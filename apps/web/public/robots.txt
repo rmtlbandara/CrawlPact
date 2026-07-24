@@ -1,0 +1,10 @@
+User-agent: *
+Allow: /
+
+Disallow: /api/
+Disallow: /audit/*
+Disallow: /app
+Disallow: /sign-in
+Disallow: /dev/
+
+Sitemap: https://crawlpact.com/sitemap.xml

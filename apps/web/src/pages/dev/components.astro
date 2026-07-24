@@ -1,0 +1,26 @@
+---
+export const prerender = false;
+import BaseLayout from "../../layouts/BaseLayout.astro";
+import { ComponentShowcase } from "../../components/ComponentShowcase";
+import { getEnv } from "../../lib/env";
+
+const appEnv = getEnv().PUBLIC_APP_ENV ?? "local";
+if (appEnv === "production") {
+  return new Response(null, { status: 404 });
+}
+---
+
+<BaseLayout
+  title="Component showcase (dev only)"
+  description="Internal design-system showcase."
+  noindex={true}
+>
+  <div class="mx-auto max-w-[1240px] px-4 py-10 sm:px-6">
+    <h1 class="text-h1 text-neutral-950">Component showcase</h1>
+    <p class="mt-2 text-body text-neutral-600">
+      Development/preview only (SRS Step 9). Not linked from navigation, disallowed in robots.txt,
+      and returns 404 when <code>PUBLIC_APP_ENV=production</code>.
+    </p>
+    <ComponentShowcase client:load />
+  </div>
+</BaseLayout>

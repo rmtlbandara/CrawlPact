@@ -1,0 +1,23 @@
+---
+export const prerender = false;
+import AdminLayout from "../../../layouts/AdminLayout.astro";
+import AdminPageHeader from "../../../components/admin/AdminPageHeader.astro";
+import { FindingAnalyticsDashboard } from "../../../components/admin/FindingAnalyticsDashboard";
+import { createDb } from "@crawlpact/database";
+import { getEnv } from "../../../lib/env";
+import { getAdminPageSession } from "../../../lib/auth/require-admin";
+
+const db = createDb(getEnv().DB);
+const admin = await getAdminPageSession(Astro.request, db);
+if (!admin) return Astro.redirect("/sign-in");
+---
+
+<AdminLayout title="Finding analytics" displayName={admin.user.displayName}>
+  <AdminPageHeader
+    title="Finding analytics"
+    description="Platform-wide finding patterns across severity, crawler, preset, and plan (SRS §28.12)."
+  />
+  <div class="mt-6">
+    <FindingAnalyticsDashboard client:load />
+  </div>
+</AdminLayout>

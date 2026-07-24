@@ -1,0 +1,95 @@
+---
+export const prerender = true;
+import MarketingLayout from "../layouts/MarketingLayout.astro";
+---
+
+<MarketingLayout
+  title="Privacy Policy | CrawlPact"
+  description="What data CrawlPact collects, why, how long it is retained, and the third parties involved in operating the service."
+>
+  <article class="mx-auto max-w-[720px] px-4 py-12 sm:px-6">
+    <h1 class="text-h1 text-neutral-950">Privacy policy</h1>
+    <p class="mt-3 text-supporting text-neutral-500">
+      Draft, pending formal legal review before production launch (see SRS §39). This page describes
+      CrawlPact's actual technical data practices as implemented.
+    </p>
+
+    <h2 class="mt-8 text-h2 text-neutral-950">What CrawlPact collects</h2>
+    <p class="mt-3 text-body text-neutral-700">CrawlPact stores only information required for:</p>
+    <ul class="mt-3 list-disc pl-5 text-body text-neutral-700">
+      <li>Your account (a display name and passkey credentials — no password, no email address)</li>
+      <li>
+        Billing, limited to identifiers needed to link your account to a Paddle customer and
+        subscription
+      </li>
+      <li>
+        Domains you save, and bounded snapshots of the public policy resources CrawlPact scanned for
+        them
+      </li>
+      <li>Security logs needed to detect abuse</li>
+      <li>First-party product-usage events (see below)</li>
+    </ul>
+    <p class="mt-3 text-body text-neutral-700">
+      CrawlPact does not store copies of entire websites — only the specific, bounded resources
+      relevant to AI crawler policy (e.g. <code>robots.txt</code>, <code>llms.txt</code>, relevant
+      headers).
+    </p>
+
+    <h2 class="mt-8 text-h2 text-neutral-950">Third parties</h2>
+    <p class="mt-3 text-body text-neutral-700">
+      Cloudflare provides hosting, storage (D1), and scheduled execution. Paddle is CrawlPact's
+      merchant of record for billing and independently sends payment-related communications.
+      CrawlPact does not use any third-party email, SMS, push-notification, AI API, external
+      authentication, or third-party analytics provider.
+    </p>
+
+    <h2 class="mt-8 text-h2 text-neutral-950">Retention</h2>
+    <table class="mt-4 w-full border-collapse text-left text-body">
+      <thead>
+        <tr class="border-b border-neutral-200 text-supporting font-medium text-neutral-600">
+          <th scope="col" class="py-2">Data</th>
+          <th scope="col" class="py-2">Retention</th>
+        </tr>
+      </thead>
+      <tbody class="divide-y divide-neutral-100">
+        <tr
+          ><td class="py-2 text-neutral-800">Anonymous scan cache</td><td
+            class="py-2 text-neutral-900">24 hours to 7 days</td
+          ></tr
+        >
+        <tr
+          ><td class="py-2 text-neutral-800">Free account scan history</td><td
+            class="py-2 text-neutral-900">30 days</td
+          ></tr
+        >
+        <tr
+          ><td class="py-2 text-neutral-800">Solo plan history</td><td class="py-2 text-neutral-900"
+            >12 months</td
+          ></tr
+        >
+        <tr
+          ><td class="py-2 text-neutral-800">Pro plan history</td><td class="py-2 text-neutral-900"
+            >24 months</td
+          ></tr
+        >
+        <tr
+          ><td class="py-2 text-neutral-800">Agency plan history</td><td
+            class="py-2 text-neutral-900">36 months</td
+          ></tr
+        >
+        <tr
+          ><td class="py-2 text-neutral-800">Deleted account private data</td><td
+            class="py-2 text-neutral-900">Purged within 30 days where permitted</td
+          ></tr
+        >
+      </tbody>
+    </table>
+
+    <h2 class="mt-8 text-h2 text-neutral-950">Your rights</h2>
+    <p class="mt-3 text-body text-neutral-700">
+      You can request account deletion at any time from account settings. Deletion begins a
+      cancellable grace period, after which private data is purged where permitted (billing records
+      required for legal/tax purposes are retained separately — see the retention table above).
+    </p>
+  </article>
+</MarketingLayout>

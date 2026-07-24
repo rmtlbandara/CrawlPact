@@ -1,0 +1,49 @@
+---
+export const prerender = false;
+import AdminLayout from "../../../layouts/AdminLayout.astro";
+import AdminPageHeader from "../../../components/admin/AdminPageHeader.astro";
+import { StatusChip } from "@crawlpact/ui";
+import { createDb, schema } from "@crawlpact/database";
+import { getEnv } from "../../../lib/env";
+import { getAdminPageSession } from "../../../lib/auth/require-admin";
+
+const db = createDb(getEnv().DB);
+const admin = await getAdminPageSession(Astro.request, db);
+if (!admin) return Astro.redirect("/sign-in");
+
+const plans = await db.select().from(schema.plans).orderBy(schema.plans.annualPriceUsdCents);
+---
+
+<AdminLayout title="Plans" displayName={admin.user.displayName}>
+  <AdminPageHeader
+    title="Plans"
+    description="Read-only view of subscription plan entitlements. Pricing/entitlement changes are a product decision made in a migration, not an ad-hoc admin edit."
+  />
+  <div class="mt-6 grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
+    {
+      plans.map((plan) => (
+        <div class="rounded-card border border-neutral-200 bg-white p-5">
+          <div class="flex items-center justify-between gap-2">
+            <h2 class="text-h3 text-neutral-950">{plan.name}</h2>
+            {!plan.isActive && <StatusChip tone="warning" label="Inactive" />}
+          </div>
+          <p class="mt-1 text-h2 text-neutral-950">
+            ${(plan.annualPriceUsdCents / 100).toFixed(0)}/yr
+          </p>
+          <ul class="mt-4 flex flex-col gap-1.5 text-supporting text-neutral-700">
+            <li>{plan.savedDomainLimit} saved domains</li>
+            <li>Monitoring: {plan.monitoringFrequency}</li>
+            <li>{plan.historyRetentionDays} day history retention</li>
+            <li>{plan.manualRescansPerDomainPerMonth} manual re-scans/domain/month</li>
+            <li>Groups: {plan.domainGroupsEnabled ? "Yes" : "No"}</li>
+            <li>CSV export: {plan.csvExportEnabled ? "Yes" : "No"}</li>
+            <li>Print reports: {plan.printReadyReportTier}</li>
+            <li>Private Atom feed: {plan.privateAtomFeedEnabled ? "Yes" : "No"}</li>
+            <li>Batch import limit: {plan.batchImportLimit}</li>
+            <li>Agency branding: {plan.agencyBrandingEnabled ? "Yes" : "No"}</li>
+          </ul>
+        </div>
+      ))
+    }
+  </div>
+</AdminLayout>

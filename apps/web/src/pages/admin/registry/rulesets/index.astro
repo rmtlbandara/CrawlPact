@@ -1,0 +1,23 @@
+---
+export const prerender = false;
+import AdminLayout from "../../../../layouts/AdminLayout.astro";
+import AdminPageHeader from "../../../../components/admin/AdminPageHeader.astro";
+import { RulesetsManager } from "../../../../components/admin/RulesetsManager";
+import { createDb } from "@crawlpact/database";
+import { getEnv } from "../../../../lib/env";
+import { getAdminPageSession } from "../../../../lib/auth/require-admin";
+
+const db = createDb(getEnv().DB);
+const admin = await getAdminPageSession(Astro.request, db);
+if (!admin) return Astro.redirect("/sign-in");
+---
+
+<AdminLayout title="Ruleset releases" displayName={admin.user.displayName}>
+  <AdminPageHeader
+    title="Ruleset releases"
+    description="Version management for findings/scoring logic (SRS §28.12)."
+  />
+  <div class="mt-6">
+    <RulesetsManager client:load />
+  </div>
+</AdminLayout>

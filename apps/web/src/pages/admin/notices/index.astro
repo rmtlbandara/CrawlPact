@@ -1,0 +1,23 @@
+---
+export const prerender = false;
+import AdminLayout from "../../../layouts/AdminLayout.astro";
+import AdminPageHeader from "../../../components/admin/AdminPageHeader.astro";
+import { NoticesManager } from "../../../components/admin/NoticesManager";
+import { createDb } from "@crawlpact/database";
+import { getEnv } from "../../../lib/env";
+import { getAdminPageSession } from "../../../lib/auth/require-admin";
+
+const db = createDb(getEnv().DB);
+const admin = await getAdminPageSession(Astro.request, db);
+if (!admin) return Astro.redirect("/sign-in");
+---
+
+<AdminLayout title="System notices" displayName={admin.user.displayName}>
+  <AdminPageHeader
+    title="System notices"
+    description="Short, structured operational messages (SRS §28.15) — not a general CMS."
+  />
+  <div class="mt-6">
+    <NoticesManager client:load />
+  </div>
+</AdminLayout>

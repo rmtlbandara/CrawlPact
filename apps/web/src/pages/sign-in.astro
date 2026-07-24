@@ -1,0 +1,21 @@
+---
+export const prerender = false;
+import MarketingLayout from "../layouts/MarketingLayout.astro";
+import { PasskeyAuth } from "../components/auth/PasskeyAuth";
+---
+
+<MarketingLayout
+  title="Sign in | CrawlPact"
+  description="CrawlPact uses passkey (WebAuthn) sign-in. No password, no email."
+  noindex={true}
+>
+  <div class="mx-auto max-w-[480px] px-4 py-20 sm:px-6">
+    <h1 class="text-h1 text-neutral-950">Sign in</h1>
+    <p class="mt-4 text-body-lg text-neutral-700">
+      CrawlPact signs you in with a passkey — no password, no email.
+    </p>
+    <div class="mt-8">
+      <PasskeyAuth client:load />
+    </div>
+  </div>
+</MarketingLayout>

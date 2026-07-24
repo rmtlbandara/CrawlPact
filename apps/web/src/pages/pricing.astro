@@ -1,0 +1,163 @@
+---
+export const prerender = true;
+import MarketingLayout from "../layouts/MarketingLayout.astro";
+import { AnalyticsBeacon } from "../components/AnalyticsBeacon";
+
+const plans = [
+  {
+    id: "free",
+    name: "Free",
+    price: "USD 0",
+    domains: 1,
+    monitoring: "None",
+    history: "30 days",
+    rescans: 2,
+    groups: false,
+    csv: false,
+    feed: false,
+    batch: 0,
+    branding: false,
+  },
+  {
+    id: "solo",
+    name: "Solo",
+    price: "USD 79",
+    domains: 5,
+    monitoring: "Monthly",
+    history: "12 months",
+    rescans: 5,
+    groups: false,
+    csv: false,
+    feed: true,
+    batch: 0,
+    branding: false,
+  },
+  {
+    id: "pro",
+    name: "Pro",
+    price: "USD 179",
+    domains: 25,
+    monitoring: "Weekly",
+    history: "24 months",
+    rescans: 10,
+    groups: true,
+    csv: true,
+    feed: true,
+    batch: 10,
+    branding: false,
+  },
+  {
+    id: "agency",
+    name: "Agency",
+    price: "USD 399",
+    domains: 100,
+    monitoring: "Weekly",
+    history: "36 months",
+    rescans: 20,
+    groups: true,
+    csv: true,
+    feed: true,
+    batch: 100,
+    branding: true,
+  },
+];
+---
+
+<MarketingLayout
+  title="Pricing | CrawlPact"
+  description="Annual pricing for CrawlPact's AI crawler policy auditing and monitoring plans, from a free single-domain audit to agency-scale portfolio monitoring."
+>
+  <div class="mx-auto max-w-[1240px] px-4 py-12 sm:px-6">
+    <h1 class="text-h1 text-neutral-950">Pricing</h1>
+    <p class="mt-3 max-w-2xl text-body-lg text-neutral-700">
+      Annual billing, handled by Paddle as merchant of record. Applicable taxes may be calculated
+      during checkout. Plan definitions are stored as product data, not hard-coded — see <a
+        href="/status"
+        class="text-brand-700 underline underline-offset-2">status</a
+      >
+      for current plan availability.
+    </p>
+
+    <div class="mt-8 overflow-x-auto" tabindex="0" role="region" aria-label="Plan comparison table">
+      <table class="w-full min-w-[720px] border-collapse text-left text-body">
+        <thead>
+          <tr class="border-b border-neutral-200 text-supporting font-medium text-neutral-600">
+            <th scope="col" class="py-3">Feature</th>
+            {
+              plans.map((plan) => (
+                <th scope="col" class="py-3 text-neutral-950">
+                  {plan.name}
+                </th>
+              ))
+            }
+          </tr>
+        </thead>
+        <tbody class="divide-y divide-neutral-100">
+          <tr
+            ><th scope="row" class="py-3 font-normal text-neutral-600">Annual price</th>{
+              plans.map((p) => <td class="py-3 font-medium">{p.price}</td>)
+            }</tr
+          >
+          <tr
+            ><th scope="row" class="py-3 font-normal text-neutral-600">Saved domains</th>{
+              plans.map((p) => <td class="py-3">{p.domains}</td>)
+            }</tr
+          >
+          <tr
+            ><th scope="row" class="py-3 font-normal text-neutral-600">Monitoring</th>{
+              plans.map((p) => <td class="py-3">{p.monitoring}</td>)
+            }</tr
+          >
+          <tr
+            ><th scope="row" class="py-3 font-normal text-neutral-600">History retention</th>{
+              plans.map((p) => <td class="py-3">{p.history}</td>)
+            }</tr
+          >
+          <tr
+            ><th scope="row" class="py-3 font-normal text-neutral-600"
+              >Manual rescans / domain / month</th
+            >{plans.map((p) => <td class="py-3">{p.rescans}</td>)}</tr
+          >
+          <tr
+            ><th scope="row" class="py-3 font-normal text-neutral-600">Domain groups</th>{
+              plans.map((p) => <td class="py-3">{p.groups ? "Yes" : "No"}</td>)
+            }</tr
+          >
+          <tr
+            ><th scope="row" class="py-3 font-normal text-neutral-600">CSV export</th>{
+              plans.map((p) => <td class="py-3">{p.csv ? "Yes" : "No"}</td>)
+            }</tr
+          >
+          <tr
+            ><th scope="row" class="py-3 font-normal text-neutral-600">Private Atom feed</th>{
+              plans.map((p) => <td class="py-3">{p.feed ? "Yes" : "No"}</td>)
+            }</tr
+          >
+          <tr
+            ><th scope="row" class="py-3 font-normal text-neutral-600">Batch import</th>{
+              plans.map((p) => <td class="py-3">{p.batch > 0 ? `Up to ${p.batch}` : "No"}</td>)
+            }</tr
+          >
+          <tr
+            ><th scope="row" class="py-3 font-normal text-neutral-600">Agency branding</th>{
+              plans.map((p) => <td class="py-3">{p.branding ? "Yes" : "No"}</td>)
+            }</tr
+          >
+        </tbody>
+      </table>
+    </div>
+
+    <p class="mt-6 text-body text-neutral-700">
+      <a href="/sign-in" class="text-brand-700 underline underline-offset-2">Create an account</a>
+      to upgrade — checkout runs through Paddle from your dashboard's billing page. Paddle handles payment,
+      tax, and receipts; CrawlPact never sees your card details.
+    </p>
+    <p class="mt-2 text-supporting text-neutral-500">
+      This deployment is still in active development — see <a
+        href="/status"
+        class="text-brand-700 underline underline-offset-2">status</a
+      > for what's verified so far.
+    </p>
+  </div>
+  <AnalyticsBeacon client:load eventName="pricing_viewed" />
+</MarketingLayout>

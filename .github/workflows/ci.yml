@@ -1,0 +1,141 @@
+name: CI
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  # Safe, non-secret placeholder values so CI can boot the app's env
+  # validation without any real credential (see docs/deployment/ENVIRONMENTS.md).
+  # No real Paddle or Cloudflare credential is ever required for this workflow.
+  PUBLIC_APP_ENV: local
+  PUBLIC_SITE_URL: http://localhost:4321
+  SESSION_SIGNING_SECRET: ci-placeholder-secret-value-not-real-00000000
+  WEBAUTHN_RP_ID: localhost
+  WEBAUTHN_RP_ORIGIN: http://localhost:4321
+  PADDLE_API_KEY: ci-placeholder
+  PADDLE_ENVIRONMENT: sandbox
+  PADDLE_WEBHOOK_SECRET: ci-placeholder
+  PADDLE_PRICE_ID_SOLO: pri_ci_placeholder
+  PADDLE_PRICE_ID_PRO: pri_ci_placeholder
+  PADDLE_PRICE_ID_AGENCY: pri_ci_placeholder
+  AUDIT_ENGINE_ENABLED: "false"
+
+jobs:
+  quality:
+    name: Format, lint, typecheck, unit + integration tests, build
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Secret scan (gitleaks)
+        uses: gitleaks/gitleaks-action@v2
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 9.15.0
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22.12.0"
+          cache: pnpm
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Format check
+        run: pnpm format:check
+
+      - name: Lint
+        run: pnpm lint
+
+      - name: Type check
+        run: pnpm typecheck
+
+      - name: Unit tests
+        run: pnpm test:unit
+
+      - name: Integration tests
+        run: pnpm test:integration
+
+      - name: Validate D1 migrations against Drizzle schema
+        run: pnpm db:validate
+
+      - name: Dependency vulnerability check
+        run: pnpm audit --audit-level=critical
+        continue-on-error: true # informational until a baseline of accepted advisories exists
+
+      - name: Build
+        run: pnpm build
+
+  e2e-and-a11y:
+    name: End-to-end and accessibility smoke tests
+    runs-on: ubuntu-latest
+    needs: quality
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 9.15.0
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22.12.0"
+          cache: pnpm
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Install Playwright browsers
+        run: pnpm exec playwright install --with-deps chromium webkit
+
+      - name: Build
+        run: pnpm build
+
+      - name: Apply D1 migrations and seed data
+        run: pnpm db:migrate && pnpm db:seed
+
+      - name: Start preview server
+        run: pnpm --filter @crawlpact/web dev &
+        env:
+          # Authenticated/admin/scan e2e journeys (registration, saving a
+          # domain, a real manual scan, Super Admin flows) need a live
+          # engine, matching real local dev's `.dev.vars` default and real
+          # production — unlike the `quality` job's unit/integration tests,
+          # which construct their own local mock env per test and never
+          # read this process-level variable at all, so overriding it here
+          # doesn't affect that job. The one behaviour this flag being
+          # false used to smoke-test at the e2e layer (the honest
+          # "AUDIT_ENGINE_DISABLED" response) is already exercised more
+          # precisely by `audit-api.integration.test.ts`.
+          AUDIT_ENGINE_ENABLED: "true"
+
+      - name: Wait for server
+        run: npx wait-on http://localhost:4321 --timeout 60000
+
+      - name: E2E tests
+        run: pnpm test:e2e
+        env:
+          PLAYWRIGHT_BASE_URL: http://localhost:4321
+
+      - name: Accessibility smoke tests
+        run: pnpm test:a11y
+        env:
+          PLAYWRIGHT_BASE_URL: http://localhost:4321
+
+      - uses: actions/upload-artifact@v4
+        if: failure()
+        with:
+          name: playwright-report
+          path: playwright-report/
+          retention-days: 14

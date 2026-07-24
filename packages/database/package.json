@@ -1,0 +1,22 @@
+{
+  "name": "@crawlpact/database",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "main": "./src/index.ts",
+  "types": "./src/index.ts",
+  "scripts": {
+    "typecheck": "tsc --noEmit",
+    "migrate:local": "wrangler d1 migrations apply crawlpact-db --local --config ../../apps/web/wrangler.jsonc",
+    "migrate:remote": "wrangler d1 migrations apply crawlpact-db --remote --config ../../apps/web/wrangler.jsonc",
+    "seed:local": "wrangler d1 execute crawlpact-db --local --config ../../apps/web/wrangler.jsonc --file ./seed/seed.sql",
+    "validate": "node ../../scripts/validate-db-schema.mjs"
+  },
+  "dependencies": {
+    "drizzle-orm": "0.45.2"
+  },
+  "devDependencies": {
+    "@cloudflare/workers-types": "5.20260722.1",
+    "typescript": "5.9.3"
+  }
+}

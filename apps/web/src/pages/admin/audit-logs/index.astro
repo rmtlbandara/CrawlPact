@@ -1,0 +1,82 @@
+---
+export const prerender = false;
+import AdminLayout from "../../../layouts/AdminLayout.astro";
+import AdminPageHeader from "../../../components/admin/AdminPageHeader.astro";
+import { EmptyState } from "@crawlpact/ui";
+import { createDb } from "@crawlpact/database";
+import { getEnv } from "../../../lib/env";
+import { getAdminPageSession } from "../../../lib/auth/require-admin";
+import { listAdminAuditLogs } from "../../../lib/admin/audit-log";
+
+const db = createDb(getEnv().DB);
+const admin = await getAdminPageSession(Astro.request, db);
+if (!admin) return Astro.redirect("/sign-in");
+
+const logs = await listAdminAuditLogs(db, { limit: 200 });
+---
+
+<AdminLayout title="Audit logs" displayName={admin.user.displayName}>
+  <AdminPageHeader
+    title="Audit logs"
+    description="Every sensitive administrative action ever taken — who, what, on what target, why, and when (SRS §28.19). Never editable through this interface."
+  />
+  <div class="mt-6">
+    {
+      logs.length === 0 ? (
+        <EmptyState
+          title="No administrative actions yet"
+          description="Every sensitive action will appear here once taken."
+        />
+      ) : (
+        <div
+          class="overflow-x-auto rounded-card border border-neutral-200"
+          tabindex="0"
+          role="region"
+          aria-label="Audit log, scrollable horizontally"
+        >
+          <table class="w-full text-left text-body">
+            <thead class="bg-neutral-50 text-supporting font-medium text-neutral-600">
+              <tr>
+                <th scope="col" class="px-4 py-3">
+                  When
+                </th>
+                <th scope="col" class="px-4 py-3">
+                  Administrator
+                </th>
+                <th scope="col" class="px-4 py-3">
+                  Action
+                </th>
+                <th scope="col" class="px-4 py-3">
+                  Target
+                </th>
+                <th scope="col" class="px-4 py-3">
+                  Reason
+                </th>
+              </tr>
+            </thead>
+            <tbody class="divide-y divide-neutral-200">
+              {logs.map((log) => (
+                <tr>
+                  <td class="px-4 py-3 text-neutral-800">
+                    {new Date(log.createdAt).toLocaleString()}
+                  </td>
+                  <td class="px-4 py-3 text-neutral-800">
+                    <a
+                      href={`/admin/users/${log.administratorUserId}`}
+                      class="text-brand-700 hover:underline"
+                    >
+                      {log.administratorUserId}
+                    </a>
+                  </td>
+                  <td class="px-4 py-3 font-mono text-supporting text-neutral-800">{log.action}</td>
+                  <td class="px-4 py-3 text-neutral-800">{log.target}</td>
+                  <td class="px-4 py-3 text-neutral-800">{log.reason}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      )
+    }
+  </div>
+</AdminLayout>

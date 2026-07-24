@@ -1,0 +1,23 @@
+---
+export const prerender = false;
+import AdminLayout from "../../../layouts/AdminLayout.astro";
+import AdminPageHeader from "../../../components/admin/AdminPageHeader.astro";
+import { BlockedTargetsManager } from "../../../components/admin/BlockedTargetsManager";
+import { createDb } from "@crawlpact/database";
+import { getEnv } from "../../../lib/env";
+import { getAdminPageSession } from "../../../lib/auth/require-admin";
+
+const db = createDb(getEnv().DB);
+const admin = await getAdminPageSession(Astro.request, db);
+if (!admin) return Astro.redirect("/sign-in");
+---
+
+<AdminLayout title="Blocked targets" displayName={admin.user.displayName}>
+  <AdminPageHeader
+    title="Blocked targets"
+    description="The scanner's admin-maintained blocklist, enforced on every scan path (SRS §28.8/§28.14)."
+  />
+  <div class="mt-6">
+    <BlockedTargetsManager client:load />
+  </div>
+</AdminLayout>

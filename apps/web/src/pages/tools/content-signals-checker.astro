@@ -1,0 +1,26 @@
+---
+export const prerender = true;
+import MarketingLayout from "../../layouts/MarketingLayout.astro";
+import { AuditForm } from "../../components/AuditForm";
+---
+
+<MarketingLayout
+  title="Content Signals Checker | Free Tool | CrawlPact"
+  description="Detect recognised Content Signals for a domain and identify contradictions with crawler-specific rules."
+  breadcrumbs={[
+    { name: "Free tools", url: "/tools" },
+    { name: "Content Signals checker", url: "/tools/content-signals-checker" },
+  ]}
+>
+  <div class="mx-auto max-w-[720px] px-4 py-16 text-center sm:px-6">
+    <h1 class="text-h1 text-neutral-950">Content Signals checker</h1>
+    <p class="mt-4 text-body-lg text-neutral-700">
+      Enter a domain to detect a recognised <code>Content-Signal</code> response header, plus its meta
+      robots tag, <code>X-Robots-Tag</code> header, and canonical URL — and flag any disagreement against
+      its RSL declaration or <code>robots.txt</code> rules.
+    </p>
+    <div class="mt-8 flex justify-center">
+      <AuditForm client:load idPrefix="content-signals-checker" focus="content-signals" />
+    </div>
+  </div>
+</MarketingLayout>

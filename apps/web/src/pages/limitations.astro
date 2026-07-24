@@ -1,0 +1,48 @@
+---
+export const prerender = true;
+import MarketingLayout from "../layouts/MarketingLayout.astro";
+---
+
+<MarketingLayout
+  title="Limitations | CrawlPact"
+  description="What CrawlPact cannot guarantee: declared policy is not proof of crawler behaviour, and other explicit product boundaries."
+>
+  <article class="mx-auto max-w-[720px] px-4 py-12 sm:px-6">
+    <h1 class="text-h1 text-neutral-950">Limitations</h1>
+
+    <h2 class="mt-8 text-h2 text-neutral-950">CrawlPact audits declared policy</h2>
+    <p class="mt-3 text-body text-neutral-700">
+      CrawlPact reports what a website's public configuration asks crawlers to do (declared policy)
+      and what CrawlPact itself was able to retrieve (observed response). It does not, and cannot,
+      prove what an external crawler actually does (actual crawler behaviour) —
+      <code>robots.txt</code> and related signals are voluntary, unenforced declarations.
+    </p>
+
+    <h2 class="mt-8 text-h2 text-neutral-950">CrawlPact is not</h2>
+    <ul class="mt-3 list-disc pl-5 text-body text-neutral-700">
+      <li>A web application firewall or reverse proxy</li>
+      <li>A live crawler blocker</li>
+      <li>A server-log analytics service</li>
+      <li>A full-site SEO crawler or general-purpose SEO suite</li>
+      <li>An AI-search ranking tracker or brand-mention tracker</li>
+      <li>A legal service or compliance certificate</li>
+      <li>
+        A guarantee that bots will obey instructions or that content will appear in AI answers
+      </li>
+    </ul>
+
+    <h2 class="mt-8 text-h2 text-neutral-950">Evidence can be incomplete</h2>
+    <p class="mt-3 text-body text-neutral-700">
+      A target may block CrawlPact's scanner, return an unexpected response, or expose only partial
+      signals. When evidence is insufficient, CrawlPact shows "Incomplete" rather than a misleading
+      score or result.
+    </p>
+
+    <h2 class="mt-8 text-h2 text-neutral-950">Registry coverage is not exhaustive</h2>
+    <p class="mt-3 text-body text-neutral-700">
+      CrawlPact's crawler registry only includes crawlers with a reliable official source and a
+      verified token. An unlisted or newly introduced crawler will not appear in a report until it
+      is verified and published.
+    </p>
+  </article>
+</MarketingLayout>

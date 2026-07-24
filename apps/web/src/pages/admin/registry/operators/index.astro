@@ -1,0 +1,23 @@
+---
+export const prerender = false;
+import AdminLayout from "../../../../layouts/AdminLayout.astro";
+import AdminPageHeader from "../../../../components/admin/AdminPageHeader.astro";
+import { OperatorsManager } from "../../../../components/admin/OperatorsManager";
+import { createDb } from "@crawlpact/database";
+import { getEnv } from "../../../../lib/env";
+import { getAdminPageSession } from "../../../../lib/auth/require-admin";
+
+const db = createDb(getEnv().DB);
+const admin = await getAdminPageSession(Astro.request, db);
+if (!admin) return Astro.redirect("/sign-in");
+---
+
+<AdminLayout title="Crawler operators" displayName={admin.user.displayName}>
+  <AdminPageHeader
+    title="Crawler operators"
+    description="Companies and organisations that publish crawlers (SRS §28.11)."
+  />
+  <div class="mt-6">
+    <OperatorsManager client:load />
+  </div>
+</AdminLayout>

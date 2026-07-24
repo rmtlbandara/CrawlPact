@@ -1,0 +1,37 @@
+---
+import MarketingLayout from "../layouts/MarketingLayout.astro";
+---
+
+<MarketingLayout
+  title="Page not found | CrawlPact"
+  description="This page doesn't exist or may have moved."
+  noindex={true}
+>
+  <div class="mx-auto max-w-[560px] px-4 py-24 text-center sm:px-6">
+    <p class="text-metadata font-medium uppercase tracking-wide text-neutral-500">404</p>
+    <h1 class="mt-2 text-h1 text-neutral-950">Page not found</h1>
+    <p class="mt-4 text-body-lg text-neutral-700">
+      This page doesn't exist, or it may have moved. Nothing on your end was scanned or affected.
+    </p>
+    <div class="mt-8 flex flex-wrap justify-center gap-3">
+      <a
+        href="/"
+        class="rounded-control bg-brand-600 px-5 py-2.5 text-body font-medium text-white hover:bg-brand-700"
+      >
+        Go to homepage
+      </a>
+      <a
+        href="/crawlers"
+        class="rounded-control border border-neutral-300 px-5 py-2.5 text-body font-medium text-neutral-800 hover:bg-neutral-50"
+      >
+        Browse the crawler directory
+      </a>
+      <a
+        href="/guides"
+        class="rounded-control border border-neutral-300 px-5 py-2.5 text-body font-medium text-neutral-800 hover:bg-neutral-50"
+      >
+        Browse guides
+      </a>
+    </div>
+  </div>
+</MarketingLayout>

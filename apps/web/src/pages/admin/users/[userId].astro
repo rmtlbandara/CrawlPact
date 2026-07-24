@@ -1,0 +1,30 @@
+---
+export const prerender = false;
+import AdminLayout from "../../../layouts/AdminLayout.astro";
+import { ErrorState } from "@crawlpact/ui";
+import { UserDetailManager } from "../../../components/admin/UserDetailManager";
+import { createDb } from "@crawlpact/database";
+import { getEnv } from "../../../lib/env";
+import { getAdminPageSession } from "../../../lib/auth/require-admin";
+import { getUserDetail } from "../../../lib/admin/users";
+
+const db = createDb(getEnv().DB);
+const admin = await getAdminPageSession(Astro.request, db);
+if (!admin) return Astro.redirect("/sign-in");
+
+const { userId } = Astro.params;
+const detail = userId ? await getUserDetail(db, userId) : null;
+---
+
+<AdminLayout title={detail ? detail.user.displayName : "User"} displayName={admin.user.displayName}>
+  <a href="/admin/users" class="text-supporting font-medium text-brand-700"> ← All users </a>
+  <div class="mt-3">
+    {
+      !detail ? (
+        <ErrorState title="User not found" description="This user does not exist." />
+      ) : (
+        <UserDetailManager client:load initial={detail} />
+      )
+    }
+  </div>
+</AdminLayout>

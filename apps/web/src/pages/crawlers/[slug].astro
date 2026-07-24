@@ -1,0 +1,65 @@
+---
+export const prerender = true;
+import { getCollection, render } from "astro:content";
+import MarketingLayout from "../../layouts/MarketingLayout.astro";
+import { CRAWLER_PURPOSE_LABELS } from "@crawlpact/registry";
+
+export async function getStaticPaths() {
+  const crawlers = await getCollection("crawlers");
+  return crawlers.map((crawler) => ({ params: { slug: crawler.id }, props: { crawler } }));
+}
+
+const { crawler } = Astro.props;
+const { Content } = await render(crawler);
+---
+
+<MarketingLayout
+  title={`${crawler.data.name} (${crawler.data.operator}) | CrawlPact Crawler Directory`}
+  description={crawler.data.summary}
+  canonicalPath={`/crawlers/${crawler.id}`}
+  ogType="article"
+  publishedDate={crawler.data.lastVerified}
+  breadcrumbs={[
+    { name: "Crawler directory", url: "/crawlers" },
+    { name: crawler.data.name, url: `/crawlers/${crawler.id}` },
+  ]}
+>
+  <article class="mx-auto max-w-[720px] px-4 py-12 sm:px-6">
+    <p class="text-metadata font-medium uppercase tracking-wide text-neutral-500">
+      {crawler.data.operator}
+    </p>
+    <h1 class="mt-1 text-h1 text-neutral-950">{crawler.data.name}</h1>
+    <dl
+      class="mt-4 grid grid-cols-2 gap-4 rounded-card border border-neutral-200 bg-neutral-50 p-4 text-supporting sm:grid-cols-4"
+    >
+      <div>
+        <dt class="text-neutral-500">User-agent token</dt>
+        <dd class="font-mono text-neutral-900">{crawler.data.userAgentToken}</dd>
+      </div>
+      <div>
+        <dt class="text-neutral-500">Purpose</dt>
+        <dd class="text-neutral-900">{CRAWLER_PURPOSE_LABELS[crawler.data.purpose]}</dd>
+      </div>
+      <div>
+        <dt class="text-neutral-500">Status</dt>
+        <dd class="text-neutral-900">{crawler.data.lifecycleStatus}</dd>
+      </div>
+      <div>
+        <dt class="text-neutral-500">Last verified</dt>
+        <dd class="text-neutral-900">{crawler.data.lastVerified}</dd>
+      </div>
+    </dl>
+
+    <div class="prose prose-neutral mt-8 max-w-none text-body text-neutral-800">
+      <Content />
+    </div>
+
+    <a
+      href={crawler.data.officialSourceUrl}
+      class="mt-6 inline-block text-body text-brand-700 underline underline-offset-2"
+      rel="noopener"
+    >
+      Official source: {crawler.data.officialSourceUrl}
+    </a>
+  </article>
+</MarketingLayout>

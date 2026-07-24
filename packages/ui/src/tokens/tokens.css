@@ -1,0 +1,170 @@
+/*
+ * CrawlPact design tokens (SRS §10.4-§10.13, §10.53).
+ *
+ * This is the single source of visual truth. Components must reference
+ * these tokens (via Tailwind utility classes generated from this @theme
+ * block) rather than hard-coding colour, spacing, radius, shadow, or motion
+ * literals — see ADR-0003.
+ *
+ * Tailwind v4's default spacing scale (0.25rem steps) and default icon
+ * `size-*` utilities already exactly match the SRS §10.8 spacing table and
+ * the SRS §10.11 icon sizing needs (space-4 = 16px = Tailwind `4`, and so
+ * on) — see docs/design/DESIGN_SYSTEM.md for the full mapping. Only the
+ * tokens Tailwind does not already provide are declared below.
+ */
+@import "tailwindcss";
+
+@theme {
+  /* Typography: native system font stacks (no external font requests —
+     avoids a third-party network dependency and keeps the hero/audit form
+     rendering without waiting on a webfont, per SRS §9.22). */
+  --font-sans:
+    -apple-system, BlinkMacSystemFont, "Segoe UI", system-ui, Roboto, "Helvetica Neue", Arial,
+    sans-serif;
+  --font-mono:
+    ui-monospace, "SF Mono", "JetBrains Mono", "IBM Plex Mono", "Roboto Mono", Menlo, Consolas,
+    monospace;
+
+  /* Brand colours (SRS §10.5) */
+  --color-brand-900: #0b1f33;
+  --color-brand-800: #12324f;
+  --color-brand-700: #184a70;
+  --color-brand-600: #176b87;
+  --color-brand-500: #1e88a8;
+  --color-brand-100: #dff3f7;
+  --color-brand-50: #f2fafb;
+
+  /* Neutral colours (SRS §10.5) */
+  --color-neutral-950: #101820;
+  --color-neutral-800: #273541;
+  --color-neutral-700: #42515c;
+  --color-neutral-600: #5c6b75;
+  /* Darkened from the SRS's suggested #75838d (3.9:1 on white, fails the
+     WCAG AA 4.5:1 small-text threshold — confirmed by axe-core in
+     apps/web/tests/a11y). #647280 keeps the same hue at 4.9:1. The SRS
+     explicitly permits adjusting exact values during implementation
+     (§10.5 preamble) provided the semantic structure is unchanged. */
+  --color-neutral-500: #647280;
+  --color-neutral-300: #c8d0d6;
+  --color-neutral-200: #dde3e7;
+  --color-neutral-100: #edf1f3;
+  --color-neutral-50: #f7f9fa;
+
+  /* Status colours (SRS §10.5) — always paired with text/icon/label, never
+     colour alone (SRS §10.6, §10.23). */
+  --color-success: #157347;
+  --color-success-bg: #e9f7ef;
+  /* Darkened from the SRS's suggested #b66a00 (3.8:1 on --color-warning-bg,
+     fails WCAG AA 4.5:1 — confirmed by axe-core). #955700 keeps the same
+     hue at 5.3:1. */
+  --color-warning: #955700;
+  --color-warning-bg: #fff4d8;
+  --color-error: #b42318;
+  --color-error-bg: #fdecea;
+  --color-critical: #8e1b12;
+  --color-critical-bg: #f9dedb;
+  --color-info: #175cd3;
+  --color-info-bg: #eaf2ff;
+  /* Darkened from the SRS's suggested #667085 (4.51:1 on
+     --color-unknown-bg — technically passing but with almost no margin
+     for rendering/rounding). #57636d gives 5.6:1. */
+  --color-unknown: #57636d;
+  --color-unknown-bg: #f2f4f7;
+
+  /* Type scale (SRS §10.7) — mobile sizes applied via responsive overrides
+     in components, e.g. `text-h1 md:text-display`. */
+  --text-display: 2.375rem; /* 38px mobile */
+  --text-display--line-height: 1.15;
+  --text-display--font-weight: 700;
+  --text-h1: 2rem; /* 32px mobile */
+  --text-h1--line-height: 1.2;
+  --text-h1--font-weight: 700;
+  --text-h2: 1.5rem; /* 24px mobile */
+  --text-h2--line-height: 1.3;
+  --text-h2--font-weight: 650;
+  --text-h3: 1.125rem; /* 18px */
+  --text-h3--line-height: 1.4;
+  --text-h3--font-weight: 600;
+  --text-card-heading: 1rem; /* 16px */
+  --text-card-heading--line-height: 1.4;
+  --text-card-heading--font-weight: 600;
+  --text-body-lg: 1.0625rem; /* 17px */
+  --text-body-lg--line-height: 1.6;
+  --text-body: 0.9375rem; /* 15px */
+  --text-body--line-height: 1.6;
+  --text-supporting: 0.8125rem; /* 13px */
+  --text-supporting--line-height: 1.5;
+  --text-metadata: 0.75rem; /* 12px */
+  --text-metadata--line-height: 1.4;
+  --text-code: 0.8125rem; /* 13px */
+  --text-code--line-height: 1.5;
+
+  /* Radius (SRS §10.9) */
+  --radius-chip: 6px;
+  --radius-control: 8px;
+  --radius-card: 12px;
+  --radius-panel: 16px;
+  --radius-pill: 999px;
+
+  /* Shadow (SRS §10.10) — subtle, used sparingly */
+  --shadow-elevated: 0 2px 8px 0 rgb(16 24 32 / 0.08);
+  --shadow-modal: 0 12px 32px -8px rgb(16 24 32 / 0.24);
+
+  /* Z-index (SRS §10.53) */
+  --z-dropdown: 100;
+  --z-sticky: 200;
+  --z-drawer: 300;
+  --z-modal: 400;
+  --z-toast: 500;
+  --z-tooltip: 600;
+
+  /* Motion (SRS §10.45) */
+  --duration-quick: 150ms;
+  --duration-standard: 200ms;
+  --ease-standard: cubic-bezier(0.2, 0, 0, 1);
+
+  /* Breakpoints (SRS §10.14) */
+  --breakpoint-xs: 360px;
+  --breakpoint-sm: 480px;
+  --breakpoint-md: 640px;
+  --breakpoint-lg: 768px;
+  --breakpoint-xl: 1024px;
+  --breakpoint-2xl: 1280px;
+  --breakpoint-3xl: 1440px;
+
+  /* Container widths (SRS §10.14) */
+  --container-marketing: 1200px;
+  --container-app: 1440px;
+  --container-reading: 720px;
+}
+
+@layer base {
+  :root {
+    color-scheme: light;
+  }
+
+  body {
+    font-family: var(--font-sans);
+    background-color: var(--color-neutral-50);
+    color: var(--color-neutral-950);
+  }
+
+  code,
+  pre,
+  kbd,
+  samp {
+    font-family: var(--font-mono);
+  }
+
+  /* SRS §10.45: respect prefers-reduced-motion globally. */
+  @media (prefers-reduced-motion: reduce) {
+    *,
+    *::before,
+    *::after {
+      animation-duration: 0.01ms !important;
+      animation-iteration-count: 1 !important;
+      transition-duration: 0.01ms !important;
+      scroll-behavior: auto !important;
+    }
+  }
+}

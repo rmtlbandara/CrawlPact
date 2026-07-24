@@ -1,0 +1,76 @@
+---
+export const prerender = false;
+import MarketingLayout from "../../layouts/MarketingLayout.astro";
+import { ErrorState } from "@crawlpact/ui";
+import { AuditReportView } from "../../components/AuditReportView";
+import type { ReportFocus } from "../../components/AuditReportView";
+import { ShareReportDialog } from "../../components/app/ShareReportDialog";
+import { createDb } from "@crawlpact/database";
+import { getEnv } from "../../lib/env";
+import { loadReportViewData } from "../../lib/report-view-data";
+import { trackEvent } from "../../lib/analytics";
+import { getPageSession } from "../../lib/auth/page-session";
+import { getPlan } from "../../lib/plan";
+
+const { auditId } = Astro.params;
+
+const VALID_FOCUS_VALUES: ReportFocus[] = ["crawlers", "robots", "llms", "rsl", "content-signals"];
+const requestedFocus = Astro.url.searchParams.get("focus");
+const focus = VALID_FOCUS_VALUES.includes(requestedFocus as ReportFocus)
+  ? (requestedFocus as ReportFocus)
+  : undefined;
+
+const db = createDb(getEnv().DB);
+const { report, diffLines, proposedRobotsText } = auditId
+  ? await loadReportViewData(db, auditId)
+  : { report: null, diffLines: null, proposedRobotsText: null };
+
+if (report) await trackEvent(db, "result_viewed");
+
+// Sharing requires an owned, saved domain — anonymous audit results have no
+// owner to authorise a share, so the dialog only appears for signed-in
+// customers. The share endpoint itself re-checks real ownership.
+const session = report ? await getPageSession(db, Astro.request) : null;
+const agencyBrandingAllowed = session
+  ? (await getPlan(db, session.user.planId)).agencyBrandingEnabled
+  : false;
+---
+
+<MarketingLayout
+  title={report
+    ? `${report.domain} — AI crawler policy report | CrawlPact`
+    : "Audit report | CrawlPact"}
+  description="AI crawler policy audit report."
+  noindex={true}
+>
+  <div class="mx-auto max-w-[960px] px-4 py-16 sm:px-6">
+    {
+      report ? (
+        <div class="flex flex-col gap-6">
+          {session && (
+            <div class="no-print flex justify-end">
+              <ShareReportDialog
+                client:load
+                auditId={report.auditId}
+                agencyBrandingAllowed={agencyBrandingAllowed}
+              />
+            </div>
+          )}
+          <AuditReportView
+            client:load
+            report={report}
+            proposedRobotsText={proposedRobotsText}
+            diffLines={diffLines}
+            focus={focus}
+          />
+        </div>
+      ) : (
+        <ErrorState
+          client:load
+          title="This report is not available"
+          description={`Audit "${auditId}" does not exist, or has not completed. Run a new audit to generate a report.`}
+        />
+      )
+    }
+  </div>
+</MarketingLayout>

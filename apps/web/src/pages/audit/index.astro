@@ -1,0 +1,49 @@
+---
+export const prerender = true;
+import MarketingLayout from "../../layouts/MarketingLayout.astro";
+import { AuditForm } from "../../components/AuditForm";
+---
+
+<MarketingLayout
+  title="Free AI Crawler Policy Audit | CrawlPact"
+  description="Run a free audit of your website's declared AI crawler policy. No account or installation required."
+>
+  <div class="mx-auto max-w-[720px] px-4 py-16 text-center sm:px-6">
+    <h1 class="text-h1 text-neutral-950">Audit your website's AI crawler policy</h1>
+    <p class="mt-4 text-body-lg text-neutral-700">
+      Enter a public domain or URL. No account, installation, or server-log access required.
+    </p>
+    <div class="mt-8 flex justify-center">
+      <AuditForm client:load idPrefix="audit-page" />
+    </div>
+
+    <div class="mt-12 grid gap-4 text-left sm:grid-cols-2">
+      {
+        [
+          "Validating target",
+          "Checking reachability",
+          "Retrieving policy resources",
+          "Parsing directives",
+          "Evaluating crawlers",
+          "Checking additional signals",
+          "Generating findings",
+          "Preparing the report",
+        ].map((stage, index) => (
+          <div class="flex items-center gap-3 rounded-control border border-neutral-200 px-3 py-2.5">
+            <span class="flex size-6 items-center justify-center rounded-full border border-neutral-300 text-metadata text-neutral-500">
+              {index + 1}
+            </span>
+            <span class="text-body text-neutral-700">{stage}</span>
+          </div>
+        ))
+      }
+    </div>
+    <p class="mt-6 text-supporting text-neutral-500">
+      See <a href="/scanner" class="text-brand-700 underline underline-offset-2"
+        >scanner information</a
+      >
+      and <a href="/limitations" class="text-brand-700 underline underline-offset-2">limitations</a
+      >.
+    </p>
+  </div>
+</MarketingLayout>

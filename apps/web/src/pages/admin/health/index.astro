@@ -1,0 +1,23 @@
+---
+export const prerender = false;
+import AdminLayout from "../../../layouts/AdminLayout.astro";
+import AdminPageHeader from "../../../components/admin/AdminPageHeader.astro";
+import { HealthOverview } from "../../../components/admin/HealthOverview";
+import { createDb } from "@crawlpact/database";
+import { getEnv } from "../../../lib/env";
+import { getAdminPageSession } from "../../../lib/auth/require-admin";
+
+const db = createDb(getEnv().DB);
+const admin = await getAdminPageSession(Astro.request, db);
+if (!admin) return Astro.redirect("/sign-in");
+---
+
+<AdminLayout title="System health" displayName={admin.user.displayName}>
+  <AdminPageHeader
+    title="System health"
+    description="Real, data-derived status per component — never a hardcoded 'all good' (SRS §28.10)."
+  />
+  <div class="mt-6">
+    <HealthOverview client:load />
+  </div>
+</AdminLayout>

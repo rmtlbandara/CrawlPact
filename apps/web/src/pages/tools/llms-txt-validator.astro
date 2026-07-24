@@ -1,0 +1,26 @@
+---
+export const prerender = true;
+import MarketingLayout from "../../layouts/MarketingLayout.astro";
+import { AuditForm } from "../../components/AuditForm";
+---
+
+<MarketingLayout
+  title="llms.txt Validator | Free Tool | CrawlPact"
+  description="Validate llms.txt and llms-full.txt structure, status, and linked resources for a domain."
+  breadcrumbs={[
+    { name: "Free tools", url: "/tools" },
+    { name: "llms.txt validator", url: "/tools/llms-txt-validator" },
+  ]}
+>
+  <div class="mx-auto max-w-[720px] px-4 py-16 text-center sm:px-6">
+    <h1 class="text-h1 text-neutral-950">llms.txt validator</h1>
+    <p class="mt-4 text-body-lg text-neutral-700">
+      Enter a domain to check for <code>/llms.txt</code> and <code>/llms-full.txt</code>, including
+      file size, whether a top-level Markdown heading is present, and linked resources. A missing
+      file is informational, not critical.
+    </p>
+    <div class="mt-8 flex justify-center">
+      <AuditForm client:load idPrefix="llms-txt-validator" focus="llms" />
+    </div>
+  </div>
+</MarketingLayout>

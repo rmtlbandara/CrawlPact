@@ -1,0 +1,154 @@
+---
+import { getAdminEnvironment } from "../../lib/admin/environment";
+import { SignOutButton } from "../auth/SignOutButton";
+
+export type Props = { displayName: string };
+const { displayName } = Astro.props;
+
+const env = getAdminEnvironment();
+const envToneClass =
+  env.label === "Production"
+    ? "bg-success-bg text-success"
+    : env.label === "Paddle Sandbox"
+      ? "bg-warning-bg text-warning"
+      : "bg-info-bg text-info";
+
+const groups: { heading: string; links: { label: string; href: string }[] }[] = [
+  {
+    heading: "Overview",
+    links: [
+      { label: "Global dashboard", href: "/admin" },
+      { label: "System health", href: "/admin/health" },
+    ],
+  },
+  {
+    heading: "Customers",
+    links: [
+      { label: "Users", href: "/admin/users" },
+      { label: "Subscriptions", href: "/admin/subscriptions" },
+      { label: "Transactions", href: "/admin/transactions" },
+      { label: "Entitlements", href: "/admin/entitlements" },
+      { label: "Webhooks", href: "/admin/webhooks" },
+    ],
+  },
+  {
+    heading: "Product operations",
+    links: [
+      { label: "Domains", href: "/admin/domains" },
+      { label: "Scans", href: "/admin/scans" },
+      { label: "Scheduled jobs", href: "/admin/jobs" },
+      { label: "Shared reports", href: "/admin/shared-reports" },
+    ],
+  },
+  {
+    heading: "Crawler intelligence",
+    links: [
+      { label: "Operators", href: "/admin/registry/operators" },
+      { label: "Crawlers", href: "/admin/registry/crawlers" },
+      { label: "Registry releases", href: "/admin/registry/releases" },
+      { label: "Ruleset releases", href: "/admin/registry/rulesets" },
+      { label: "Finding analytics", href: "/admin/findings" },
+    ],
+  },
+  {
+    heading: "Security",
+    links: [
+      { label: "Security events", href: "/admin/security" },
+      { label: "Blocked targets", href: "/admin/blocked-targets" },
+      { label: "Audit logs", href: "/admin/audit-logs" },
+    ],
+  },
+  {
+    heading: "Configuration",
+    links: [
+      { label: "Plans", href: "/admin/plans" },
+      { label: "Runtime settings", href: "/admin/settings" },
+      { label: "System notices", href: "/admin/notices" },
+    ],
+  },
+];
+
+const currentPath = Astro.url.pathname;
+function isActive(href: string): boolean {
+  return href === "/admin" ? currentPath === "/admin" : currentPath.startsWith(href);
+}
+---
+
+<div class="flex min-h-screen">
+  <aside
+    class="hidden w-64 shrink-0 flex-col border-r border-neutral-800 bg-neutral-950 lg:flex"
+    aria-label="Super Admin navigation"
+  >
+    <div class="flex items-center gap-2 border-b border-neutral-800 px-4 py-4">
+      <a href="/admin" class="text-body font-semibold text-white">CrawlPact</a>
+      <span
+        class="rounded-pill bg-neutral-800 px-2 py-0.5 text-caption font-medium text-neutral-300"
+      >
+        Admin
+      </span>
+    </div>
+    <nav class="flex-1 overflow-y-auto px-2 py-4">
+      {
+        groups.map((group) => (
+          <div class="mb-5">
+            <p class="px-2 text-caption font-semibold uppercase tracking-wide text-neutral-500">
+              {group.heading}
+            </p>
+            <ul class="mt-1.5 flex flex-col gap-0.5">
+              {group.links.map((link) => (
+                <li>
+                  <a
+                    href={link.href}
+                    aria-current={isActive(link.href) ? "page" : undefined}
+                    class={`block rounded-control px-2.5 py-1.5 text-supporting font-medium ${
+                      isActive(link.href)
+                        ? "bg-brand-900 text-white"
+                        : "text-neutral-400 hover:bg-neutral-900 hover:text-neutral-100"
+                    }`}
+                  >
+                    {link.label}
+                  </a>
+                </li>
+              ))}
+            </ul>
+          </div>
+        ))
+      }
+    </nav>
+  </aside>
+
+  <div class="flex min-w-0 flex-1 flex-col">
+    <header class="border-b border-neutral-200 bg-white">
+      <div class="flex items-center justify-between gap-4 px-4 py-3 sm:px-6">
+        <div class="flex items-center gap-3">
+          <span
+            class={`rounded-pill px-2.5 py-1 text-supporting font-semibold ${envToneClass}`}
+            title={`App environment: ${env.appEnv} · Paddle: ${env.paddleEnvironment}`}
+          >
+            {env.label}
+          </span>
+          <a href="/" class="text-supporting text-neutral-500 hover:text-neutral-800">
+            ← Back to public site
+          </a>
+        </div>
+        <div class="flex items-center gap-3">
+          <span class="text-supporting text-neutral-600">{displayName}</span>
+          <a
+            href="/app"
+            class="rounded-control border border-neutral-300 px-3 py-1.5 text-supporting font-medium text-neutral-700 hover:bg-neutral-50"
+          >
+            Customer view
+          </a>
+          <SignOutButton client:load />
+        </div>
+      </div>
+    </header>
+    <main
+      id="main-content"
+      tabindex="-1"
+      class="mx-auto w-full max-w-[1400px] flex-1 px-4 py-8 sm:px-6"
+    >
+      <slot />
+    </main>
+  </div>
+</div>

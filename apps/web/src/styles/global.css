@@ -1,0 +1,26 @@
+/* Single global stylesheet. Tokens are the source of truth (packages/ui). */
+@import "@crawlpact/ui/src/tokens/tokens.css";
+
+/* Ensure Tailwind's content scanner covers the UI package even if a given
+   deploy environment's auto-detection heuristics don't reach outside
+   apps/web (monorepo safety net — see docs/design/DESIGN_SYSTEM.md). */
+@source "../../../../packages/ui/src";
+
+/* Print support (SRS §10.30 print-ready reports; Part 3 Step 17/18).
+   `.no-print` hides chrome (nav, footer, interactive controls) that has no
+   meaning on paper; report content prints in normal document flow using
+   the same real markup shown on screen — nothing is fabricated or
+   re-rendered specially for print. */
+@media print {
+  .no-print {
+    display: none !important;
+  }
+  a[href^="http"]::after {
+    content: " (" attr(href) ")";
+    font-size: 0.85em;
+    color: #555;
+  }
+  body {
+    background: #fff;
+  }
+}

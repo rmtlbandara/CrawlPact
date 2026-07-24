@@ -1,0 +1,81 @@
+{
+  "$schema": "node_modules/wrangler/config-schema.json",
+  "name": "crawlpact-web",
+  "main": "./src/worker.ts",
+  "compatibility_date": "2026-07-01",
+  "compatibility_flags": ["nodejs_compat"],
+  "assets": {
+    "directory": "./dist",
+    "binding": "ASSETS",
+  },
+  "d1_databases": [
+    {
+      "binding": "DB",
+      "database_name": "crawlpact-db",
+      // Replace with the real database ID after `wrangler d1 create crawlpact-db`.
+      // See docs/deployment/CLOUDFLARE_CONFIGURATION.md. Local development and
+      // CI never need a real ID — `--local` uses an on-disk sqlite file.
+      "database_id": "00000000-0000-0000-0000-000000000000",
+      "migrations_dir": "../../packages/database/migrations",
+    },
+  ],
+  "triggers": {
+    // Daily at 03:00 UTC. Drives both the monitoring sweep (lib/monitoring.ts
+    // — re-scans domains whose monthly/weekly schedule is due) and the data
+    // retention purge (lib/data-retention.ts) — see src/worker.ts's
+    // `scheduled()` export.
+    "crons": ["0 3 * * *"],
+  },
+  "vars": {
+    "PUBLIC_APP_ENV": "production",
+    "PUBLIC_SITE_URL": "https://crawlpact.com",
+    "PADDLE_ENVIRONMENT": "production",
+    "AUDIT_ENGINE_ENABLED": "false",
+    // WebAuthn is not optional config — the browser strictly validates
+    // `rpId`/origin against the page it's actually served from, so without
+    // these matching the real deployed domain, every passkey ceremony
+    // (registration and login) fails outright, for every user. Not a
+    // secret (it's just the domain name), so it belongs in `vars`, not
+    // `wrangler secret put` — found missing from this file entirely during
+    // Part 3 Step 26's production configuration prep.
+    "WEBAUTHN_RP_ID": "crawlpact.com",
+    "WEBAUTHN_RP_ORIGIN": "https://crawlpact.com",
+  },
+  "env": {
+    "preview": {
+      // Distinct D1 database from production (SRS §28.20/§33: "separate
+      // production and preview access" — found missing during Part 3 Step
+      // 23/24's audit, since env.preview previously only overrode `vars`
+      // and silently inherited the top-level `d1_databases` block, meaning
+      // preview traffic — including admin testing — would read/write real
+      // production data). Create with
+      // `wrangler d1 create crawlpact-db-preview` and replace the
+      // placeholder below, same as the production database above; never
+      // reuse the production database_id here.
+      "d1_databases": [
+        {
+          "binding": "DB",
+          "database_name": "crawlpact-db-preview",
+          "database_id": "00000000-0000-0000-0000-000000000000",
+          "migrations_dir": "../../packages/database/migrations",
+        },
+      ],
+      "vars": {
+        "PUBLIC_APP_ENV": "preview",
+        // Placeholder — replace with the real preview URL (e.g. the
+        // `*.workers.dev` subdomain Cloudflare assigns, or a dedicated
+        // preview custom domain) once one exists. Left equal to production
+        // here, this environment's CSRF Origin check, Atom feed URLs, and
+        // share links would silently reference the production domain
+        // instead of wherever preview is actually served.
+        "PUBLIC_SITE_URL": "https://preview.crawlpact.com",
+        // Must match whatever PUBLIC_SITE_URL above actually resolves to
+        // once a real preview domain exists — same reasoning as production.
+        "WEBAUTHN_RP_ID": "preview.crawlpact.com",
+        "WEBAUTHN_RP_ORIGIN": "https://preview.crawlpact.com",
+        "PADDLE_ENVIRONMENT": "sandbox",
+        "AUDIT_ENGINE_ENABLED": "false",
+      },
+    },
+  },
+}

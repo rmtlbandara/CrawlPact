@@ -1,0 +1,23 @@
+---
+export const prerender = false;
+import AdminLayout from "../../../layouts/AdminLayout.astro";
+import AdminPageHeader from "../../../components/admin/AdminPageHeader.astro";
+import { SubscriptionsManager } from "../../../components/admin/SubscriptionsManager";
+import { createDb } from "@crawlpact/database";
+import { getEnv } from "../../../lib/env";
+import { getAdminPageSession } from "../../../lib/auth/require-admin";
+
+const db = createDb(getEnv().DB);
+const admin = await getAdminPageSession(Astro.request, db);
+if (!admin) return Astro.redirect("/sign-in");
+---
+
+<AdminLayout title="Subscriptions" displayName={admin.user.displayName}>
+  <AdminPageHeader
+    title="Subscriptions"
+    description="All Paddle subscriptions, entitlement mismatches, and sync errors (SRS §28.5)."
+  />
+  <div class="mt-6">
+    <SubscriptionsManager client:load />
+  </div>
+</AdminLayout>

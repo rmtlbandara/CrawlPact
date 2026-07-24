@@ -1,0 +1,19 @@
+---
+import BaseLayout from "./BaseLayout.astro";
+import AdminNav from "../components/admin/AdminNav.astro";
+
+export type Props = { title: string; displayName: string };
+const { title, displayName } = Astro.props;
+---
+
+<BaseLayout
+  title={`${title} | CrawlPact Admin`}
+  description="CrawlPact Super Admin."
+  noindex={true}
+>
+  <div class="min-h-screen bg-neutral-50">
+    <AdminNav displayName={displayName}>
+      <slot />
+    </AdminNav>
+  </div>
+</BaseLayout>

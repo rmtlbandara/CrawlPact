@@ -1,0 +1,17 @@
+---
+export const prerender = false;
+import AppLayout from "../../../layouts/AppLayout.astro";
+import { NotificationsManager } from "../../../components/app/NotificationsManager";
+import { createDb } from "@crawlpact/database";
+import { getEnv } from "../../../lib/env";
+import { getPageSession } from "../../../lib/auth/page-session";
+
+const db = createDb(getEnv().DB);
+const result = await getPageSession(db, Astro.request);
+if (!result) return Astro.redirect("/sign-in");
+const { user } = result;
+---
+
+<AppLayout title="Notifications" displayName={user.displayName}>
+  <NotificationsManager client:load />
+</AppLayout>

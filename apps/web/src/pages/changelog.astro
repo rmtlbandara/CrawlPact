@@ -1,0 +1,90 @@
+---
+export const prerender = false;
+import MarketingLayout from "../layouts/MarketingLayout.astro";
+import { createDb, schema } from "@crawlpact/database";
+import { isNotNull, desc } from "drizzle-orm";
+import { getEnv } from "../lib/env";
+
+const db = createDb(getEnv().DB);
+const registryReleases = await db
+  .select()
+  .from(schema.registryVersions)
+  .where(isNotNull(schema.registryVersions.publishedAt))
+  .orderBy(desc(schema.registryVersions.publishedAt));
+
+/**
+ * Real product milestones. Unlike the registry changelog above, there is no
+ * database table for product releases (SRS doesn't define one) — this is a
+ * hand-maintained, factual list of what actually shipped in this
+ * repository, updated as part of each part/step's own work, never
+ * backfilled with invented dates or features.
+ */
+const productEntries = [
+  {
+    date: "2026-07-22",
+    title: "Engineering foundation and public audit (Part 1)",
+    body: "Repository governance, architecture decisions, design system, database schema, the public website shell, the safe-fetch scanner chokepoint, robots.txt parsing, and the initial crawler registry were established.",
+  },
+  {
+    date: "2026-07-23",
+    title: "Policy engine, accounts, monitoring, and billing (Part 2)",
+    body: "The Policy Health Score, conflict detection, findings, presets, passkey accounts, scheduled monitoring with semantic-drift detection, notifications, and Paddle billing shipped, making CrawlPact a real, usable product rather than a landing page.",
+  },
+  {
+    date: "2026-07-24",
+    title: "Super Admin, agency features, and SEO content (Part 3, in progress)",
+    body: "A full Super Admin control center (users, subscriptions, webhooks, domains/scans, scheduler health, registry/ruleset administration, findings analytics, security operations, runtime configuration), agency batch import and report branding, an expanded public crawler directory, and genuinely scoped free tools shipped.",
+  },
+];
+---
+
+<MarketingLayout
+  title="Changelog | CrawlPact"
+  description="Product changelog and crawler registry release notes for CrawlPact."
+>
+  <article class="mx-auto max-w-[720px] px-4 py-12 sm:px-6">
+    <h1 class="text-h1 text-neutral-950">Changelog</h1>
+    <p class="mt-3 text-body text-neutral-700">
+      Two separate kinds of change are tracked here. A registry release reflects new information
+      about crawlers — it is never a change to your website (FR-REG-009/010). A product entry
+      reflects a change to CrawlPact itself.
+    </p>
+
+    <h2 class="mt-10 text-h3 text-neutral-950">Registry releases</h2>
+    <p class="mt-2 text-supporting text-neutral-600">
+      See <a href="/methodology" class="text-brand-700 underline underline-offset-2">methodology</a> for
+      how registry entries are verified, and the
+      <a href="/crawlers" class="text-brand-700 underline underline-offset-2">crawler directory</a> for
+      current entries.
+    </p>
+    <ol class="mt-6 flex flex-col gap-6 border-l border-neutral-200 pl-6">
+      {
+        registryReleases.map((release) => (
+          <li>
+            <p class="text-supporting text-neutral-500">
+              {release.publishedAt && new Date(release.publishedAt).toLocaleDateString()}
+            </p>
+            <h3 class="mt-1 text-card-heading text-neutral-950">
+              Registry {release.versionLabel}
+              {release.isActive && <span class="ml-2 text-supporting text-success">(active)</span>}
+            </h3>
+            <p class="mt-1.5 text-body text-neutral-700">{release.changelog}</p>
+          </li>
+        ))
+      }
+    </ol>
+
+    <h2 class="mt-12 text-h3 text-neutral-950">Product</h2>
+    <ol class="mt-6 flex flex-col gap-6 border-l border-neutral-200 pl-6">
+      {
+        productEntries.map((entry) => (
+          <li>
+            <p class="text-supporting text-neutral-500">{entry.date}</p>
+            <h3 class="mt-1 text-card-heading text-neutral-950">{entry.title}</h3>
+            <p class="mt-1.5 text-body text-neutral-700">{entry.body}</p>
+          </li>
+        ))
+      }
+    </ol>
+  </article>
+</MarketingLayout>

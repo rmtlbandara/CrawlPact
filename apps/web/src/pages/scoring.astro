@@ -1,0 +1,82 @@
+---
+export const prerender = true;
+import MarketingLayout from "../layouts/MarketingLayout.astro";
+
+const weights = [
+  { category: "Resource availability and validity", weight: "15%" },
+  { category: "Syntax and deterministic evaluation", weight: "20%" },
+  { category: "Business-objective alignment", weight: "30%" },
+  { category: "Cross-signal consistency", weight: "15%" },
+  { category: "Registry freshness and explicitness", weight: "10%" },
+  { category: "Monitoring and change risk", weight: "10%" },
+];
+
+const labels = [
+  { range: "90–100", label: "Strong" },
+  { range: "75–89", label: "Good" },
+  { range: "50–74", label: "Needs attention" },
+  { range: "25–49", label: "Weak" },
+  { range: "0–24", label: "Critical" },
+  { range: "—", label: "Incomplete (insufficient evidence)" },
+];
+---
+
+<MarketingLayout
+  title="Policy Health Score Methodology | CrawlPact"
+  description="How CrawlPact's Policy Health Score is weighted and labelled, and why it is not a compliance, legal, or security score."
+>
+  <article class="mx-auto max-w-[720px] px-4 py-12 sm:px-6">
+    <h1 class="text-h1 text-neutral-950">Policy Health Score</h1>
+    <p class="mt-4 text-body-lg text-neutral-700">
+      The Policy Health Score ranges from 0 to 100 when sufficient evidence is available. It is not
+      a compliance score, a legal score, a security score, or a protection score — it is a weighted
+      summary of how well a website's declared AI crawler policy matches its selected objective.
+    </p>
+
+    <h2 class="mt-8 text-h2 text-neutral-950">Weighting</h2>
+    <table class="mt-4 w-full border-collapse text-left text-body">
+      <thead>
+        <tr class="border-b border-neutral-200 text-supporting font-medium text-neutral-600">
+          <th scope="col" class="py-2">Category</th>
+          <th scope="col" class="py-2">Weight</th>
+        </tr>
+      </thead>
+      <tbody class="divide-y divide-neutral-100">
+        {
+          weights.map((row) => (
+            <tr>
+              <td class="py-2 text-neutral-800">{row.category}</td>
+              <td class="py-2 font-medium text-neutral-900">{row.weight}</td>
+            </tr>
+          ))
+        }
+      </tbody>
+    </table>
+
+    <h2 class="mt-8 text-h2 text-neutral-950">Labels</h2>
+    <table class="mt-4 w-full border-collapse text-left text-body">
+      <thead>
+        <tr class="border-b border-neutral-200 text-supporting font-medium text-neutral-600">
+          <th scope="col" class="py-2">Score</th>
+          <th scope="col" class="py-2">Label</th>
+        </tr>
+      </thead>
+      <tbody class="divide-y divide-neutral-100">
+        {
+          labels.map((row) => (
+            <tr>
+              <td class="py-2 font-mono text-neutral-800">{row.range}</td>
+              <td class="py-2 text-neutral-900">{row.label}</td>
+            </tr>
+          ))
+        }
+      </tbody>
+    </table>
+
+    <h2 class="mt-8 text-h2 text-neutral-950">When there is not enough evidence</h2>
+    <p class="mt-3 text-body text-neutral-700">
+      When a scan cannot retrieve enough policy resources to evaluate confidently, CrawlPact shows
+      "Incomplete" rather than a misleading number — never a gauge that implies false precision.
+    </p>
+  </article>
+</MarketingLayout>

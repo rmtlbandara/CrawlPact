@@ -1,0 +1,30 @@
+---
+export const prerender = true;
+import MarketingLayout from "../../layouts/MarketingLayout.astro";
+import { AuditForm } from "../../components/AuditForm";
+---
+
+<MarketingLayout
+  title="Robots.txt AI Validator | Free Tool | CrawlPact"
+  description="Validate robots.txt syntax and AI-crawler-specific user-agent groups against RFC 9309 behaviour."
+  breadcrumbs={[
+    { name: "Free tools", url: "/tools" },
+    { name: "Robots.txt AI validator", url: "/tools/robots-txt-ai-validator" },
+  ]}
+>
+  <div class="mx-auto max-w-[720px] px-4 py-16 text-center sm:px-6">
+    <h1 class="text-h1 text-neutral-950">Robots.txt AI validator</h1>
+    <p class="mt-4 text-body-lg text-neutral-700">
+      Enter a domain to validate its <code>robots.txt</code> — including duplicate groups, overly broad
+      wildcard blocks, and other syntax issues — with the exact matched rule and line number for each
+      documented AI crawler.
+    </p>
+    <div class="mt-8 flex justify-center">
+      <AuditForm client:load idPrefix="robots-txt-validator" focus="robots" />
+    </div>
+    <p class="mt-6 text-supporting text-neutral-500">
+      See <a href="/methodology" class="text-brand-700 underline underline-offset-2">methodology</a> for
+      parsing rules.
+    </p>
+  </div>
+</MarketingLayout>

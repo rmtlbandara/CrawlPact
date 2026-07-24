@@ -1,0 +1,23 @@
+---
+export const prerender = false;
+import AdminLayout from "../../../layouts/AdminLayout.astro";
+import AdminPageHeader from "../../../components/admin/AdminPageHeader.astro";
+import { WebhooksManager } from "../../../components/admin/WebhooksManager";
+import { createDb } from "@crawlpact/database";
+import { getEnv } from "../../../lib/env";
+import { getAdminPageSession } from "../../../lib/auth/require-admin";
+
+const db = createDb(getEnv().DB);
+const admin = await getAdminPageSession(Astro.request, db);
+if (!admin) return Astro.redirect("/sign-in");
+---
+
+<AdminLayout title="Webhooks" displayName={admin.user.displayName}>
+  <AdminPageHeader
+    title="Paddle webhooks"
+    description="Every received webhook event, its processing status, and a safe, idempotent retry (SRS §28.7)."
+  />
+  <div class="mt-6">
+    <WebhooksManager client:load />
+  </div>
+</AdminLayout>

@@ -1,0 +1,46 @@
+---
+export const prerender = false;
+import MarketingLayout from "../../layouts/MarketingLayout.astro";
+import { ErrorState } from "@crawlpact/ui";
+import { AuditReportView } from "../../components/AuditReportView";
+import { createDb } from "@crawlpact/database";
+import { getEnv } from "../../lib/env";
+import { getShareForToken } from "../../lib/sharing";
+import { loadReportViewData } from "../../lib/report-view-data";
+
+const { token } = Astro.params;
+
+const db = createDb(getEnv().DB);
+const share = token ? await getShareForToken(db, token) : null;
+const { report, diffLines, proposedRobotsText } = share
+  ? await loadReportViewData(db, share.scanId)
+  : { report: null, diffLines: null, proposedRobotsText: null };
+---
+
+<MarketingLayout
+  title={report
+    ? `${report.domain} — Shared AI crawler policy report | CrawlPact`
+    : "Shared report | CrawlPact"}
+  description="A shared AI crawler policy report."
+  noindex={true}
+>
+  <div class="mx-auto max-w-[960px] px-4 py-16 sm:px-6">
+    {
+      report ? (
+        <AuditReportView
+          client:load
+          report={report}
+          proposedRobotsText={proposedRobotsText}
+          diffLines={diffLines}
+          agencyBranding={share?.agencyBranding ?? null}
+        />
+      ) : (
+        <ErrorState
+          client:load
+          title="This shared link is not available"
+          description="This link has expired, been revoked, or never existed."
+        />
+      )
+    }
+  </div>
+</MarketingLayout>

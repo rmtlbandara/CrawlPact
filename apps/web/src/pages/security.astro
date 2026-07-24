@@ -1,0 +1,48 @@
+---
+export const prerender = true;
+import MarketingLayout from "../layouts/MarketingLayout.astro";
+---
+
+<MarketingLayout
+  title="Security | CrawlPact"
+  description="How CrawlPact protects against SSRF, isolates the scanner, verifies Paddle webhooks, and handles authentication and session security."
+>
+  <article class="mx-auto max-w-[720px] px-4 py-12 sm:px-6">
+    <h1 class="text-h1 text-neutral-950">Security</h1>
+
+    <h2 class="mt-8 text-h2 text-neutral-950">Scanning safety</h2>
+    <p class="mt-3 text-body text-neutral-700">
+      CrawlPact only fetches public HTTP/HTTPS resources you specify. All outbound requests pass
+      through a single safe-fetch module that rejects private, loopback, link-local, reserved, and
+      cloud-metadata addresses, rejects literal IP targets, revalidates every redirect destination,
+      and enforces timeouts, size limits, and a request cap per scan. See
+      <a href="/scanner" class="text-brand-700 underline underline-offset-2">scanner information</a
+      >.
+    </p>
+
+    <h2 class="mt-8 text-h2 text-neutral-950">Authentication</h2>
+    <p class="mt-3 text-body text-neutral-700">
+      CrawlPact uses passkeys (WebAuthn) exclusively — no passwords, and no email or SMS in the
+      authentication or recovery path. Sessions are server-side records that can be individually
+      reviewed and revoked.
+    </p>
+
+    <h2 class="mt-8 text-h2 text-neutral-950">Billing</h2>
+    <p class="mt-3 text-body text-neutral-700">
+      Paddle is the billing system of record. Every inbound Paddle webhook is signature-verified
+      before processing, and duplicate or out-of-order events are handled idempotently.
+    </p>
+
+    <h2 class="mt-8 text-h2 text-neutral-950">Administrative access</h2>
+    <p class="mt-3 text-body text-neutral-700">
+      Super Admin actions require an assigned admin role, recent authentication for sensitive
+      actions, and are recorded in an append-only audit log with a reason, actor, and affected
+      target.
+    </p>
+
+    <h2 class="mt-8 text-h2 text-neutral-950">Reporting a vulnerability</h2>
+    <p class="mt-3 text-body text-neutral-700">
+      See <code>SECURITY.md</code> in the project repository for how to report a security issue.
+    </p>
+  </article>
+</MarketingLayout>

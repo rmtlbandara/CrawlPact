@@ -1,0 +1,203 @@
+# Known Risks
+
+Honest list of what could bite the project next, and gaps that are deferred rather than
+silently dropped. Update this whenever a risk is discovered, mitigated, or accepted.
+
+**Updated during Part 3 Step 23** (2026-07-24).
+
+## Deferred by design (not bugs — scope boundaries of Part 2)
+
+Resolved in Part 3 (kept here for history, not because they're still open): Super Admin Control
+Center (Steps 1–11), agency-specific UX beyond basic domain groups (Step 12), SEO content below
+the SRS §30.4 minimum (Steps 13–16, see `docs/seo/SEO_CONTENT_GOVERNANCE.md`), and admin UI for
+`blocked_targets`/`temporary_entitlements`/webhook retry (Steps 4–6).
+
+| Risk                                                 | Why deferred                                                                 | Revisit when                  |
+| ---------------------------------------------------- | ---------------------------------------------------------------------------- | ----------------------------- |
+| No production Cloudflare or Paddle account connected | Nothing in this repo has been deployed or tested against real infrastructure | Deployment authorised by user |
+
+## Real open risks (not just "not built yet")
+
+| Risk                                                                                                        | Impact                                                                                                                                                                                                                                                                                                                                                 | Mitigation status                                                                                                                                                                                                                                     |
+| ----------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| **CrawlPact's real workload likely exceeds the Cloudflare Workers free-tier CPU budget (10ms/request)**     | A free-tier deployment would probably fail/throttle on real audit scans (several sequential fetches + parsing + multiple D1 writes is real CPU work)                                                                                                                                                                                                   | Documented expectation based on verified, live-fetched Cloudflare limits, not yet measured against a real deployed Worker (no production account connected) — see `docs/performance/PERFORMANCE_AND_COST.md`; verify during Step 26/launch smoke test |
+| **Admin list pagination is designed (contract + UI component) but not wired to any admin page**             | An operator cannot page past a fixed top-N/limit ceiling on any admin list view                                                                                                                                                                                                                                                                        | Interim mitigation: every admin list query now has a hard `.limit()` ceiling so growth can't make a page load unbounded; full pagination UI wiring is real follow-up work — see `docs/performance/PERFORMANCE_AND_COST.md`                            |
+| **No `Cache-Control`/caching layer for anonymous or SSR content**                                           | Every request (including anonymous audit results and public marketing pages) hits SSR/D1 fresh                                                                                                                                                                                                                                                         | Documented, not yet implemented — see `docs/performance/PERFORMANCE_AND_COST.md`                                                                                                                                                                      |
+| **Paddle API field-shape fidelity is unverified against a live account**                                    | If Paddle's real payload field names differ from the public docs this code was built against, webhook processing could silently misparse fields                                                                                                                                                                                                        | Signature verification, idempotency, and the state machine are proven correct against self-generated fixtures of the assumed shape; needs a real-sandbox smoke test before launch — see `docs/security/BILLING_SECURITY.md`                           |
+| **DNS rebinding against the scanner's own resolution check is not fully closable**                          | A resolved-then-validated IP is not provably the IP the subsequent `fetch()` connects to, on Cloudflare Workers' current API                                                                                                                                                                                                                           | Defence-in-depth (per-scan limits, no cookie jar, no script execution) bounds the blast radius; not eliminated — see ADR-0005 and `docs/security/SSRF_SECURITY_MODEL.md`                                                                              |
+| **CSP allows `'unsafe-inline'` for scripts/styles**                                                         | Reduces (doesn't eliminate) the CSP's XSS mitigation value                                                                                                                                                                                                                                                                                             | Astro island hydration + Tailwind's runtime both need it today; per-request nonce plumbing is unbuilt, tracked in `docs/security/THREAT_MODEL.md`                                                                                                     |
+| **CSRF defence is Origin/Referer-based, fails closed on missing headers**                                   | A legitimate privacy-hardened client that strips both headers would be rejected (safe, but a false positive)                                                                                                                                                                                                                                           | Accepted tradeoff, tested (`csrf.integration.test.ts`); no known real client is affected today                                                                                                                                                        |
+| **No cross-request target-frequency abuse monitoring**                                                      | A distributed set of anonymous callers (many IPs) could still direct many small in-bounds scans at one target — only per-caller limits exist                                                                                                                                                                                                           | Tracked for Super Admin tooling (Part 3)                                                                                                                                                                                                              |
+| **Billing records (`transactions`, `webhook_events`) have no retention/purge job**                          | Indefinite storage of billing history; SRS leaves the exact retention window to "legally and operationally required," undecided                                                                                                                                                                                                                        | Needs a real decision (finance-adjacent), not an arbitrary cutoff invented unilaterally — `docs/data/DATA_RETENTION.md`                                                                                                                               |
+| **Admin subscriptions/transactions list views hide rows whose account was later deleted**                   | `lib/admin/subscriptions.ts` uses `INNER JOIN` to `users` for the owner's name; a billing customer with `user_id = NULL` (post account-deletion, since Part 3 Step 21's fix) won't appear in `/admin/subscriptions`/`/admin/transactions`, even though the row itself is intact and directly queryable                                                 | Real, disclosed follow-on gap from the Step 21 fix, not addressed in the same pass — would need `LEFT JOIN` + null-safe owner display in both the lib functions and their React components — `docs/data/DATA_RETENTION.md`                            |
+| **Bingbot (`crw_bingbot`) has a registry row but no public directory page**                                 | The public crawler directory is one page short of the full registry (20 of 21)                                                                                                                                                                                                                                                                         | Deliberate, not an oversight — Microsoft's `bingbot` documentation is JS-rendered and could not be fetched/read this pass; add the page once it can be verified against a readable official source — `docs/registry/SOURCE_VERIFICATION_POLICY.md`    |
+| **Visual-regression baseline not wired into CI**                                                            | Real layout regressions on the 13 covered pages/breakpoints won't be caught automatically until this is fixed                                                                                                                                                                                                                                          | Baseline exists locally (macOS-generated); needs a Linux-environment baseline to run safely in the `ubuntu-latest` CI job — see `docs/testing/TEST_STRATEGY.md`                                                                                       |
+| **This repository has zero git commits**                                                                    | All work exists only in the working tree; a lost/corrupted working tree would lose everything                                                                                                                                                                                                                                                          | Not this agent's call to make unilaterally — flagged for the user, not auto-committed                                                                                                                                                                 |
+| **Real Playwright e2e coverage is real but not exhaustive against SRS §35.3's full list**                   | `auth-and-account.spec.ts`/`admin-flows.spec.ts` (Part 3 Step 23) cover passkey registration/sign-in, save-domain-and-scan, account deletion, report printing, and four Super Admin journeys — but scheduled scan, Paddle purchase/portal, agency client report, and keyboard-only/table-filtering beyond subscriptions have no dedicated e2e test yet | Disclosed, prioritised subset (highest-SRS-priority journeys built first); the remainder is real follow-up work, not silently claimed as done — see `docs/testing/TEST_STRATEGY.md`                                                                   |
+| **`wrangler.jsonc` preview `PUBLIC_SITE_URL`/`WEBAUTHN_RP_ID`/`WEBAUTHN_RP_ORIGIN` are still placeholders** | Structurally separate from production now (Step 26 fix), but the actual values (`preview.crawlpact.com`) are placeholders since no real preview domain exists yet — WebAuthn ceremonies will fail on preview specifically until these are updated to the real domain                                                                                   | Not fixable without a real Cloudflare account/domain connected; tracked so it isn't forgotten once one exists — see `docs/deployment/CLOUDFLARE_CONFIGURATION.md`                                                                                     |
+
+## Fixed during Part 2's own quality gate (recorded for context, not currently open)
+
+Found by actually running the tests, not by inspection — kept here so the fixes aren't reverted
+by accident:
+
+- **`persist-scan.ts` primary-key collision on failed robots.txt fetch**: `sourceResourceId` was
+  unconditionally hardcoded to `${scanId}_robots_txt` even when that `scan_resources` row was
+  never inserted (a fully refused robots.txt fetch), causing a downstream collision when the
+  monitoring sweep's failure-fallback path tried to insert a duplicate scan row. Fixed by
+  tracking whether the resource was actually persisted and using that (possibly `null`) value.
+  Found via a monitoring integration test exercising a `target_unavailable` fixture, not by
+  inspection.
+- **CSRF rollout broke ~15 previously-passing integration tests**: adding `assertSameOrigin`
+  correctly rejected the existing tests' raw `new Request(...)` POST/DELETE calls, none of which
+  set an `Origin` header. Fixed systematically (shared `jsonRequest`/`mutatingRequest` test
+  helpers now always set `Origin`) rather than papering over individual failures; confirmed with
+  a dedicated `csrf.integration.test.ts` that the control itself actually works, not just that
+  legitimate requests still pass.
+- **`audit-abuse-prevention.integration.test.ts` first-draft bugs**: a missing admin-user fixture
+  (FK violation on `blocked_targets` insert), a missing `runtime_configuration` seed row in the
+  D1 test harness (rate-limit `UPDATE` silently affected zero rows), and an over-strict status
+  assertion (`target_unavailable` vs. the actual `incomplete`, since `safeFetch` returns a
+  failure object rather than `null` for blocklist rejections). All three fixed; the harness fix
+  (seeding `runtime_configuration`) benefits every future test using that config key.
+- **E2E "mobile navigation menu opens and closes" failed on mobile-safari** (Step 20, first
+  `pnpm test:e2e` run this Part): clicking "Open menu" immediately after `page.goto()` raced
+  `MobileNav`'s `client:idle` React hydration (even lazier than the `client:load` race already
+  documented for the audit form). Root-caused via investigation, not guessed — confirmed the
+  component is Radix's `div`-based dialog, not the native HTML `<dialog>` element, ruling out a
+  WebKit `<dialog>`-quirk explanation. Fixed by adding the same `waitForLoadState("networkidle")`
+  wait already used elsewhere in the same test file.
+- **No enforced total-scan timeout (FR-FET-007) despite ADR-0005/`SSRF_SECURITY_MODEL.md`
+  already documenting one as implemented**: `packages/scanner/src/orchestrator.ts` only enforced
+  a per-resource timeout (20s default); its 5 sequential resource fetches had no overall
+  deadline, so a target slow on multiple resources could take up to ~5× the per-resource
+  timeout. Found by the Step 20 real-domain test (`npr.org` took 104 seconds — see
+  `docs/status/PART2_REAL_DOMAIN_TEST_RESULTS.md`), not by inspection. Fixed by adding a
+  `totalTimeoutMs` budget to `runScan` (default 30s, tunable via the new
+  `scan_total_timeout_seconds` runtime-configuration key), enforced before each resource attempt
+  and capping each fetch's own timeout to whatever budget remains. Verified against the same
+  domain that exposed it: `npr.org` now completes (honestly, as `incomplete`) in 30.5s instead of
+  104s. Covered by a new unit test in `orchestrator.test.ts`.
+- **E2E "shows an honest disabled state" failed against a live-scanner dev server**: not a
+  product bug — the local dev server had `AUDIT_ENGINE_ENABLED=true` (needed for the real-domain
+  scanner test), so the audit form correctly ran a real scan instead of showing the disabled
+  message. Confirmed CI/production default to `false` (`.github/workflows/ci.yml`); re-ran the
+  full e2e/a11y suite against a matching CI-parity environment for a meaningful result, then
+  switched back to `true` for the real-domain test. Superseded in Part 3 (see below): this exact
+  e2e test was removed once CI itself moved to running with the engine enabled.
+
+## Fixed during Part 3 Step 23 (SRS traceability audit + real e2e build-out)
+
+- **`/app` (customer dashboard Overview) crashed with a silent 200-empty-body response for any
+  brand-new, domain-less account** — `apps/web/src/pages/app/index.astro` passed a literal
+  `<a>...</a>` written in Astro template syntax as the React `EmptyState` component's `action`
+  prop. Astro compiles that into its own internal chunk object, not a React element; React's SSR
+  renderer throws ("Objects are not valid as a React child") when it receives one, and the dev
+  server swallowed the exception, returning `200 <html><head></head><body></body></html>` instead
+  of a 500 — invisible to anything checking only status codes. Found because
+  `auth-and-account.spec.ts`'s save-domain-and-scan e2e test is the first thing in this project's
+  history to render `/app` for a real, brand-new, zero-domain account through an actual browser.
+  Fixed by rendering the equivalent markup natively in Astro instead of routing it through a React
+  prop; confirmed no other `.astro` file uses the same `action={<jsx/>}` anti-pattern.
+- **`PRAGMA foreign_keys=OFF` is a no-op inside a D1 migration file** — see
+  `docs/data/MIGRATION_POLICY.md` and `docs/data/DATA_RETENTION.md`'s migration-authoring note;
+  fixed in migrations 0013–0015 by switching to `PRAGMA defer_foreign_keys=ON`.
+- **`db:validate` false-positived on the SQLite table-rebuild pattern**: `scripts/validate-db-schema.mjs`'s
+  lightweight regex parser treated a migration's intermediate `x_new` table (created, populated,
+  then renamed to the real name in the same file — the standard way to change a column's FK
+  behavior) as a real, permanent table with no matching Drizzle schema. Fixed by teaching the
+  parser to fold `ALTER TABLE x_new RENAME TO x` into the target table's column set, the same way
+  it already folds `ALTER TABLE x ADD COLUMN`.
+- **Astro 7's `astro dev` daemonizes by default**, which broke Playwright's own `webServer`
+  process-lifetime expectation locally (`Error: Process from config.webServer exited early`) even
+  though the actual server was healthy — `.github/workflows/ci.yml`'s own pattern (spawn with `&`,
+  poll with `wait-on` against the real HTTP endpoint) is unaffected since it never depends on the
+  spawned process staying in the foreground. Worked around locally by running the dev server
+  manually and pointing Playwright at it (`CI=1`, which sets `webServer: undefined`); not a CI
+  concern.
+- **`e2e-and-a11y`'s CI job never ran `db:migrate`/`db:seed` before starting the dev server** —
+  harmless while e2e only touched public marketing pages (no real DB read needed), but would have
+  broken every authenticated/admin e2e test added this step. Fixed by adding that step before
+  "Start preview server" in `.github/workflows/ci.yml`.
+- **e2e test-setup helpers shelling out to `wrangler d1 execute --local` under real parallel
+  Playwright workers hit transient `SQLITE_BUSY`/lock errors** against the shared local D1 file —
+  confirmed by re-running the exact same failing command standalone immediately afterwards and
+  having it succeed. Fixed with a broad retry-with-backoff wrapper in
+  `tests/e2e/helpers/admin-db.ts` rather than pattern-matching one specific error string (the
+  exact wording varied run to run).
+- **`Date.now()`-only e2e fixture names collided under parallel workers**: two admin-flow e2e
+  tests registering accounts within the same millisecond both matched the wrong user row via
+  `findUserIdByDisplayName`, then hit `admin_role_assignments`' `UNIQUE(user_id, role_id)`
+  constraint trying to grant the same role twice to the same (wrongly-matched) user. Fixed by
+  appending a random suffix to the generated display name.
+- **`grantSuperAdmin` test helper only inserted the `admin_role_assignments` row, not
+  `users.is_admin`** — `login/finish.ts` requires both to set `isAdminSession`, matching
+  `admin-users.integration.test.ts`'s fixture, which the new helper had missed replicating.
+  Fixed by setting both in the same call.
+
+## Fixed during Part 3 Step 26 (production configuration prep)
+
+- **Super Admin accounts had no enforced minimum-two-passkeys requirement (SRS §28.20)** —
+  found during Step 23/24, fixed here: `lib/auth/credentials.ts`'s `removeCredential` now checks
+  the target user's active admin roles and refuses to drop an admin account below 2 registered
+  passkeys (ordinary accounts still only need to keep 1). Proven in both directions by a new
+  `auth-flow.integration.test.ts` case: blocked at exactly 2→1 for an admin, allowed at 3→2,
+  blocked again at 2→1 — and the test explicitly restores the account to non-admin/1-passkey
+  afterward so it doesn't leak state into later tests in the same file (an early draft of this
+  test broke a later "login" test by removing the wrong credential row; fixed by matching on the
+  passkey's label rather than array position).
+- **`env.preview` in `apps/web/wrangler.jsonc` had no distinct D1 database binding** — found
+  during Step 23/24, fixed here: added a separate `d1_databases` block under `env.preview` with
+  its own placeholder `database_id`, never to be set equal to production's.
+- **`env.preview` also had no distinct `PUBLIC_SITE_URL`**, silently inheriting production's —
+  found while fixing the D1 binding above, same root cause (an environment block that only
+  overrides `vars` partially). Would have made preview's CSRF Origin check, Atom feed URLs, and
+  share links reference the production domain. Fixed with a placeholder preview URL, to be
+  replaced with the real one once it exists.
+- **`WEBAUTHN_RP_ID`/`WEBAUTHN_RP_ORIGIN` were never in `wrangler.jsonc` at all** — found while
+  auditing the vars fix above. Without these set to the real deployed domain, passkey
+  registration/login fails outright for every user in production, since the browser strictly
+  validates `rpId`/origin against the actual page origin during the WebAuthn ceremony. This was
+  latent (never triggered locally, since `.dev.vars` already had its own correct values) but
+  would have been a real, total-outage-level bug on first production deploy. Added to both the
+  production and preview `vars` blocks.
+- **SRS §10.43's environment indicator was never built** despite
+  `docs/deployment/ENVIRONMENTS.md` stating it "should" exist "once an authenticated shell exists
+  (Part 3+)" — Part 3's authenticated shell is now complete, so this promise was overdue. Added a
+  persistent, `no-print` banner in `BaseLayout.astro` (covers every page — public, app, and admin,
+  since all three share this layout) reading the same `PUBLIC_APP_ENV` that already drives
+  CSP/HSTS decisions, showing nothing in production and a labelled banner otherwise, exactly
+  matching the SRS's own wording ("Production shall not display a distracting label").
+- **`e2e-and-a11y`'s CI job never ran `db:migrate`/`db:seed`** (already fixed in Step 23, restated
+  here since it's directly relevant to this step's config-correctness theme) — verified again
+  still correct after this step's `wrangler.jsonc` changes.
+
+## Explicitly rejected shortcuts (recorded so they aren't quietly reintroduced later)
+
+- Fabricating a scan result to make the landing page "feel" more complete — rejected in Part 1
+  and still true in Part 2: `AUDIT_ENGINE_ENABLED=false` returns an honest disabled state, never
+  a fake report.
+- Using `drizzle-kit push` against a real database — rejected; migrations remain hand-authored
+  SQL only (ADR-0002), unchanged through Part 2's additional migrations.
+- Wiring `test:visual` into CI with a mismatched-platform baseline just to show a green check —
+  rejected; a Linux baseline is needed for that step to mean anything, so it stays local/manual
+  until one exists.
+- Claiming the Paddle integration is "verified" because the signature/idempotency logic passes
+  self-generated fixtures — rejected; explicitly labelled "not verified against a live account"
+  throughout `docs/security/BILLING_SECURITY.md` and this document.
+- Treating every real-domain-test failure as a product bug without evidence — rejected; see
+  `docs/status/PART2_REAL_DOMAIN_TEST_RESULTS.md` for the evidence-based breakdown of
+  target-side restrictions vs. genuine parser/product issues.
+- **Padding the public crawler directory to hit a page-count target** — rejected during Part 3
+  Step 13/14. Initial research (grepping for "crawler directory") missed SRS §30.4's "Initial
+  Content Minimum" checklist, which does specify "20 crawler-reference pages" verbatim — an
+  earlier claim in this session that the figure "wasn't in the SRS" was wrong and was corrected
+  once found. What was still rejected: padding to that number with fabricated or unverified
+  crawlers. The real work was (1) closing the gap between the 18-crawler DB registry and the 8
+  existing content pages with 9 new pages, each written only after live-fetching the operator's
+  current official documentation, then (2) finding 3 more genuinely real, operator-documented
+  crawlers not yet in the registry (`OAI-AdsBot`, `Google-CloudVertexBot`, `GoogleOther`) to
+  reach 20 published pages honestly rather than stopping short of the real requirement. One
+  registry crawler (`crw_bingbot`) is deliberately left without a content page because its
+  official source could not be fetched and read this pass — see the Bingbot exception in
+  `docs/registry/SOURCE_VERIFICATION_POLICY.md`.

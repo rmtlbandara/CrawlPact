@@ -1,0 +1,26 @@
+---
+export const prerender = false;
+import AdminLayout from "../../../../layouts/AdminLayout.astro";
+import AdminPageHeader from "../../../../components/admin/AdminPageHeader.astro";
+import { CrawlersManager } from "../../../../components/admin/CrawlersManager";
+import { createDb } from "@crawlpact/database";
+import { getEnv } from "../../../../lib/env";
+import { getAdminPageSession } from "../../../../lib/auth/require-admin";
+import { listOperators } from "../../../../lib/admin/registry";
+
+const db = createDb(getEnv().DB);
+const admin = await getAdminPageSession(Astro.request, db);
+if (!admin) return Astro.redirect("/sign-in");
+
+const operators = await listOperators(db);
+---
+
+<AdminLayout title="Crawlers" displayName={admin.user.displayName}>
+  <AdminPageHeader
+    title="Crawlers"
+    description="Crawler draft CRUD, source verification, lifecycle and replacement management (SRS §28.11)."
+  />
+  <div class="mt-6">
+    <CrawlersManager client:load operators={operators.map((o) => ({ id: o.id, name: o.name }))} />
+  </div>
+</AdminLayout>

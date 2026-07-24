@@ -1,0 +1,15 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="630" viewBox="0 0 1200 630">
+  <rect width="1200" height="630" fill="#101820" />
+  <rect x="80" y="80" width="88" height="88" rx="20" fill="#176B87" />
+  <path
+    d="M110 106h30a24 24 0 1 1 0 48h-8"
+    stroke="#F2FAFB"
+    stroke-width="7"
+    fill="none"
+    stroke-linecap="round"
+  />
+  <circle cx="110" cy="162" r="7.5" fill="#F2FAFB" />
+  <text x="80" y="250" font-family="-apple-system, Helvetica, Arial, sans-serif" font-size="72" font-weight="700" fill="#F7F9FA">CrawlPact</text>
+  <text x="80" y="310" font-family="-apple-system, Helvetica, Arial, sans-serif" font-size="34" fill="#C8D0D6">AI Crawler Policy Auditor &amp; Monitor</text>
+  <text x="80" y="540" font-family="-apple-system, Helvetica, Arial, sans-serif" font-size="26" fill="#647280">Vendor neutral · Evidence based · No AI model required</text>
+</svg>

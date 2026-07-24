@@ -1,0 +1,23 @@
+---
+export const prerender = false;
+import AdminLayout from "../../../layouts/AdminLayout.astro";
+import AdminPageHeader from "../../../components/admin/AdminPageHeader.astro";
+import { EntitlementsManager } from "../../../components/admin/EntitlementsManager";
+import { createDb } from "@crawlpact/database";
+import { getEnv } from "../../../lib/env";
+import { getAdminPageSession } from "../../../lib/auth/require-admin";
+
+const db = createDb(getEnv().DB);
+const admin = await getAdminPageSession(Astro.request, db);
+if (!admin) return Astro.redirect("/sign-in");
+---
+
+<AdminLayout title="Entitlements" displayName={admin.user.displayName}>
+  <AdminPageHeader
+    title="Temporary entitlements"
+    description="Manually-granted plan overrides — always expiring, reasoned, and audited (SRS §28.5)."
+  />
+  <div class="mt-6">
+    <EntitlementsManager client:load />
+  </div>
+</AdminLayout>

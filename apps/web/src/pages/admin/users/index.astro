@@ -1,0 +1,20 @@
+---
+export const prerender = false;
+import AdminLayout from "../../../layouts/AdminLayout.astro";
+import AdminPageHeader from "../../../components/admin/AdminPageHeader.astro";
+import { UsersManager } from "../../../components/admin/UsersManager";
+import { createDb } from "@crawlpact/database";
+import { getEnv } from "../../../lib/env";
+import { getAdminPageSession } from "../../../lib/auth/require-admin";
+
+const db = createDb(getEnv().DB);
+const admin = await getAdminPageSession(Astro.request, db);
+if (!admin) return Astro.redirect("/sign-in");
+---
+
+<AdminLayout title="Users" displayName={admin.user.displayName}>
+  <AdminPageHeader title="Users" description="Search and manage customer accounts (SRS §28.3)." />
+  <div class="mt-6">
+    <UsersManager client:load />
+  </div>
+</AdminLayout>

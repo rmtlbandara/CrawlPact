@@ -1,0 +1,57 @@
+---
+export const prerender = true;
+import MarketingLayout from "../layouts/MarketingLayout.astro";
+---
+
+<MarketingLayout
+  title="Scanner Information | CrawlPact"
+  description="What CrawlPact's scanner does and does not do: request limits, user agent, safety boundaries, and current status in this environment."
+>
+  <article class="mx-auto max-w-[720px] px-4 py-12 sm:px-6">
+    <h1 class="text-h1 text-neutral-950">Scanner information</h1>
+
+    <h2 class="mt-8 text-h2 text-neutral-950">Current status</h2>
+    <p class="mt-3 text-body text-neutral-700">
+      The live scanner is not yet enabled in this environment. Submitting the audit form currently
+      returns a clear "not enabled" response rather than any scan result — CrawlPact never presents
+      mocked or fabricated data as a real audit. See
+      <a href="/status" class="text-brand-700 underline underline-offset-2">status</a> for the current
+      development phase.
+    </p>
+
+    <h2 class="mt-8 text-h2 text-neutral-950">What the scanner does</h2>
+    <ul class="mt-3 list-disc pl-5 text-body text-neutral-700">
+      <li>Fetches only public HTTP/HTTPS resources you specify by domain or URL.</li>
+      <li>
+        Identifies itself with a fixed user agent: <code
+          >CrawlPactAuditBot/1.0 (+https://crawlpact.com/scanner)</code
+        >.
+      </li>
+      <li>
+        Uses roughly 12 external requests per scan, each with connection, first-byte, and total-scan
+        timeouts.
+      </li>
+      <li>Follows at most five redirects, revalidating each destination before following it.</li>
+    </ul>
+
+    <h2 class="mt-8 text-h2 text-neutral-950">What the scanner never does</h2>
+    <ul class="mt-3 list-disc pl-5 text-body text-neutral-700">
+      <li>Execute JavaScript on the target page.</li>
+      <li>Submit forms or authenticate as a user.</li>
+      <li>Retain cookies from the target website.</li>
+      <li>Impersonate a third-party crawler's user agent.</li>
+      <li>
+        Fetch private, loopback, link-local, reserved, or cloud-metadata addresses, or a literal IP
+        target.
+      </li>
+    </ul>
+
+    <h2 class="mt-8 text-h2 text-neutral-950">Safety design</h2>
+    <p class="mt-3 text-body text-neutral-700">
+      Every outbound request the scanner makes goes through a single, isolated safe-fetch module
+      responsible for target validation — see
+      <a href="/security" class="text-brand-700 underline underline-offset-2">security</a>
+      and the architecture decision record for scanner isolation.
+    </p>
+  </article>
+</MarketingLayout>

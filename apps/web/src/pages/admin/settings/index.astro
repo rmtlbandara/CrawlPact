@@ -1,0 +1,23 @@
+---
+export const prerender = false;
+import AdminLayout from "../../../layouts/AdminLayout.astro";
+import AdminPageHeader from "../../../components/admin/AdminPageHeader.astro";
+import { RuntimeConfigManager } from "../../../components/admin/RuntimeConfigManager";
+import { createDb } from "@crawlpact/database";
+import { getEnv } from "../../../lib/env";
+import { getAdminPageSession } from "../../../lib/auth/require-admin";
+
+const db = createDb(getEnv().DB);
+const admin = await getAdminPageSession(Astro.request, db);
+if (!admin) return Astro.redirect("/sign-in");
+---
+
+<AdminLayout title="Runtime settings" displayName={admin.user.displayName}>
+  <AdminPageHeader
+    title="Runtime settings"
+    description="Approved, non-secret operational limits — validated ranges, no arbitrary keys (SRS §28.16)."
+  />
+  <div class="mt-6">
+    <RuntimeConfigManager client:load />
+  </div>
+</AdminLayout>

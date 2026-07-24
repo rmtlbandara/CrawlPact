@@ -1,0 +1,162 @@
+---
+import "../styles/global.css";
+import { getEnv } from "../lib/env";
+
+export type Breadcrumb = { name: string; url: string };
+
+export type Props = {
+  title: string;
+  description: string;
+  canonicalPath?: string;
+  noindex?: boolean;
+  /** For guide/crawler detail pages — adds Open Graph article dates and an Article JSON-LD node. */
+  ogType?: "website" | "article";
+  publishedDate?: string;
+  updatedDate?: string;
+  breadcrumbs?: Breadcrumb[];
+};
+
+const {
+  title,
+  description,
+  canonicalPath,
+  noindex = false,
+  ogType = "website",
+  publishedDate,
+  updatedDate,
+  breadcrumbs,
+} = Astro.props;
+const siteUrl = Astro.site ?? new URL("https://crawlpact.com");
+
+// SRS §10.43: "A non-production environment shall display a persistent
+// label... Production shall not display a distracting label." Reads the
+// same PUBLIC_APP_ENV var that already drives CSP/HSTS decisions in
+// middleware.ts, so there is one source of truth for "which environment is
+// this" across the whole app — not a second, independently-maintained flag.
+const environmentLabel: string | null = (() => {
+  switch (getEnv().PUBLIC_APP_ENV) {
+    case "production":
+      return null;
+    case "preview":
+      return "Preview";
+    case "local":
+      return "Local Development";
+    default:
+      return null;
+  }
+})();
+const canonicalUrl = new URL(canonicalPath ?? Astro.url.pathname, siteUrl).toString();
+const ogImageUrl = new URL("/og-image.svg", siteUrl).toString();
+
+const jsonLdGraph: Record<string, unknown>[] = [
+  {
+    "@type": "Organization",
+    name: "CrawlPact",
+    url: siteUrl.toString(),
+    description: "AI Crawler Policy Auditor & Monitor",
+  },
+  {
+    "@type": "WebSite",
+    name: "CrawlPact",
+    url: siteUrl.toString(),
+  },
+];
+
+if (ogType === "article" && publishedDate) {
+  jsonLdGraph.push({
+    "@type": "Article",
+    headline: title,
+    description,
+    url: canonicalUrl,
+    datePublished: publishedDate,
+    dateModified: updatedDate ?? publishedDate,
+    author: { "@type": "Organization", name: "CrawlPact" },
+  });
+}
+
+if (breadcrumbs && breadcrumbs.length > 0) {
+  jsonLdGraph.push({
+    "@type": "BreadcrumbList",
+    itemListElement: breadcrumbs.map((crumb, index) => ({
+      "@type": "ListItem",
+      position: index + 1,
+      name: crumb.name,
+      item: new URL(crumb.url, siteUrl).toString(),
+    })),
+  });
+}
+---
+
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>{title}</title>
+    <meta name="description" content={description} />
+    <link rel="canonical" href={canonicalUrl} />
+    {noindex && <meta name="robots" content="noindex, nofollow" />}
+    <meta property="og:title" content={title} />
+    <meta property="og:description" content={description} />
+    <meta property="og:type" content={ogType} />
+    <meta property="og:url" content={canonicalUrl} />
+    <meta property="og:site_name" content="CrawlPact" />
+    <meta property="og:image" content={ogImageUrl} />
+    <meta property="og:image:width" content="1200" />
+    <meta property="og:image:height" content="630" />
+    {
+      ogType === "article" && publishedDate && (
+        <meta property="article:published_time" content={publishedDate} />
+      )
+    }
+    {
+      ogType === "article" && (updatedDate ?? publishedDate) && (
+        <meta property="article:modified_time" content={updatedDate ?? publishedDate} />
+      )
+    }
+    <meta name="twitter:card" content="summary_large_image" />
+    <meta name="twitter:title" content={title} />
+    <meta name="twitter:description" content={description} />
+    <meta name="twitter:image" content={ogImageUrl} />
+    <link rel="icon" href="/favicon.svg" type="image/svg+xml" />
+    <script
+      type="application/ld+json"
+      is:inline
+      set:html={JSON.stringify({
+        "@context": "https://schema.org",
+        "@graph": jsonLdGraph,
+      })}
+    />
+  </head>
+  <body>
+    <a href="#main-content" class="skip-link">Skip to content</a>
+    {environmentLabel && <div class="env-banner no-print">{environmentLabel} environment</div>}
+    <slot />
+  </body>
+</html>
+
+<style>
+  .skip-link {
+    position: absolute;
+    left: -9999px;
+    top: 0;
+    z-index: 1000;
+    background: white;
+    color: #0b1f33;
+    padding: 0.75rem 1rem;
+    border-radius: 0 0 8px 0;
+  }
+  .skip-link:focus {
+    left: 0;
+  }
+  .env-banner {
+    background: #92400e;
+    color: white;
+    text-align: center;
+    font-size: 0.8rem;
+    font-weight: 600;
+    letter-spacing: 0.02em;
+    text-transform: uppercase;
+    padding: 0.35rem 1rem;
+  }
+</style>

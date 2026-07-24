@@ -1,0 +1,492 @@
+---
+export const prerender = true;
+import { getCollection } from "astro:content";
+import MarketingLayout from "../layouts/MarketingLayout.astro";
+import { AuditForm } from "../components/AuditForm";
+import { ReportPreview } from "../components/ReportPreview";
+import { AnalyticsBeacon } from "../components/AnalyticsBeacon";
+import { Accordion } from "@crawlpact/ui";
+import { CRAWLER_PURPOSE_LABELS } from "@crawlpact/registry";
+
+const crawlerPreview = (await getCollection("crawlers")).slice(0, 4);
+
+const faqItems = [
+  {
+    value: "block-ai",
+    title: "Does CrawlPact block AI crawlers?",
+    content:
+      "No. CrawlPact audits and reports on your declared policy and generates configuration recommendations you can apply yourself. It never modifies your website.",
+  },
+  {
+    value: "guarantee-obedience",
+    title: "Does CrawlPact guarantee that crawlers obey robots.txt?",
+    content:
+      "No. robots.txt is a declared instruction, not an enforcement mechanism. CrawlPact reports declared policy and observed responses, and is explicit about what it cannot prove — see /limitations.",
+  },
+  {
+    value: "install",
+    title: "Do I need to install anything?",
+    content:
+      "No. Enter a domain or URL and CrawlPact retrieves bounded public policy resources directly. No server-log access or plugin is required.",
+  },
+  {
+    value: "uses-ai",
+    title: "Does CrawlPact use AI?",
+    content:
+      "No AI model is used to generate findings or recommendations. Evaluation is deterministic, based on documented crawler behaviour and parsed policy files.",
+  },
+  {
+    value: "search-vs-training",
+    title: "Can I allow AI search but block AI training?",
+    content:
+      'Yes — this is exactly what the "Allow Search, Block Training" preset is designed for, since many operators use separate crawler tokens for search and training.',
+  },
+  {
+    value: "what-websites",
+    title: "What websites can CrawlPact audit?",
+    content:
+      "Any public website reachable over HTTP or HTTPS. CrawlPact cannot audit private, internal, or authentication-gated sites.",
+  },
+  {
+    value: "verification",
+    title: "How are crawler purposes verified?",
+    content:
+      "Each crawler record requires a reliable official source, a verified user-agent token, a purpose classification, and administrator approval before publication (SRS FR-REG-005).",
+  },
+  {
+    value: "crawler-changes",
+    title: "What happens when a crawler changes?",
+    content:
+      'Registry updates are versioned and immutable. Saved domains can be re-evaluated against a new registry version, and the resulting change is labelled "registry drift" — distinct from a change to your own website.',
+  },
+  {
+    value: "legal-advice",
+    title: "Does CrawlPact provide legal advice?",
+    content:
+      "No. CrawlPact is a technical auditing and monitoring tool, not a legal or compliance service.",
+  },
+  {
+    value: "monitoring",
+    title: "How do paid monitoring and notifications work?",
+    content:
+      "Paid plans schedule recurring scans (monthly or weekly, by plan) and surface changes through an in-app notification centre and a private Atom feed — CrawlPact does not send email or SMS.",
+  },
+];
+---
+
+<MarketingLayout
+  title="AI Crawler Policy Auditor & Robots.txt Checker | CrawlPact"
+  description="Audit how AI search, training, user-triggered and agent crawlers are addressed by your website. Detect policy conflicts, generate recommendations and monitor changes."
+>
+  <!-- Hero -->
+  <section class="mx-auto max-w-[1240px] px-4 py-14 sm:px-6 sm:py-20">
+    <div class="max-w-3xl">
+      <h1 class="text-h1 sm:text-display text-neutral-950">
+        Audit and monitor your website's AI crawler policy.
+      </h1>
+      <p class="mt-4 text-body-lg text-neutral-700">
+        See how search, training, user-triggered and agent crawlers are addressed by your website.
+        Detect conflicts, generate clear recommendations and monitor future changes — without
+        installing anything.
+      </p>
+      <div class="mt-8">
+        <AuditForm client:load idPrefix="hero" />
+        <p class="mt-3 text-supporting text-neutral-600">
+          No installation. No server-log access. No AI API required. Try
+          <code class="rounded-[4px] bg-neutral-100 px-1.5 py-0.5 font-mono text-supporting"
+            >example.com</code
+          >.
+        </p>
+      </div>
+    </div>
+  </section>
+
+  <!-- Trust strip -->
+  <section class="border-y border-neutral-200 bg-neutral-50 py-6">
+    <ul
+      class="mx-auto flex max-w-[1240px] flex-wrap justify-center gap-x-8 gap-y-2 px-4 text-supporting font-medium text-neutral-600 sm:px-6"
+    >
+      <li>Vendor-neutral</li>
+      <li>No installation</li>
+      <li>Evidence-based findings</li>
+      <li>Search and training crawlers separated</li>
+      <li>Works with public websites</li>
+      <li>Deterministic recommendations</li>
+    </ul>
+  </section>
+
+  <!-- Problem explanation -->
+  <section id="product" class="mx-auto max-w-[1240px] px-4 py-16 sm:px-6">
+    <h2 class="text-h2 text-neutral-950">
+      AI crawler policy is no longer a single allow-or-block decision.
+    </h2>
+    <p class="mt-4 max-w-2xl text-body-lg text-neutral-700">
+      Crawler operators increasingly use separate crawlers for different purposes. Blocking a search
+      crawler can remove your website from AI-assisted search results; blocking a training crawler
+      has a different, usually unrelated, consequence.
+    </p>
+    <ul class="mt-6 grid gap-3 sm:grid-cols-3">
+      {
+        [
+          "Search",
+          "Training",
+          "User-triggered retrieval",
+          "Agents",
+          "Advertising or validation",
+          "Research or mixed purposes",
+        ].map((purpose) => (
+          <li class="rounded-card border border-neutral-200 bg-white px-4 py-3 text-body text-neutral-800">
+            {purpose}
+          </li>
+        ))
+      }
+    </ul>
+  </section>
+
+  <!-- How it works -->
+  <section class="bg-neutral-50 py-16">
+    <div class="mx-auto max-w-[1240px] px-4 sm:px-6">
+      <h2 class="text-h2 text-neutral-950">How CrawlPact works</h2>
+      <ol class="mt-8 grid gap-6 sm:grid-cols-2 lg:grid-cols-4">
+        {
+          [
+            {
+              step: "1",
+              title: "Enter a domain",
+              body: "CrawlPact retrieves bounded public policy resources.",
+            },
+            {
+              step: "2",
+              title: "Review crawler access",
+              body: "The system separates search, training, user-triggered and agent crawlers.",
+            },
+            {
+              step: "3",
+              title: "Fix conflicts",
+              body: "You receive evidence, explanations and configuration recommendations.",
+            },
+            {
+              step: "4",
+              title: "Monitor changes",
+              body: "Paid plans add scheduled rechecks, history and change notifications.",
+            },
+          ].map((item) => (
+            <li class="rounded-card border border-neutral-200 bg-white p-5">
+              <span class="flex size-8 items-center justify-center rounded-full bg-brand-600 text-body font-semibold text-white">
+                {item.step}
+              </span>
+              <h3 class="mt-3 text-card-heading text-neutral-950">{item.title}</h3>
+              <p class="mt-1.5 text-supporting text-neutral-600">{item.body}</p>
+            </li>
+          ))
+        }
+      </ol>
+    </div>
+  </section>
+
+  <!-- Product result preview (clearly labelled synthetic demonstration) -->
+  <section class="mx-auto max-w-[1240px] px-4 py-16 sm:px-6">
+    <h2 class="text-h2 text-neutral-950">See what a report looks like</h2>
+    <p class="mt-2 max-w-2xl text-body text-neutral-700">
+      Illustrative example using a synthetic demonstration domain — not a real scan result.
+    </p>
+    <div class="mt-6 rounded-panel border border-neutral-200 bg-white p-6 shadow-elevated">
+      <div
+        class="flex flex-wrap items-center justify-between gap-4 border-b border-neutral-200 pb-4"
+      >
+        <div>
+          <p class="font-mono text-supporting text-neutral-500">example.com (demonstration data)</p>
+          <p class="text-h3 text-neutral-950">AI crawler policy report</p>
+        </div>
+        <p class="text-supporting text-neutral-500">
+          Scanned 22 July 2026 &middot; Registry v2026.07.1
+        </p>
+      </div>
+      <div class="mt-5">
+        <ReportPreview client:visible />
+      </div>
+    </div>
+  </section>
+
+  <!-- Core features -->
+  <section class="bg-neutral-50 py-16">
+    <div class="mx-auto max-w-[1240px] px-4 sm:px-6">
+      <h2 class="text-h2 text-neutral-950">Core features</h2>
+      <div class="mt-8 grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
+        {
+          [
+            {
+              title: "AI crawler access matrix",
+              body: "See whether documented crawlers appear allowed, blocked or unspecified.",
+            },
+            {
+              title: "Search versus training separation",
+              body: "Understand the different business effects of crawler purposes.",
+            },
+            {
+              title: "Policy-conflict detection",
+              body: "Identify contradictions across robots.txt, headers, RSL and related signals.",
+            },
+            {
+              title: "Configuration recommendations",
+              body: "Receive copyable, deterministic changes with evidence.",
+            },
+            {
+              title: "Change monitoring",
+              body: "Detect future website-policy and crawler-registry changes.",
+            },
+            {
+              title: "Multi-domain management",
+              body: "Manage policies across client and company websites.",
+            },
+            {
+              title: "Evidence and history",
+              body: "Preserve the exact resources and rules used for every finding.",
+            },
+          ].map((feature) => (
+            <div class="rounded-card border border-neutral-200 bg-white p-5">
+              <h3 class="text-card-heading text-neutral-950">{feature.title}</h3>
+              <p class="mt-1.5 text-body text-neutral-700">{feature.body}</p>
+            </div>
+          ))
+        }
+      </div>
+    </div>
+  </section>
+
+  <!-- Audience / use cases -->
+  <section class="mx-auto max-w-[1240px] px-4 py-16 sm:px-6">
+    <h2 class="text-h2 text-neutral-950">Built for real workflows</h2>
+    <div class="mt-8 grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
+      {
+        [
+          {
+            title: "SEO agencies",
+            body: "Audit an entire client portfolio and generate client-safe reports without exposing internal tooling.",
+          },
+          {
+            title: "Publishers",
+            body: "Decide crawler-by-crawler which AI training use is acceptable without losing AI-assisted search visibility.",
+          },
+          {
+            title: "SaaS companies",
+            body: "Keep documentation and marketing pages discoverable by search crawlers while opting out of training crawlers.",
+          },
+          {
+            title: "Documentation websites",
+            body: "Verify llms.txt and robots.txt agree before publishing developer-facing content.",
+          },
+          {
+            title: "Web developers",
+            body: "Catch a CDN or plugin silently rewriting robots.txt after a deployment.",
+          },
+          {
+            title: "Technical website owners",
+            body: "Get a deterministic baseline before making a policy decision under pressure.",
+          },
+        ].map((useCase) => (
+          <div class="rounded-card border border-neutral-200 bg-white p-5">
+            <h3 class="text-card-heading text-neutral-950">{useCase.title}</h3>
+            <p class="mt-1.5 text-body text-neutral-700">{useCase.body}</p>
+          </div>
+        ))
+      }
+    </div>
+  </section>
+
+  <!-- Supported signals -->
+  <section class="bg-neutral-50 py-16">
+    <div class="mx-auto max-w-[1240px] px-4 sm:px-6">
+      <h2 class="text-h2 text-neutral-950">Supported public signals</h2>
+      <p class="mt-2 max-w-2xl text-body text-neutral-700">
+        Support depth may vary by specification maturity.
+      </p>
+      <ul class="mt-6 flex flex-wrap gap-2">
+        {
+          [
+            "robots.txt",
+            "AI crawler user-agent groups",
+            "llms.txt",
+            "llms-full.txt",
+            "RSL",
+            "Content Signals",
+            "Robots meta",
+            "X-Robots-Tag",
+            "Sitemap declarations",
+            "Relevant HTTP headers",
+          ].map((signal) => (
+            <li class="rounded-pill border border-neutral-200 bg-white px-3 py-1.5 font-mono text-supporting text-neutral-700">
+              {signal}
+            </li>
+          ))
+        }
+      </ul>
+    </div>
+  </section>
+
+  <!-- Crawler directory preview -->
+  <section class="mx-auto max-w-[1240px] px-4 py-16 sm:px-6">
+    <div class="flex items-baseline justify-between gap-4">
+      <h2 class="text-h2 text-neutral-950">AI crawler directory</h2>
+      <a href="/crawlers" class="text-body font-medium text-brand-700 hover:underline"
+        >View all crawlers</a
+      >
+    </div>
+    <div class="mt-8 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+      {
+        crawlerPreview.map((crawler) => (
+          <a
+            href={`/crawlers/${crawler.id}`}
+            class="rounded-card border border-neutral-200 bg-white p-4 hover:border-brand-300"
+          >
+            <p class="text-metadata font-medium uppercase tracking-wide text-neutral-500">
+              {crawler.data.operator}
+            </p>
+            <p class="mt-1 text-card-heading text-neutral-950">{crawler.data.name}</p>
+            <p class="mt-1.5 text-supporting text-neutral-600">
+              {CRAWLER_PURPOSE_LABELS[crawler.data.purpose]} &middot; verified{" "}
+              {crawler.data.lastVerified}
+            </p>
+          </a>
+        ))
+      }
+    </div>
+  </section>
+
+  <!-- Monitoring value -->
+  <section class="bg-neutral-50 py-16">
+    <div class="mx-auto max-w-[1240px] px-4 sm:px-6">
+      <h2 class="text-h2 text-neutral-950">A correct policy today can become outdated tomorrow.</h2>
+      <ul class="mt-6 grid gap-3 sm:grid-cols-2">
+        {
+          [
+            "Website deployments can alter policy files",
+            "CDNs or plugins can change generated rules",
+            "Crawler operators can introduce new tokens",
+            "Crawler purposes can be separated or revised",
+            "Saved domains can be re-evaluated when the registry changes",
+          ].map((point) => (
+            <li class="rounded-card border border-neutral-200 bg-white px-4 py-3 text-body text-neutral-800">
+              {point}
+            </li>
+          ))
+        }
+      </ul>
+    </div>
+  </section>
+
+  <!-- Pricing summary -->
+  <section class="mx-auto max-w-[1240px] px-4 py-16 sm:px-6">
+    <div class="flex items-baseline justify-between gap-4">
+      <h2 class="text-h2 text-neutral-950">Pricing</h2>
+      <a href="/pricing" class="text-body font-medium text-brand-700 hover:underline"
+        >View full pricing</a
+      >
+    </div>
+    <p class="mt-2 max-w-2xl text-body text-neutral-700">
+      Annual pricing. Billing is handled by Paddle; applicable taxes may be calculated during
+      checkout.
+    </p>
+    <div class="mt-8 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+      {
+        [
+          {
+            name: "Free",
+            price: "$0",
+            domains: "1 domain",
+            monitoring: "No monitoring",
+            cta: "Start free",
+          },
+          {
+            name: "Solo",
+            price: "$79/yr",
+            domains: "5 domains",
+            monitoring: "Monthly monitoring",
+            cta: "Choose Solo",
+          },
+          {
+            name: "Pro",
+            price: "$179/yr",
+            domains: "25 domains",
+            monitoring: "Weekly monitoring",
+            cta: "Choose Pro",
+            recommended: true,
+          },
+          {
+            name: "Agency",
+            price: "$399/yr",
+            domains: "100 domains",
+            monitoring: "Weekly monitoring",
+            cta: "Choose Agency",
+          },
+        ].map((plan) => (
+          <div
+            class={`rounded-card border p-5 ${plan.recommended ? "border-brand-600 ring-1 ring-brand-600" : "border-neutral-200"}`}
+          >
+            {plan.recommended && (
+              <p class="mb-2 text-metadata font-medium uppercase tracking-wide text-brand-700">
+                Recommended
+              </p>
+            )}
+            <h3 class="text-card-heading text-neutral-950">{plan.name}</h3>
+            <p class="mt-1 text-h3 text-neutral-950">{plan.price}</p>
+            <p class="mt-2 text-supporting text-neutral-600">{plan.domains}</p>
+            <p class="text-supporting text-neutral-600">{plan.monitoring}</p>
+            <a
+              href="/pricing"
+              class="mt-4 block rounded-control border border-neutral-300 px-3 py-2 text-center text-body font-medium text-neutral-800 hover:bg-neutral-50"
+            >
+              {plan.cta}
+            </a>
+          </div>
+        ))
+      }
+    </div>
+  </section>
+
+  <!-- FAQ -->
+  <section class="bg-neutral-50 py-16">
+    <div class="mx-auto max-w-[720px] px-4 sm:px-6">
+      <h2 class="text-h2 text-neutral-950">Frequently asked questions</h2>
+      <div class="mt-6">
+        <Accordion
+          client:visible
+          items={faqItems.map((item) => ({
+            value: item.value,
+            title: item.title,
+            content: item.content,
+          }))}
+        />
+      </div>
+    </div>
+  </section>
+
+  <!-- FAQPage structured data — must mirror the visible FAQ above exactly (SRS §9.24) -->
+  <script
+    type="application/ld+json"
+    is:inline
+    set:html={JSON.stringify({
+      "@context": "https://schema.org",
+      "@type": "FAQPage",
+      mainEntity: faqItems.map((item) => ({
+        "@type": "Question",
+        name: item.title,
+        acceptedAnswer: { "@type": "Answer", text: item.content },
+      })),
+    })}
+  />
+
+  <!-- Final CTA -->
+  <section class="mx-auto max-w-[1240px] px-4 py-16 sm:px-6">
+    <div class="rounded-panel border border-neutral-200 bg-white p-10 text-center shadow-elevated">
+      <h2 class="text-h2 text-neutral-950">Check your website's AI crawler policy now.</h2>
+      <p class="mt-2 text-body-lg text-neutral-700">
+        Run a free public audit. No account or installation required.
+      </p>
+      <div class="mt-6 flex justify-center">
+        <AuditForm client:visible idPrefix="final-cta" />
+      </div>
+    </div>
+  </section>
+  <AnalyticsBeacon client:load eventName="landing_viewed" />
+</MarketingLayout>

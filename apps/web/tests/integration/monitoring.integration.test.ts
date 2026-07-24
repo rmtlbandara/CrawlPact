@@ -1,0 +1,298 @@
+import { afterAll, beforeAll, describe, expect, it } from "vitest";
+import { eq } from "drizzle-orm";
+import { createDb, schema } from "@crawlpact/database";
+import type { Database } from "@crawlpact/database";
+import type { AuditResult } from "../../src/lib/run-audit";
+import { createD1TestHarness } from "./d1-harness";
+import {
+  FAILURE_PAUSE_THRESHOLD,
+  runMonitoringSweep,
+  type RunAuditFn,
+} from "../../src/lib/monitoring";
+
+/**
+ * Exercises the real scheduled-monitoring orchestration (claiming/locking,
+ * drift detection, failure backoff/pause, notification creation) against a
+ * real D1 database, injecting a fake `runAudit` so the test is deterministic
+ * and needs no live network access — see monitoring.ts's `RunAuditFn` for
+ * why that seam exists.
+ */
+
+function fakeAuditResult(options: {
+  status: AuditResult["status"];
+  score: number | null;
+  crawlerResult: "allowed" | "blocked";
+}): AuditResult {
+  const crawlerEvaluations: AuditResult["crawlerEvaluations"] = [
+    {
+      crawlerId: "crawler_test",
+      crawlerName: "TestBot",
+      operatorName: "Test Operator",
+      userAgentToken: "TestBot",
+      purpose: "search",
+      lifecycleStatus: "active",
+      replacementCrawlerId: null,
+      result: options.crawlerResult,
+      matchedRule: null,
+      matchedLineNumber: null,
+    },
+  ];
+
+  return {
+    status: options.status,
+    canonicalOrigin: "https://monitoring-test.example",
+    crawlerEvaluations,
+    conflicts: [],
+    findings:
+      options.crawlerResult === "blocked"
+        ? [
+            {
+              code: "TEST_FINDING",
+              severity: "high",
+              category: "visibility",
+              title: "Test finding",
+              summary: "Test",
+              whatHappened: "Test",
+              whyItMatters: "Test",
+              evidenceSummary: "Test",
+              recommendedAction: "Test",
+              limitation: null,
+              confidence: "high",
+              sourceUrl: null,
+              rulesetVersion: "rules_test",
+              affectedCrawlerId: "crawler_test",
+              fingerprint: "test-fingerprint",
+            },
+          ]
+        : [],
+    score:
+      options.score === null
+        ? { state: "incomplete" }
+        : { state: "scored", value: options.score, label: "test", categoryBreakdown: [] },
+    recommendation: { proposedAdditions: [], warnings: [] },
+    diff: [],
+    originalRobotsText: "User-agent: *\nAllow: /",
+    proposedRobotsText: "User-agent: *\nAllow: /",
+    externalRequestCount: 1,
+    scanSignals: {
+      canonicalOrigin: "https://monitoring-test.example",
+      robotsTxt: {
+        attempted: true,
+        fetch:
+          options.status === "target_unavailable"
+            ? null
+            : {
+                ok: true,
+                requestedUrl: "https://monitoring-test.example/robots.txt",
+                finalUrl: "https://monitoring-test.example/robots.txt",
+                statusCode: 200,
+                contentType: "text/plain",
+                contentSizeBytes: 20,
+                redirectCount: 0,
+                durationMs: 5,
+                truncated: false,
+                body: "User-agent: *\nAllow: /",
+              },
+        parsed: null,
+      },
+      llmsTxt: { attempted: false, fetch: null, parsed: null },
+      llmsFullTxt: { attempted: false, fetch: null, parsed: null },
+      sitemap: { attempted: false, fetch: null, parsed: null },
+      homepage: { attempted: false, fetch: null, parsed: null },
+      rsl: { attempted: false, fetch: null, parsed: null },
+      contentSignals: null,
+      xRobotsTag: [],
+      externalRequestCount: 1,
+    },
+  } as AuditResult;
+}
+
+function queueRunAudit(results: AuditResult[]): RunAuditFn {
+  let index = 0;
+  return async () => {
+    const result = results[Math.min(index, results.length - 1)]!;
+    index++;
+    return result;
+  };
+}
+
+async function insertTestUserAndDomain(
+  db: Database,
+  options: { monitoringFrequency: "weekly" | "monthly"; nextScanAt: string | null },
+): Promise<{ userId: string; domainId: string }> {
+  const userId = crypto.randomUUID();
+  const domainId = crypto.randomUUID();
+  const now = new Date().toISOString();
+
+  await db.insert(schema.users).values({
+    id: userId,
+    displayName: "Monitoring Test User",
+    status: "active",
+    planId: "pro",
+    isAdmin: false,
+    createdAt: now,
+    updatedAt: now,
+  });
+
+  await db.insert(schema.domains).values({
+    id: domainId,
+    ownerUserId: userId,
+    displayName: "monitoring-test.example",
+    canonicalOrigin: "https://monitoring-test.example",
+    originalInput: "monitoring-test.example",
+    preset: "maximum_ai_visibility",
+    monitoringState: "active",
+    monitoringFrequency: options.monitoringFrequency,
+    nextScanAt: options.nextScanAt,
+    consecutiveFailureCount: 0,
+    createdAt: now,
+    updatedAt: now,
+  });
+
+  return { userId, domainId };
+}
+
+describe("scheduled monitoring sweep (real D1)", () => {
+  let db: Database;
+  let dispose: () => Promise<void>;
+
+  beforeAll(async () => {
+    const harness = await createD1TestHarness();
+    dispose = harness.dispose;
+    db = createDb(harness.db);
+  });
+
+  afterAll(async () => {
+    await dispose();
+  });
+
+  it("scans a due domain, records the result, and does not re-select it before its next scan is due", async () => {
+    const { domainId } = await insertTestUserAndDomain(db, {
+      monitoringFrequency: "weekly",
+      nextScanAt: null,
+    });
+
+    const result = await runMonitoringSweep(
+      db,
+      queueRunAudit([
+        fakeAuditResult({ status: "completed", score: 88, crawlerResult: "allowed" }),
+      ]),
+    );
+    expect(result).toEqual({ domainsSelected: 1, scansCompleted: 1, scansFailed: 0 });
+
+    const [domain] = await db
+      .select()
+      .from(schema.domains)
+      .where(eq(schema.domains.id, domainId))
+      .limit(1);
+    expect(domain!.lastScanId).not.toBeNull();
+    expect(domain!.currentScore).toBe(88);
+    expect(domain!.consecutiveFailureCount).toBe(0);
+    expect(new Date(domain!.nextScanAt!).getTime()).toBeGreaterThan(Date.now());
+
+    const [scanRow] = await db
+      .select()
+      .from(schema.scans)
+      .where(eq(schema.scans.id, domain!.lastScanId!))
+      .limit(1);
+    expect(scanRow!.triggeredBy).toBe("scheduled");
+
+    // Immediately due again? No — nextScanAt was pushed a week out.
+    const secondSweep = await runMonitoringSweep(
+      db,
+      queueRunAudit([
+        fakeAuditResult({ status: "completed", score: 90, crawlerResult: "allowed" }),
+      ]),
+    );
+    expect(secondSweep.domainsSelected).toBe(0);
+  });
+
+  it("detects semantic drift between scans and creates a notification", async () => {
+    const { userId, domainId } = await insertTestUserAndDomain(db, {
+      monitoringFrequency: "weekly",
+      nextScanAt: null,
+    });
+
+    await runMonitoringSweep(
+      db,
+      queueRunAudit([
+        fakeAuditResult({ status: "completed", score: 95, crawlerResult: "allowed" }),
+      ]),
+    );
+
+    // Force it due again to simulate the next scheduled run.
+    await db
+      .update(schema.domains)
+      .set({ nextScanAt: null })
+      .where(eq(schema.domains.id, domainId));
+
+    await runMonitoringSweep(
+      db,
+      queueRunAudit([
+        fakeAuditResult({ status: "completed", score: 40, crawlerResult: "blocked" }),
+      ]),
+    );
+
+    const diffs = await db
+      .select()
+      .from(schema.scanDiffs)
+      .where(eq(schema.scanDiffs.domainId, domainId));
+    expect(diffs).toHaveLength(1);
+    expect(diffs[0]!.diffType).toBe("website_drift");
+
+    const notifications = await db
+      .select()
+      .from(schema.notifications)
+      .where(eq(schema.notifications.userId, userId));
+    expect(notifications.some((n) => n.type === "high_severity_policy_change")).toBe(true);
+  });
+
+  it("backs off on repeated failures and pauses monitoring after the threshold, notifying at each stage", async () => {
+    const { userId, domainId } = await insertTestUserAndDomain(db, {
+      monitoringFrequency: "weekly",
+      nextScanAt: null,
+    });
+
+    for (let attempt = 1; attempt <= FAILURE_PAUSE_THRESHOLD; attempt++) {
+      await db
+        .update(schema.domains)
+        .set({ nextScanAt: null })
+        .where(eq(schema.domains.id, domainId));
+      await runMonitoringSweep(
+        db,
+        queueRunAudit([
+          fakeAuditResult({ status: "target_unavailable", score: null, crawlerResult: "allowed" }),
+        ]),
+      );
+    }
+
+    const [domain] = await db
+      .select()
+      .from(schema.domains)
+      .where(eq(schema.domains.id, domainId))
+      .limit(1);
+    expect(domain!.consecutiveFailureCount).toBe(FAILURE_PAUSE_THRESHOLD);
+    expect(domain!.monitoringState).toBe("paused");
+    expect(domain!.nextScanAt).toBeNull();
+
+    const notifications = await db
+      .select()
+      .from(schema.notifications)
+      .where(eq(schema.notifications.userId, userId));
+    expect(notifications.some((n) => n.type === "monitoring_paused")).toBe(true);
+    expect(notifications.some((n) => n.type === "resource_failure")).toBe(true);
+    // No notification for the very first (transient) failure.
+    expect(notifications.filter((n) => n.type === "resource_failure")).toHaveLength(
+      FAILURE_PAUSE_THRESHOLD - 2,
+    );
+
+    // Paused domains are never selected again.
+    const nextSweep = await runMonitoringSweep(
+      db,
+      queueRunAudit([
+        fakeAuditResult({ status: "completed", score: 100, crawlerResult: "allowed" }),
+      ]),
+    );
+    expect(nextSweep.domainsSelected).toBe(0);
+  });
+});

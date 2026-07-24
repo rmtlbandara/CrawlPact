@@ -1,0 +1,17 @@
+{
+  "$schema": "https://json.schemastore.org/claude-code-settings.json",
+  "permissions": {
+    "allow": [
+      "Bash(pnpm *)",
+      "Bash(npm view *)",
+      "Bash(git status)",
+      "Bash(git diff*)",
+      "Bash(git log*)",
+      "Bash(wrangler d1 migrations list*)"
+    ],
+    "deny": ["Bash(wrangler deploy*)", "Bash(git push*)", "Bash(rm -rf *)"]
+  },
+  "env": {
+    "CI": "false"
+  }
+}

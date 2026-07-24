@@ -1,0 +1,44 @@
+---
+export const prerender = false;
+import AppLayout from "../../../layouts/AppLayout.astro";
+import { GroupsManager } from "../../../components/app/GroupsManager";
+import { createDb } from "@crawlpact/database";
+import { getEnv } from "../../../lib/env";
+import { getPageSession } from "../../../lib/auth/page-session";
+import { getPlan } from "../../../lib/plan";
+
+const db = createDb(getEnv().DB);
+const result = await getPageSession(db, Astro.request);
+if (!result) return Astro.redirect("/sign-in");
+const { user } = result;
+
+const plan = await getPlan(db, user.planId);
+---
+
+<AppLayout title="Groups" displayName={user.displayName}>
+  <h1 class="text-h1 text-neutral-950">Groups</h1>
+  <p class="mt-2 text-body text-neutral-700">
+    Organise saved domains into groups — useful when managing several clients or brands.
+  </p>
+
+  {
+    !plan.domainGroupsEnabled ? (
+      <div class="mt-6 rounded-card border border-dashed border-neutral-300 px-6 py-12 text-center">
+        <h2 class="text-h3 text-neutral-900">Domain groups aren't included on your plan</h2>
+        <p class="mx-auto mt-2 max-w-sm text-body text-neutral-600">
+          Upgrade to a plan with domain groups to organise multiple domains together.
+        </p>
+        <a
+          href="/pricing"
+          class="mt-4 inline-block rounded-control bg-brand-600 px-5 py-3 text-body font-medium text-white hover:bg-brand-700"
+        >
+          View plans
+        </a>
+      </div>
+    ) : (
+      <div class="mt-6">
+        <GroupsManager client:load />
+      </div>
+    )
+  }
+</AppLayout>

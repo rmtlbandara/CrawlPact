@@ -1,0 +1,56 @@
+---
+export const prerender = false;
+import AppLayout from "../../../layouts/AppLayout.astro";
+import { ProfileForm } from "../../../components/app/ProfileForm";
+import { PasskeysManager } from "../../../components/app/PasskeysManager";
+import { SessionsManager } from "../../../components/app/SessionsManager";
+import { RecoveryCodesPanel } from "../../../components/app/RecoveryCodesPanel";
+import { DeleteAccountPanel } from "../../../components/app/DeleteAccountPanel";
+import { createDb } from "@crawlpact/database";
+import { getEnv } from "../../../lib/env";
+import { getPageSession } from "../../../lib/auth/page-session";
+
+const db = createDb(getEnv().DB);
+const result = await getPageSession(db, Astro.request);
+if (!result) return Astro.redirect("/sign-in");
+const { user } = result;
+---
+
+<AppLayout title="Account" displayName={user.displayName}>
+  <h1 class="text-h1 text-neutral-950">Account</h1>
+
+  <section class="mt-8">
+    <h2 class="text-h2 text-neutral-950">Profile</h2>
+    <div class="mt-3 rounded-card border border-neutral-200 bg-white p-5">
+      <ProfileForm client:load initialDisplayName={user.displayName} />
+    </div>
+  </section>
+
+  <section class="mt-10">
+    <h2 class="text-h2 text-neutral-950">Passkeys</h2>
+    <div class="mt-3">
+      <PasskeysManager client:load />
+    </div>
+  </section>
+
+  <section class="mt-10">
+    <h2 class="text-h2 text-neutral-950">Recovery codes</h2>
+    <div class="mt-3">
+      <RecoveryCodesPanel client:load />
+    </div>
+  </section>
+
+  <section class="mt-10">
+    <h2 class="text-h2 text-neutral-950">Sessions</h2>
+    <div class="mt-3">
+      <SessionsManager client:load />
+    </div>
+  </section>
+
+  <section class="mt-10">
+    <h2 class="text-h2 text-neutral-950">Delete account</h2>
+    <div class="mt-3">
+      <DeleteAccountPanel client:load pendingDeletion={user.status === "pending_deletion"} />
+    </div>
+  </section>
+</AppLayout>

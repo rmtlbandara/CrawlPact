@@ -1,0 +1,60 @@
+---
+import { MobileNav } from "./MobileNav";
+
+const links = [
+  { label: "Product", href: "/#product" },
+  { label: "Free tools", href: "/tools" },
+  { label: "AI crawlers", href: "/crawlers" },
+  { label: "Guides", href: "/guides" },
+  { label: "Pricing", href: "/pricing" },
+  { label: "Methodology", href: "/methodology" },
+];
+---
+
+<header class="no-print border-b border-neutral-200 bg-white">
+  <div class="mx-auto flex max-w-[1240px] items-center justify-between gap-4 px-4 py-3 sm:px-6">
+    <a
+      href="/"
+      class="flex items-center gap-2 text-h3 font-semibold text-neutral-950"
+      aria-label="CrawlPact home"
+    >
+      <span
+        aria-hidden="true"
+        class="flex size-8 items-center justify-center rounded-control bg-brand-600 text-white"
+        >C</span
+      >
+      CrawlPact
+    </a>
+
+    <nav aria-label="Primary" class="hidden md:block">
+      <ul class="flex items-center gap-6 text-body text-neutral-700">
+        {
+          links.map((link) => (
+            <li>
+              <a href={link.href} class="hover:text-brand-700">
+                {link.label}
+              </a>
+            </li>
+          ))
+        }
+      </ul>
+    </nav>
+
+    <div class="hidden items-center gap-3 md:flex">
+      <a href="/sign-in" class="text-body text-neutral-700 hover:text-brand-700">Sign in</a>
+      <a
+        href="/audit"
+        class="rounded-control bg-brand-600 px-4 py-2.5 text-body font-medium text-white hover:bg-brand-700"
+      >
+        Audit a domain
+      </a>
+    </div>
+
+    <MobileNav
+      client:idle
+      links={[...links, { label: "Sign in", href: "/sign-in" }]}
+      ctaHref="/audit"
+      ctaLabel="Audit a domain"
+    />
+  </div>
+</header>

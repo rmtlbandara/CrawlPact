@@ -1,0 +1,23 @@
+---
+export const prerender = false;
+import AdminLayout from "../../../layouts/AdminLayout.astro";
+import AdminPageHeader from "../../../components/admin/AdminPageHeader.astro";
+import { ScanOperationsDashboard } from "../../../components/admin/ScanOperationsDashboard";
+import { createDb } from "@crawlpact/database";
+import { getEnv } from "../../../lib/env";
+import { getAdminPageSession } from "../../../lib/auth/require-admin";
+
+const db = createDb(getEnv().DB);
+const admin = await getAdminPageSession(Astro.request, db);
+if (!admin) return Astro.redirect("/sign-in");
+---
+
+<AdminLayout title="Scan operations" displayName={admin.user.displayName}>
+  <AdminPageHeader
+    title="Scan operations"
+    description="Platform-wide scan throughput, failures, and high-failure hosts (SRS §28.9)."
+  />
+  <div class="mt-6">
+    <ScanOperationsDashboard client:load />
+  </div>
+</AdminLayout>
