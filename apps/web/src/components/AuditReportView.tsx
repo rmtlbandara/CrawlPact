@@ -371,7 +371,13 @@ export function AuditReportView({
           </div>
         </div>
         <div className="mt-5 grid gap-6 md:grid-cols-[280px_1fr]">
-          <ScoreComponent score={report.score} methodologyHref="/scoring" />
+          <ScoreComponent
+            score={report.score}
+            categoryBreakdown={
+              report.score.state === "scored" ? report.score.categoryBreakdown : undefined
+            }
+            methodologyHref="/scoring"
+          />
           <div>
             <p className="text-supporting text-neutral-600">
               Preset:{" "}

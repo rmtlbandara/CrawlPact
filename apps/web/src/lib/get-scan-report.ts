@@ -10,6 +10,12 @@ import type {
   RslSignal,
 } from "@crawlpact/core";
 import { parseContentSignals, parseHtmlSignals, parseLlmsTxt, parseRsl } from "@crawlpact/scanner";
+import {
+  SCORE_CATEGORY_LABELS,
+  SCORE_CATEGORY_ORDER,
+  scoreLabelFor,
+  type ScoreCategory,
+} from "@crawlpact/policy";
 
 type ScanResourceRow = typeof schema.scanResources.$inferSelect;
 
@@ -171,7 +177,12 @@ export async function getScanReport(
     preset: scan.preset,
     score:
       scan.scoreState === "scored" && scan.score !== null
-        ? { state: "scored", value: scan.score, label: scoreLabel(scan.score) }
+        ? {
+            state: "scored",
+            value: scan.score,
+            label: scoreLabelFor(scan.score),
+            categoryBreakdown: buildCategoryBreakdown(scan.scoreBreakdown),
+          }
         : { state: "incomplete" },
     crawlerMatrix: crawlerResults.map((row) => ({
       crawlerId: row.crawlerId,
@@ -216,10 +227,10 @@ export async function getScanReport(
   };
 }
 
-function scoreLabel(value: number): string {
-  if (value >= 90) return "Strong";
-  if (value >= 75) return "Good";
-  if (value >= 50) return "Needs attention";
-  if (value >= 25) return "Weak";
-  return "Critical";
+function buildCategoryBreakdown(raw: string | null): { label: string; value: number }[] {
+  if (!raw) return [];
+  const parsed = JSON.parse(raw) as Partial<Record<ScoreCategory, number>>;
+  return SCORE_CATEGORY_ORDER.filter((category) => typeof parsed[category] === "number").map(
+    (category) => ({ label: SCORE_CATEGORY_LABELS[category], value: parsed[category] as number }),
+  );
 }

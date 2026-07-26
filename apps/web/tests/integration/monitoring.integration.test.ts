@@ -68,7 +68,19 @@ function fakeAuditResult(options: {
     score:
       options.score === null
         ? { state: "incomplete" }
-        : { state: "scored", value: options.score, label: "test", categoryBreakdown: [] },
+        : {
+            state: "scored",
+            value: options.score,
+            label: "test",
+            categoryBreakdown: {
+              resource_availability: 100,
+              syntax_evaluation: 100,
+              objective_alignment: 100,
+              cross_signal_consistency: 100,
+              registry_freshness: 100,
+              monitoring_change_risk: 100,
+            },
+          },
     recommendation: { proposedAdditions: [], warnings: [] },
     diff: [],
     originalRobotsText: "User-agent: *\nAllow: /",

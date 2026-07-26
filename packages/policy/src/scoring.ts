@@ -20,6 +20,18 @@ export const SCORE_WEIGHTS: Record<ScoreCategory, number> = {
   monitoring_change_risk: 0.1,
 };
 
+/** Category order and labels exactly match the public methodology page (`/scoring`). */
+export const SCORE_CATEGORY_ORDER = Object.keys(SCORE_WEIGHTS) as ScoreCategory[];
+
+export const SCORE_CATEGORY_LABELS: Record<ScoreCategory, string> = {
+  resource_availability: "Resource availability and validity",
+  syntax_evaluation: "Syntax and deterministic evaluation",
+  objective_alignment: "Business-objective alignment",
+  cross_signal_consistency: "Cross-signal consistency",
+  registry_freshness: "Registry freshness and explicitness",
+  monitoring_change_risk: "Monitoring and change risk",
+};
+
 export type PolicyHealthScore =
   | {
       state: "scored";
@@ -29,7 +41,13 @@ export type PolicyHealthScore =
     }
   | { state: "incomplete" };
 
-function labelFor(score: number): string {
+/**
+ * The single source of truth for score→label text (SRS §22.3's five bands).
+ * Exported so every real-score display — the report view, the domain
+ * detail page, etc. — shows the same label for the same number rather than
+ * each re-deriving (or omitting) it independently.
+ */
+export function scoreLabelFor(score: number): string {
   if (score >= 90) return "Strong";
   if (score >= 75) return "Good";
   if (score >= 50) return "Needs attention";
@@ -116,5 +134,5 @@ export function computePolicyHealthScore(
     ),
   );
 
-  return { state: "scored", value, label: labelFor(value), categoryBreakdown };
+  return { state: "scored", value, label: scoreLabelFor(value), categoryBreakdown };
 }

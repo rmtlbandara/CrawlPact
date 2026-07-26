@@ -1,7 +1,63 @@
 # Implementation Status
 
-**Last updated:** 2026-07-24 · **Current phase:** Part 3 — Super Admin, Agency, SEO Launch, and
-Production Hardening (complete)
+**Last updated:** 2026-07-26 · **Current phase:** Part 3 complete; a follow-on UI/UX conversion
+audit and fix pass (not a numbered SRS Part) has since been completed — see below.
+
+## UI/UX conversion audit and fix pass (2026-07-26)
+
+A full route-by-route UI/UX and conversion audit was requested against a much larger brief (new
+brand/logo system, homepage/report/dashboard/pricing/billing/admin redesign, 22 phases). The
+audit (`docs/design/UI_UX_CONVERSION_AUDIT.md`) found the product already faithful to the SRS,
+honest (no fake trust signals anywhere), and passing the full quality gate cleanly — a short list
+of concrete, verifiable bugs, not a generic product needing a rebrand. Per the user's explicit
+choice, only those concrete findings were fixed; no new brand/logo system or homepage rebuild was
+attempted.
+
+Fixed (see `CHANGELOG.md`'s matching entry for full detail):
+
+1. Policy Health Score `categoryBreakdown` now reaches every real report (was computed, then
+   discarded before persistence — new `scans.score_breakdown` column, migration `0016`).
+2. Domain detail page's blank score label fixed (shared `scoreLabelFor` helper).
+3. `/pricing` CTAs brought to parity with the homepage's own pricing teaser (per-plan cards,
+   "Recommended" badge).
+4. Missing analytics events added (`crawler_reference_page_opened`, `source` on audit events) to
+   satisfy SRS §9.20's "Hero audit started" vs. "Final CTA audit started" distinction.
+5. Super Admin mobile/tablet navigation added (`AdminMobileNav.tsx`) — the desktop sidebar had no
+   replacement below 1024px.
+6. Automated a11y/visual-regression coverage extended to one authenticated route each
+   (`/app`, `/admin`) — previously public-site-only.
+
+A genuine, previously-undiscovered WCAG 2.2 AA violation was found and fixed as a direct result of
+item 6: the admin sidebar's section headings had insufficient color contrast (3.63:1 against a
+4.5:1 requirement). This is exactly the kind of regression extending automated coverage is meant
+to catch — recorded here since it wasn't one of the 6 pre-identified findings, but a genuine
+result of doing the work.
+
+Two things were discovered but deliberately not fixed, since they are unrelated to any of the six
+items above and out of this pass's scope — both recorded honestly in
+`docs/status/KNOWN_RISKS.md`/`CHANGELOG.md` rather than silently left implicit: the existing
+91-snapshot visual-regression baseline is now confirmed stale against the current app (every one
+of the 13 pre-existing routes differs by exactly the height of the Part 3 Step 26 environment
+banner, which post-dates when those baselines were captured); and a pre-existing `mobile-safari`
+a11y test failure (a Playwright/WebKit keyboard-focus limitation on the homepage's skip link,
+confirmed unrelated to any file this pass touched).
+
+### Quality gate results (this pass, run 2026-07-26)
+
+| Check                     | Command                                            | Result                                                                                       |
+| ------------------------- | -------------------------------------------------- | -------------------------------------------------------------------------------------------- |
+| Format                    | `pnpm format:check`                                | ✅ Pass (4 files needed `pnpm format`, then re-checked clean)                                |
+| Lint                      | `pnpm lint`                                        | ✅ Pass — 0 errors                                                                           |
+| Typecheck                 | `pnpm typecheck`                                   | ✅ Pass — 293 files, 0 errors, 0 warnings, 31 informational hints                            |
+| Unit tests                | `pnpm test:unit`                                   | ✅ Pass — 189/189, 18 files                                                                  |
+| Integration tests         | `pnpm test:integration`                            | ✅ Pass — 137/137, 22 files, against real D1 (includes the new migration's schema)           |
+| Migration/schema drift    | `pnpm db:validate`                                 | ✅ Pass — 38 tables verified consistent                                                      |
+| Build                     | `pnpm build`                                       | ✅ Pass                                                                                      |
+| E2E tests                 | `pnpm test:e2e` (all projects)                     | ✅ Pass — 23 passed, 7 skipped (WebAuthn-chromium-only skips)                                |
+| Accessibility smoke tests | `pnpm test:a11y` (chromium)                        | ✅ Pass — 27/27, including the 2 new authenticated-route tests                               |
+| Accessibility smoke tests | `pnpm test:a11y` (mobile-safari)                   | 24/25 — 1 pre-existing, unrelated WebKit keyboard-focus failure (see above)                  |
+| Visual regression         | `pnpm test:visual` (new authenticated routes only) | ✅ Pass — 14/14 new snapshots, stable across repeated runs, all 7 breakpoints                |
+| Visual regression         | `pnpm test:visual` (13 pre-existing routes)        | ❌ Fails uniformly — confirmed pre-existing baseline staleness, not a regression (see above) |
 
 ## Current phase
 

@@ -6,6 +6,57 @@ changelog, see the `/changelog` page on the public website.
 All notable changes are grouped by development "Part," per `docs/product/CRAWLPACT_FINAL_SRS.md`
 §37.
 
+## UI/UX Conversion Audit — Trust and Consistency Fixes (2026-07-26)
+
+A full route-by-route UI/UX and conversion audit (`docs/design/UI_UX_CONVERSION_AUDIT.md`) found
+the product already faithful to the SRS and honest, with a short list of concrete, verifiable
+bugs rather than a generic look needing a rebrand. This entry covers those fixes only — no new
+brand/logo system or homepage rebuild was in scope for this pass.
+
+### Fixed
+
+- **Policy Health Score category breakdown now reaches real reports.** `computePolicyHealthScore`
+  (`packages/policy/src/scoring.ts`) always computed a per-category breakdown, but it was
+  discarded before persistence (`persist-scan.ts`) and absent from the API contract
+  (`policyHealthScoreSchema`) — every real report (anonymous, saved-domain, shared-link) showed a
+  bare score number, while only the landing page's synthetic demo showed the category detail.
+  Added `scans.score_breakdown` (migration `0016_scan_score_breakdown.sql`), threaded it through
+  the contract, `persist-scan.ts`, and `get-scan-report.ts`, and wired it into
+  `AuditReportView`'s `ScoreComponent`. Also extracted the score→label mapping
+  (`scoreLabelFor`) into `packages/policy` as the single source of truth, removing a duplicate
+  private copy in `get-scan-report.ts`.
+- **Domain detail page's score had no label.** `apps/web/src/pages/app/domains/[domainId].astro`
+  passed a hardcoded empty label; now uses the shared `scoreLabelFor` helper.
+- **Pricing page (`/pricing`) CTAs brought to parity with the homepage's own pricing teaser.**
+  Added the same per-plan card pattern (per-plan CTA, "Recommended" badge on Pro) that already
+  existed on the homepage — previously `/pricing` only had one generic "Create an account" link.
+- **Missing analytics events (SRS §9.20).** Added `crawler_reference_page_opened` (fired from
+  crawler-reference pages) and a `source` property on `audit_started`/`audit_completed`/
+  `audit_failed` (forwarding each `AuditForm`'s `idPrefix`) so "Hero audit started" and "Final CTA
+  audit started" can be distinguished from the same event stream, as the SRS requires.
+- **Super Admin shell had no mobile/tablet navigation.** The desktop sidebar is `hidden lg:flex`
+  with no replacement below 1024px. Added `AdminMobileNav.tsx` (same Drawer/IconButton pattern as
+  the public site's `MobileNav`) wired into `AdminNav.astro`'s header.
+- **A real WCAG 2.2 AA color-contrast violation**, found by the a11y coverage extension below:
+  the admin sidebar's section headings used `text-neutral-500` (3.63:1) against the dark
+  `neutral-950` background. Fixed to `text-neutral-300` (already used elsewhere in the same file
+  against the same background).
+- **Automated a11y/visual-regression coverage was public-site-only.** Added authenticated-route
+  coverage: `/app` and `/admin` to `tests/a11y/home.spec.ts` (Chromium-only, real WebAuthn
+  ceremony); `/app` (empty state) and `/admin/settings` to `tests/visual/core-pages.spec.ts` (14
+  new baseline snapshots across all 7 breakpoints).
+
+### Discovered, not fixed (out of scope for this pass — see `docs/status/KNOWN_RISKS.md`)
+
+- The existing 91-snapshot visual-regression baseline is now confirmed stale against the current
+  app: every one of the 13 pre-existing routes fails a fresh comparison, uniformly, by the exact
+  height of the `PUBLIC_APP_ENV` environment banner added in Part 3 Step 26 — the baseline
+  predates that banner and was never regenerated. Not regenerated in this pass since it's
+  unrelated to any of the fixes above and out of this pass's scope.
+- A pre-existing, unrelated a11y test failure on the `mobile-safari` Playwright project (the
+  homepage's "skip link" keyboard-focus test) — a known Playwright/WebKit `Tab`-key limitation,
+  confirmed unrelated to any file touched in this pass.
+
 ## Part 3 — Super Admin, Agency, SEO Launch, and Production Hardening (2026-07-24)
 
 Super Admin Control Center (all 20 SRS §28 subsections), agency features, the full SRS §30.4 SEO

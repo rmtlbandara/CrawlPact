@@ -43,6 +43,8 @@ export async function persistScan(
     rulesetVersionId: params.rulesetVersionId,
     score: result.score.state === "scored" ? result.score.value : null,
     scoreState: result.score.state,
+    scoreBreakdown:
+      result.score.state === "scored" ? JSON.stringify(result.score.categoryBreakdown) : null,
     externalRequestCount: result.externalRequestCount,
     recommendedAdditions: JSON.stringify(result.recommendation.proposedAdditions),
     errorCategory:

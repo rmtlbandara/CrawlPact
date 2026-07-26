@@ -24,6 +24,7 @@ export const PRODUCT_EVENT_NAMES = [
   "subscription_activated",
   "report_shared",
   "notification_opened",
+  "crawler_reference_page_opened",
 ] as const;
 
 export type ProductEventName = (typeof PRODUCT_EVENT_NAMES)[number];

@@ -2,6 +2,7 @@
 export const prerender = true;
 import { getCollection, render } from "astro:content";
 import MarketingLayout from "../../layouts/MarketingLayout.astro";
+import { AnalyticsBeacon } from "../../components/AnalyticsBeacon";
 import { CRAWLER_PURPOSE_LABELS } from "@crawlpact/registry";
 
 export async function getStaticPaths() {
@@ -62,4 +63,9 @@ const { Content } = await render(crawler);
       Official source: {crawler.data.officialSourceUrl}
     </a>
   </article>
+  <AnalyticsBeacon
+    client:load
+    eventName="crawler_reference_page_opened"
+    properties={{ crawlerId: crawler.id }}
+  />
 </MarketingLayout>

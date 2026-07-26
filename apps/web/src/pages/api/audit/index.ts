@@ -138,7 +138,12 @@ export const POST: APIRoute = async ({ request }) => {
       await recordSecurityEvent(db, "rate_limit", { ipHash, target: normalized.normalizedOrigin });
     }
 
-    await trackEvent(db, "audit_started", { properties: { trigger: "anonymous" } });
+    await trackEvent(db, "audit_started", {
+      properties: {
+        trigger: "anonymous",
+        ...(parsed.data.source ? { source: parsed.data.source } : {}),
+      },
+    });
 
     const blocklist = await getBlockedTargetPatterns(db);
     const totalTimeoutMs = (await getIntConfig(db, "scan_total_timeout_seconds", 30)) * 1000;
@@ -176,7 +181,10 @@ export const POST: APIRoute = async ({ request }) => {
     const succeeded =
       auditResult.status === "completed" || auditResult.status === "completed_with_warnings";
     await trackEvent(db, succeeded ? "audit_completed" : "audit_failed", {
-      properties: { status: auditResult.status },
+      properties: {
+        status: auditResult.status,
+        ...(parsed.data.source ? { source: parsed.data.source } : {}),
+      },
     });
 
     return jsonResponse(

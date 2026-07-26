@@ -79,6 +79,7 @@ export const scans = sqliteTable("scans", {
   rulesetVersionId: text("ruleset_version_id").references(() => rulesetVersions.id),
   score: integer("score"),
   scoreState: text("score_state").notNull().$type<"scored" | "incomplete">(),
+  scoreBreakdown: text("score_breakdown"),
   externalRequestCount: integer("external_request_count").notNull().default(0),
   errorCategory: text("error_category"),
   recommendedAdditions: text("recommended_additions"),

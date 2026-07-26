@@ -3,6 +3,7 @@ export const prerender = false;
 import AppLayout from "../../../layouts/AppLayout.astro";
 import { DomainDetailActions } from "../../../components/app/DomainDetailActions";
 import { ScoreComponent, ErrorState, StatusChip } from "@crawlpact/ui";
+import { scoreLabelFor } from "@crawlpact/policy";
 import { createDb } from "@crawlpact/database";
 import { getEnv } from "../../../lib/env";
 import { getPageSession } from "../../../lib/auth/page-session";
@@ -54,7 +55,11 @@ const scans = domain ? await listScansForDomain(db, domain.id) : [];
                   score={
                     domain.currentScore === null
                       ? { state: "incomplete" }
-                      : { state: "scored", value: domain.currentScore, label: "" }
+                      : {
+                          state: "scored",
+                          value: domain.currentScore,
+                          label: scoreLabelFor(domain.currentScore),
+                        }
                   }
                 />
               </div>

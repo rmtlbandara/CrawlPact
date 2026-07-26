@@ -28,6 +28,10 @@ React island (`MobileNav.tsx`) renders a hamburger trigger and a `Drawer`-based 
 one of only two client-side islands most marketing pages load (the other is the audit form),
 in service of SRS §9.22's "minimise JavaScript".
 
+The Super Admin shell's desktop sidebar (`AdminNav.astro`) is `hidden lg:flex` — below 1024px it
+had no replacement at all until 2026-07-26, when `AdminMobileNav.tsx` (the same `Drawer`/
+`IconButton` pattern as the public site's `MobileNav`) was added to the admin header.
+
 ## Tables
 
 `DataTable` hides columns below configurable breakpoints (`hideBelow: "sm" | "md" | "lg"`) and

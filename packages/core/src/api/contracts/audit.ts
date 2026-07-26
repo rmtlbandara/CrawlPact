@@ -14,6 +14,15 @@ export const createAuditRequestSchema = z.object({
     .trim()
     .min(1, "Enter a domain, such as example.com")
     .max(253, "This does not look like a valid domain or URL."),
+  /**
+   * Which `AuditForm` instance submitted this request (its `idPrefix`, e.g.
+   * "hero", "final-cta", "audit-page", or a free-tool page) — recorded as
+   * an analytics property so "Hero audit started" and "Final CTA audit
+   * started" (SRS §9.20) can be distinguished from the same event stream.
+   * Never validated against a fixed enum: an unrecognised or missing value
+   * must never block a real audit, since this is purely observational.
+   */
+  source: z.string().min(1).max(64).optional(),
 });
 export type CreateAuditRequest = z.infer<typeof createAuditRequestSchema>;
 
@@ -122,8 +131,19 @@ export const crawlerMatrixRowSchema = z.object({
 });
 export type CrawlerMatrixRow = z.infer<typeof crawlerMatrixRowSchema>;
 
+export const scoreCategoryBreakdownEntrySchema = z.object({
+  label: z.string(),
+  value: z.number().min(0).max(100),
+});
+export type ScoreCategoryBreakdownEntry = z.infer<typeof scoreCategoryBreakdownEntrySchema>;
+
 export const policyHealthScoreSchema = z.union([
-  z.object({ state: z.literal("scored"), value: z.number().min(0).max(100), label: z.string() }),
+  z.object({
+    state: z.literal("scored"),
+    value: z.number().min(0).max(100),
+    label: z.string(),
+    categoryBreakdown: z.array(scoreCategoryBreakdownEntrySchema),
+  }),
   z.object({ state: z.literal("incomplete") }),
 ]);
 
