@@ -1,7 +1,110 @@
 # Implementation Status
 
-**Last updated:** 2026-07-26 · **Current phase:** Part 3 complete; a follow-on UI/UX conversion
-audit and fix pass (not a numbered SRS Part) has since been completed — see below.
+**Last updated:** 2026-07-26 · **Current phase:** Part 3 complete; two follow-on passes (not
+numbered SRS Parts) have since been completed — a UI/UX conversion audit and fix pass, and a
+Cloudflare infrastructure-alignment pass — see below, most recent first.
+
+## Cloudflare infrastructure-alignment pass (2026-07-26)
+
+A 23-phase brief asked for a full audit/alignment of CrawlPact's architecture against an approved
+Cloudflare plan (Workers, D1, R2, Workers Static Assets/Pages, DNS/SSL/CDN, Cron Triggers, Paddle).
+Per the user's explicit scope decisions: **R2 is not adopted** (no current technical need — see
+`docs/data/D1_R2_DATA_PLACEMENT_POLICY.md`); the framing throughout is "how far can Workers Free
+be stretched," not an assumption of immediate Paid upgrade; and **all documentation/analysis
+phases were completed, while code changes (wrangler.jsonc hardening, cache-header implementation,
+D1 write batching, new tests) were deliberately deferred** pending review of the findings below.
+
+**Documents created:**
+
+- `docs/deployment/CLOUDFLARE_RESOURCE_LIMITS.md` — ~27 current Cloudflare Free-plan limits,
+  verified live against official docs 2026-07-26 (Phase 0).
+- `docs/deployment/CLOUDFLARE_ARCHITECTURE_AUDIT.md` — current-state audit of every Cloudflare
+  touchpoint in the codebase (Phase 1).
+- `docs/architecture/adr/ADR-0006-CLOUDFLARE-STATIC-DELIVERY.md` — formalizes keeping Workers
+  Static Assets over a Cloudflare Pages split (Phase 2/3).
+- `docs/data/D1_R2_DATA_PLACEMENT_POLICY.md` — the R2 decision and its five revisit triggers
+  (Phase 4/6).
+- `docs/data/D1_STORAGE_CAPACITY_AUDIT.md` — per-table D1 growth model, three scenarios (Phase 5).
+- `docs/operations/SCAN_CAPACITY_BUDGET.md` — per-scan CPU/subrequest/D1 cost budget (Phase 10).
+- `docs/operations/MONITORING_CAPACITY_PLAN.md` — six scheduled-monitoring scenarios (Phase 11).
+- `docs/operations/CLOUDFLARE_UPGRADE_TRIGGERS.md` — concrete warning/action thresholds (Phase 12).
+- `docs/deployment/CDN_CACHE_POLICY.md` — cache policy defined, header implementation deferred
+  (Phase 13).
+- `docs/release/CLOUDFLARE_CAPACITY_AND_COST_REPORT.md` — capstone synthesis (Phase 21).
+
+**Documents updated:** `docs/deployment/CLOUDFLARE_CONFIGURATION.md` (DNS/SSL/domain checklist,
+R2 note), `docs/deployment/DEPLOYMENT.md`, `docs/deployment/ENVIRONMENTS.md` (corrected a stale
+"once implemented" note — the environment banner has been live since Part 3 Step 26),
+`docs/operations/BACKUP_AND_RECOVERY.md` (verified 7-day Time Travel window, tabletop drill
+detail), `docs/data/DATA_RETENTION.md` and `docs/data/DATA_MODEL.md` (R2 cross-references, 8
+missing migration entries added, a newly-found FK gap noted), `docs/architecture/ARCHITECTURE.md`
+(corrected stale "not yet implemented" language left over from Part 1), and
+`docs/performance/PERFORMANCE_AND_COST.md` (linked to the new, more specific capacity analysis).
+
+### Two central findings, more consequential than a "Free-plan-friendly" audit would suggest
+
+1. **CPU time (10ms/invocation on Free) is now quantified, not just judged by shape.** A single
+   scan is estimated at ≈3–7ms typical, ≈12–25ms+ worst case — thin-to-negative margin — driven by
+   two previously-uncosted mechanisms: an unbatched ~30–76-statement D1 write fan-out per scan, and
+   an uncapped findings count (up to ~46 in a realistic worst case). The scheduled monitoring
+   sweep shares this same ceiling across its whole per-tick batch, meaning the current 20-domain
+   default is "essentially certain" to fail, and backlog is modeled to begin accumulating
+   somewhere between 5 and 50 Solo customers — **well below the SRS's own 150+/1,000-domain
+   commercial target**, which the current design cannot reach under Workers Free at all.
+2. **D1 storage is not the non-issue a per-scan glance suggests.** `scan_resources` rows tagged
+   `html_meta` store the full truncated homepage HTML body, not just meta tags. At the SRS's own
+   commercial target, the production database is modeled to reach 45–70% of its 500MB per-database
+   cap within one year and cross it entirely between year 1–2 — driven by this one field
+   compounding across Pro/Agency's multi-year retention windows.
+
+Neither finding recommends Queues, Workflows, Durable Objects, or R2 as the fix — both conclude the
+existing bounded-batch-plus-cron architecture is the right shape, and the load-bearing remedy is
+either cheap, targeted tightening (D1 write batching, capping findings, reducing `html_meta`
+capture size, populating the unused `resource_hash` column for deduplication) or, once volume
+outgrows what tightening can buy, a Workers Paid upgrade for CPU headroom specifically — not the
+daily request/D1-write quotas, which stay comfortable at every modeled scale.
+
+### New risks surfaced (added to `docs/status/KNOWN_RISKS.md`)
+
+The unbatched D1 write fan-out and uncapped findings count; `html_meta`'s full-HTML capture as the
+dominant D1 growth driver; a missing `ON DELETE CASCADE` on `scan_diffs.previous_scan_id`/
+`current_scan_id` (same bug class as the Part 3 Step 21 fixes, not yet fixed); `product_events`/
+`security_events`/`notifications` having no purge job at all; RSL parsing's missing pre-parse size
+bound and a sitemap sparse-`<loc>` full-scan gap; and the orchestrator's subrequest counter
+undercounting true consumption by excluding redirect hops.
+
+### Deferred to a follow-up pass (explicitly out of this pass's scope)
+
+Wrangler.jsonc hardening (Phase 18), R2 bindings/storage abstraction (skipped — R2 not adopted),
+CDN cache-header implementation and header tests (Phase 13/20 code), D1 write batching and the
+other capacity tightening measures named above, the `scan_diffs` FK fix, a Super Admin capacity-
+visibility UI (Phase 17), and the recovery tabletop drill itself (requires a real Cloudflare
+account, which does not exist).
+
+### Quality gate results (this pass, run 2026-07-26)
+
+| Check | Command | Result |
+| --- | --- | --- |
+| Format | `pnpm format:check` | ✅ Pass (15 doc files needed `pnpm format`, then re-checked clean) |
+| Lint | `pnpm lint` | ✅ Pass — 0 errors |
+| Typecheck | `pnpm typecheck` | ✅ Pass — 293 files, 0 errors, 0 warnings, 31 informational hints |
+| Unit tests | `pnpm test:unit` | ✅ Pass — 189/189, 18 files |
+| Integration tests | `pnpm test:integration` | ✅ Pass — 137/137, 22 files, against real D1 |
+| Migration/schema drift | `pnpm db:validate` | ✅ Pass — 38 tables verified consistent |
+| Build | `pnpm build` | ✅ Pass |
+
+No application code was touched this pass (documentation/analysis only, confirmed via `git status`
+before running the gate) — e2e/a11y/visual suites were not re-run since no UI or behavior changed,
+consistent with the quality-gate skill's own guidance. A standalone `wrangler deploy --dry-run`
+invocation (attempted as supplementary evidence for Phase 23's "wrangler dry-run deployment" ask)
+produced bundler errors resolving Astro's virtual modules (`astro:static-paths`, `virtual:astro:app`)
+when run directly against `wrangler.jsonc`'s `main: ./src/worker.ts` — most likely an artifact of
+invoking Wrangler standalone outside whatever build-integration context makes the documented
+`pnpm build` → `wrangler deploy` flow work in practice (a long-established, widely-used Astro/
+Cloudflare-adapter pattern), not a newly-discovered break in this specific project. Not confirmed
+either way with certainty; recorded as an open question worth checking during an actual first
+deploy rather than asserted as broken, since resolving it with certainty would mean touching
+build/deploy tooling, out of this pass's scope.
 
 ## UI/UX conversion audit and fix pass (2026-07-26)
 

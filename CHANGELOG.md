@@ -6,6 +6,66 @@ changelog, see the `/changelog` page on the public website.
 All notable changes are grouped by development "Part," per `docs/product/CRAWLPACT_FINAL_SRS.md`
 §37.
 
+## Cloudflare Infrastructure Alignment — Capacity Audit and Analysis (2026-07-26)
+
+A 23-phase brief requested full alignment of CrawlPact's architecture with an approved Cloudflare
+plan (Workers, D1, R2, Workers Static Assets/Pages, DNS/SSL/CDN, Cron Triggers, Paddle). Per the
+user's explicit scope: R2 is not adopted (no current technical need), the analysis is framed
+around extending Workers Free headroom rather than assuming an immediate Paid upgrade, and all
+documentation/analysis phases were completed while risky code changes (wrangler.jsonc hardening,
+cache-header implementation, D1 write batching, new tests) were deliberately deferred. See
+`docs/status/IMPLEMENTATION_STATUS.md`'s matching entry for the full document list.
+
+### Added
+
+- **Verified current Cloudflare Free-plan limits** (`docs/deployment/CLOUDFLARE_RESOURCE_LIMITS.md`) —
+  ~27 limits fetched live against official docs, including confirming D1's 500MB per-database cap
+  is distinct from its 5GB account-wide total, and that Cloudflare Pages' "unlimited" claim is
+  scoped to static-asset requests only, not Functions/dynamic requests.
+- **A full current-state Cloudflare architecture audit** (`docs/deployment/CLOUDFLARE_ARCHITECTURE_AUDIT.md`)
+  confirming R2 is unused anywhere in the codebase, production/preview D1 are structurally
+  separate, and scan evidence lives entirely in D1 as capped TEXT.
+- **ADR-0006**, formalizing the decision to keep Workers Static Assets over a Cloudflare Pages
+  split, with the honest caveat that Workers Static Assets requests likely count against the
+  shared Workers daily-request budget (unlike Pages' exempt static-asset requests) — not
+  independently verified, flagged as a follow-up.
+- **A D1/R2 data placement policy** (`docs/data/D1_R2_DATA_PLACEMENT_POLICY.md`) concluding R2 is
+  not justified today, with five concrete, evidence-based triggers that would reopen the decision.
+- **A D1 storage capacity model** (`docs/data/D1_STORAGE_CAPACITY_AUDIT.md`) finding the production
+  database is expected to reach 45–70% of its 500MB cap within one year, and cross it entirely
+  between year 1–2, at the SRS's own commercial target — driven by `scan_resources`'s `html_meta`
+  rows capturing full homepage HTML rather than just meta tags, compounding across Pro/Agency's
+  multi-year retention windows.
+- **A scan capacity budget and monitoring capacity plan**
+  (`docs/operations/SCAN_CAPACITY_BUDGET.md`, `docs/operations/MONITORING_CAPACITY_PLAN.md`)
+  quantifying, for the first time, that a real scan's CPU cost (≈3–7ms typical, ≈12–25ms+ worst
+  case) leaves thin-to-negative margin against Workers Free's 10ms ceiling — driven by an
+  unbatched D1 write fan-out and an uncapped findings count — and that the scheduled monitoring
+  sweep's current 20-domain default batch size is "essentially certain" to exceed that same
+  ceiling, with backlog modeled to begin between 5 and 50 Solo customers.
+- **Concrete upgrade triggers** (`docs/operations/CLOUDFLARE_UPGRADE_TRIGGERS.md`) and a **CDN
+  cache policy** (`docs/deployment/CDN_CACHE_POLICY.md`, policy only — header implementation
+  deferred) turning the above into warning/action thresholds.
+- **A capstone capacity and cost report** (`docs/release/CLOUDFLARE_CAPACITY_AND_COST_REPORT.md`)
+  synthesizing all of the above into a recommended launch configuration.
+
+### Documentation corrections made along the way
+
+- `docs/architecture/ARCHITECTURE.md` still described authentication, billing, monitoring, the
+  scanner, and Super Admin as "architected for but not implemented" — stale since Part 1; all are
+  now real, built features.
+- `docs/deployment/ENVIRONMENTS.md` still described the environment indicator banner as pending
+  ("once implemented") — it has been live since Part 3 Step 26.
+- `docs/data/DATA_MODEL.md`'s migration table stopped at migration 8 of the now-16 that exist.
+
+### Discovered, not fixed (out of scope for this docs-only pass — see `docs/status/KNOWN_RISKS.md`)
+
+An unbatched D1 write fan-out and uncapped findings count in the scan-persistence path; a missing
+`ON DELETE CASCADE` on `scan_diffs.previous_scan_id`/`current_scan_id` (same bug class as three
+previously-fixed migrations); `product_events`/`security_events`/`notifications` having no purge
+job; RSL parsing's missing pre-parse size bound; a sitemap sparse-`<loc>` full-scan gap; and the
+scanner's subrequest counter undercounting true consumption by excluding redirect hops.
+
 ## UI/UX Conversion Audit — Trust and Consistency Fixes (2026-07-26)
 
 A full route-by-route UI/UX and conversion audit (`docs/design/UI_UX_CONVERSION_AUDIT.md`) found

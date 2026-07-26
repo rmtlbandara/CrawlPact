@@ -104,6 +104,15 @@ appear in those admin list views, even though the underlying rows are intact and
 directly. This is a real UX/completeness gap (the record isn't lost, just not surfaced in that
 one view) — see `docs/status/KNOWN_RISKS.md`.
 
+## Object storage cleanup
+
+Not applicable. R2 is not currently adopted (`docs/data/D1_R2_DATA_PLACEMENT_POLICY.md`,
+2026-07-26) — there are no objects to coordinate deletion of alongside a D1 row, no orphan-object
+detection needed, and nothing beyond the D1 `DELETE`/`UPDATE` operations above runs during the
+daily retention purge (confirmed by the 2026-07-26 architecture audit reading the full
+`lib/data-retention.ts` file). If R2 is ever adopted, this section must be updated so that object
+deletion is coordinated with (and never precedes) the D1 reference it corresponds to.
+
 ## What's still open
 
 Billing records (`transactions`, `webhook_events`) have no purge job — SRS leaves their exact

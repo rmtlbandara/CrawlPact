@@ -8,9 +8,9 @@
 
 ## Environment indicators (SRS §10.43)
 
-`PUBLIC_APP_ENV` is read from the Worker's `vars`. A non-production value should render a
-persistent environment label in the UI once an authenticated shell exists (Part 3+); Part 1's
-public marketing pages do not need one since there is no sandbox/production data to confuse.
+`PUBLIC_APP_ENV` is read from the Worker's `vars`. A non-production value renders a persistent
+environment label in the UI — implemented in `BaseLayout.astro` at Part 3 Step 26, covering every
+page (public, app, and admin, since all three share that layout). Production shows no label.
 
 ## Config precedence
 

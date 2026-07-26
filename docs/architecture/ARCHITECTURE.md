@@ -34,8 +34,17 @@ packages/
    pages — see `export const prerender = true` on those pages).
 4. API routes (`src/pages/api/**`) validate input with `@crawlpact/core` zod contracts, return
    the standard envelope (`docs/api/API_CONTRACTS.md`), and are the only place D1 is queried.
-5. Cron ticks invoke `scheduled()` in `worker.ts`, which will dispatch to monitoring-sweep logic
-   in Part 4.
+5. Cron ticks invoke `scheduled()` in `worker.ts`, which dispatches to the monitoring sweep
+   (`lib/monitoring.ts`) and the data-retention purge (`lib/data-retention.ts`) — both real,
+   implemented, tested logic (Part 4 onward), not a placeholder.
+
+## Storage
+
+D1 is the only datastore (ADR-0002). **No R2 (object storage) is used** —
+`docs/data/D1_R2_DATA_PLACEMENT_POLICY.md` (2026-07-26) records the evidence-based decision not
+to adopt it yet, and the concrete triggers that would reopen that decision. Static delivery
+(Workers Static Assets vs. Cloudflare Pages) is formalised in
+[ADR-0006](./adr/ADR-0006-CLOUDFLARE-STATIC-DELIVERY.md).
 
 ## Module boundaries
 
@@ -48,8 +57,10 @@ packages/
   can be reused by any future surface (customer app, Super Admin) without pulling in
   server-only code.
 
-## What is deliberately not built yet
+## Current implementation state
 
-Authentication, billing, monitoring scheduling, the scanner itself, and the Super Admin
-console are architected for (schema, ADRs, typed contracts exist) but not implemented — see
-`docs/status/IMPLEMENTATION_STATUS.md` for the authoritative current state.
+Authentication (passkeys, ADR-0004), billing (Paddle, ADR unwritten — see
+`docs/security/BILLING_SECURITY.md`), monitoring scheduling, the scanner (ADR-0005), and the
+Super Admin console are all implemented, not just architected for — see
+`docs/status/IMPLEMENTATION_STATUS.md` for the authoritative current state and
+`docs/status/REQUIREMENTS_TRACEABILITY.md` for per-requirement traceability.

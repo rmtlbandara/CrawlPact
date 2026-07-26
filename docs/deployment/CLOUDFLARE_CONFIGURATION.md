@@ -66,6 +66,60 @@ export — both are real, implemented, tested logic, not a placeholder.
 `@simplewebauthn/server` and `@paddle/paddle-node-sdk`. Bump `compatibility_date` deliberately,
 not automatically, and re-run the full test suite after doing so.
 
-## Custom domains / DNS
+## Object storage (R2)
 
-Not yet configured — no production Cloudflare account has been connected to this repository.
+**Not used.** See `docs/data/D1_R2_DATA_PLACEMENT_POLICY.md` (2026-07-26) for the evidence-based
+decision not to adopt R2 at this time, and the concrete triggers that would reopen that decision.
+No `r2_buckets` binding exists in `wrangler.jsonc`.
+
+## DNS, SSL, and domain configuration (Phase 14)
+
+**Not yet configured** — no production Cloudflare account has been connected to this repository.
+This section records the _intended_ configuration for when a real account exists, so first setup
+follows a checklist rather than being improvised.
+
+### Domains
+
+- `crawlpact.com` — canonical apex, production.
+- `www.crawlpact.com` — must permanently redirect (301) to the apex, never serve independent
+  content.
+- `preview.crawlpact.com` (optional) — for the `env.preview` Worker environment. Currently a
+  placeholder value in `wrangler.jsonc`'s `env.preview` block; must be replaced with the real
+  domain before preview WebAuthn ceremonies will work (see "Non-secret environment vars" above).
+
+### Required configuration once a real account exists
+
+1. **Apex is canonical.** All redirects converge on `https://crawlpact.com`, never
+   `https://www.crawlpact.com` or a bare-HTTP variant.
+2. **HTTP → HTTPS redirect** enabled account-wide (Cloudflare's "Always Use HTTPS" setting).
+3. **`www` → apex redirect**, permanent (301), configured as a Cloudflare redirect rule or page
+   rule — verify it does not create a redirect loop with rule #1 (test both
+   `http://www.crawlpact.com` and `https://www.crawlpact.com` resolve to `https://crawlpact.com`
+   in exactly one hop).
+4. **Universal SSL** active on the zone (Cloudflare's free, automatic certificate) — this is
+   enabled by default for any zone added to Cloudflare and should simply be confirmed, not
+   configured manually.
+5. **DNS records proxied** (orange-cloud, not grey-cloud/DNS-only) for the apex and `www` — this
+   is what puts Cloudflare's CDN, DDoS protection, and CSP/security-header injection in front of
+   the Worker; a DNS-only record would bypass Cloudflare entirely for that hostname.
+6. **HSTS**: do **not** enable a long-duration/preload HSTS policy until the redirect chain above
+   (#1–#3) has been verified working end-to-end. Enabling HSTS before the domain/redirect strategy
+   is confirmed risks locking out a misconfigured hostname for the duration of the `max-age` (and
+   permanently, if preloaded) with no easy rollback. Start with a short `max-age` and no
+   `preload`/`includeSubDomains` flag; extend only after confirming no unintended hostname is ever
+   served over plain HTTP.
+7. **WebAuthn RP ID and origin exactly match** the real serving domain — see the "Non-secret
+   environment vars" section above; this is re-stated here because it is a DNS/domain-config
+   precondition, not just an application config one.
+8. **Preview isolation**: preview uses its own D1 database (`crawlpact-db-preview`, see above), no
+   R2 (R2 isn't used by either environment — see above), Paddle **sandbox** credentials (never
+   production Paddle keys), and cannot reach production data. Production and preview secrets
+   (`SESSION_SIGNING_SECRET`, `PADDLE_API_KEY`, `PADDLE_WEBHOOK_SECRET`) must be set independently
+   per environment via `wrangler secret put ... --env preview` — never reuse a production secret
+   value for preview.
+
+### CDN caching
+
+See `docs/deployment/CDN_CACHE_POLICY.md` for the full cache policy (what's safe to cache publicly
+vs. never cached) — DNS/CDN configuration and cache-control policy are related but distinct
+concerns; this section covers domain/routing/TLS, that document covers response caching.

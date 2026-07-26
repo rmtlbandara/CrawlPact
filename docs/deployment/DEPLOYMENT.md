@@ -27,6 +27,12 @@ wrangler deploy --config apps/web/wrangler.jsonc [--env preview]
 
 - Load `/` and `/status` on the deployed URL.
 - Confirm `robots.txt` and `sitemap.xml` resolve.
-- Confirm the environment indicator (once implemented) matches the target environment.
+- Confirm the environment indicator matches the target environment (see
+  `docs/deployment/ENVIRONMENTS.md`).
 - Check `scheduled_job_runs` after the next cron tick to confirm the Worker's `scheduled()`
   export is live.
+- **Production only, first deploy to a real domain**: confirm `http://` redirects to `https://`,
+  `www.crawlpact.com` redirects to the apex in exactly one hop (no loop), and the WebAuthn
+  ceremony succeeds end-to-end against the real origin — see
+  `docs/deployment/CLOUDFLARE_CONFIGURATION.md`'s "DNS, SSL, and domain configuration" section for
+  the full checklist. Do not enable a long-duration/preload HSTS policy until these are confirmed.

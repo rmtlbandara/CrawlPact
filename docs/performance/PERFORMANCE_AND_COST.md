@@ -25,7 +25,12 @@ not just typechecked.
   **free-tier** subrequest limit (50/invocation) — this wasn't designed against that limit, but
   it happens to already respect it.
 - The scheduled monitoring sweep (`monitoring.ts`) already caps domains claimed per cron tick via
-  `monitoring_scan_batch_size` — confirmed still correctly enforced (Part 2 Step 15 work).
+  `monitoring_scan_batch_size` — the _mechanism_ (Part 2 Step 15 work) is confirmed still correctly
+  enforced. **Update, 2026-07-26**: the _default value_ (20, tunable 1–200) is not CPU-safe on
+  Workers Free — see `docs/operations/MONITORING_CAPACITY_PLAN.md`, which found the realistically
+  CPU-safe batch size is closer to 1 domain/tick, since an entire cron tick's domain loop must fit
+  inside the same 10ms-per-invocation CPU budget as a single HTTP request. The batching mechanism
+  itself remains correct; the number it defaults to does not match Free-plan reality.
 - `getActiveRegistry`'s crawler join is unbounded but currently returns 21 rows (admin-curated,
   no self-publish feature exists) — not a real problem at today's scale; revisit if a
   self-publish/community-registry feature is ever added.
@@ -88,3 +93,20 @@ Worker (no production Cloudflare account is connected yet — see
 during Step 26's production configuration prep and an actual pre-launch smoke test, not a
 confirmed measurement — stated as such deliberately, per this project's rule against presenting
 an unmeasured assumption as a verified fact.
+
+**2026-07-26 update — this expectation has since been sharpened with a specific, quantified
+basis**, not just a shape-level judgment. `docs/operations/SCAN_CAPACITY_BUDGET.md` costs a real
+scan line-by-line (≈3–7ms CPU typical, ≈12–25ms+ worst case, against the same 10ms ceiling) and
+identifies the two largest previously-uncosted contributors: an unbatched ~30–76-statement D1
+write fan-out per scan (`persist-scan.ts` never uses `db.batch()`), and an uncapped findings
+count that can reach ~46 rows in a realistic worst case. `docs/operations/MONITORING_CAPACITY_PLAN.md`
+extends this to the scheduled sweep and finds the current single-daily-cron design starts
+accumulating backlog somewhere between 5 and 50 Solo customers — far below the SRS's own
+150+/1,000-domain target, which the design cannot reach at all under the current CPU ceiling.
+Neither document recommends Queues/Workflows/Durable Objects; both conclude Workers Paid (for CPU
+headroom specifically, not the daily request/D1-write quotas, which stay comfortable even at
+1,000+ domains) is the load-bearing fix, alongside cheaper interim tightening (D1 write batching,
+capping findings, multiple daily cron windows) that extends — but does not remove the need for —
+that eventual upgrade. See `docs/deployment/CLOUDFLARE_RESOURCE_LIMITS.md` for the current
+verified limits both documents are built on (fetched 2026-07-26, superseding the 2026-07-24
+figures in the table above where they differ only in presentation, not substance).
