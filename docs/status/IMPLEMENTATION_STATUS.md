@@ -49,9 +49,13 @@ instead — see `docs/operations/RUNBOOK.md`).
 
 **Not completed / explicitly deferred**:
 
-- Paddle secrets and non-secret vars (`PADDLE_API_KEY`, `PADDLE_WEBHOOK_SECRET`,
-  `PADDLE_PRICE_ID_SOLO/PRO/AGENCY`, `PUBLIC_PADDLE_CLIENT_TOKEN`) — all require a real Paddle
-  account/catalog, out of this pass's scope (separate `paddle:catalog-setup` skill).
+- ~~Paddle secrets/vars unset~~ **Resolved 2026-07-26**: live catalog created (Solo/Pro/Agency
+  products+prices via `paddle:catalog-setup`), price IDs and `PUBLIC_PADDLE_CLIENT_TOKEN` set in
+  `wrangler.jsonc` production `vars`, live webhook destination registered
+  (`ntfset_01kyfkc59d8h66prnhw220hnzy` → `/api/billing/webhook`), and `PADDLE_API_KEY` /
+  `PADDLE_WEBHOOK_SECRET` set as production Worker secrets (confirmed via `wrangler secret list`).
+  Not yet done: an actual end-to-end checkout/webhook run against this live config, and the
+  `status.astro` hardcoded-label fix noted below.
 - Zone-level DNS/SSL/WAF/Cache Rule/redirect-rule configuration — this session's Cloudflare API
   token is read-only at the zone level (Wrangler's default OAuth scope), so these need a manual
   dashboard check; see `docs/deployment/CLOUDFLARE_CONFIGURATION.md`'s checklist. Most notably:

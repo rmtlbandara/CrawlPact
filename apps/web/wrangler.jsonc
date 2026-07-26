@@ -35,6 +35,13 @@
     "PUBLIC_APP_ENV": "production",
     "PUBLIC_SITE_URL": "https://crawlpact.com",
     "PADDLE_ENVIRONMENT": "production",
+    // Live Paddle catalog created 2026-07-26 (see paddle:catalog-setup run) —
+    // not secrets, per docs/deployment/CLOUDFLARE_CONFIGURATION.md.
+    "PADDLE_PRICE_ID_SOLO": "pri_01kyfjzj3t4x2t4dqrmnkjj0r2",
+    "PADDLE_PRICE_ID_PRO": "pri_01kyfjzj81k6w2ds6r6a2jcv93",
+    "PADDLE_PRICE_ID_AGENCY": "pri_01kyfjzjc4tbhve9czw1dq2b1b",
+    // Browser-exposed by design (Paddle.js needs it client-side) — not a secret.
+    "PUBLIC_PADDLE_CLIENT_TOKEN": "live_7744585ebeca2976cd76da4b966",
     "AUDIT_ENGINE_ENABLED": "false",
     // WebAuthn is not optional config — the browser strictly validates
     // `rpId`/origin against the page it's actually served from, so without

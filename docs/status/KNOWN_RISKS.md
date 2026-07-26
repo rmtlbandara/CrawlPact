@@ -16,7 +16,7 @@ the SRS §30.4 minimum (Steps 13–16, see `docs/seo/SEO_CONTENT_GOVERNANCE.md`)
 | Risk                                                 | Why deferred                                                                 | Revisit when                  |
 | ---------------------------------------------------- | ---------------------------------------------------------------------------- | ----------------------------- |
 | ~~No production Cloudflare account connected~~ **Resolved 2026-07-26** | N/A | Real account/zone connected, both environments deployed — see `docs/deployment/DEPLOYMENT.md`'s 2026-07-26 deployment record |
-| No Paddle account connected | Nothing billing-related has been tested against a real Paddle account; `PADDLE_API_KEY`/`PADDLE_WEBHOOK_SECRET`/price IDs/client token are all unset in both deployed environments | A real Paddle account/catalog exists (see `paddle:catalog-setup` skill) |
+| ~~No Paddle account connected~~ **Resolved 2026-07-26** | Live catalog (Solo/Pro/Agency products+prices), price IDs, client token, webhook destination (`ntfset_01kyfkc59d8h66prnhw220hnzy`), `PADDLE_API_KEY`, and `PADDLE_WEBHOOK_SECRET` are all now created/wired against the production Worker | N/A — see `docs/deployment/CLOUDFLARE_CONFIGURATION.md`. Still open: no real checkout has been run end-to-end against this live config yet |
 
 ## Real open risks (not just "not built yet")
 

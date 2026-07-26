@@ -76,7 +76,11 @@ wrangler deploy --config apps/web/dist/server/wrangler.json
   attached, `SESSION_SIGNING_SECRET` confirmed to persist across the code deploy.
 - **Production deployed and validated**: full canonical-hostname matrix passed (see
   `docs/deployment/CLOUDFLARE_CONFIGURATION.md`). Placeholder Worker replaced.
-- **Not yet resolved**: Paddle secrets/vars (needs a real Paddle account — separate task); several
+- **Resolved 2026-07-26**: live Paddle catalog created, price IDs and client token wired into
+  production `vars`, live webhook destination registered, and `PADDLE_API_KEY` /
+  `PADDLE_WEBHOOK_SECRET` set as production Worker secrets (see
+  `docs/deployment/CLOUDFLARE_CONFIGURATION.md`). Still open: no real checkout/webhook has run
+  end-to-end against this live config yet, and several
   zone-level settings need a manual dashboard check since this session's API token was read-only
   at the zone level (see `docs/deployment/CLOUDFLARE_CONFIGURATION.md`'s "Items that need a
   dashboard check", including Cloudflare's own AI Crawl Control robots.txt injection, which is

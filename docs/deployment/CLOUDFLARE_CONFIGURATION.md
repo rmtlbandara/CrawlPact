@@ -92,21 +92,24 @@ the generated config, not the source `wrangler.jsonc`):
 | Secret                  | Status (2026-07-26)                                                        |
 | ------------------------ | -------------------------------------------------------------------------- |
 | `SESSION_SIGNING_SECRET` | **Set**, both environments — generated randomly per environment (32 bytes) |
-| `PADDLE_API_KEY`         | **Not set** — requires a real Paddle account; billing routes that call the Paddle API will error until this is set |
-| `PADDLE_WEBHOOK_SECRET`  | **Not set** — same as above; inbound Paddle webhooks will fail signature verification until set |
+| `PADDLE_API_KEY`         | **Set**, production, 2026-07-26 — live Paddle account API key. Not yet set for preview (should be a sandbox key when set) |
+| `PADDLE_WEBHOOK_SECRET`  | **Set**, production, 2026-07-26 — signing secret from the live webhook destination `ntfset_01kyfkc59d8h66prnhw220hnzy` (destination `https://crawlpact.com/api/billing/webhook`, subscribed to `subscription.*`/`transaction.*`/`adjustment.*`/`customer.*`, matching what `webhook-processor.ts` handles). Not yet set for preview |
 
-Two more Paddle-related values are required by `packages/config/src/env.ts`'s schema but were
-never documented anywhere in this file (a real gap, found 2026-07-26) — both also blocked on a
-real Paddle account/catalog existing:
+Two more Paddle-related values are required by `packages/config/src/env.ts`'s schema:
 
-- `PADDLE_PRICE_ID_SOLO`, `PADDLE_PRICE_ID_PRO`, `PADDLE_PRICE_ID_AGENCY` — these are **not
-  secrets** (Paddle price IDs aren't sensitive) and belong in `wrangler.jsonc`'s `vars`, not
-  `wrangler secret put`, once real values exist.
+- `PADDLE_PRICE_ID_SOLO`, `PADDLE_PRICE_ID_PRO`, `PADDLE_PRICE_ID_AGENCY` — **not secrets**
+  (Paddle price IDs aren't sensitive), so they live in `wrangler.jsonc`'s production `vars`, not
+  `wrangler secret put`. **Set** as of 2026-07-26 — real live-catalog products/prices created via
+  the `paddle:catalog-setup` skill (Solo $79/yr, Pro $179/yr, Agency $399/yr, all `saas` tax
+  category).
 - `PUBLIC_PADDLE_CLIENT_TOKEN` — also not a secret (it's designed to be browser-exposed), belongs
-  in `vars` once a real value exists.
+  in `vars`. **Set** as of 2026-07-26 — live client-side token `ctkn_01kyfk8x7xbsz450tet3zb4c96`
+  created via the Paddle MCP.
 
-Setting up the actual Paddle catalog/product/price records and obtaining these values is a
-separate task from Cloudflare configuration — see the `paddle:catalog-setup` skill.
+`PADDLE_API_KEY` and `PADDLE_WEBHOOK_SECRET` above remain **not set** in Cloudflare even though a
+live Paddle account/catalog now exists — setting Worker secrets is a separate, live-infra-changing
+step from creating catalog records, and `PADDLE_WEBHOOK_SECRET` specifically requires a live
+webhook destination to be registered in Paddle first (see `docs/security/BILLING_SECURITY.md`).
 
 ## Cron Triggers
 
