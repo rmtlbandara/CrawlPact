@@ -14,8 +14,31 @@ authorised:
 pnpm install
 pnpm build
 wrangler d1 migrations apply crawlpact-db --remote --config apps/web/wrangler.jsonc
-wrangler deploy --config apps/web/wrangler.jsonc
+wrangler deploy --config apps/web/dist/server/wrangler.json
 ```
+
+**The deploy target is `apps/web/dist/server/wrangler.json`, not `apps/web/wrangler.jsonc`.**
+`apps/web/wrangler.jsonc` is the hand-authored *source* config (bindings, vars, secret names,
+cron); `@astrojs/cloudflare` reads it during `astro build` and regenerates a fully-resolved,
+already-bundled deploy config at `dist/server/wrangler.json` (with `main: "entry.mjs"` and
+`no_bundle: true`). Running `wrangler deploy` directly against `wrangler.jsonc` (with `main:
+"./src/worker.ts"`) fails — Wrangler's own esbuild pass cannot resolve Astro's internal virtual
+module specifiers (`virtual:astro-cloudflare:config`, `astro:static-paths`, `virtual:astro:app`),
+which only resolve inside Astro's own Vite build. Confirmed by an actual failed deploy attempt,
+2026-07-26 — this was previously an open, unconfirmed suspicion in `IMPLEMENTATION_STATUS.md`.
+
+For **preview**, set `CLOUDFLARE_ENV=preview` before building so Astro reads `env.preview`'s
+vars/D1/KV from `wrangler.jsonc` and bakes the correctly-scoped values (including the worker name
+`crawlpact-web-preview`) into the regenerated config:
+
+```bash
+CLOUDFLARE_ENV=preview pnpm --filter @crawlpact/web build
+wrangler d1 migrations apply crawlpact-db-preview --remote --config apps/web/wrangler.jsonc --env preview
+wrangler deploy --config apps/web/dist/server/wrangler.json
+```
+
+Rebuild (without `CLOUDFLARE_ENV`) before deploying production again — the generated config is
+overwritten by whichever environment was last built.
 
 ## Rotating secrets
 

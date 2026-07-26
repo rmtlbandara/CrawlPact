@@ -12,13 +12,18 @@
     {
       "binding": "DB",
       "database_name": "crawlpact-db",
-      // Replace with the real database ID after `wrangler d1 create crawlpact-db`.
-      // See docs/deployment/CLOUDFLARE_CONFIGURATION.md. Local development and
-      // CI never need a real ID — `--local` uses an on-disk sqlite file.
-      "database_id": "00000000-0000-0000-0000-000000000000",
+      "database_id": "dd295b75-7376-4f05-8c50-fb0a63cc3cee",
       "migrations_dir": "../../packages/database/migrations",
     },
   ],
+  // @astrojs/cloudflare unconditionally enables its built-in KV-backed
+  // Astro.session feature unless a session KV binding is already declared
+  // (this app doesn't use Astro.session at all — real sessions are D1-backed,
+  // ADR-0004 — but the adapter requires this binding to exist regardless).
+  // Reuses the pre-existing "crawlpact-web-session" KV namespace (created by
+  // an earlier deploy attempt hitting this same undocumented requirement)
+  // rather than provisioning a new one.
+  "kv_namespaces": [{ "binding": "SESSION", "id": "e092c1f4171243cf801b5af24070dfca" }],
   "triggers": {
     // Daily at 03:00 UTC. Drives both the monitoring sweep (lib/monitoring.ts
     // — re-scans domains whose monthly/weekly schedule is due) and the data
@@ -56,10 +61,11 @@
         {
           "binding": "DB",
           "database_name": "crawlpact-db-preview",
-          "database_id": "00000000-0000-0000-0000-000000000000",
+          "database_id": "e9c9f730-1f0d-4f4e-8775-db94126b12f0",
           "migrations_dir": "../../packages/database/migrations",
         },
       ],
+      "kv_namespaces": [{ "binding": "SESSION", "id": "6c940efc0991477a88fa9f730c53b476" }],
       "vars": {
         "PUBLIC_APP_ENV": "preview",
         // Placeholder — replace with the real preview URL (e.g. the

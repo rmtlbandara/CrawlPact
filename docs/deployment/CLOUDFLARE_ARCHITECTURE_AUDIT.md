@@ -6,6 +6,19 @@ This document **gathers evidence only** — it does not decide whether to introd
 service. All findings below are traced to real file:line citations, not assumed from generic
 Cloudflare patterns. Audited on branch `chore/cloudflare-capacity-alignment`, 2026-07-26.
 
+> **Update, same day (2026-07-26), later pass**: this audit was written when D1 IDs were still
+> placeholders and no Cloudflare account was connected. Both are now resolved — a real account is
+> connected, real D1 databases exist and are migrated, and both environments are deployed. See
+> `docs/deployment/CLOUDFLARE_ENVIRONMENT_MATRIX.md` for current state and
+> `docs/deployment/DEPLOYMENT.md`'s "2026-07-26 deployment record" for what changed. The
+> capacity/cost findings below (CPU budget, D1 storage growth) are unaffected by this update — they
+> remain estimates pending real production traffic, not yet measurements. One correction to this
+> audit's own architecture description: a `SESSION` KV binding now exists (see
+> `docs/deployment/CLOUDFLARE_CONFIGURATION.md`) — it is an `@astrojs/cloudflare` adapter
+> requirement, not an application-level KV usage, so the "R2 usage today: No" and "no object
+> storage" findings below still stand unchanged; KV is not R2 and is not read by any application
+> code.
+
 ## Headline answer
 
 **Yes — all scan evidence (robots.txt, llms.txt, llms-full.txt, sitemap metadata, RSL, HTML

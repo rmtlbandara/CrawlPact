@@ -1,8 +1,73 @@
 # Implementation Status
 
-**Last updated:** 2026-07-26 · **Current phase:** Part 3 complete; two follow-on passes (not
-numbered SRS Parts) have since been completed — a UI/UX conversion audit and fix pass, and a
-Cloudflare infrastructure-alignment pass — see below, most recent first.
+**Last updated:** 2026-07-26 · **Current phase:** Part 3 complete; three follow-on passes (not
+numbered SRS Parts) have since been completed — a UI/UX conversion audit and fix pass, a
+Cloudflare infrastructure-alignment pass, and a Cloudflare account setup + first production
+deployment pass — see below, most recent first.
+
+## Cloudflare account setup and first production deployment (2026-07-26)
+
+Continuation of the alignment pass below, now with actual Cloudflare account access (`wrangler
+login`, authorised by the user) instead of documentation/analysis only. Per the user's explicit
+scope decisions: full build-out authorised (D1 creation → migrations → secrets → preview deploy →
+validation → production deploy), each production-affecting step confirmed before proceeding; the
+two pre-existing orphaned KV namespaces were reused rather than deleted or duplicated.
+
+**Discovered before any change was made**: the Cloudflare account already had the `crawlpact.com`
+zone active (delegated from Namecheap) with a Worker Custom Domain attached to a placeholder
+`crawlpact-web` Worker (bare "Hello world", no bindings, deployed earlier the same day by an
+unknown prior process/session) — contradicting this repo's own docs, which said no account existed
+and no deployment had occurred. Two KV namespaces (`crawlpact-web-session`,
+`crawlpact-web-preview-session`) also pre-existed.
+
+**Root cause found for both surprises above, and for a previously-unconfirmed suspicion**:
+`@astrojs/cloudflare` unconditionally enables its own built-in KV-backed session feature (a
+default independent of CrawlPact's actual D1-backed session system, ADR-0004) unless explicitly
+configured otherwise — this is what the orphaned KV namespaces were created to satisfy, likely by
+an earlier deploy attempt. Separately, and confirmed for the first time by an actual failed deploy
+attempt: `wrangler.jsonc`'s `main: "./src/worker.ts"` cannot be deployed directly — Wrangler's own
+bundler can't resolve Astro's internal virtual modules standalone. The `IMPLEMENTATION_STATUS.md`
+entry below had recorded this as an unconfirmed `--dry-run` artifact; it is now confirmed real and
+fixed (deploy `apps/web/dist/server/wrangler.json`, the build output's own generated config,
+instead — see `docs/operations/RUNBOOK.md`).
+
+**Completed**:
+
+- Real D1 databases created and migrated: `crawlpact-db` and `crawlpact-db-preview`, 16/16
+  migrations each, 38 tables verified (matching `pnpm db:validate`).
+- `SESSION_SIGNING_SECRET` generated and set per environment (distinct random values).
+- The deploy-bundling root cause diagnosed and fixed; both the KV binding requirement and the
+  `main`-entry issue resolved by reusing the pre-existing KV namespaces and switching the deploy
+  target to the Astro-generated config.
+- Full quality gate run and passed (format has one pre-existing, unrelated failure in this pass —
+  `docs/status/IMPLEMENTATION_STATUS.md` itself flagged by Prettier despite no edits to it this
+  pass, not investigated further as out of scope).
+- Preview deployed and validated (real app serving correctly, cron attached, secret persisted
+  across the deploy).
+- Production deployed and validated: full canonical-hostname matrix passing (apex, `www`, HTTP→HTTPS,
+  path/query preservation, one-hop redirects, no loops).
+
+**Not completed / explicitly deferred**:
+
+- Paddle secrets and non-secret vars (`PADDLE_API_KEY`, `PADDLE_WEBHOOK_SECRET`,
+  `PADDLE_PRICE_ID_SOLO/PRO/AGENCY`, `PUBLIC_PADDLE_CLIENT_TOKEN`) — all require a real Paddle
+  account/catalog, out of this pass's scope (separate `paddle:catalog-setup` skill).
+- Zone-level DNS/SSL/WAF/Cache Rule/redirect-rule configuration — this session's Cloudflare API
+  token is read-only at the zone level (Wrangler's default OAuth scope), so these need a manual
+  dashboard check; see `docs/deployment/CLOUDFLARE_CONFIGURATION.md`'s checklist. Most notably:
+  Cloudflare's own "Content Signals"/AI Crawl Control feature is already injecting AI-crawler
+  Disallow rules into CrawlPact's own `robots.txt`, unprompted — a product decision for the user,
+  not something to silently accept or silently disable.
+- `status.astro`'s "Paddle billing: Available" label is hardcoded rather than checking real secret
+  presence — now visibly inaccurate on the live production `/status` page. Flagged, not fixed
+  (application code change, outside this pass's Cloudflare-infrastructure scope without explicit
+  sign-off).
+- Preview's `PUBLIC_SITE_URL`/`WEBAUTHN_RP_ID`/`WEBAUTHN_RP_ORIGIN` still say `preview.crawlpact.com`
+  rather than preview's real `workers.dev` hostname.
+
+See `docs/deployment/DEPLOYMENT.md`'s "2026-07-26 deployment record",
+`docs/deployment/CLOUDFLARE_CONFIGURATION.md`, and `docs/deployment/CLOUDFLARE_ENVIRONMENT_MATRIX.md`
+for full detail. No secret values appear in any of these documents.
 
 ## Cloudflare infrastructure-alignment pass (2026-07-26)
 
