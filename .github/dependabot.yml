@@ -5,8 +5,17 @@ updates:
     schedule:
       interval: "weekly"
     groups:
+      # Only minor/patch bumps get grouped and silently bundled together.
+      # A major version — typescript, zod, eslint, and eslint-plugin-astro
+      # all did this in one grouped PR that got merged straight through,
+      # breaking `pnpm lint`/typecheck on `main` (typescript 7.0 isn't
+      # supported by @typescript-eslint yet; eslint 10 isn't supported by
+      # eslint-plugin-jsx-a11y yet) — now each major bump surfaces as its
+      # own separate, clearly-labelled PR instead of hiding inside a
+      # generic "dev-dependencies" bundle.
       dev-dependencies:
         dependency-type: "development"
+        update-types: ["minor", "patch"]
     open-pull-requests-limit: 10
 
   - package-ecosystem: "github-actions"

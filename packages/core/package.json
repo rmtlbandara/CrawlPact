@@ -10,10 +10,10 @@
     "test": "vitest run"
   },
   "dependencies": {
-    "zod": "4.4.3"
+    "zod": "3.25.76"
   },
   "devDependencies": {
-    "typescript": "7.0.2",
+    "typescript": "5.9.3",
     "vitest": "4.1.10"
   }
 }
