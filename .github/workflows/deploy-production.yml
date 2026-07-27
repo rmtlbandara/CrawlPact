@@ -36,7 +36,7 @@ jobs:
           echo "::error::confirm input must be exactly \"DEPLOY PRODUCTION\" — refusing to deploy."
           exit 1
 
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
         with:
           ref: ${{ github.event.inputs.commit_sha }}
           fetch-depth: 0
