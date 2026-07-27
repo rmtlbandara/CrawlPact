@@ -21,8 +21,8 @@ export const adminAuditLogEntrySchema = z.object({
   action: z.string(),
   target: z.string(),
   reason: z.string(),
-  previousState: z.record(z.unknown()).nullable(),
-  newState: z.record(z.unknown()).nullable(),
+  previousState: z.record(z.string(), z.unknown()).nullable(),
+  newState: z.record(z.string(), z.unknown()).nullable(),
   createdAt: z.string().datetime(),
   requestId: z.string(),
 });

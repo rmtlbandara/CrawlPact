@@ -38,5 +38,5 @@ export const paddleWebhookEventSchema = z.object({
   event_id: z.string(),
   event_type: z.string(),
   occurred_at: z.string(),
-  data: z.record(z.unknown()),
+  data: z.record(z.string(), z.unknown()),
 });

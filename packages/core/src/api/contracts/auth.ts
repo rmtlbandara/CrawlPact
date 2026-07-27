@@ -12,22 +12,22 @@ export const beginRegistrationRequestSchema = z.object({
 
 export const beginRegistrationResponseSchema = z.object({
   challengeId: z.string(),
-  publicKeyCredentialCreationOptions: z.record(z.unknown()),
+  publicKeyCredentialCreationOptions: z.record(z.string(), z.unknown()),
 });
 
 export const finishRegistrationRequestSchema = z.object({
   challengeId: z.string(),
-  credential: z.record(z.unknown()),
+  credential: z.record(z.string(), z.unknown()),
 });
 
 export const beginAssertionResponseSchema = z.object({
   challengeId: z.string(),
-  publicKeyCredentialRequestOptions: z.record(z.unknown()),
+  publicKeyCredentialRequestOptions: z.record(z.string(), z.unknown()),
 });
 
 export const finishAssertionRequestSchema = z.object({
   challengeId: z.string(),
-  credential: z.record(z.unknown()),
+  credential: z.record(z.string(), z.unknown()),
 });
 
 export const sessionSummarySchema = z.object({

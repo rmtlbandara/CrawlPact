@@ -48,7 +48,7 @@ function concatBytes(...parts: Uint8Array<ArrayBufferLike>[]): Uint8Array<ArrayB
   return out;
 }
 
-async function sha256(data: Uint8Array): Promise<Uint8Array> {
+async function sha256(data: Uint8Array<ArrayBuffer>): Promise<Uint8Array> {
   return new Uint8Array(await webcrypto.subtle.digest("SHA-256", data));
 }
 
