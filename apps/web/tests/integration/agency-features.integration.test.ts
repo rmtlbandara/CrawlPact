@@ -68,6 +68,7 @@ describe("agency features: batch import and agency branding (real D1)", () => {
       PADDLE_PRICE_ID_PRO: "test",
       PADDLE_PRICE_ID_AGENCY: "test",
       PUBLIC_PADDLE_CLIENT_TOKEN: "test",
+      BILLING_ENABLED: "false",
       AUDIT_ENGINE_ENABLED: "false",
     };
   });

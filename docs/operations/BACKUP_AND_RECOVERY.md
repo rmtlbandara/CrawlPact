@@ -1,13 +1,12 @@
 # Backup and Recovery
 
-## Current state (2026-07-26)
+## Current state (2026-07-27)
 
-No production D1 database exists yet — there is nothing to back up in a live environment.
-Nothing here has changed structurally since Part 1: the schema has grown to 16 forward-only
-migrations as of the 2026-07-26 Cloudflare alignment pass, all applying cleanly to a fresh
-database — verified by `pnpm db:validate` and by every integration test run against a real,
-freshly-migrated D1 instance. This document still defines the target policy for when a
-production database exists.
+~~No production D1 database exists yet~~ — **superseded 2026-07-26**: a real production D1
+database (`crawlpact-db`) exists, migrated and bound to the live `crawlpact-web` Worker (see
+`docs/deployment/CLOUDFLARE_CONFIGURATION.md`). The policy below is the current, active policy
+for it, not a future target. No backup/recovery drill against this real database has been run yet
+— see `docs/status/KNOWN_RISKS.md`.
 
 ## D1 backup approach
 
@@ -56,9 +55,9 @@ database. This is a deliberate simplicity benefit of the single-D1-database arch
 
 ## Recovery drill (tabletop exercise — to be performed before production launch)
 
-No production database exists yet, so no drill has actually been run — this section intentionally
-contains no fabricated results. The drill, once a real Cloudflare account and database exist,
-should walk through each of the following scenarios and record actual command output/timing:
+A real production database exists (since 2026-07-26), but this drill has still not actually been
+run against it — this section intentionally contains no fabricated results. The drill should walk
+through each of the following scenarios and record actual command output/timing:
 
 1. **D1 point-in-time restore**: use `wrangler d1 time-travel restore` against the **preview**
    database (never rehearse against production) to confirm the procedure works end-to-end within

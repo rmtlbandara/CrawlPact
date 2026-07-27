@@ -8,6 +8,7 @@ import { priceIdForPlan } from "../../../lib/billing/plan-mapping";
 import type { PaidPlanId } from "../../../lib/billing/plan-mapping";
 import { trackEvent } from "../../../lib/analytics";
 import { jsonErrorResponse, jsonResponse } from "../../../lib/json-response";
+import { isPaddleBillingConfigured } from "../../../lib/admin/environment";
 
 export const prerender = false;
 
@@ -28,6 +29,10 @@ export const POST: APIRoute = async ({ request }) => {
   try {
     const db = createDb(getEnv().DB);
     const { user } = await requireSession(request, db);
+
+    if (!isPaddleBillingConfigured()) {
+      throw new ApiError("SERVICE_UNAVAILABLE", "Billing is not available in this environment.");
+    }
 
     const body = await request.json().catch(() => {
       throw new ApiError("VALIDATION_FAILED", "Request body must be valid JSON.");

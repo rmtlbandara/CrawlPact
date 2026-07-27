@@ -28,7 +28,7 @@ function resetEnv(overrides: Record<string, string>) {
   for (const key of Object.keys(mockEnv)) delete mockEnv[key];
   Object.assign(
     mockEnv,
-    { PUBLIC_APP_ENV: "production", PADDLE_ENVIRONMENT: "production" },
+    { PUBLIC_APP_ENV: "production", PADDLE_ENVIRONMENT: "production", BILLING_ENABLED: "true" },
     overrides,
   );
 }
@@ -48,6 +48,11 @@ describe("isPaddleBillingConfigured", () => {
     resetEnv({ ...REAL_PADDLE_ENV, PADDLE_WEBHOOK_SECRET: "" });
     expect(isPaddleBillingConfigured()).toBe(false);
   });
+
+  it('returns false when BILLING_ENABLED is not "true", even with real credentials', () => {
+    resetEnv({ ...REAL_PADDLE_ENV, BILLING_ENABLED: "false" });
+    expect(isPaddleBillingConfigured()).toBe(false);
+  });
 });
 
 describe("getAdminEnvironment", () => {
@@ -64,5 +69,14 @@ describe("getAdminEnvironment", () => {
     const result = getAdminEnvironment();
     expect(result.label).toBe("Production");
     expect(result.paddleBillingConfigured).toBe(false);
+  });
+
+  it("never returns a raw Paddle credential value, only derived booleans/labels", () => {
+    resetEnv(REAL_PADDLE_ENV);
+    const result = getAdminEnvironment();
+    const serialized = JSON.stringify(result);
+    for (const secret of Object.values(REAL_PADDLE_ENV)) {
+      expect(serialized).not.toContain(secret);
+    }
   });
 });

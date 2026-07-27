@@ -22,6 +22,7 @@ type CloudflareRuntimeEnv = {
   PADDLE_PRICE_ID_PRO: string;
   PADDLE_PRICE_ID_AGENCY: string;
   PUBLIC_PADDLE_CLIENT_TOKEN: string;
+  BILLING_ENABLED: string;
   AUDIT_ENGINE_ENABLED: string;
 };
 

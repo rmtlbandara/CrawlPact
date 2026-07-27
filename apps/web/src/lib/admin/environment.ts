@@ -1,32 +1,25 @@
+import { KNOWN_PADDLE_PLACEHOLDER_VALUES } from "@crawlpact/config";
 import { getEnv } from "../env";
 
 export type AdminEnvironmentLabel = "Development" | "Preview" | "Paddle Sandbox" | "Production";
 
-/**
- * `.env.example` placeholder values (Part 2 Step 17). A Paddle var can be a
- * non-empty string per the config schema while still being one of these —
- * that's "unconfigured", not "configured", for status-reporting purposes.
- */
-const PADDLE_PLACEHOLDER_VALUES = new Set([
-  "paddle_sandbox_placeholder",
-  "replace-with-paddle-sandbox-webhook-secret",
-  "pri_sandbox_placeholder",
-  "paddle_sandbox_client_token_placeholder",
-]);
-
 function isRealPaddleValue(value: string | undefined): boolean {
-  return Boolean(value) && !PADDLE_PLACEHOLDER_VALUES.has(value as string);
+  return Boolean(value) && !KNOWN_PADDLE_PLACEHOLDER_VALUES.has(value as string);
 }
 
 /**
- * Whether Paddle billing has real (non-placeholder) credentials wired for
- * the current environment — as opposed to merely having the env vars
- * present, which the config schema requires even for local dev's sandbox
- * placeholders. See `docs/status/KNOWN_RISKS.md` ("/status's 'Paddle
- * billing: Available' label is hardcoded, not a real check").
+ * Whether Paddle billing is both intentionally enabled (`BILLING_ENABLED`)
+ * and wired with real (non-placeholder) credentials — as opposed to merely
+ * having the env vars present, which the config schema requires even for
+ * local dev's sandbox placeholders. `BILLING_ENABLED` is the authoritative
+ * deployment-intent gate; real-value detection is defense in depth so a
+ * misconfigured environment can never present fake billing availability.
+ * See `docs/status/KNOWN_RISKS.md` ("/status's 'Paddle billing: Available'
+ * label is hardcoded, not a real check").
  */
 export function isPaddleBillingConfigured(): boolean {
   const env = getEnv();
+  if (env.BILLING_ENABLED !== "true") return false;
   return (
     isRealPaddleValue(env.PADDLE_API_KEY) &&
     isRealPaddleValue(env.PADDLE_WEBHOOK_SECRET) &&

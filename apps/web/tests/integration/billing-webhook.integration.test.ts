@@ -141,6 +141,7 @@ describe("Paddle billing webhook (real D1, self-generated HMAC signatures)", () 
       PADDLE_PRICE_ID_PRO: "pri_pro_test",
       PADDLE_PRICE_ID_AGENCY: "pri_agency_test",
       PUBLIC_PADDLE_CLIENT_TOKEN: "test",
+      BILLING_ENABLED: "false",
       AUDIT_ENGINE_ENABLED: "false",
     };
     userId = await signUpTestUser("Ada");

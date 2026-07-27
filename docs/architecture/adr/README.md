@@ -13,6 +13,7 @@ This directory records material architectural decisions for CrawlPact, in line w
 | [ADR-0004](./ADR-0004-AUTHENTICATION-STRATEGY.md)    | Authentication strategy                | Accepted |
 | [ADR-0005](./ADR-0005-SCANNER-ISOLATION.md)          | Scanner isolation and SSRF containment | Accepted |
 | [ADR-0006](./ADR-0006-CLOUDFLARE-STATIC-DELIVERY.md) | Cloudflare static delivery strategy    | Accepted |
+| [ADR-0007](./ADR-0007-DEPLOYMENT-PIPELINE.md)        | Deployment pipeline                    | Accepted |
 
 ## Process
 

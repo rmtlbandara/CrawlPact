@@ -42,6 +42,7 @@
     "PADDLE_PRICE_ID_AGENCY": "pri_01kyfjzjc4tbhve9czw1dq2b1b",
     // Browser-exposed by design (Paddle.js needs it client-side) — not a secret.
     "PUBLIC_PADDLE_CLIENT_TOKEN": "live_7744585ebeca2976cd76da4b966",
+    "BILLING_ENABLED": "true",
     "AUDIT_ENGINE_ENABLED": "false",
     // WebAuthn is not optional config — the browser strictly validates
     // `rpId`/origin against the page it's actually served from, so without
@@ -75,18 +76,35 @@
       "kv_namespaces": [{ "binding": "SESSION", "id": "6c940efc0991477a88fa9f730c53b476" }],
       "vars": {
         "PUBLIC_APP_ENV": "preview",
-        // Placeholder — replace with the real preview URL (e.g. the
-        // `*.workers.dev` subdomain Cloudflare assigns, or a dedicated
-        // preview custom domain) once one exists. Left equal to production
-        // here, this environment's CSRF Origin check, Atom feed URLs, and
-        // share links would silently reference the production domain
-        // instead of wherever preview is actually served.
-        "PUBLIC_SITE_URL": "https://preview.crawlpact.com",
-        // Must match whatever PUBLIC_SITE_URL above actually resolves to
-        // once a real preview domain exists — same reasoning as production.
-        "WEBAUTHN_RP_ID": "preview.crawlpact.com",
-        "WEBAUTHN_RP_ORIGIN": "https://preview.crawlpact.com",
+        // Real serving origin: the `crawlpact-web-preview` Worker's
+        // Cloudflare-assigned workers.dev hostname (account subdomain
+        // "rmtlbandara", confirmed live 2026-07-27 — a dedicated
+        // preview.crawlpact.com was considered but no such DNS record
+        // exists, so it would 404/fail TLS if used here). Every
+        // WebAuthn ceremony strictly validates rpId/origin against the
+        // page actually serving the request, so this must exactly match
+        // wherever preview is really deployed.
+        "PUBLIC_SITE_URL": "https://crawlpact-web-preview.rmtlbandara.workers.dev",
+        "WEBAUTHN_RP_ID": "crawlpact-web-preview.rmtlbandara.workers.dev",
+        "WEBAUTHN_RP_ORIGIN": "https://crawlpact-web-preview.rmtlbandara.workers.dev",
         "PADDLE_ENVIRONMENT": "sandbox",
+        // `vars` is a non-inheritable field per Wrangler's named-environment
+        // model (env.preview does NOT merge with the top-level `vars` block
+        // — it fully replaces it), so these have to be redeclared here even
+        // though checkout/portal are already blocked in preview by
+        // BILLING_ENABLED=false below. Without them, the schema's required
+        // fields would be silently `undefined` on the deployed preview
+        // Worker — found by `pnpm env:validate:preview` while building this
+        // change. Same sandbox-placeholder convention as .env.example.
+        "PADDLE_PRICE_ID_SOLO": "pri_sandbox_placeholder",
+        "PADDLE_PRICE_ID_PRO": "pri_sandbox_placeholder",
+        "PADDLE_PRICE_ID_AGENCY": "pri_sandbox_placeholder",
+        "PUBLIC_PADDLE_CLIENT_TOKEN": "paddle_sandbox_client_token_placeholder",
+        // Preview must never serve real checkouts even if a Paddle sandbox
+        // value were ever mistakenly wired in here — see
+        // packages/config/src/env.ts's cross-field validation, which also
+        // hard-rejects PADDLE_ENVIRONMENT=production outside production.
+        "BILLING_ENABLED": "false",
         "AUDIT_ENGINE_ENABLED": "false",
       },
     },

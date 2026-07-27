@@ -1,0 +1,83 @@
+name: Deploy preview
+
+# Runs only after CI has actually passed on main — this workflow never
+# builds or tests anything itself, it only builds *for deployment* and
+# deploys trusted, already-validated code. A commit that failed CI can
+# never reach this workflow.
+on:
+  workflow_run:
+    workflows: ["CI"]
+    types: [completed]
+    branches: [main]
+
+concurrency:
+  # A newer preview deploy always wins — an in-flight deploy of an older
+  # commit is cancelled rather than being allowed to overwrite a newer one.
+  group: deploy-preview
+  cancel-in-progress: true
+
+jobs:
+  deploy:
+    name: Build, deploy and verify preview
+    if: github.event.workflow_run.conclusion == 'success'
+    runs-on: ubuntu-latest
+    environment: preview
+    permissions:
+      contents: read
+    env:
+      CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+      CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.workflow_run.head_sha }}
+
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 9.15.0
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22.12.0"
+          cache: pnpm
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Validate the preview environment contract
+        run: pnpm run env:validate:preview
+
+      - name: Build for preview
+        run: pnpm run build:preview
+
+      - name: Apply pending migrations to preview D1 only
+        run: >
+          pnpm exec wrangler d1 migrations apply crawlpact-db-preview --remote
+          --config apps/web/wrangler.jsonc --env preview
+
+      - name: Deploy preview Worker
+        run: pnpm run deploy:preview
+
+      - name: Verify deployed bindings match wrangler.jsonc
+        run: pnpm run deploy:verify-bindings preview
+
+      - name: Smoke test the deployed preview
+        run: pnpm run smoke:preview
+
+      - name: Record deployment summary
+        if: always()
+        run: |
+          {
+            echo "### Preview deployment"
+            echo "- Commit: \`${{ github.event.workflow_run.head_sha }}\`"
+            echo "- URL: https://crawlpact-web-preview.rmtlbandara.workers.dev"
+          } >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Upload failure diagnostics
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: preview-deploy-failure-${{ github.event.workflow_run.head_sha }}
+          path: apps/web/dist/server/wrangler.json
+          retention-days: 14
+          if-no-files-found: ignore

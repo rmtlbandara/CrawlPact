@@ -3,9 +3,19 @@ export const prerender = false;
 import MarketingLayout from "../layouts/MarketingLayout.astro";
 import { PayCheckout } from "../components/PayCheckout";
 import { getEnv } from "../lib/env";
+import { isPaddleBillingConfigured } from "../lib/admin/environment";
 
 const env = getEnv();
 const transactionId = Astro.url.searchParams.get("_ptxn");
+// Only block rendering PayCheckout when there's an actual transaction
+// reference to act on — that's the one case where it would call
+// `initializePaddle()` with whatever client token this environment has
+// (a placeholder in local/preview), i.e. "attempt an invalid environment
+// initialization". With no `_ptxn` at all, PayCheckout already renders its
+// own safe "missing" state without ever calling Paddle, so there's nothing
+// unsafe to guard there — and gating it too would break that already-safe,
+// already-tested path for no reason.
+const blockedByBillingDisabled = Boolean(transactionId) && !isPaddleBillingConfigured();
 ---
 
 <MarketingLayout
@@ -16,12 +26,21 @@ const transactionId = Astro.url.searchParams.get("_ptxn");
   <div class="mx-auto max-w-[480px] px-4 py-20 sm:px-6">
     <h1 class="text-h1 text-neutral-950">Complete your payment</h1>
     <div class="mt-6">
-      <PayCheckout
-        client:load
-        transactionId={transactionId}
-        clientToken={env.PUBLIC_PADDLE_CLIENT_TOKEN}
-        environment={env.PADDLE_ENVIRONMENT}
-      />
+      {
+        blockedByBillingDisabled ? (
+          <p role="alert" class="text-body text-neutral-700">
+            Payments are not available in this environment. If you were sent here to complete a
+            payment, please contact support instead of retrying.
+          </p>
+        ) : (
+          <PayCheckout
+            client:load
+            transactionId={transactionId}
+            clientToken={env.PUBLIC_PADDLE_CLIENT_TOKEN}
+            environment={env.PADDLE_ENVIRONMENT}
+          />
+        )
+      }
     </div>
   </div>
 </MarketingLayout>

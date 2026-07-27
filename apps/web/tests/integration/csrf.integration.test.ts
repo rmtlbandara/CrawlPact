@@ -42,6 +42,7 @@ describe("CSRF: cross-site requests are rejected on authenticated mutating endpo
       PADDLE_PRICE_ID_PRO: "test",
       PADDLE_PRICE_ID_AGENCY: "test",
       PUBLIC_PADDLE_CLIENT_TOKEN: "test",
+      BILLING_ENABLED: "false",
       AUDIT_ENGINE_ENABLED: "false",
     };
 

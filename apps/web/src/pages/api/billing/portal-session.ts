@@ -6,6 +6,7 @@ import { getEnv } from "../../../lib/env";
 import { requireSession } from "../../../lib/auth/require-session";
 import { createCustomerPortalSession } from "../../../lib/billing/paddle-api";
 import { jsonErrorResponse, jsonResponse } from "../../../lib/json-response";
+import { isPaddleBillingConfigured } from "../../../lib/admin/environment";
 
 export const prerender = false;
 
@@ -21,6 +22,10 @@ export const POST: APIRoute = async ({ request }) => {
   try {
     const db = createDb(getEnv().DB);
     const { user } = await requireSession(request, db);
+
+    if (!isPaddleBillingConfigured()) {
+      throw new ApiError("SERVICE_UNAVAILABLE", "Billing is not available in this environment.");
+    }
 
     const [billingCustomer] = await db
       .select()

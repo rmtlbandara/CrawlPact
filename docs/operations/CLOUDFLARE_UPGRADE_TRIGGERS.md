@@ -5,9 +5,11 @@ limit referenced below is sourced from `docs/deployment/CLOUDFLARE_RESOURCE_LIMI
 live against `developers.cloudflare.com` on 2026-07-26) — this document does not re-derive limits,
 it turns them into concrete operational thresholds.
 
-CrawlPact holds no paid Cloudflare plan today (pre-launch, no production account connected). This
-document exists so that once real traffic exists, there is a pre-agreed answer to "should we
-upgrade yet?" instead of that decision being made reactively during an incident.
+CrawlPact holds no paid Cloudflare plan today. A real production account/zone/Worker has been
+connected since 2026-07-26 (this line previously said no production account was connected at all —
+corrected 2026-07-27); the zone remains on the Free plan (confirmed via a direct Cloudflare API
+read). This document exists so that once real traffic exists, there is a pre-agreed answer to
+"should we upgrade yet?" instead of that decision being made reactively during an incident.
 
 Do not read this document as a promise that CrawlPact will remain on Cloudflare's Free plan
 indefinitely — it explicitly is not. It defines when to stop assuming Free is sufficient.

@@ -71,6 +71,7 @@ describe("Super Admin webhook operations (real D1)", () => {
       PADDLE_PRICE_ID_PRO: "pri_pro",
       PADDLE_PRICE_ID_AGENCY: "pri_agency",
       PUBLIC_PADDLE_CLIENT_TOKEN: "test",
+      BILLING_ENABLED: "false",
       AUDIT_ENGINE_ENABLED: "false",
     };
   });
