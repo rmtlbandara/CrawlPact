@@ -32,6 +32,15 @@ jobs:
   quality:
     name: Format, lint, typecheck, unit + integration tests, build
     runs-on: ubuntu-latest
+    permissions:
+      # gitleaks-action needs to list the PR's commits to scan them on
+      # `pull_request` events (GET /pulls/{n}/commits) — without this, the
+      # default token's read-only `contents` scope makes that call 403.
+      # Found running this repo's first-ever pull request (every prior
+      # commit only ran CI on `push`, which uses a different scan strategy
+      # that doesn't need this permission).
+      contents: read
+      pull-requests: read
     steps:
       - uses: actions/checkout@v4
         with:

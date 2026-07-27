@@ -7,6 +7,16 @@ export default defineConfig({
   fullyParallel: true,
   forbidOnly: !!process.env.CI,
   retries: process.env.CI ? 2 : 0,
+  // This suite had never actually run to completion in GitHub Actions CI
+  // before 2026-07-27 (the `quality` job always failed first, so
+  // `e2e-and-a11y`, which `needs: quality`, was always skipped) — the first
+  // real run took 17 minutes for what completes in ~1-2 minutes locally,
+  // and 9/27 test cases hit the default 30s per-test timeout on real
+  // WebAuthn-ceremony/scan/print round-trips that pass locally in ~11s.
+  // Retries alone didn't help (all 3 attempts timed out identically), so
+  // this is a genuine CI-runner performance gap, not flakiness — doubling
+  // the timeout for CI only, not locally. See docs/status/KNOWN_RISKS.md.
+  timeout: process.env.CI ? 60_000 : 30_000,
   reporter: process.env.CI ? [["github"], ["html", { open: "never" }]] : "list",
   use: {
     baseURL: process.env.PLAYWRIGHT_BASE_URL ?? "http://localhost:4321",
