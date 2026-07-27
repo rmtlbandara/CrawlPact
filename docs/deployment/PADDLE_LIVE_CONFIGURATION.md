@@ -79,10 +79,12 @@ server-side transaction creation. `crawlpact.com` is now an **approved** Paddle 
 domain-submission endpoint — and confirmed live via `checkoutDomains.list`; Apple Pay payment-method
 verification is also `verified`).
 
-No `/pay` route (Paddle's public default-payment-link/`_ptxn` recovery flow) exists yet. This is
-separate from the authenticated in-app upgrade flow above, which doesn't need it. Deliberately not
-built in this pass, per the user's choice — no longer blocked on the checkout domain, but still the
-user's call whether/when to build it.
+`apps/web/src/pages/pay.astro` (public, `noindex`, `PayCheckout.tsx`) hosts Paddle's default
+payment-link/`_ptxn` recovery flow — separate from the authenticated in-app upgrade flow above,
+which doesn't need it. Built and deployed (Version ID `19495f1d-a5b6-46cf-a905-848c0037e45c`),
+confirmed live (`200`, correctly `noindex`, with and without a `_ptxn` param). The user has set
+Paddle's account-level default payment link to `https://crawlpact.com/pay` (not independently
+verifiable — Paddle exposes no API for that setting).
 
 ## Webhook endpoint
 
