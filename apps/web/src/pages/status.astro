@@ -15,7 +15,12 @@ const capabilities = [
   },
   { name: "Account registration (passkeys)", state: "Available" },
   { name: "Saved domains and monitoring", state: "Available" },
-  { name: "Paddle billing", state: `Available (${environment.label})` },
+  {
+    name: "Paddle billing",
+    state: environment.paddleBillingConfigured
+      ? `Available (${environment.label})`
+      : "Not configured in this environment",
+  },
   { name: "Super Admin Control Center", state: "Available (authorised administrators)" },
 ];
 ---
