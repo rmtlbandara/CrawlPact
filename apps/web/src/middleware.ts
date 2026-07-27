@@ -2,11 +2,13 @@ import { defineMiddleware } from "astro:middleware";
 import { getEnv } from "./lib/env";
 
 /**
- * Security response headers applied to every request (SRS §33, Part 2
- * Step 19). Astro SSR responses don't go through `public/_headers` (that
- * file only covers static assets on Cloudflare's Workers Assets binding),
- * so this is the one place that must set them for every rendered page and
- * API response.
+ * Security response headers applied to every SSR request (SRS §33, Part 2
+ * Step 19). Prerendered marketing pages (home, pricing, guides, etc.) are
+ * static HTML served directly off the Workers Assets binding and never run
+ * this middleware at all — `apps/web/public/_headers` carries the same
+ * headers for those, since a live production check found the site's own
+ * homepage shipping with zero security headers otherwise. Keep both in
+ * sync by hand; there's no single source both read from.
  *
  * The CSP here allows `'unsafe-inline'` for scripts/styles because Astro's
  * island-hydration bootstrap and Tailwind's runtime both emit inline

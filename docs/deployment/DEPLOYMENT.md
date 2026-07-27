@@ -6,6 +6,19 @@ after a full Cloudflare account/zone reconciliation (see
 for current state). No deploy may happen without the user's explicit permission each time this
 project rule applies regardless of any prior authorization.
 
+## Preferred path: GitHub Actions (2026-07-27)
+
+`.github/workflows/deploy-preview.yml` (automatic, after CI succeeds on `main`) and
+`.github/workflows/deploy-production.yml` (`workflow_dispatch`, requires a typed confirmation and
+a commit already contained in `main`) are now the authoritative deployment path — see
+`docs/deployment/GITHUB_ACTIONS_DEPLOYMENT.md` and
+`docs/architecture/adr/ADR-0007-DEPLOYMENT-PIPELINE.md`. The manual steps below still describe
+what those workflows actually run (via `pnpm build:preview`/`build:production`/
+`deploy:preview`/`deploy:production`), and remain the fallback for a genuine emergency, but manual
+deploys must **never** be run from a machine with a `.dev.vars` file present — confirmed to
+silently bake incorrect environment values into every prerendered page if you do (see ADR-0007).
+`scripts/build.sh` refuses to run under that condition for exactly this reason.
+
 ## Preconditions before any deploy is requested
 
 1. `pnpm quality` passes locally and in CI.
@@ -36,6 +49,12 @@ CLOUDFLARE_ENV=preview pnpm --filter @crawlpact/web build
 wrangler d1 migrations apply crawlpact-db-preview --remote --config apps/web/wrangler.jsonc --env preview
 wrangler deploy --config apps/web/dist/server/wrangler.json
 ```
+
+**Never add `--env preview` to the `wrangler deploy` line above.** Confirmed by a real
+`--dry-run`: against the Astro-generated `dist/server/wrangler.json` (already a fully flattened
+snapshot of whichever environment `CLOUDFLARE_ENV` selected at build time), `--env` does nothing —
+it silently deploys whatever the config was built as. The preview/production distinction is made
+once, at the build step, not at deploy time. See ADR-0007.
 
 ## Post-deploy verification
 

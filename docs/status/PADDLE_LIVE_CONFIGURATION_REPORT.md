@@ -3,9 +3,12 @@
 **Execution timestamp:** 2026-07-26
 **Repository:** `rmtlbandara/CrawlPact`
 **Branch:** `main`
-**HEAD:** `9f93b19a16a61d1f13976ddc4402c6f731f9d6d4`
-**Authoritative baseline:** `9f93b19a16a61d1f13976ddc4402c6f731f9d6d4`
-**HEAD relationship to baseline:** exact match (HEAD _is_ the baseline commit)
+**HEAD at time of this report:** `9f93b19a16a61d1f13976ddc4402c6f731f9d6d4`
+**Historical snapshot — superseded.** `/pay` was built and deployed in the two commits
+immediately after this report (`72e32a8`, `21c5fb6`), closing the default-payment-link gap this
+report describes as open below. See `docs/deployment/PADDLE_LIVE_CONFIGURATION.md` and
+`docs/architecture/adr/ADR-0007-DEPLOYMENT-PIPELINE.md` for the current state as of the
+2026-07-27 release-engineering pass.
 
 ## How this pass started
 

@@ -43,7 +43,8 @@ Baseline commit: `9f93b19a16a61d1f13976ddc4402c6f731f9d6d4`. Statuses use exactl
    `https://crawlpact.com/`.
 2. ~~Submit `crawlpact.com` for checkout-domain approval in the Paddle Dashboard~~ **Done** — status
    `approved`, confirmed live via `checkoutDomains.list` (`chedom_01kyfnvdzbbvxx40vr7b3hvz98`).
-3. Decide whether/when to build `/pay` — no longer blocked on domain approval, still the user's
-   call.
+3. ~~Decide whether/when to build `/pay`~~ **Done** — built and deployed (`72e32a8`, `21c5fb6`),
+   verified reachable, `noindex`, and safe in the no-`_ptxn` state.
 4. Run one real subscription lifecycle end-to-end (sandbox smoke test, or a deliberately,
    separately authorized live purchase) before calling billing "verified" rather than "configured."
+   Still open as of the 2026-07-27 release-engineering pass — see `docs/status/KNOWN_RISKS.md`.

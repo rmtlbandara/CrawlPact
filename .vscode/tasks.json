@@ -1,0 +1,34 @@
+{
+  "version": "2.0.0",
+  "tasks": [
+    {
+      "label": "Dev server",
+      "type": "shell",
+      "command": "pnpm dev",
+      "isBackground": true,
+      "problemMatcher": [],
+      "group": "build"
+    },
+    {
+      "label": "Quality gate",
+      "type": "shell",
+      "command": "pnpm quality",
+      "problemMatcher": [],
+      "group": "test"
+    },
+    {
+      "label": "E2E tests",
+      "type": "shell",
+      "command": "pnpm test:e2e",
+      "problemMatcher": [],
+      "group": "test"
+    },
+    {
+      "label": "Local D1: migrate + seed",
+      "type": "shell",
+      "command": "pnpm db:migrate && pnpm db:seed",
+      "problemMatcher": [],
+      "group": "build"
+    }
+  ]
+}

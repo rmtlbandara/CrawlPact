@@ -1,9 +1,18 @@
 # Implementation Status
 
-**Last updated:** 2026-07-26 · **Current phase:** Part 3 complete; three follow-on passes (not
-numbered SRS Parts) have since been completed — a UI/UX conversion audit and fix pass, a
-Cloudflare infrastructure-alignment pass, and a Cloudflare account setup + first production
-deployment pass — see below, most recent first.
+**Last updated:** 2026-07-27 · **Current as of commit:** branched from `21c5fb6` (`main`) ·
+**Current phase:** Part 3 complete; four follow-on passes (not numbered SRS Parts) have since been
+completed — a UI/UX conversion audit and fix pass, a Cloudflare infrastructure-alignment pass, a
+Cloudflare account setup + first production deployment pass, and a release-engineering hardening
+pass (CI/CD, environment contract, `/pay` and Paddle live-catalog verification, two live
+production bugs found and fixed) — see below, most recent first.
+
+Real Cloudflare account, zone, Worker, D1 (production + preview), KV, and a live Paddle catalog
+(Solo/Pro/Agency, client token, webhook destination) are connected and verified — see
+`docs/deployment/CLOUDFLARE_CONFIGURATION.md`, `docs/deployment/PADDLE_LIVE_CONFIGURATION.md`, and
+`docs/architecture/adr/ADR-0007-DEPLOYMENT-PIPELINE.md`. `/pay` is built, deployed, and verified.
+The repository has real Git history (this is not a "zero commits" project) and a GitHub Actions
+CI/CD pipeline (`.github/workflows/ci.yml`, `deploy-preview.yml`, `deploy-production.yml`).
 
 ## Cloudflare account setup and first production deployment (2026-07-26)
 
@@ -426,32 +435,36 @@ against a live account (the biggest remaining item before launch), CSP's `unsafe
 allowance, no cross-request target-frequency abuse monitoring, and `env.preview`'s domain-specific
 placeholder values pending a real preview domain.
 
-## Decisions required from the user before production deployment
+## Historical: decisions once required before production deployment — now resolved
 
-1. **This repository still has zero git commits.** All Part 1, 2, and 3 work exists only in the
-   working tree. Per standing instructions, no commit is made without an explicit request.
-2. **Cloudflare account / D1 databases**: still placeholders in `wrangler.jsonc` (now correctly
-   _structured_ as two distinct databases — production and preview — but neither has a real ID
-   yet). Nothing can be deployed until real accounts/databases exist.
-3. **Paddle sandbox account**: needed to close the one real open verification gap in billing —
-   the single most important item before production launch per
-   `docs/status/FINAL_PRODUCTION_READINESS_REPORT.md`.
-4. **Visual-regression CI wiring**: still needs a decision on generating a Linux baseline (a
-   throwaway CI run or the official Playwright Docker image) — unchanged from Part 2's ask.
-5. **Professional UI/UX review** (SRS §36 item 45): a human-judgement task this agent cannot
-   self-certify, flagged for the user, not for continued agent work.
+The four items below (repository had no commits, Cloudflare account/D1 didn't exist, Paddle
+account didn't exist, no CI/CD pipeline existed) were all true as of Part 3 completion and are all
+resolved as of this pass. Kept here as a historical record, not a current blocker list.
 
-## Next recommended task
+1. ~~This repository has zero git commits.~~ **Resolved** — real Git history exists (`main`,
+   currently 8+ commits at the 2026-07-27 pass, `git log` is authoritative for the exact count).
+2. ~~Cloudflare account / D1 databases are placeholders.~~ **Resolved 2026-07-26** — real
+   production and preview D1 databases exist, migrated, and bound.
+3. ~~Paddle sandbox account needed.~~ **Resolved 2026-07-26** — a live Paddle account (Solo/Pro/
+   Agency products, client token, webhook destination) is connected; see
+   `docs/status/KNOWN_RISKS.md` for what real-webhook-lifecycle verification is still outstanding.
+4. **Visual-regression CI wiring**: still open — unchanged from Part 2's ask, see
+   `docs/status/KNOWN_RISKS.md`.
+5. **Professional UI/UX review** (SRS §36 item 45): still a human-judgement task this agent
+   cannot self-certify — still flagged for the user.
 
-**Not more Part 3 feature work — the SRS is fully addressed.** The concrete next steps, in
-priority order: (1) obtain Paddle sandbox credentials and run one real checkout lifecycle through
-them; (2) make the four decisions listed above; (3) once a real Cloudflare account exists, create
-the two real D1 databases and apply migrations to each; (4) get the professional UI/UX review
-done; (5) only then consider production deployment, with explicit, in-the-moment authorisation.
+## Current real open items
+
+See `docs/status/KNOWN_RISKS.md` for the full, current list. In short: no real Paddle webhook has
+ever been delivered end-to-end; the audit engine remains deliberately disabled in production
+(`AUDIT_ENGINE_ENABLED=false`, honestly reflected everywhere it's surfaced); GitHub branch
+protection and Environment required-reviewer approval are unavailable on this repository's current
+plan; visual-regression tests are not yet CI-wired; the cron trigger is not yet covered by the new
+binding-drift check.
 
 ---
 
-## Quality gate results (Part 3 completion, run 2026-07-24)
+## Historical quality gate results (Part 3 completion, run 2026-07-24 — superseded, see current results in docs/release/RELEASE_CHECKLIST.md)
 
 | Check                     | Command                                                     | Result                                                                                                             |
 | ------------------------- | ----------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------ |

@@ -39,7 +39,11 @@ will itself confirm via webhook).
 ## What's unverified
 
 The Paddle API field names/shapes here (webhook payloads, portal-session response) follow
-Paddle's public docs as best understood but have **not** been exercised against a real Paddle
-sandbox account — none was available when this was built (see the Part 2 final report). Verify
-against a live account before launch; the self-generated-HMAC webhook tests only prove the
-signature/idempotency/state-machine logic is correct for payloads of the assumed shape.
+Paddle's public docs as best understood. No sandbox account was available when this was first
+built; a live Paddle account has since been connected (2026-07-26) and its real entities
+(products, prices, notification settings) were read and cross-checked against these field-shape
+assumptions — narrowing, not closing, this gap. **Still true: no real webhook has ever actually
+been delivered to `/api/billing/webhook`**, so envelope-level behavior under real traffic (retries,
+timing) remains unproven — the self-generated-HMAC webhook tests only prove the
+signature/idempotency/state-machine logic is correct for payloads of the assumed shape. See
+`docs/status/KNOWN_RISKS.md`.

@@ -6,6 +6,68 @@ changelog, see the `/changelog` page on the public website.
 All notable changes are grouped by development "Part," per `docs/product/CRAWLPACT_FINAL_SRS.md`
 §37.
 
+## Release-Engineering Hardening — CI/CD Pipeline, Environment Contract, Live Production Bugs (2026-07-27)
+
+Full audit and implementation of the development-to-production lifecycle: git/GitHub/Cloudflare/
+Paddle read-only reconciliation, then a focused branch implementing the fixes. See
+`docs/architecture/adr/ADR-0007-DEPLOYMENT-PIPELINE.md` for the full reasoning.
+
+### Fixed
+
+- **CI had failed on every push since `gitleaks-action` was introduced** — `results.sarif` written
+  to the repo root broke `pnpm format:check` every single run; no prior "quality gate passed"
+  claim in any commit message was ever actually confirmed green in CI. Fixed via
+  `.prettierignore`/`.gitignore`.
+- **Production's prerendered marketing pages shipped a "Local Development environment" banner**
+  baked into the static HTML — root cause: Astro's Cloudflare adapter resolves environment
+  variables for static prerendering from a machine-local `.dev.vars` file first, regardless of
+  shell env vars or `CLOUDFLARE_ENV`. `scripts/build.sh` now refuses to build for preview/production
+  if `.dev.vars` exists anywhere in the checkout.
+- **Prerendered/static pages served zero security headers** (no CSP, `X-Content-Type-Options`,
+  HSTS) — they bypass `middleware.ts` entirely via the Workers Assets binding.
+  `apps/web/public/_headers` now carries the same header set.
+- **`env.preview.vars` in `apps/web/wrangler.jsonc` was missing `PADDLE_PRICE_ID_*` and
+  `PUBLIC_PADDLE_CLIENT_TOKEN` entirely** — `vars` is non-inheritable per named environment in
+  Wrangler's model, so preview never had these at all. Caught by the new `pnpm env:validate:preview`.
+- **`PUBLIC_PADDLE_CLIENT_TOKEN` was missing from the canonical Zod env schema**
+  (`packages/config/src/env.ts`) despite being required everywhere else.
+- Preview's `PUBLIC_SITE_URL`/`WEBAUTHN_RP_ID`/`WEBAUTHN_RP_ORIGIN` referenced
+  `preview.crawlpact.com`, which doesn't exist — updated to the real, confirmed-live
+  `crawlpact-web-preview.rmtlbandara.workers.dev`.
+- Checkout and customer-portal-session API routes did not check whether billing was actually
+  configured before handing back a (possibly placeholder) Paddle client token — now gated by
+  `isPaddleBillingConfigured()`, returning a controlled `SERVICE_UNAVAILABLE` instead.
+
+### Added
+
+- `BILLING_ENABLED` environment flag (local/preview `false`, production `true`) as the
+  authoritative deployment-intent gate, cross-validated against `PADDLE_ENVIRONMENT`/
+  `PUBLIC_APP_ENV` (local/preview can never carry a live Paddle credential, enforced by a Zod
+  `.superRefine()`, not just convention).
+- `scripts/env-validate.ts`, `scripts/build.sh`, `scripts/deploy.sh`,
+  `scripts/verify-bindings.ts`, `scripts/smoke-test.ts` and the matching `pnpm env:validate:*` /
+  `build:*` / `deploy:*` / `smoke:*` scripts.
+- `.github/workflows/deploy-preview.yml` (automatic after CI succeeds on `main`) and
+  `.github/workflows/deploy-production.yml` (`workflow_dispatch`, typed confirmation, commit must
+  be contained in `main`) — the first automated deploy path this repository has ever had.
+- `.github/PULL_REQUEST_TEMPLATE.md`, `.github/dependabot.yml`, `.vscode/` workspace config.
+- `docs/architecture/adr/ADR-0007-DEPLOYMENT-PIPELINE.md`,
+  `docs/deployment/GITHUB_ACTIONS_DEPLOYMENT.md`, `docs/deployment/GITHUB_DESKTOP_WORKFLOW.md`,
+  `docs/release/RELEASE_CHECKLIST.md`, `docs/release/ROLLBACK_RUNBOOK.md`.
+
+### Documentation
+
+Corrected several stale claims found during this pass: `IMPLEMENTATION_STATUS.md` and
+`KNOWN_RISKS.md` still described the repository as having zero Git commits;
+`PADDLE_LIVE_CONFIGURATION_REPORT.md` and `PADDLE_LIVE_GO_LIVE_CHECKLIST.md` still described
+`/pay` as unbuilt after it had shipped; `CLOUDFLARE_ENVIRONMENT_MATRIX.md` said production's
+Paddle vars were "Not set" after they'd been confirmed live; `BACKUP_AND_RECOVERY.md` and
+`CLOUDFLARE_UPGRADE_TRIGGERS.md` still said no production Cloudflare account existed. See
+`docs/status/KNOWN_RISKS.md`'s "Release-engineering hardening pass" section for the full list,
+including new findings not yet resolved (Cloudflare Workers Builds' broken competing deploy
+integration, a Paddle webhook secret inadvertently surfaced in this session's transcript, GitHub
+branch protection unavailable on the current plan).
+
 ## Cloudflare Infrastructure Alignment — Capacity Audit and Analysis (2026-07-26)
 
 A 23-phase brief requested full alignment of CrawlPact's architecture with an approved Cloudflare

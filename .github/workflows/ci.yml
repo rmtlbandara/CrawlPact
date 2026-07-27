@@ -24,6 +24,8 @@ env:
   PADDLE_PRICE_ID_SOLO: pri_ci_placeholder
   PADDLE_PRICE_ID_PRO: pri_ci_placeholder
   PADDLE_PRICE_ID_AGENCY: pri_ci_placeholder
+  PUBLIC_PADDLE_CLIENT_TOKEN: ci-placeholder
+  BILLING_ENABLED: "false"
   AUDIT_ENGINE_ENABLED: "false"
 
 jobs:
@@ -72,7 +74,14 @@ jobs:
 
       - name: Dependency vulnerability check
         run: pnpm audit --audit-level=critical
-        continue-on-error: true # informational until a baseline of accepted advisories exists
+        # Reviewed 2026-07-27: 3 high advisories, all in dev-only tooling
+        # (sharp/libvips via wrangler's miniflare, brace-expansion via
+        # @typescript-eslint's minimatch) — never in a production runtime
+        # dependency, never reachable by attacker-controlled input. Kept
+        # informational deliberately, not by default; see
+        # docs/status/KNOWN_RISKS.md for the specific advisories accepted
+        # and re-review whenever this step's output changes.
+        continue-on-error: true
 
       - name: Build
         run: pnpm build

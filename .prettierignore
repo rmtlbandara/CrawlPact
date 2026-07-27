@@ -8,3 +8,9 @@ coverage
 playwright-report
 test-results
 docs/product/CRAWLPACT_FINAL_SRS.md
+
+# gitleaks-action (.github/workflows/ci.yml) writes this SARIF report to the
+# repo root on every CI run; it's a generated artifact, never hand-authored,
+# and its formatting isn't ours to fix. Excluding it here is what actually
+# keeps `pnpm format:check` green — see chore/release-pipeline-hardening.
+results.sarif
