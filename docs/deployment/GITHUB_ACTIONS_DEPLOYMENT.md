@@ -34,9 +34,16 @@ already live as Cloudflare Worker secrets and don't need to exist in GitHub at a
     anything else runs.
 - The workflow independently verifies `commit_sha` is actually contained in `origin/main` before
   doing anything else — it does not trust the input blindly.
+- It also independently verifies that the **actual recorded CI workflow run** for that exact
+  commit succeeded — `pnpm release:check` (below) re-runs format/lint/typecheck/unit/integration/
+  build fresh, but that script has never included e2e/a11y (they need a running dev server and
+  Playwright browsers), so re-running it tells you nothing about whether `e2e-and-a11y` passed.
+  Without this check, a red `e2e-and-a11y` on `main` would not have blocked this workflow at all —
+  found while reasoning through what "ready for production" actually requires.
 - Concurrency: a second dispatch while one is already running queues rather than cancelling the
   first (production deploys are never raced against each other).
-- Steps: checkout at the given SHA → re-run the full quality gate (`pnpm release:check`) →
+- Steps: checkout at the given SHA → verify CI succeeded for that exact commit (including
+  `e2e-and-a11y`) → re-run the full quality gate (`pnpm release:check`) →
   `pnpm env:validate:production` → `pnpm build:production` → record the build artifact checksum →
   apply pending migrations to `crawlpact-db` → `pnpm deploy:production` → record the Worker
   version ID (parsed from `wrangler deploy`'s own output) → `pnpm deploy:verify-bindings
