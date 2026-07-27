@@ -75,7 +75,7 @@ jobs:
 
       - name: Upload failure diagnostics
         if: failure()
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: preview-deploy-failure-${{ github.event.workflow_run.head_sha }}
           path: apps/web/dist/server/wrangler.json
