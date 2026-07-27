@@ -11,7 +11,9 @@ export const prerender = false;
 
 const trackRequestSchema = z.object({
   eventName: z.string(),
-  properties: z.record(z.union([z.string().max(200), z.number(), z.boolean()])).optional(),
+  properties: z
+    .record(z.string(), z.union([z.string().max(200), z.number(), z.boolean()]))
+    .optional(),
 });
 
 /**
