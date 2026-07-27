@@ -26,6 +26,7 @@ jobs:
     environment: production
     permissions:
       contents: read
+      actions: read
     env:
       CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
       CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
@@ -48,6 +49,29 @@ jobs:
             echo "::error::${{ github.event.inputs.commit_sha }} is not contained in origin/main — refusing to deploy."
             exit 1
           fi
+
+      - name: Require CI (including e2e-and-a11y) to have actually succeeded for this exact commit
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        # `pnpm run release:check` below re-verifies format/lint/typecheck/
+        # unit/integration/build fresh, but that script has never included
+        # e2e/a11y (they need a running dev server and Playwright browsers,
+        # not a fit for a quick pre-deploy re-check) — so re-running it
+        # tells you nothing about whether e2e-and-a11y passed. This checks
+        # the *actual* CI workflow run recorded against this exact commit
+        # SHA, which does include it. Found missing while reasoning through
+        # why `main`'s e2e-and-a11y being red wouldn't otherwise block this
+        # workflow at all.
+        run: |
+          sha="${{ github.event.inputs.commit_sha }}"
+          conclusion=$(gh run list --repo "${{ github.repository }}" --workflow ci.yml --branch main \
+            --json headSha,conclusion,createdAt --limit 50 \
+            --jq "[.[] | select(.headSha == \"$sha\")] | sort_by(.createdAt) | last | .conclusion // \"none\"")
+          if [ "$conclusion" != "success" ]; then
+            echo "::error::CI has not succeeded for commit $sha (found: '$conclusion'). This includes e2e-and-a11y, not just the quality job — refusing to deploy past a known-failing or unverified CI result."
+            exit 1
+          fi
+          echo "CI succeeded for $sha (including e2e-and-a11y) — proceeding."
 
       - uses: pnpm/action-setup@v6
         with:
