@@ -2,16 +2,16 @@
 
 **Status as of 2026-07-26: a real Cloudflare account and zone are connected, and both environments
 are deployed.** See `docs/deployment/CLOUDFLARE_ENVIRONMENT_MATRIX.md` for the full current-state
-table (worker names, URLs, resource IDs are non-secret and listed there; secret *values* are never
+table (worker names, URLs, resource IDs are non-secret and listed there; secret _values_ are never
 recorded in any repo file).
 
 ## Bindings (`apps/web/wrangler.jsonc`)
 
-| Binding    | Type                  | Purpose                                                                                |
-| ---------- | --------------------- | --------------------------------------------------------------------------------------- |
-| `DB`       | D1 database           | Primary datastore (ADR-0002) — **a distinct database per environment**, see below       |
-| `ASSETS`   | Workers Static Assets | Astro's built static output                                                             |
-| `SESSION`  | KV namespace          | **Not used by CrawlPact's own code** — see "Astro's own session KV requirement" below   |
+| Binding   | Type                  | Purpose                                                                               |
+| --------- | --------------------- | ------------------------------------------------------------------------------------- |
+| `DB`      | D1 database           | Primary datastore (ADR-0002) — **a distinct database per environment**, see below     |
+| `ASSETS`  | Workers Static Assets | Astro's built static output                                                           |
+| `SESSION` | KV namespace          | **Not used by CrawlPact's own code** — see "Astro's own session KV requirement" below |
 
 ## Astro's own session KV requirement (not CrawlPact's session system)
 
@@ -89,10 +89,10 @@ Set per environment with `wrangler secret put <NAME> --config apps/web/dist/serv
 (build first — see `docs/operations/RUNBOOK.md`'s "Deploying" section for why the deploy target is
 the generated config, not the source `wrangler.jsonc`):
 
-| Secret                  | Status (2026-07-26)                                                        |
-| ------------------------ | -------------------------------------------------------------------------- |
-| `SESSION_SIGNING_SECRET` | **Set**, both environments — generated randomly per environment (32 bytes) |
-| `PADDLE_API_KEY`         | **Set**, production, 2026-07-26 — live Paddle account API key. Not yet set for preview (should be a sandbox key when set) |
+| Secret                   | Status (2026-07-26)                                                                                                                                                                                                                                                                                                                 |
+| ------------------------ | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `SESSION_SIGNING_SECRET` | **Set**, both environments — generated randomly per environment (32 bytes)                                                                                                                                                                                                                                                          |
+| `PADDLE_API_KEY`         | **Set**, production, 2026-07-26 — live Paddle account API key. Not yet set for preview (should be a sandbox key when set)                                                                                                                                                                                                           |
 | `PADDLE_WEBHOOK_SECRET`  | **Set**, production, 2026-07-26 — signing secret from the live webhook destination `ntfset_01kyfkc59d8h66prnhw220hnzy` (destination `https://crawlpact.com/api/billing/webhook`, subscribed to `subscription.*`/`transaction.*`/`adjustment.*`/`customer.*`, matching what `webhook-processor.ts` handles). Not yet set for preview |
 
 Two more Paddle-related values are required by `packages/config/src/env.ts`'s schema:
@@ -106,10 +106,29 @@ Two more Paddle-related values are required by `packages/config/src/env.ts`'s sc
   in `vars`. **Set** as of 2026-07-26 — live client-side token `ctkn_01kyfk8x7xbsz450tet3zb4c96`
   created via the Paddle MCP.
 
-`PADDLE_API_KEY` and `PADDLE_WEBHOOK_SECRET` above remain **not set** in Cloudflare even though a
-live Paddle account/catalog now exists — setting Worker secrets is a separate, live-infra-changing
-step from creating catalog records, and `PADDLE_WEBHOOK_SECRET` specifically requires a live
-webhook destination to be registered in Paddle first (see `docs/security/BILLING_SECURITY.md`).
+**Correction (verified 2026-07-26 via a direct, read-only Cloudflare API call against the live
+`crawlpact-web` Worker's settings)**: the paragraph above claiming these two secrets remain unset
+was stale — `PADDLE_API_KEY` and `PADDLE_WEBHOOK_SECRET` are both genuinely bound as `secret_text`
+on the live Worker right now, confirming the table above rather than contradicting it.
+
+**Real, currently-live gap found during that same check**: `PADDLE_PRICE_ID_SOLO`,
+`PADDLE_PRICE_ID_PRO`, `PADDLE_PRICE_ID_AGENCY`, and `PUBLIC_PADDLE_CLIENT_TOKEN` — all `vars` in
+`wrangler.jsonc` — are **absent from the live Worker's actual deployed bindings**, even though the
+secrets above are present and the file on disk has correct values. Root cause, confirmed from the
+account's own deployment history: the last full `wrangler deploy` ran at `2026-07-26T12:28:44Z`,
+but the Paddle catalog and these four `vars` were only added to `wrangler.jsonc` afterward (Paddle
+resources created ~16:08–16:14Z the same day). The two later deployments (16:17–16:18Z) were both
+`wrangler secret put` calls (`"triggered_by": "secret"` in the deployment history) — those only
+attach the named secret to the already-running version; they don't re-read `wrangler.jsonc`'s
+`vars` block. **Practical effect: checkout is very likely broken in production right now** —
+`/api/billing/checkout` reads `env.PADDLE_PRICE_ID_SOLO` etc. directly with no request-time
+validation (`apps/web/src/lib/billing/plan-mapping.ts`), so a missing var resolves to `undefined`
+rather than an error, silently handing an invalid price ID to Paddle.js instead of failing loudly.
+**Resolved 2026-07-26, same pass**: the user explicitly authorized a production deploy; rebuilt and
+ran `wrangler deploy` against the current `wrangler.jsonc` (Version ID
+`69b71641-7dc6-4411-9c7e-ea539eb31967`). A direct Cloudflare API read of the live Worker's settings
+afterward confirmed all four vars now present with correct values, and
+`https://crawlpact.com/`/`/status` both returned `200`.
 
 ## Cron Triggers
 
@@ -174,7 +193,7 @@ The following need a manual dashboard check (Cloudflare dashboard → the `crawl
    `Disallow: /` rules for GPTBot, ClaudeBot, Google-Extended, CCBot, Bytespider, Amazonbot,
    Applebot-Extended, and meta-externalagent. This is a zone-level default CrawlPact did not
    request in code. Given CrawlPact's entire product is auditing exactly this class of
-   crawler-governance signal, whether to keep, adjust, or disable this on CrawlPact's *own* site
+   crawler-governance signal, whether to keep, adjust, or disable this on CrawlPact's _own_ site
    is a product decision, not a technical default to leave unexamined — review under the zone's
    **AI Crawl Control** / **Bots** settings.
 2. **SSL/TLS encryption mode** — confirm it's `Full (strict)`, never `Flexible`.
@@ -190,7 +209,7 @@ The following need a manual dashboard check (Cloudflare dashboard → the `crawl
    `workers.dev` enabled by default (Wrangler's own default when `workers_dev` isn't explicitly
    set in config). Production has a working Custom Domain, so `workers.dev` for production is
    redundant public surface — consider explicitly setting `"workers_dev": false` for production
-   once confirmed unneeded. Preview currently *depends* on `workers.dev` (no preview custom domain
+   once confirmed unneeded. Preview currently _depends_ on `workers.dev` (no preview custom domain
    exists) — do not disable it there.
 7. **DNSSEC** — not confirmed either way; only enable once registrar-side DS record handling can
    be completed (Namecheap is the registrar of record).

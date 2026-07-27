@@ -1,0 +1,27 @@
+---
+export const prerender = false;
+import MarketingLayout from "../layouts/MarketingLayout.astro";
+import { PayCheckout } from "../components/PayCheckout";
+import { getEnv } from "../lib/env";
+
+const env = getEnv();
+const transactionId = Astro.url.searchParams.get("_ptxn");
+---
+
+<MarketingLayout
+  title="Complete your payment | CrawlPact"
+  description="Complete or update a CrawlPact subscription payment via Paddle."
+  noindex={true}
+>
+  <div class="mx-auto max-w-[480px] px-4 py-20 sm:px-6">
+    <h1 class="text-h1 text-neutral-950">Complete your payment</h1>
+    <div class="mt-6">
+      <PayCheckout
+        client:load
+        transactionId={transactionId}
+        clientToken={env.PUBLIC_PADDLE_CLIENT_TOKEN}
+        environment={env.PADDLE_ENVIRONMENT}
+      />
+    </div>
+  </div>
+</MarketingLayout>

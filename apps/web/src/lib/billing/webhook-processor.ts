@@ -13,10 +13,14 @@ import { trackEvent } from "../analytics";
  * elsewhere in the app — see lib/plan.ts and every plan-gated endpoint).
  *
  * Payload shapes here follow Paddle Billing v2's publicly documented
- * webhook format as best understood without a live sandbox account to
- * verify against (none was available for this phase — see the Part 2
- * final report's residual-risk section). Verify field names against a
- * real Paddle account before relying on this in production.
+ * webhook format. The entity field names this file reads (subscription
+ * status/items/scheduled_change/current_billing_period, transaction
+ * status/details.totals, adjustment action, customer id/custom_data) were
+ * cross-checked 2026-07-26 against this account's live Paddle API read
+ * responses (products/prices/notification-settings) via the Paddle MCP
+ * connection, and matched. That is read-API confirmation, not proof —
+ * no real webhook delivery or live checkout has been observed against
+ * this handler yet; see docs/status/KNOWN_RISKS.md.
  */
 
 const MAX_ATTEMPTS_BEFORE_GIVING_UP = 5;

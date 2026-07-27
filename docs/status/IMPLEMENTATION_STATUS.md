@@ -62,10 +62,12 @@ instead — see `docs/operations/RUNBOOK.md`).
   Cloudflare's own "Content Signals"/AI Crawl Control feature is already injecting AI-crawler
   Disallow rules into CrawlPact's own `robots.txt`, unprompted — a product decision for the user,
   not something to silently accept or silently disable.
-- `status.astro`'s "Paddle billing: Available" label is hardcoded rather than checking real secret
-  presence — now visibly inaccurate on the live production `/status` page. Flagged, not fixed
-  (application code change, outside this pass's Cloudflare-infrastructure scope without explicit
-  sign-off).
+- ~~`status.astro`'s "Paddle billing: Available" label is hardcoded rather than checking real
+  secret presence~~ **Resolved 2026-07-26**: `getAdminEnvironment()` now exposes
+  `paddleBillingConfigured` via `isPaddleBillingConfigured()`, which checks
+  `PADDLE_API_KEY`/`PADDLE_WEBHOOK_SECRET`/price IDs/`PUBLIC_PADDLE_CLIENT_TOKEN` are all present
+  and not `.env.example` placeholder values; `/status` now shows "Not configured in this
+  environment" when they aren't.
 - Preview's `PUBLIC_SITE_URL`/`WEBAUTHN_RP_ID`/`WEBAUTHN_RP_ORIGIN` still say `preview.crawlpact.com`
   rather than preview's real `workers.dev` hostname.
 
@@ -152,15 +154,15 @@ account, which does not exist).
 
 ### Quality gate results (this pass, run 2026-07-26)
 
-| Check | Command | Result |
-| --- | --- | --- |
-| Format | `pnpm format:check` | ✅ Pass (15 doc files needed `pnpm format`, then re-checked clean) |
-| Lint | `pnpm lint` | ✅ Pass — 0 errors |
-| Typecheck | `pnpm typecheck` | ✅ Pass — 293 files, 0 errors, 0 warnings, 31 informational hints |
-| Unit tests | `pnpm test:unit` | ✅ Pass — 189/189, 18 files |
-| Integration tests | `pnpm test:integration` | ✅ Pass — 137/137, 22 files, against real D1 |
-| Migration/schema drift | `pnpm db:validate` | ✅ Pass — 38 tables verified consistent |
-| Build | `pnpm build` | ✅ Pass |
+| Check                  | Command                 | Result                                                             |
+| ---------------------- | ----------------------- | ------------------------------------------------------------------ |
+| Format                 | `pnpm format:check`     | ✅ Pass (15 doc files needed `pnpm format`, then re-checked clean) |
+| Lint                   | `pnpm lint`             | ✅ Pass — 0 errors                                                 |
+| Typecheck              | `pnpm typecheck`        | ✅ Pass — 293 files, 0 errors, 0 warnings, 31 informational hints  |
+| Unit tests             | `pnpm test:unit`        | ✅ Pass — 189/189, 18 files                                        |
+| Integration tests      | `pnpm test:integration` | ✅ Pass — 137/137, 22 files, against real D1                       |
+| Migration/schema drift | `pnpm db:validate`      | ✅ Pass — 38 tables verified consistent                            |
+| Build                  | `pnpm build`            | ✅ Pass                                                            |
 
 No application code was touched this pass (documentation/analysis only, confirmed via `git status`
 before running the gate) — e2e/a11y/visual suites were not re-run since no UI or behavior changed,

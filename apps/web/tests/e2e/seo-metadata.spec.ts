@@ -93,6 +93,12 @@ test.describe("Non-indexable routes are genuinely excluded", () => {
     const signIn = await request.get("/sign-in");
     expect(await signIn.text()).toContain('content="noindex');
 
+    // /pay is Paddle's public default-payment-link/_ptxn recovery route —
+    // deliberately never indexed, since it only ever makes sense reached via
+    // a direct link Paddle itself generates.
+    const pay = await request.get("/pay");
+    expect(await pay.text()).toContain('content="noindex');
+
     // /admin has no session in this test (redirects to sign-in) — the
     // X-Robots-Tag header must still be present on that response, since
     // it's a content-type-independent guarantee applied to every response

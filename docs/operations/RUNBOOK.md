@@ -18,7 +18,7 @@ wrangler deploy --config apps/web/dist/server/wrangler.json
 ```
 
 **The deploy target is `apps/web/dist/server/wrangler.json`, not `apps/web/wrangler.jsonc`.**
-`apps/web/wrangler.jsonc` is the hand-authored *source* config (bindings, vars, secret names,
+`apps/web/wrangler.jsonc` is the hand-authored _source_ config (bindings, vars, secret names,
 cron); `@astrojs/cloudflare` reads it during `astro build` and regenerates a fully-resolved,
 already-bundled deploy config at `dist/server/wrangler.json` (with `main: "entry.mjs"` and
 `no_bundle: true`). Running `wrangler deploy` directly against `wrangler.jsonc` (with `main:
