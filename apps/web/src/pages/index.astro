@@ -429,6 +429,7 @@ const faqItems = [
         [
           {
             name: "Free",
+            audience: "One-time check on a single site",
             price: "$0",
             domains: "1 domain",
             monitoring: "No monitoring",
@@ -436,6 +437,7 @@ const faqItems = [
           },
           {
             name: "Solo",
+            audience: "Individual site owners",
             price: "$79/yr",
             domains: "5 domains",
             monitoring: "Monthly monitoring",
@@ -443,6 +445,7 @@ const faqItems = [
           },
           {
             name: "Pro",
+            audience: "Growing portfolios",
             price: "$179/yr",
             domains: "25 domains",
             monitoring: "Weekly monitoring",
@@ -451,6 +454,7 @@ const faqItems = [
           },
           {
             name: "Agency",
+            audience: "Agencies with many clients",
             price: "$399/yr",
             domains: "100 domains",
             monitoring: "Weekly monitoring",
@@ -466,7 +470,8 @@ const faqItems = [
               </p>
             )}
             <h3 class="text-card-heading text-neutral-950">{plan.name}</h3>
-            <p class="mt-1 text-h3 text-neutral-950">{plan.price}</p>
+            <p class="mt-1 text-supporting text-neutral-500">{plan.audience}</p>
+            <p class="mt-2 text-h3 text-neutral-950">{plan.price}</p>
             <p class="mt-2 text-supporting text-neutral-600">{plan.domains}</p>
             <p class="text-supporting text-neutral-600">{plan.monitoring}</p>
             <a
