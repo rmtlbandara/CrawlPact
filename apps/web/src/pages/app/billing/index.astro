@@ -130,8 +130,12 @@ const PAID_PLANS = [
   <section class="mt-8">
     <h2 class="text-h2 text-neutral-950">Plans</h2>
     <p class="mt-2 text-body text-neutral-700">
-      Prices and taxes are handled by Paddle at checkout. You can cancel any time through the
-      billing portal above.
+      Prices and taxes are handled by Paddle at checkout.{" "}
+      {
+        billingCustomer
+          ? "You can cancel any time through the billing portal above."
+          : "Once subscribed, you can manage or cancel your plan any time from this page."
+      }
     </p>
     <div class="mt-4 grid grid-cols-1 gap-4 sm:grid-cols-3">
       {

@@ -348,6 +348,37 @@ here), `app/index` (dashboard), `app/domains/index`, `app/domains/[domainId]`, `
 `app/notifications/index`, `app/billing/index`, `app/account/index` (profile/passkeys/recovery
 codes/sessions/deletion, all as sub-sections of one route).
 
+**Progress so far.** Reviewed every route above with a real authenticated session — registered a
+genuine account via the real WebAuthn ceremony (CDP virtual authenticator, the same technique
+`tests/e2e` uses), not a mock or fixture, and walked through dashboard (empty and populated),
+domains (list, add, detail), groups, notifications, billing, and account with real screenshots
+at each step.
+
+- `app/index`, `app/domains/*`, `app/groups`, `app/notifications`, `app/account` — all already
+  compliant. Highlights confirmed matching the source brief: the zero-domain empty state is
+  preserved exactly as required; plan-gated features (groups) show contextual, respectful
+  upgrade messaging with no broken controls; destructive actions (remove passkey, sign out all
+  sessions, delete account) are visually distinct and explain consequences; the domain detail
+  page's "Incomplete" score state matches `ScoreComponent`'s honest pattern exactly for a
+  domain that's been saved but not yet scanned.
+- **`app/billing` — real bug found and fixed.** The Plans section unconditionally said "You can
+  cancel any time through the billing portal above," but `PortalButton` only renders when a
+  `billingCustomer` record exists (i.e., after a first purchase) — so any Free-tier visitor who
+  has never subscribed saw a claim referencing a button that plainly isn't on their screen.
+  Fixed with conditional copy matching the same `billingCustomer` check the button itself uses.
+- **Considered and deliberately not fixed**: the Notifications page's "Revoke" button for the
+  private Atom feed is always enabled, even before a feed has ever been created (a harmless
+  no-op DELETE in that case, not an error). The seemingly-obvious fix — hiding it when the
+  client-side `feedUrl` state is empty — would actually be *wrong*, since the raw feed URL is
+  only ever shown once at creation time and cleared from state afterward; `feedUrl === null`
+  doesn't mean no feed exists, just that it isn't currently displayed. Fixing this properly
+  needs a new server-side "does a feed exist" check, which is more new API surface than this
+  low-severity, harmless issue justifies.
+
+Verified: pnpm quality clean, all 6 `auth-and-account.spec.ts` e2e tests pass (including the
+real save-domain-and-scan journey), pnpm test:a11y 53/54 (same pre-existing mobile-safari
+failure, unrelated).
+
 ### Phase 7 — Super Admin
 
 `admin/index`, `admin/users/index` + `[userId]`, `admin/domains/index`, `admin/scans/index`,
