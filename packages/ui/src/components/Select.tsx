@@ -13,14 +13,23 @@ export type SelectProps = {
   disabled?: boolean;
   name?: string;
   id?: string;
+  /**
+   * Required unless the trigger is already associated with a visible
+   * `<label htmlFor>` (e.g. via `FormField`). Radix's Select.Trigger has no
+   * accessible name of its own before a value is chosen — without one of
+   * these two, screen reader users get an unlabelled control (confirmed by
+   * axe-core: WCAG 2.2 AA `button-name`, critical impact).
+   */
+  ariaLabel?: string;
 };
 
 /** SRS §10.53. Native-feeling select with full keyboard support via Radix. */
-export function Select({ options, placeholder, id, ...props }: SelectProps) {
+export function Select({ options, placeholder, id, ariaLabel, ...props }: SelectProps) {
   return (
     <RadixSelect.Root {...props}>
       <RadixSelect.Trigger
         id={id}
+        aria-label={ariaLabel}
         className={cx(
           "flex h-11 w-full items-center justify-between gap-2 rounded-control border border-neutral-300 bg-white px-3 text-body text-neutral-950",
           "focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand-600",
