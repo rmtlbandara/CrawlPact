@@ -217,6 +217,7 @@ dev-only showcase.
 `sitemap.xml`, `feed/[token].xml`.
 
 **Progress so far** (commits `abb7821`, `147d82c`, `8e633d3`):
+
 - `index` — added the missing "Evidence and methodology" section (§6 item 9 of the source
   brief), migrated one isolated `max-w-[720px]` to the `max-w-reading` token, added "who it's
   for" audience line to each pricing-summary plan card.
