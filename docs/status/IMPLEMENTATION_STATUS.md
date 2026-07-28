@@ -1,15 +1,18 @@
 # Implementation Status
 
-**Last updated:** 2026-07-28 · **Current as of commit:** branched from `30a97cc` (`main`) ·
-**Current phase:** Part 3 complete; seven follow-on passes (not numbered SRS Parts) have since been
+**Last updated:** 2026-07-28 · **Current as of commit:** `6320032` (`main`) ·
+**Current phase:** Part 3 complete; eight follow-on passes (not numbered SRS Parts) have since been
 completed — a UI/UX conversion audit and fix pass, a Cloudflare infrastructure-alignment pass, a
 Cloudflare account setup + first production deployment pass, a release-engineering hardening
 pass (CI/CD, environment contract, `/pay` and Paddle live-catalog verification, two live
 production bugs found and fixed), a Paddle fulfillment/webhook live-delivery verification pass,
 a production-stabilization pass that root-caused and fixed the long-standing real-CI e2e
-instability, and a full-scope production remediation pass that found and fixed the most severe
-defect in the project's history (production account creation completely broken since launch) —
-see below, most recent first.
+instability, a full-scope production remediation pass that found and fixed the most severe
+defect in the project's history (production account creation completely broken since launch),
+and — superseding this document's own "keep disabled for now" decision below — the audit engine
+was enabled in production and the crawler registry seeded, so the live scanner now returns real
+scan results rather than the honest-disabled response described throughout most of this document
+— see below, most recent first.
 
 Real Cloudflare account, zone, Worker, D1 (production + preview), KV, and a live Paddle catalog
 (Solo/Pro/Agency, client token, webhook destination) are connected and verified — see
@@ -17,6 +20,30 @@ Real Cloudflare account, zone, Worker, D1 (production + preview), KV, and a live
 `docs/architecture/adr/ADR-0007-DEPLOYMENT-PIPELINE.md`. `/pay` is built, deployed, and verified.
 The repository has real Git history (this is not a "zero commits" project) and a GitHub Actions
 CI/CD pipeline (`.github/workflows/ci.yml`, `deploy-preview.yml`, `deploy-production.yml`).
+
+## Production audit engine enabled, real crawler registry seeded (2026-07-28, commit `6320032`)
+
+Per explicit user instruction, overriding the "decision: keep disabled for now" call recorded
+below under "Production-stabilization pass" — that decision was this document's own, made
+correctly at the time against the CPU-budget risk quantified in
+`docs/operations/SCAN_CAPACITY_BUDGET.md`, and the override is the user's call to make, not a
+walk-back of a mistake. `AUDIT_ENGINE_ENABLED=true` was set in `wrangler.jsonc` and deployed.
+
+Enabling the flag surfaced a second, previously undiscovered blocker: production's crawler
+registry tables (`crawler_operators`/`crawlers`/`registry_versions`/`ruleset_versions`) had never
+been seeded, so `getActiveRegistry()` had nothing to return and no scan could complete even with
+the engine on. Fixed by extracting the same real, source-verified-against-each-operator's-own-
+documentation registry the public SEO content is already built around (not test data) from
+`seed.sql` into an idempotent `reference-data.sql` seed, safe to re-run against production.
+
+**Current state**: the live scanner is enabled in production and returns real scan results, not
+the honest-disabled response. Every place that reflects this flag correctly reads it live at
+request time (`status.astro`, `AuditForm.tsx`, `api/audit/index.ts`) — `scanner.astro` was found
+to have it hardcoded into static build output during the Evidence Observatory redesign's Phase 4
+work and was fixed to match the same live-read pattern (`feat/evidence-observatory-ui-ux-redesign`
+branch). The CPU-budget risk documented in `docs/operations/SCAN_CAPACITY_BUDGET.md` is not
+resolved by this change — it's an accepted, explicit tradeoff at current volume, not a claim that
+the risk no longer exists; revisit if real usage approaches the modeled thresholds.
 
 ## Full-scope production remediation: critical account-creation defect found and fixed (2026-07-28)
 
@@ -102,6 +129,11 @@ API that `crawlpact.com` is still on the Free Workers plan and both D1 databases
 near-empty — the documented CPU-budget risk is current, not a stale claim. Presented to the user
 as an explicit decision rather than flipped unilaterally; **decision: keep disabled for now**. See
 `docs/status/KNOWN_RISKS.md` for detail.
+
+**Superseded the same day**: see "Production audit engine enabled, real crawler registry seeded"
+at the top of this document — the user's own subsequent, explicit instruction overrode this
+decision later on 2026-07-28. Kept here unedited for an accurate record of the reasoning at the
+time; do not treat this paragraph as the current state.
 
 Full local quality gate re-run and passed after all changes: format, lint, typecheck (0 errors),
 unit (202/202), integration (137/137), `db:validate` (38 tables), build.
@@ -584,12 +616,15 @@ resolved as of this pass. Kept here as a historical record, not a current blocke
 
 ## Current real open items
 
-See `docs/status/KNOWN_RISKS.md` for the full, current list. In short: no real Paddle webhook has
-ever been delivered end-to-end; the audit engine remains deliberately disabled in production
-(`AUDIT_ENGINE_ENABLED=false`, honestly reflected everywhere it's surfaced); GitHub branch
-protection and Environment required-reviewer approval are unavailable on this repository's current
-plan; visual-regression tests are not yet CI-wired; the cron trigger is not yet covered by the new
-binding-drift check.
+See `docs/status/KNOWN_RISKS.md` for the full, current list. In short: the audit engine is now
+**enabled** in production (`AUDIT_ENGINE_ENABLED=true`, see "Production audit engine enabled" at
+the top of this document) — this paragraph previously said otherwise and was corrected
+2026-07-28; a real Paddle webhook simulation has been delivered and correctly processed
+end-to-end in production (`docs/status/PADDLE_WEBHOOK_LIVE_DELIVERY_VERIFICATION.md`), though a
+real _paid_ checkout lifecycle (actual payment, plan grant) has still not been run and needs
+separate explicit authorization; GitHub branch protection and Environment required-reviewer
+approval are unavailable on this repository's current plan; visual-regression tests are not yet
+CI-wired; the cron trigger is not yet covered by the new binding-drift check.
 
 ---
 
