@@ -254,6 +254,43 @@ const faqItems = [
     </div>
   </section>
 
+  <!-- Evidence and methodology -->
+  <section class="mx-auto max-w-[1240px] px-4 py-16 sm:px-6">
+    <h2 class="text-h2 text-neutral-950">Every finding traces back to evidence you can inspect.</h2>
+    <p class="mt-4 max-w-2xl text-body-lg text-neutral-700">
+      CrawlPact separates what it observed from what it retrieved, and never claims certainty beyond
+      what the evidence supports. No finding is generated without a documented rule, a parsed policy
+      file, or a registry reference behind it.
+    </p>
+    <div class="mt-8 grid gap-4 sm:grid-cols-2">
+      <a
+        href="/methodology"
+        class="rounded-card border border-neutral-200 bg-white p-5 hover:border-brand-300"
+      >
+        <h3 class="text-card-heading text-neutral-950">How CrawlPact evaluates policy</h3>
+        <p class="mt-1.5 text-body text-neutral-700">
+          The deterministic rules behind every finding and recommendation — no AI model involved.
+        </p>
+        <span class="mt-3 inline-block text-supporting font-medium text-brand-700">
+          Read the methodology &rarr;
+        </span>
+      </a>
+      <a
+        href="/scoring"
+        class="rounded-card border border-neutral-200 bg-white p-5 hover:border-brand-300"
+      >
+        <h3 class="text-card-heading text-neutral-950">How the Policy Health Score works</h3>
+        <p class="mt-1.5 text-body text-neutral-700">
+          A policy-health indicator, not a legal, compliance or security score — see exactly what it
+          measures and its known limitations.
+        </p>
+        <span class="mt-3 inline-block text-supporting font-medium text-brand-700">
+          Read the scoring methodology &rarr;
+        </span>
+      </a>
+    </div>
+  </section>
+
   <!-- Audience / use cases -->
   <section class="mx-auto max-w-[1240px] px-4 py-16 sm:px-6">
     <h2 class="text-h2 text-neutral-950">Built for real workflows</h2>
@@ -446,7 +483,7 @@ const faqItems = [
 
   <!-- FAQ -->
   <section class="bg-neutral-50 py-16">
-    <div class="mx-auto max-w-[720px] px-4 sm:px-6">
+    <div class="mx-auto max-w-reading px-4 sm:px-6">
       <h2 class="text-h2 text-neutral-950">Frequently asked questions</h2>
       <div class="mt-6">
         <Accordion

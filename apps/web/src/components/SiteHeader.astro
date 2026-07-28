@@ -9,6 +9,15 @@ const links = [
   { label: "Pricing", href: "/pricing" },
   { label: "Methodology", href: "/methodology" },
 ];
+
+const currentPath = Astro.url.pathname;
+
+// "Product" is a homepage anchor, not a distinct section, so it's excluded
+// from current-page indication — only real standalone routes are marked.
+function isCurrentSection(href: string): boolean {
+  const path = href.split("#")[0] ?? "";
+  return path !== "" && path !== "/" && currentPath.startsWith(path);
+}
 ---
 
 <header class="no-print border-b border-neutral-200 bg-white">
@@ -31,7 +40,15 @@ const links = [
         {
           links.map((link) => (
             <li>
-              <a href={link.href} class="hover:text-brand-700">
+              <a
+                href={link.href}
+                aria-current={isCurrentSection(link.href) ? "page" : undefined}
+                class={
+                  isCurrentSection(link.href)
+                    ? "font-medium text-brand-700"
+                    : "hover:text-brand-700"
+                }
+              >
                 {link.label}
               </a>
             </li>
