@@ -101,6 +101,7 @@ export function UsersManager() {
         </div>
         <div className="w-48">
           <Select
+            ariaLabel="Filter users by status"
             options={[
               { value: "any", label: "Any status" },
               { value: "active", label: "Active" },

@@ -141,6 +141,7 @@ export function WebhooksManager() {
       {banner && <p className="text-supporting text-neutral-700">{banner}</p>}
       <div className="w-56">
         <Select
+          ariaLabel="Filter webhook events by status"
           options={[
             { value: "any", label: "All statuses" },
             { value: "pending", label: "Pending" },
