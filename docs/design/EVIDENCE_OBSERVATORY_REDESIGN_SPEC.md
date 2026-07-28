@@ -216,27 +216,53 @@ dev-only showcase.
 `guides/[slug]` (20 static guides, one template), `tools/index` + 5 standalone tool pages,
 `sitemap.xml`, `feed/[token].xml`.
 
-**Progress so far** (commits `abb7821`, `147d82c`, `8e633d3`):
+**Progress so far** (commits `abb7821` through `bc31192`):
 
 - `index` — added the missing "Evidence and methodology" section (§6 item 9 of the source
-  brief), migrated one isolated `max-w-[720px]` to the `max-w-reading` token, added "who it's
-  for" audience line to each pricing-summary plan card.
+  brief), added "who it's for" audience line to each pricing-summary plan card.
 - `SiteHeader.astro` / `MobileNav.tsx` (shared chrome, used by every public page) — added
   `aria-current="page"` + visual current-section indication on both desktop and mobile nav.
 - `pricing` — added "who it's for" audience line to each of the 4 plan cards (a requirement
   explicitly listed in source brief §9 that was previously missing entirely).
-- `crawlers/[slug]` — reviewed against source brief §8's required field list (Operator,
-  User-agent token, Purpose, Documented behaviour, Official source, Registry version, CrawlPact
-  interpretation, Limitations). All covered except "Registry version," which has no real data
-  source at this layer (these are static SEO markdown files, not tied to a live registry
-  release) — deliberately not added rather than fabricated. No changes made; already compliant.
-- Everything else in this phase's route list: **not started**.
+- `sign-in` — added an explanation of what a passkey is, why no password/email, what device
+  prompt to expect, and what to do when a passkey is unavailable (source brief §10 explicitly
+  lists all four as required and none were previously explained).
+- `scanner` — **real defect found and fixed, not just polish**: the page was fully static
+  (`prerender = true`) with a hardcoded "the live scanner is not yet enabled" claim.
+  Production's `wrangler.jsonc` has had `AUDIT_ENGINE_ENABLED=true` since commit `6320032` (the
+  tip of `main` this branch was cut from) — so real visitors were being told a live feature was
+  disabled. Fixed to read the flag live at request time (`prerender = false` + `getEnv()`),
+  matching the pattern `status.astro` already used correctly. Swept the rest of the public
+  pages/API for the same stale-claim pattern — nothing else was affected.
+- `crawlers/[slug]`, `guides/[slug]` — reviewed against source brief §8's required field/content
+  list. Field coverage was already complete except "Registry version" (no real data source at
+  this static-content layer — correctly left out, not fabricated). Two real gaps were found and
+  fixed: no "related crawlers/guides" section and no audit CTA at the end (both explicitly
+  required by §8). Both now compute real related items from collection data (never fabricated,
+  hidden when nothing is genuinely related) plus a consistent bottom `/audit` CTA.
+- Migrated 17 files' isolated `max-w-[720px]` to the existing `max-w-reading` token (mechanical,
+  zero visual change, flagged by the editor's own canonical-class diagnostic).
+- Reviewed `about`, `limitations`, `404`, and `security` directly — all already compliant with
+  the redesign's honesty/evidence principles, no changes needed.
+- Everything else in this phase's route list (`crawlers/index`, `guides/index`, `tools/index` +
+  5 tool pages, `privacy`, `terms`, `acceptable-use`, `changelog`, `methodology`, `scoring`,
+  `pay`, `sitemap.xml`, `feed/[token].xml`): **not yet individually reviewed**.
 
 ### Phase 5 — Audit and reports
 
-`audit/index` (entry form), `audit/[auditId]` (report view — must keep reflecting
-`AUDIT_ENGINE_ENABLED=false` honestly), `shared/[token]` (shared report view: valid / revoked /
-expired / invalid / agency-branded states).
+`audit/index` (entry form), `audit/[auditId]` (report view), `shared/[token]` (shared report
+view: valid / revoked / expired / invalid / agency-branded states).
+
+**Correction:** this section originally said the report view "must keep reflecting
+`AUDIT_ENGINE_ENABLED=false` honestly," on the assumption inherited from
+`docs/status/IMPLEMENTATION_STATUS.md` that the audit engine was still disabled in production.
+That assumption was wrong — production's `wrangler.jsonc` has had `AUDIT_ENGINE_ENABLED=true`
+since commit `6320032`, deployed before this branch was cut (see the Phase 4 progress note on
+`scanner` above, where this was discovered and a stale hardcoded claim was fixed). Phase 5 must
+reflect the **live** flag value at request time — same pattern as `status.astro` — not assume
+either state. `docs/status/IMPLEMENTATION_STATUS.md` itself may also need a pass to correct this
+same stale assumption; that's a docs-accuracy task, not a redesign task, and is out of this
+branch's scope, but is worth flagging to whoever next reads it.
 
 ### Phase 6 — Authentication and customer app
 
