@@ -35,6 +35,7 @@ const ROUTES = [
   "/limitations",
   "/sign-in",
   "/this-page-does-not-exist", // renders 404.astro
+  "/dev/components", // dev-only component showcase; excluded from prod build/sitemap
 ];
 
 for (const route of ROUTES) {
