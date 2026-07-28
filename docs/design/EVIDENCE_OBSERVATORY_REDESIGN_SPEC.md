@@ -97,9 +97,10 @@ omitted field looks like it was never collected; an explicit "Not available" tel
 CrawlPact checked and doesn't have it). Optional `context` line for shared-report/agency-branding
 disclosure text, supplied by the caller — the component has no opinion on what that text says.
 
-**Where it will be used later:** audit report Level 1 header (Phase 5), shared-report view
-(Phase 5), domain-detail full-report view (Phase 6). Not wired into any page yet — this session
-only adds it to `packages/ui` and the dev showcase.
+**Now wired into `AuditReportView.tsx`** (the audit report's Level 1 header), replacing a
+fragmented domain/scan-time/registry-version/preset/status layout and surfacing `rulesetVersion`,
+which existed in the real data but was never shown anywhere before. Still to come: `shared/[token]`
+view (Phase 5), domain-detail full-report view (Phase 6).
 
 ### B. Evidence Rail — `EvidenceRail` (built this session)
 
@@ -259,10 +260,15 @@ dev-only showcase.
 - Corrected a stale claim in `docs/status/IMPLEMENTATION_STATUS.md` (audit engine + Paddle
   webhook status) discovered via the `/scanner` fix above — not a redesign-spec change, recorded
   here only because this session's work surfaced it.
-- Everything else in this phase's route list (`tools/index` + 5 tool pages, `privacy`,
-  `changelog` content itself, `pay`, `sitemap.xml`, `feed/[token].xml`): **not yet individually
-  reviewed** (note: `privacy`/`terms`/`acceptable-use`/`changelog`/`methodology`/`security`/
-  `scanner` have had the spacing bug fixed but not a full content/structure review).
+- `tools/index` + 5 tool pages, `privacy`, `pay`, `sitemap.xml` — reviewed directly, all already
+  compliant (each tool page embeds the real validator rather than just linking to it, which
+  already satisfies "CTA that doesn't interrupt reading" better than a link would; `privacy` is
+  honestly labelled draft-pending-legal-review; `sitemap.xml` correctly excludes private/thin
+  routes per SRS §30.3). One more instance of the spacing bug found and fixed on
+  `tools/rsl-validator`.
+- **Phase 4 route list: fully reviewed.** `feed/[token].xml` (a per-user private Atom feed, not
+  a public content page) was not separately reviewed — out of scope for a public-website content
+  pass.
 
 ### Phase 5 — Audit and reports
 
@@ -276,9 +282,34 @@ That assumption was wrong — production's `wrangler.jsonc` has had `AUDIT_ENGIN
 since commit `6320032`, deployed before this branch was cut (see the Phase 4 progress note on
 `scanner` above, where this was discovered and a stale hardcoded claim was fixed). Phase 5 must
 reflect the **live** flag value at request time — same pattern as `status.astro` — not assume
-either state. `docs/status/IMPLEMENTATION_STATUS.md` itself may also need a pass to correct this
-same stale assumption; that's a docs-accuracy task, not a redesign task, and is out of this
-branch's scope, but is worth flagging to whoever next reads it.
+either state. `docs/status/IMPLEMENTATION_STATUS.md` has since been corrected directly (commit
+`47f9d0a`) at the user's explicit request.
+
+**Starting Phase 5 now.** The live audit engine being enabled in production raises the stakes
+here beyond typical redesign polish: this is a real, working scan pipeline real visitors use
+today, not a mostly-static content surface like Phase 4. Extra care on every change — reproduce
+the actual current behaviour first, verify against real scan output where practical, never
+assume a state.
+
+**Progress so far:**
+
+- `audit/index` — the static 8-stage "progress" list (numbered circles styled like a real
+  tracker) was reworded to be explicitly informational and visually de-emphasised, since the
+  form's actual submission feedback is only a button spinner with no real connection to that
+  list — real risk now that the engine is genuinely live, not just aspirational content. Also
+  fixed the same glued-text spacing bug as Phase 4.
+- `AuditReportView.tsx` (the report itself — the single highest-stakes template in the product)
+  — wired in `ProvenanceHeader` (built in the foundations slice, never used until now) to
+  replace a fragmented metadata layout: domain/scan-time/registry-version were in one header
+  block, while preset/status were a separate paragraph next to the score, and
+  **`rulesetVersion` existed in the real data but was never shown anywhere**. All five now
+  render together in one consistent block, all real fields, nothing fabricated.
+  Verified against a genuinely real scan (`AUDIT_ENGINE_ENABLED=true` locally, matching
+  production) run against `example.com` through the actual `/api/audit` endpoint — not a mock,
+  not a fixture. Zero axe-core WCAG violations on that real report page (checked directly, since
+  `/audit/[auditId]` isn't in the standard 22-route a11y suite — real reports need a real
+  `auditId` that suite can't generate). The one e2e test touching this component (`Print report`
+  button) still passes unchanged.
 
 ### Phase 6 — Authentication and customer app
 
