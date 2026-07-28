@@ -9,7 +9,9 @@
     "typecheck": "tsc --noEmit",
     "migrate:local": "wrangler d1 migrations apply crawlpact-db --local --config ../../apps/web/wrangler.jsonc",
     "migrate:remote": "wrangler d1 migrations apply crawlpact-db --remote --config ../../apps/web/wrangler.jsonc",
-    "seed:local": "wrangler d1 execute crawlpact-db --local --config ../../apps/web/wrangler.jsonc --file ./seed/seed.sql",
+    "seed:reference-data:local": "wrangler d1 execute crawlpact-db --local --config ../../apps/web/wrangler.jsonc --file ./seed/reference-data.sql",
+    "seed:reference-data:remote": "wrangler d1 execute crawlpact-db --remote --config ../../apps/web/wrangler.jsonc --file ./seed/reference-data.sql",
+    "seed:local": "pnpm run seed:reference-data:local && wrangler d1 execute crawlpact-db --local --config ../../apps/web/wrangler.jsonc --file ./seed/seed.sql",
     "validate": "node ../../scripts/validate-db-schema.mjs",
     "reset:local": "rm -rf .wrangler && pnpm run migrate:local && pnpm run seed:local"
   },

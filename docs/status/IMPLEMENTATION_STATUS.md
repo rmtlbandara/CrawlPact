@@ -1,13 +1,15 @@
 # Implementation Status
 
 **Last updated:** 2026-07-28 · **Current as of commit:** branched from `30a97cc` (`main`) ·
-**Current phase:** Part 3 complete; six follow-on passes (not numbered SRS Parts) have since been
+**Current phase:** Part 3 complete; seven follow-on passes (not numbered SRS Parts) have since been
 completed — a UI/UX conversion audit and fix pass, a Cloudflare infrastructure-alignment pass, a
 Cloudflare account setup + first production deployment pass, a release-engineering hardening
 pass (CI/CD, environment contract, `/pay` and Paddle live-catalog verification, two live
 production bugs found and fixed), a Paddle fulfillment/webhook live-delivery verification pass,
-and a production-stabilization pass that root-caused and fixed the long-standing real-CI e2e
-instability — see below, most recent first.
+a production-stabilization pass that root-caused and fixed the long-standing real-CI e2e
+instability, and a full-scope production remediation pass that found and fixed the most severe
+defect in the project's history (production account creation completely broken since launch) —
+see below, most recent first.
 
 Real Cloudflare account, zone, Worker, D1 (production + preview), KV, and a live Paddle catalog
 (Solo/Pro/Agency, client token, webhook destination) are connected and verified — see
@@ -15,6 +17,48 @@ Real Cloudflare account, zone, Worker, D1 (production + preview), KV, and a live
 `docs/architecture/adr/ADR-0007-DEPLOYMENT-PIPELINE.md`. `/pay` is built, deployed, and verified.
 The repository has real Git history (this is not a "zero commits" project) and a GitHub Actions
 CI/CD pipeline (`.github/workflows/ci.yml`, `deploy-preview.yml`, `deploy-production.yml`).
+
+## Full-scope production remediation: critical account-creation defect found and fixed (2026-07-28)
+
+A follow-on brief reported two "confirmed production failures": the audit engine's honest disabled
+message, and "This passkey is not recognised" on sign-in. The first was verified against the live
+Cloudflare Worker config and found to be the user's own just-made decision from the prior pass, not
+a regression — not touched. The second was investigated properly rather than assumed, per
+`CLAUDE.md`'s "reproduce before fixing" principle, and turned out to be real, but not an
+authentication bug.
+
+**Root cause, evidence-based**: direct D1 queries against production showed `users`,
+`passkey_credentials`, and `sessions` all at 0 rows, with 11 real `auth_failure`/`unknown_credential`
+security events — the correct response when no credential exists anywhere. Tracing why no account
+had ever been created led to `register/finish.ts`'s `INSERT INTO users` failing on a real
+`FOREIGN KEY` violation: `users.plan_id → plans.id`, and production's `plans` table (and
+`admin_roles`) had never been seeded. Confirmed directly by running one real registration attempt
+against `https://crawlpact.com` (Chromium + a CDP virtual authenticator), which returned a genuine
+HTTP 500. **The core create-account journey had been completely broken in production since the
+database was created on 2026-07-26** — nobody had ever been able to register a working account.
+
+**Fixed**: inserted the real SRS §8 plan catalog (4 rows) and the real admin-role catalog (6 rows)
+directly into production D1 — additive real reference data matching migration 0001 exactly, not
+test/fake data, no schema change. Verified immediately with a full real register → sign-out →
+sign-in round trip against production; all three throwaway verification accounts and their rows
+were deleted afterward, restoring production to 0 real users. See
+`docs/status/KNOWN_RISKS.md` for full detail, including the still-open, lower-urgency
+`runtime_configuration` seeding gap.
+
+**E2E stability**: a real GitHub Actions run (triggered by the user's push of the prior pass's fix)
+surfaced a third instance of the same Vite SSR dependency-optimizer race — the previous fix's
+route warmup only covered page GETs, never the auth API routes' own separate module graph
+(`@simplewebauthn/server`). Fixed by extending `global-setup.ts` with serial POST warm-ups against
+those routes. Committed and a fresh PR (#31) opened for real-CI re-verification; not yet confirmed
+green at the time of writing.
+
+**Other verification this pass**: Cloudflare (Worker bindings, D1/KV/custom-domain separation, DNS,
+10 available Worker versions for rollback, no duplicate/orphaned CrawlPact workers — the
+already-documented broken "Workers Builds" duplicate pipeline is unchanged) and Paddle (all 3
+products/prices active and exactly matching the Worker's configured price IDs, webhook destination
+correct and active) were both re-verified read-first via their respective MCPs, no changes needed.
+A minor, non-security CSP gap was found live (Cloudflare's own Web Analytics beacon silently
+blocked by `script-src`) and disclosed, not fixed unilaterally (a product decision).
 
 ## Production-stabilization pass: E2E root cause fixed, recovery-code e2e gap closed (2026-07-28)
 

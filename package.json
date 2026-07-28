@@ -27,6 +27,7 @@
     "db:migrate": "pnpm --filter @crawlpact/database run migrate:local",
     "db:migrate:remote": "pnpm --filter @crawlpact/database run migrate:remote",
     "db:seed": "pnpm --filter @crawlpact/database run seed:local",
+    "db:seed:reference-data:remote": "pnpm --filter @crawlpact/database run seed:reference-data:remote",
     "db:validate": "pnpm --filter @crawlpact/database run validate",
     "db:reset:local": "pnpm --filter @crawlpact/database run reset:local",
     "registry:validate": "node scripts/registry-tools.mjs validate",
