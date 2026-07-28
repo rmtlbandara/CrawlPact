@@ -5,13 +5,16 @@ covered by `apps/web/tests/integration/billing-webhook.integration.test.ts` (10 
 scenarios: creation, update, renewal, past-due grace, scheduled cancellation, effective
 cancellation, refund, duplicate event, out-of-order event, invalid signature).
 
-**Not verified against a live Paddle account** — no sandbox credentials were available for this
-phase. The signature-verification/idempotency/state-machine logic is proven correct against
-self-generated HMAC fixtures matching Paddle's publicly documented webhook shape; the shape
-itself (exact field names on subscription/transaction/adjustment payloads) has not been
-confirmed against a real account. See `apps/web/src/pages/api/billing/AGENTS.md` and
-`lib/billing/webhook-processor.ts`'s docstring. Treat this as needing a real-account smoke test
-before launch.
+**Verified against the live Paddle account on 2026-07-28** — a Paddle webhook simulation delivered
+8 real, `Paddle-Signature`-signed events to `https://crawlpact.com/api/billing/webhook` in
+production; every one was correctly signature-verified, parsed, dispatched, and recorded, and one
+intentionally-unsubscribed event type was correctly never delivered. The
+signature-verification/idempotency/state-machine logic, previously proven only against
+self-generated HMAC fixtures, is now also proven against genuine Paddle-originated traffic. See
+`docs/status/PADDLE_WEBHOOK_LIVE_DELIVERY_VERIFICATION.md` for full evidence. What remains
+unverified: a real **paid** checkout lifecycle (real payment, real `custom_data.userId` linkage,
+real plan grant) — deliberately not run without separate explicit authorization, since no real
+charge may be triggered.
 
 ## Non-negotiables (SRS §27, §33)
 
@@ -44,7 +47,9 @@ implementation yet — it's Super Admin tooling, Part 3 scope, correctly not bui
 ## Definition of done for this area
 
 Webhook signature verification, idempotency, out-of-order protection, and the full subscription
-lifecycle state machine are implemented and tested (10/10 fixture scenarios pass). Checkout
-initiation (Paddle.js overlay) and the customer portal session endpoint are implemented but
-**not** exercised against a real Paddle account — that verification, plus a Super Admin
-view/retry UI for failed webhooks, remain open for a later phase.
+lifecycle state machine are implemented and tested (10/10 fixture scenarios pass), **and** now
+verified against real, signed Paddle production traffic (2026-07-28, see above). A Super Admin
+view/retry UI for failed webhooks is implemented (`/admin/webhooks`). Checkout initiation
+(Paddle.js overlay) and the customer portal session endpoint are implemented but not yet
+exercised against a real **paid** transaction — that remains open for a later, separately
+authorized phase.

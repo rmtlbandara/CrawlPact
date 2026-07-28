@@ -94,6 +94,13 @@ events: the full `transaction.*`, `subscription.*`, `customer.*`, `adjustment.*`
 verified to cover everything `webhook-processor.ts`'s `event.eventType.startsWith(...)` dispatch
 handles. No duplicate/legacy notification destination exists in the account.
 
+**Live delivery verified 2026-07-28**: with explicit user authorization, `traffic_source` was
+temporarily set to `all`, a Paddle webhook simulation was run against this exact destination, real
+signed events were confirmed delivered and correctly processed in production, and `traffic_source`
+was reverted to `platform` immediately after. See
+`docs/status/PADDLE_WEBHOOK_LIVE_DELIVERY_VERIFICATION.md` for full evidence — this closes the
+previously-open "no real webhook has ever been delivered" gap.
+
 ## Signature security
 
 `paddle-webhook.ts`/`webhook.ts` verify the raw request body against `PADDLE_WEBHOOK_SECRET` using

@@ -18,9 +18,13 @@ import { trackEvent } from "../analytics";
  * status/details.totals, adjustment action, customer id/custom_data) were
  * cross-checked 2026-07-26 against this account's live Paddle API read
  * responses (products/prices/notification-settings) via the Paddle MCP
- * connection, and matched. That is read-API confirmation, not proof —
- * no real webhook delivery or live checkout has been observed against
- * this handler yet; see docs/status/KNOWN_RISKS.md.
+ * connection, and matched. On 2026-07-28, a real Paddle webhook simulation
+ * delivered genuinely signed events to this handler in production —
+ * signature verification, parsing, dispatch, and idempotent audit logging
+ * all confirmed working against real traffic. See
+ * docs/status/PADDLE_WEBHOOK_LIVE_DELIVERY_VERIFICATION.md. Still open: a
+ * real paid checkout lifecycle (real `custom_data.userId` linkage through
+ * to a plan grant) has not been run — see docs/status/KNOWN_RISKS.md.
  */
 
 const MAX_ATTEMPTS_BEFORE_GIVING_UP = 5;

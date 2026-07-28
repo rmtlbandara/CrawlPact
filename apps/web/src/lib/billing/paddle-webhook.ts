@@ -8,11 +8,11 @@
  * JSON before verifying would silently break on any whitespace/key-order
  * difference and is a common way to accidentally defeat this check.
  *
- * Verified against Paddle's publicly documented signing scheme; not tested
- * against a live Paddle sandbox account (none was available — see the
- * Part 2 final report). The self-generated-HMAC tests in
- * `paddle-webhook.test.ts` prove this implementation correctly verifies
- * and rejects signatures of this exact shape.
+ * Verified against Paddle's publicly documented signing scheme, the
+ * self-generated-HMAC tests in `paddle-webhook.test.ts`, and — as of
+ * 2026-07-28 — real signatures on real Paddle-originated webhook traffic
+ * delivered to production via Paddle's webhook simulator (see
+ * docs/status/PADDLE_WEBHOOK_LIVE_DELIVERY_VERIFICATION.md).
  */
 
 const MAX_SIGNATURE_AGE_SECONDS = 5 * 60;

@@ -1,11 +1,12 @@
 # Implementation Status
 
-**Last updated:** 2026-07-27 · **Current as of commit:** branched from `21c5fb6` (`main`) ·
-**Current phase:** Part 3 complete; four follow-on passes (not numbered SRS Parts) have since been
+**Last updated:** 2026-07-28 · **Current as of commit:** branched from `30a97cc` (`main`) ·
+**Current phase:** Part 3 complete; five follow-on passes (not numbered SRS Parts) have since been
 completed — a UI/UX conversion audit and fix pass, a Cloudflare infrastructure-alignment pass, a
-Cloudflare account setup + first production deployment pass, and a release-engineering hardening
+Cloudflare account setup + first production deployment pass, a release-engineering hardening
 pass (CI/CD, environment contract, `/pay` and Paddle live-catalog verification, two live
-production bugs found and fixed) — see below, most recent first.
+production bugs found and fixed), and a Paddle fulfillment/webhook live-delivery verification pass
+— see below, most recent first.
 
 Real Cloudflare account, zone, Worker, D1 (production + preview), KV, and a live Paddle catalog
 (Solo/Pro/Agency, client token, webhook destination) are connected and verified — see
@@ -13,6 +14,43 @@ Real Cloudflare account, zone, Worker, D1 (production + preview), KV, and a live
 `docs/architecture/adr/ADR-0007-DEPLOYMENT-PIPELINE.md`. `/pay` is built, deployed, and verified.
 The repository has real Git history (this is not a "zero commits" project) and a GitHub Actions
 CI/CD pipeline (`.github/workflows/ci.yml`, `deploy-preview.yml`, `deploy-production.yml`).
+
+## Paddle fulfillment/webhook live-delivery verification (2026-07-28)
+
+Paddle onboarding item 03 ("Handle fulfillment and provisioning — listen to notifications from
+Paddle in your app"). The webhook-receiving implementation (`webhook-processor.ts`,
+`paddle-webhook.ts`, `/api/billing/webhook`, the admin webhooks dashboard) already existed and was
+already covered by 10/10 self-generated-HMAC integration test scenarios; what was missing was any
+proof it worked against genuinely Paddle-signed traffic, not just local fixtures — production's
+`webhook_events` table was confirmed empty (zero rows) immediately before this pass.
+
+With the user's explicit, separately-confirmed authorization: the existing production notification
+destination's `traffic_source` was temporarily changed from `platform` to `all` (required for
+Paddle's webhook simulator to reach it at all), a `subscription_creation` scenario simulation was
+run against it, and 8 of the resulting real, `Paddle-Signature`-signed events were confirmed
+correctly delivered, verified, parsed, dispatched, and audit-logged in production — all `200`
+responses in the exact JSON shape the handler produces, and one intentionally-unsubscribed event
+type (`payment_method.saved`) correctly never delivered at all. `traffic_source` was reverted to
+`platform` immediately after. Per a second explicit user decision, the 11 synthetic
+`webhook_events` rows this test created were then deleted from production D1 so the real webhook
+audit log stays free of test noise — the evidence lives in
+`docs/status/PADDLE_WEBHOOK_LIVE_DELIVERY_VERIFICATION.md` instead. No product, price, token,
+checkout domain, customer, subscription, transaction, or charge was created or touched; no secret
+was rotated. Zero application code changes were needed — the existing implementation was already
+correct; this pass only proved it.
+
+A secondary, disclosed finding: reading the notification setting via the Paddle MCP (`get`/`update`)
+returns `endpoint_secret_key` in plaintext unrequested, confirming this is Paddle's standard
+response shape for that endpoint (not a one-off), consistent with the same behavior the
+2026-07-27 pass first flagged in `docs/status/KNOWN_RISKS.md`. Per explicit user decision, the
+webhook secret was **not** rotated this pass — that risk entry remains open.
+
+See `docs/status/PADDLE_WEBHOOK_LIVE_DELIVERY_VERIFICATION.md` for the full report,
+`docs/deployment/PADDLE_LIVE_GO_LIVE_CHECKLIST.md` and `docs/status/KNOWN_RISKS.md` for the updated
+checklist/risk entries, and `docs/security/BILLING_SECURITY.md` for the updated security posture.
+No code changes were made this pass beyond docstring corrections in `webhook-processor.ts` and
+`paddle-webhook.ts` reflecting the new verified status — `pnpm quality` was not re-run since no
+functional code changed.
 
 ## Cloudflare account setup and first production deployment (2026-07-26)
 
