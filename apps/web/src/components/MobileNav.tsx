@@ -10,14 +10,24 @@ export type NavLink = { label: string; href: string };
  * SiteHeader.astro; this island only handles the mobile collapsible menu
  * (SRS §9.6, §10.15).
  */
+// "Product" is a homepage anchor, not a distinct section, so it's excluded
+// from current-page indication — only real standalone routes are marked
+// (mirrors the same rule in SiteHeader.astro's desktop nav).
+function isCurrentSection(href: string, currentPath: string): boolean {
+  const path = href.split("#")[0] ?? "";
+  return path !== "" && path !== "/" && currentPath.startsWith(path);
+}
+
 export function MobileNav({
   links,
   ctaHref,
   ctaLabel,
+  currentPath,
 }: {
   links: NavLink[];
   ctaHref: string;
   ctaLabel: string;
+  currentPath: string;
 }) {
   const [open, setOpen] = useState(false);
 
@@ -27,13 +37,24 @@ export function MobileNav({
       <Drawer open={open} onOpenChange={setOpen} title="Menu" side="right">
         <nav aria-label="Primary">
           <ul className="flex flex-col gap-1">
-            {links.map((link) => (
-              <li key={link.href}>
-                <Link href={link.href} className="block py-2.5 text-body-lg text-neutral-800">
-                  {link.label}
-                </Link>
-              </li>
-            ))}
+            {links.map((link) => {
+              const current = isCurrentSection(link.href, currentPath);
+              return (
+                <li key={link.href}>
+                  <Link
+                    href={link.href}
+                    aria-current={current ? "page" : undefined}
+                    className={
+                      current
+                        ? "block py-2.5 text-body-lg font-medium text-brand-700"
+                        : "block py-2.5 text-body-lg text-neutral-800"
+                    }
+                  >
+                    {link.label}
+                  </Link>
+                </li>
+              );
+            })}
           </ul>
         </nav>
         <a
