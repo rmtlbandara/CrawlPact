@@ -36,14 +36,17 @@ will itself confirm via webhook).
 - Log a raw webhook payload without redaction — `payload_redacted` in `webhook_events` exists
   specifically so `custom_data`/PII-adjacent fields aren't retained verbatim.
 
-## What's unverified
+## What's verified, and what's still open
 
 The Paddle API field names/shapes here (webhook payloads, portal-session response) follow
-Paddle's public docs as best understood. No sandbox account was available when this was first
-built; a live Paddle account has since been connected (2026-07-26) and its real entities
-(products, prices, notification settings) were read and cross-checked against these field-shape
-assumptions — narrowing, not closing, this gap. **Still true: no real webhook has ever actually
-been delivered to `/api/billing/webhook`**, so envelope-level behavior under real traffic (retries,
-timing) remains unproven — the self-generated-HMAC webhook tests only prove the
-signature/idempotency/state-machine logic is correct for payloads of the assumed shape. See
+Paddle's public docs. A live Paddle account has been connected since 2026-07-26 (products, prices,
+notification settings read and cross-checked), and on 2026-07-28, with explicit user
+authorization, a real Paddle webhook simulation delivered genuinely `Paddle-Signature`-signed
+events to this exact endpoint in production — signature verification, parsing, dispatch, and
+idempotent audit logging were all confirmed working against real traffic, not just the
+self-generated-HMAC test fixtures. See `docs/status/PADDLE_WEBHOOK_LIVE_DELIVERY_VERIFICATION.md`.
+
+**Still open**: a real **paid** checkout lifecycle — real payment, real `custom_data.userId`
+linkage, real plan grant — has not been run, and must not be without separate explicit
+authorization (no real charge may be triggered against this Live account). See
 `docs/status/KNOWN_RISKS.md`.
