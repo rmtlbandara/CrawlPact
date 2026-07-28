@@ -123,6 +123,40 @@ jobs:
       - name: Apply D1 migrations and seed data
         run: pnpm db:migrate && pnpm db:seed
 
+      - name: Write CI-local .dev.vars for Cloudflare secret bindings
+        # SESSION_SIGNING_SECRET/PADDLE_API_KEY/PADDLE_WEBHOOK_SECRET are
+        # `secret_text` bindings, not `wrangler.jsonc` `vars` — Astro's
+        # Cloudflare dev-mode platform proxy (`cloudflare:workers`'s `env`,
+        # see apps/web/src/lib/env.ts) only receives secret values from a
+        # local `.dev.vars` file; this job's own shell-level `env:` block
+        # below never reaches it. Without this, every route that signs or
+        # verifies a token (WebAuthn challenges, sessions) gets an
+        # empty-string secret and 500s with "Imported HMAC key length (0)"
+        # — the real root cause of every real-CI passkey-registration
+        # failure so far, confirmed 2026-07-28 by reading an actual failing
+        # run's Playwright network trace response body, not just its
+        # console message. Every value here is the same non-secret CI
+        # placeholder already visible in this workflow's top-level `env:`
+        # block, written to a gitignored, ephemeral runner-local file —
+        # never a real credential.
+        run: |
+          cat > apps/web/.dev.vars << 'DEVVARS'
+          PUBLIC_APP_ENV=local
+          PUBLIC_SITE_URL=http://localhost:4321
+          SESSION_SIGNING_SECRET=ci-placeholder-secret-value-not-real-00000000
+          WEBAUTHN_RP_ID=localhost
+          WEBAUTHN_RP_ORIGIN=http://localhost:4321
+          PADDLE_API_KEY=ci-placeholder
+          PADDLE_ENVIRONMENT=sandbox
+          PADDLE_WEBHOOK_SECRET=ci-placeholder
+          PADDLE_PRICE_ID_SOLO=pri_ci_placeholder
+          PADDLE_PRICE_ID_PRO=pri_ci_placeholder
+          PADDLE_PRICE_ID_AGENCY=pri_ci_placeholder
+          PUBLIC_PADDLE_CLIENT_TOKEN=ci-placeholder
+          BILLING_ENABLED=false
+          AUDIT_ENGINE_ENABLED=true
+          DEVVARS
+
       - name: Start preview server
         run: pnpm --filter @crawlpact/web dev &
         env:
