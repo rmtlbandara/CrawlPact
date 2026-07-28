@@ -369,7 +369,7 @@ at each step.
 - **Considered and deliberately not fixed**: the Notifications page's "Revoke" button for the
   private Atom feed is always enabled, even before a feed has ever been created (a harmless
   no-op DELETE in that case, not an error). The seemingly-obvious fix — hiding it when the
-  client-side `feedUrl` state is empty — would actually be *wrong*, since the raw feed URL is
+  client-side `feedUrl` state is empty — would actually be _wrong_, since the raw feed URL is
   only ever shown once at creation time and cleared from state afterward; `feedUrl === null`
   doesn't mean no feed exists, just that it isn't currently displayed. Fixing this properly
   needs a new server-side "does a feed exist" check, which is more new API surface than this
