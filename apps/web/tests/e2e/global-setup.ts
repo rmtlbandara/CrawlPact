@@ -9,6 +9,24 @@ import type { FullConfig } from "@playwright/test";
 const EXTRA_ROUTES = ["/sign-in", "/pay", "/app", "/app/billing", "/app/account", "/admin"];
 
 /**
+ * API routes with their own separate server-side import graph that a page
+ * fetch never touches — `@simplewebauthn/server` is imported only inside
+ * `lib/auth/webauthn.ts`, which no page component ever loads (that module is
+ * reached exclusively through these API route handlers). A real ubuntu-latest
+ * CI run confirmed `register/begin` returning a real 500 here — the exact
+ * same SSR dependency-optimizer race as `/pay`'s `@paddle/paddle-js`
+ * (see the class comment below), just in a spot the page-route warmup above
+ * never reaches. One warm hit is enough: all of these share the same
+ * underlying module, so `@simplewebauthn/server`'s dependency discovery only
+ * has to happen once for all of them to be safe.
+ */
+const API_WARMUP_REQUESTS: { path: string; body: unknown }[] = [
+  { path: "/api/auth/register/begin", body: { displayName: "warmup" } },
+  { path: "/api/auth/login/begin", body: {} },
+  { path: "/api/auth/recovery-codes/redeem", body: { code: "WARMUP-WARMUP-WARMUP" } },
+];
+
+/**
  * Warms every real route, serially, before Playwright's fullyParallel suite
  * starts. Astro's dev server (Vite) discovers and pre-bundles each new
  * SSR-side dependency the first time a route that imports it is requested —
@@ -49,6 +67,21 @@ export default async function globalSetup(config: FullConfig): Promise<void> {
       await fetch(new URL(route, baseURL));
     } catch {
       // Best-effort warmup — see comment above.
+    }
+  }
+
+  for (const { path, body } of API_WARMUP_REQUESTS) {
+    try {
+      await fetch(new URL(path, baseURL), {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(body),
+      });
+    } catch {
+      // Best-effort warmup — see comment above. A 4xx/5xx response here is
+      // fine and expected (the body is deliberately not a real ceremony);
+      // what matters is that the route's module graph gets loaded once,
+      // serially, before any parallel worker starts.
     }
   }
 }
