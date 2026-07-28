@@ -454,10 +454,30 @@ revert. Individual commits are scoped (spec doc; each new component; showcase up
 list addition) so a partial revert is also possible if a later session wants to keep some of this
 slice and not other parts.
 
-## 12. What this document does not cover yet
+## 12. Current completion state
 
-Phases 4 through 8 (all actual page redesigns, full cross-browser/breakpoint verification, a
-regenerated CI-wired visual baseline, Lighthouse/Core Web Vitals measurement, and the source
-document's full A–J deliverables package) are **not started**. This spec is the reference those
-sessions execute against — see the session's final interim status report for the honest
-completion state as of now.
+**Phases 4, 5, 6, and 7 are complete** — every route in each phase's scope was reviewed with real
+data (real scans, a real authenticated customer session, a real admin session), and every
+genuine gap found was fixed and verified; see each phase's own progress notes above for exactly
+what changed and what was deliberately left alone, with reasoning.
+
+**Phase 8 — partially done, honestly incomplete:**
+
+- Done: the repo's actual configured cross-browser matrix (chromium + mobile-safari/WebKit — no
+  separate Firefox project exists in `playwright.config.ts`, so that's the real matrix, not a
+  reduced one) was run clean at the end of this session: `pnpm test:e2e` 29/29 passed (9 skipped
+  by design, mobile-only WebAuthn gate), `pnpm test:a11y` 53/54 (the one failure is the
+  pre-existing, already-documented mobile-safari skip-link tooling limitation, confirmed
+  unrelated to this branch's changes throughout every single commit this session).
+- **Not done, explicitly**: a regenerated, CI-wired visual-regression baseline (the existing one
+  was already confirmed stale before this session started, for unrelated reasons — regenerating
+  91 snapshots requires reviewing every image individually per this document's own rules, not a
+  blind bulk update); Lighthouse/Core Web Vitals lab measurements (no Lighthouse tooling is
+  currently wired into this repo); a manual screen-reader walkthrough; and the source document's
+  full A–J final deliverables package (this document plus each phase's commits serve the same
+  purpose, but weren't assembled into that exact format).
+
+Per this document's own completion standard: **the redesign has zero known critical or
+high-severity defects and no known regressions after the automated and manual verification
+actually performed** — not "fully complete," since the Phase 8 items above genuinely weren't
+done. Continuing this work in a later session should start from this section.
