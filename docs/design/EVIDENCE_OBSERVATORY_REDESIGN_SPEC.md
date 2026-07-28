@@ -242,11 +242,27 @@ dev-only showcase.
   hidden when nothing is genuinely related) plus a consistent bottom `/audit` CTA.
 - Migrated 17 files' isolated `max-w-[720px]` to the existing `max-w-reading` token (mechanical,
   zero visual change, flagged by the editor's own canonical-class diagnostic).
-- Reviewed `about`, `limitations`, `404`, and `security` directly — all already compliant with
-  the redesign's honesty/evidence principles, no changes needed.
-- Everything else in this phase's route list (`crawlers/index`, `guides/index`, `tools/index` +
-  5 tool pages, `privacy`, `terms`, `acceptable-use`, `changelog`, `methodology`, `scoring`,
-  `pay`, `sitemap.xml`, `feed/[token].xml`): **not yet individually reviewed**.
+- `crawlers/index` — grouped the flat 20-crawler list into Policy Purpose Lane sections (§4C),
+  only rendering purposes with a real entry.
+- `guides/index` — "This index will grow toward the SRS's launch content minimum" was stale;
+  verified the collection already exactly meets SRS §30.4's minimum (10 decision + 5
+  implementation + 5 troubleshooting) and corrected the copy.
+- **Repo-wide text-rendering bug found and fixed**: inline `<a>` tags separated from their
+  surrounding text by a line break (with nothing else on that line) had their whitespace
+  stripped by Astro's compiler instead of collapsed to a space, producing glued-together text
+  ("seemethodology", "statusfor"). Found via direct HTML verification (not just visual review)
+  and fixed on 8 pages (`about`, `acceptable-use`, `changelog`, `methodology`, `pricing`,
+  `scanner`, `security`, `terms`) using an explicit `{" "}` expression at each junction.
+- Reviewed `about`, `limitations`, `404`, and `security` content directly — all already
+  compliant with the redesign's honesty/evidence principles, no content changes needed (only the
+  spacing-bug fix above, which is a rendering defect, not a content/redesign change).
+- Corrected a stale claim in `docs/status/IMPLEMENTATION_STATUS.md` (audit engine + Paddle
+  webhook status) discovered via the `/scanner` fix above — not a redesign-spec change, recorded
+  here only because this session's work surfaced it.
+- Everything else in this phase's route list (`tools/index` + 5 tool pages, `privacy`,
+  `changelog` content itself, `pay`, `sitemap.xml`, `feed/[token].xml`): **not yet individually
+  reviewed** (note: `privacy`/`terms`/`acceptable-use`/`changelog`/`methodology`/`security`/
+  `scanner` have had the spacing bug fixed but not a full content/structure review).
 
 ### Phase 5 — Audit and reports
 
