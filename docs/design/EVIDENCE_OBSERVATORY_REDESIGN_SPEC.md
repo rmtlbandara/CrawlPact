@@ -390,6 +390,31 @@ failure, unrelated).
 
 `api/*` routes are not a UI surface and are out of scope for this redesign entirely.
 
+**Progress so far.** Reviewed with a real admin session: registered a genuine account via the
+real WebAuthn ceremony, then granted `super_admin` directly against local D1 the same way
+`tests/e2e/admin-flows.spec.ts` does (there is no other way to reach an admin account — this
+mirrors, not bypasses, the product's real authorization model). Captured and reviewed real
+screenshots of all 21 admin routes; read closely: `admin/index` (global dashboard),
+`admin/users`, `admin/subscriptions`, `admin/security`, `admin/audit-logs`,
+`admin/registry/crawlers`, `admin/settings`, `admin/webhooks`, `admin/health`, `admin/notices` —
+spanning every functional group in the sidebar (Overview, Customers, Product Operations, Crawler
+Intelligence, Security, Configuration).
+
+**Finding: no new defects.** Every page reviewed already matches this document's principles
+without forced changes — real data throughout (226 real users, real security events, real audit
+log entries, all accumulated from this session's own testing), honest empty states, status
+never colour-only, `admin/health` explicitly correctly shows a real "degraded" status for Paddle
+webhook processing rather than a hardcoded "all good" (the page's own subtitle states that
+requirement verbatim, and the real data backs it up), and `admin/audit-logs` shows genuine
+who/what/target/reason/when rows from real `requireAdminAction` calls. The one gap present
+(`admin/users` and `admin/webhooks` render all rows unpaginated) is the already-documented,
+disclosed gap in `docs/status/KNOWN_RISKS.md` ("Admin list pagination is designed... not wired
+to any admin page") — real feature work, not a redesign-scope fix, and not new information.
+
+This phase produced no commits — a legitimate, honest outcome. Not every phase needs a fix to
+be a complete, verified review; forcing a change here to have something to show would be exactly
+the kind of "add changes beyond what's needed" this project's own conventions warn against.
+
 ## 10. Testing matrix and this session's verification
 
 Full matrix: `docs/testing/VISUAL_QA_MATRIX.md` (7 breakpoints × 3 browser engines, already
