@@ -9,12 +9,17 @@ export async function getStaticPaths() {
 }
 
 const { guide } = Astro.props;
-const { Content } = await render(guide);
+const { Content, headings } = await render(guide);
 
 const allGuides = await getCollection("guides");
 const relatedGuides = allGuides
   .filter((other) => other.id !== guide.id && other.data.category === guide.data.category)
   .slice(0, 3);
+
+// Only worth a table of contents once a guide has enough sections to need
+// one — shorter guides (a couple of headings) read fine top-to-bottom.
+const tocHeadings = headings.filter((h) => h.depth <= 2);
+const showToc = tocHeadings.length >= 3;
 ---
 
 <MarketingLayout
@@ -42,6 +47,29 @@ const relatedGuides = allGuides
         )
       }
     </p>
+
+    {
+      showToc && (
+        <nav
+          aria-label="Table of contents"
+          class="mt-6 rounded-card border border-neutral-200 bg-neutral-50 p-4"
+        >
+          <p class="text-metadata font-medium uppercase tracking-wide text-neutral-500">
+            On this page
+          </p>
+          <ul class="mt-2 flex flex-col gap-1.5">
+            {tocHeadings.map((heading) => (
+              <li>
+                <a href={`#${heading.slug}`} class="text-supporting text-brand-700 hover:underline">
+                  {heading.text}
+                </a>
+              </li>
+            ))}
+          </ul>
+        </nav>
+      )
+    }
+
     <div class="prose prose-neutral mt-6 max-w-none text-body text-neutral-800">
       <Content />
     </div>
