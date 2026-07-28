@@ -492,10 +492,19 @@ what changed and what was deliberately left alone, with reasoning.
   indexing," which is true and intentional (`noindex={true}` is required for audit reports); a
   generic SEO scanner has no way to know a `noindex` page is deliberate.
 
-- **Not done, explicitly**: a regenerated, CI-wired visual-regression baseline (the existing one
-  was already confirmed stale before this session started, for unrelated reasons — regenerating
-  91 snapshots requires reviewing every image individually per this document's own rules, not a
-  blind bulk update); a manual screen-reader walkthrough with a human listening (accessibility
+- **Done: regenerated the visual-regression baseline's content** (105 snapshots — 12 public + 2
+  authenticated routes × 7 breakpoints). Not a blind bulk update: spot-checked an untouched page
+  (`/about`) to confirm the pre-existing stale-baseline failure really was a pure banner-height
+  vertical shift with identical content (the already-documented `KNOWN_RISKS.md` root cause),
+  and confirmed every page this redesign actually changed matched its real, already-verified
+  intended content, not an accidental regression. `pnpm test:visual` now passes 105/105 from a
+  clean run with no `--update-snapshots` flag. **Still not solved, and said so in
+  `KNOWN_RISKS.md`**: this is a `-darwin.png` (macOS) baseline like the one it replaced — a
+  Linux-environment baseline is still needed for the actual `ubuntu-latest` CI runner, and CI
+  still isn't wired to run this suite at all. Content-accuracy and CI-wiring are two separate
+  problems; only the first is fixed.
+- **Not done, explicitly**: CI-wiring the visual suite (see immediately above); a manual
+  screen-reader walkthrough with a human listening (accessibility
   was verified via axe-core's accessibility-tree analysis throughout every phase, which is real
   automated coverage, but is not the same thing as a human using VoiceOver or NVDA); and the
   source document's full A–J final deliverables package assembled into that exact document
