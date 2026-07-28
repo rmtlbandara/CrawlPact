@@ -4,6 +4,7 @@ import { defineConfig, devices } from "@playwright/test";
 // docs/testing/TEST_STRATEGY.md for what belongs in e2e vs. unit/integration.
 export default defineConfig({
   testDir: "./apps/web/tests/e2e",
+  globalSetup: "./apps/web/tests/e2e/global-setup.ts",
   fullyParallel: true,
   forbidOnly: !!process.env.CI,
   retries: process.env.CI ? 2 : 0,

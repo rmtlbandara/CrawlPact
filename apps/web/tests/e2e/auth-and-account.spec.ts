@@ -1,7 +1,12 @@
 import { expect, test } from "@playwright/test";
 import { addVirtualAuthenticator } from "./helpers/webauthn";
-import { registerNewAccount, signInWithPasskey } from "./helpers/auth";
+import {
+  registerNewAccount,
+  registerNewAccountCapturingRecoveryCodes,
+  signInWithPasskey,
+} from "./helpers/auth";
 import { ensureRealPage } from "./helpers/navigation";
+import { clearAnonymousAuditRateLimit, clearRecoveryCodeRateLimit } from "./helpers/admin-db";
 
 /**
  * Real browser journeys through the customer-facing account/domain flows
@@ -77,6 +82,65 @@ test.describe("Passkey account lifecycle", () => {
   });
 });
 
+/**
+ * SRS §24/§35.3: recovery-code sign-in is the only path into an account
+ * once its passkey is unavailable — real browser coverage for it (as
+ * opposed to `auth-flow.integration.test.ts`'s API-level coverage of the
+ * same redeem/reuse/rate-limit logic) was a gap found while re-verifying
+ * the recovery-code flow end to end.
+ */
+test.describe("Recovery code sign-in", () => {
+  test.beforeEach(async ({ page, browserName }) => {
+    test.skip(browserName !== "chromium", "WebAuthn virtual authenticator is Chromium-only.");
+    await clearRecoveryCodeRateLimit();
+    await addVirtualAuthenticator(page);
+  });
+
+  test("signs in with a one-time recovery code, and the same code cannot be reused", async ({
+    page,
+  }) => {
+    const displayName = `E2E Recovery User ${Date.now()}`;
+    const recoveryCodes = await registerNewAccountCapturingRecoveryCodes(page, displayName);
+    expect(recoveryCodes.length).toBeGreaterThan(0);
+
+    await page.getByRole("button", { name: "Sign out" }).click();
+    await page.waitForURL("**/");
+
+    // Simulate a lost passkey: sign back in with a saved recovery code
+    // instead of `signInWithPasskey`.
+    await page.goto("/sign-in");
+    await page.waitForLoadState("networkidle");
+    await page.getByRole("button", { name: "Recovery code" }).click();
+    await page.getByLabel("Recovery code").fill(recoveryCodes[0]!);
+    await page.getByRole("button", { name: "Sign in with recovery code" }).click();
+    await page.waitForURL("**/app");
+    await ensureRealPage(page);
+    await expect(page.getByRole("heading", { name: "Overview" })).toBeVisible();
+
+    // The code is single-use — replaying it must be rejected, not silently
+    // create a second session.
+    await page.getByRole("button", { name: "Sign out" }).click();
+    await page.waitForURL("**/");
+    await page.goto("/sign-in");
+    await page.waitForLoadState("networkidle");
+    await page.getByRole("button", { name: "Recovery code" }).click();
+    await page.getByLabel("Recovery code").fill(recoveryCodes[0]!);
+    await page.getByRole("button", { name: "Sign in with recovery code" }).click();
+    await expect(page.getByText("That didn't work")).toBeVisible();
+    expect(page.url()).toContain("/sign-in");
+  });
+
+  test("rejects an invalid recovery code without creating a session", async ({ page }) => {
+    await page.goto("/sign-in");
+    await page.waitForLoadState("networkidle");
+    await page.getByRole("button", { name: "Recovery code" }).click();
+    await page.getByLabel("Recovery code").fill("NOTAREAL-CODE1-XXXXX");
+    await page.getByRole("button", { name: "Sign in with recovery code" }).click();
+    await expect(page.getByText("That didn't work")).toBeVisible();
+    expect(page.url()).toContain("/sign-in");
+  });
+});
+
 test.describe("Anonymous audit report", () => {
   test("prints a report via the real print button", async ({ page }) => {
     // A real scan against a real external target (example.com) competing
@@ -84,6 +148,12 @@ test.describe("Anonymous audit report", () => {
     // legitimately take longer than Playwright's default 30s test timeout
     // under concurrent load — generous but not unbounded.
     test.setTimeout(60_000);
+    // The anonymous-audit daily cap (SRS §28.8) is shared across every run
+    // of this suite from this machine/CI-runner's IP — without resetting it
+    // first, this test fails deterministically after ~20 cumulative runs
+    // with the real, correctly-working "daily limit" error instead of ever
+    // reaching /audit/*.
+    await clearAnonymousAuditRateLimit();
     await page.goto("/");
     await page.waitForLoadState("networkidle");
     await page.getByLabel("Domain or URL to audit").first().fill("example.com");

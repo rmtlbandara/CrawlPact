@@ -1,12 +1,13 @@
 # Implementation Status
 
 **Last updated:** 2026-07-28 · **Current as of commit:** branched from `30a97cc` (`main`) ·
-**Current phase:** Part 3 complete; five follow-on passes (not numbered SRS Parts) have since been
+**Current phase:** Part 3 complete; six follow-on passes (not numbered SRS Parts) have since been
 completed — a UI/UX conversion audit and fix pass, a Cloudflare infrastructure-alignment pass, a
 Cloudflare account setup + first production deployment pass, a release-engineering hardening
 pass (CI/CD, environment contract, `/pay` and Paddle live-catalog verification, two live
-production bugs found and fixed), and a Paddle fulfillment/webhook live-delivery verification pass
-— see below, most recent first.
+production bugs found and fixed), a Paddle fulfillment/webhook live-delivery verification pass,
+and a production-stabilization pass that root-caused and fixed the long-standing real-CI e2e
+instability — see below, most recent first.
 
 Real Cloudflare account, zone, Worker, D1 (production + preview), KV, and a live Paddle catalog
 (Solo/Pro/Agency, client token, webhook destination) are connected and verified — see
@@ -14,6 +15,52 @@ Real Cloudflare account, zone, Worker, D1 (production + preview), KV, and a live
 `docs/architecture/adr/ADR-0007-DEPLOYMENT-PIPELINE.md`. `/pay` is built, deployed, and verified.
 The repository has real Git history (this is not a "zero commits" project) and a GitHub Actions
 CI/CD pipeline (`.github/workflows/ci.yml`, `deploy-preview.yml`, `deploy-production.yml`).
+
+## Production-stabilization pass: E2E root cause fixed, recovery-code e2e gap closed (2026-07-28)
+
+Requested as a broad production-readiness sweep (CI, audit engine, auth, recovery codes,
+accessibility, security). Investigation first (per `CLAUDE.md`'s "verify docs against
+implementation" rule) found several of the brief's assumed symptoms didn't match current reality:
+the "audit engine not enabled" state and the e2e instability were both already known and disclosed
+in `docs/status/KNOWN_RISKS.md`, not silent gaps, and no open defect was logged against sign-in/
+create-account. The user directed effort at: fixing the real e2e failures, re-verifying auth/
+recovery-code/audit-engine state, deciding on `AUDIT_ENGINE_ENABLED`, and a blocker sweep.
+
+**E2E root-caused for the first time** (previously only "not runner speed" was ruled out, per
+`docs/status/KNOWN_RISKS.md`'s 2026-07-27 entry) by reproducing the exact CI failure pattern
+locally — mirroring CI's steps (`astro dev` backgrounded, `CI=1`, `wait-on`, full parallel
+`pnpm test:e2e`) rather than guessing. Two distinct, confirmed causes, both fixed:
+
+1. **A Vite SSR dependency-optimizer race.** Astro's dev server lazily pre-bundles each SSR-side
+   dependency (`@paddle/paddle-js`, `@simplewebauthn/browser`) on first request; Playwright's real
+   parallel workers hitting different never-before-seen routes concurrently raced that
+   pre-bundling, corrupting in-flight requests with Vite's dependency-optimizer error and a
+   blocking error overlay. Fixed with `apps/web/tests/e2e/global-setup.ts`, which serially warms
+   every route (sitemap-driven, plus the non-indexed dependency-heavy ones) before any parallel
+   worker starts.
+2. **Shared per-IP rate-limit counters.** The anonymous-audit and recovery-code-redemption rate
+   limits (real, correctly-working abuse protection) are shared per-IP `security_events` counters
+   — repeated e2e runs from the same machine/CI-runner IP eventually trip the real lockout. Fixed
+   with `clearAnonymousAuditRateLimit()`/`clearRecoveryCodeRateLimit()` test-setup helpers.
+
+Verified stable: the full suite (34 tests, 2 browser projects) passed 3 consecutive local runs
+after each fix (6 consecutive clean runs total), with one single pre-existing, already-documented
+`SQLITE_BUSY` flake self-recovering via the existing retry wrapper exactly as designed. **Not yet
+verified inside real GitHub Actions** — that needs an actual push, which needs separate explicit
+authorization (this repo's own `settings.json` hard-denies `git push`/`wrangler deploy` by design).
+
+**Recovery-code sign-in e2e gap found and closed**: real API-level integration coverage already
+existed (`auth-flow.integration.test.ts`), but no browser test ever exercised the actual "Recovery
+code" tab/form/redeem/reuse-rejection journey. Added to `auth-and-account.spec.ts`.
+
+**`AUDIT_ENGINE_ENABLED` re-confirmed, not silently left stale**: live-checked via the Cloudflare
+API that `crawlpact.com` is still on the Free Workers plan and both D1 databases are still
+near-empty — the documented CPU-budget risk is current, not a stale claim. Presented to the user
+as an explicit decision rather than flipped unilaterally; **decision: keep disabled for now**. See
+`docs/status/KNOWN_RISKS.md` for detail.
+
+Full local quality gate re-run and passed after all changes: format, lint, typecheck (0 errors),
+unit (202/202), integration (137/137), `db:validate` (38 tables), build.
 
 ## Paddle fulfillment/webhook live-delivery verification (2026-07-28)
 

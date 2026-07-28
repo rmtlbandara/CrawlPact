@@ -86,6 +86,34 @@ export async function grantSuperAdmin(userId: string): Promise<void> {
   );
 }
 
+/**
+ * Clears the anonymous-audit daily rate limit's counter (`security_events`
+ * rows with `event_type = 'rate_limit'`, keyed by the caller's IP hash — see
+ * `lib/auth/rate-limit.ts`). Every e2e run submits a real anonymous audit
+ * from the same machine/CI-runner IP, sharing one counter across the whole
+ * suite *and* across however many times this suite has run today — the
+ * production 20/day cap is real, correct abuse protection, but that makes
+ * the anonymous-audit e2e test non-repeatable without a reset. No other e2e
+ * test asserts on rate-limit state, so a full clear here is safe.
+ */
+export async function clearAnonymousAuditRateLimit(): Promise<void> {
+  await d1Execute(`DELETE FROM security_events WHERE event_type = 'rate_limit';`);
+}
+
+/**
+ * Clears the recovery-code brute-force rate limit's counter (`security_events`
+ * rows with `event_type = 'recovery_code_failure'` — see
+ * `pages/api/auth/recovery-codes/redeem.ts`, 5 failed attempts per 15
+ * minutes per IP). Every e2e run that exercises an invalid/reused recovery
+ * code shares this same counter with every other such run from this
+ * machine/CI-runner's IP within the same 15-minute window — without
+ * resetting it first, repeated local/CI runs eventually trip the real,
+ * correctly-working lockout instead of reaching the behaviour under test.
+ */
+export async function clearRecoveryCodeRateLimit(): Promise<void> {
+  await d1Execute(`DELETE FROM security_events WHERE event_type = 'recovery_code_failure';`);
+}
+
 /** Seeds a `failed` webhook event so the admin webhooks e2e test has
  * something real and eligible to retry, without waiting for a real Paddle
  * delivery to fail. */
