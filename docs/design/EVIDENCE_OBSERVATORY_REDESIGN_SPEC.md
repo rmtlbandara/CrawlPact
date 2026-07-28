@@ -216,6 +216,21 @@ dev-only showcase.
 `guides/[slug]` (20 static guides, one template), `tools/index` + 5 standalone tool pages,
 `sitemap.xml`, `feed/[token].xml`.
 
+**Progress so far** (commits `abb7821`, `147d82c`, `8e633d3`):
+- `index` — added the missing "Evidence and methodology" section (§6 item 9 of the source
+  brief), migrated one isolated `max-w-[720px]` to the `max-w-reading` token, added "who it's
+  for" audience line to each pricing-summary plan card.
+- `SiteHeader.astro` / `MobileNav.tsx` (shared chrome, used by every public page) — added
+  `aria-current="page"` + visual current-section indication on both desktop and mobile nav.
+- `pricing` — added "who it's for" audience line to each of the 4 plan cards (a requirement
+  explicitly listed in source brief §9 that was previously missing entirely).
+- `crawlers/[slug]` — reviewed against source brief §8's required field list (Operator,
+  User-agent token, Purpose, Documented behaviour, Official source, Registry version, CrawlPact
+  interpretation, Limitations). All covered except "Registry version," which has no real data
+  source at this layer (these are static SEO markdown files, not tied to a live registry
+  release) — deliberately not added rather than fabricated. No changes made; already compliant.
+- Everything else in this phase's route list: **not started**.
+
 ### Phase 5 — Audit and reports
 
 `audit/index` (entry form), `audit/[auditId]` (report view — must keep reflecting
