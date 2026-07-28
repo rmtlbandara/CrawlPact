@@ -101,25 +101,40 @@ export async function adminRevokeShare(db: Database, shareId: string): Promise<v
  * Resolves a public share token to the scan it grants read access to, plus
  * any agency branding stored on it — null on invalid/expired/revoked.
  */
-export async function getShareForToken(
-  db: Database,
-  token: string,
-): Promise<{ scanId: string; agencyBranding: AgencyBranding | null } | null> {
+export type ShareResolution =
+  | { status: "valid"; scanId: string; agencyBranding: AgencyBranding | null }
+  | { status: "revoked" }
+  | { status: "expired" }
+  | { status: "invalid" };
+
+/**
+ * Distinguishes revoked/expired/invalid rather than collapsing all three into
+ * one generic "not available" — a real gap found while reviewing the shared-
+ * report page against docs/design/EVIDENCE_OBSERVATORY_REDESIGN_SPEC.md §12,
+ * which explicitly calls for the shared-report view to show these as
+ * distinct states. The previous version filtered `revokedAt IS NULL` in the
+ * SQL WHERE clause itself, so a revoked token was indistinguishable from a
+ * token that never existed at the data layer, not just in the UI.
+ */
+export async function getShareForToken(db: Database, token: string): Promise<ShareResolution> {
   const tokenHash = await hashShareToken(token);
   const [row] = await db
     .select({
       scanId: schema.sharedReports.scanId,
       expiresAt: schema.sharedReports.expiresAt,
+      revokedAt: schema.sharedReports.revokedAt,
       agencyBranding: schema.sharedReports.agencyBranding,
     })
     .from(schema.sharedReports)
-    .where(
-      and(eq(schema.sharedReports.tokenHash, tokenHash), isNull(schema.sharedReports.revokedAt)),
-    )
+    .where(eq(schema.sharedReports.tokenHash, tokenHash))
     .limit(1);
-  if (!row) return null;
-  if (row.expiresAt && new Date(row.expiresAt).getTime() < Date.now()) return null;
+  if (!row) return { status: "invalid" };
+  if (row.revokedAt) return { status: "revoked" };
+  if (row.expiresAt && new Date(row.expiresAt).getTime() < Date.now()) {
+    return { status: "expired" };
+  }
   return {
+    status: "valid",
     scanId: row.scanId,
     agencyBranding: row.agencyBranding ? (JSON.parse(row.agencyBranding) as AgencyBranding) : null,
   };

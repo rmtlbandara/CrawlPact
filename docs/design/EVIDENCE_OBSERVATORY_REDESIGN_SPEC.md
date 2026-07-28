@@ -99,8 +99,9 @@ disclosure text, supplied by the caller — the component has no opinion on what
 
 **Now wired into `AuditReportView.tsx`** (the audit report's Level 1 header), replacing a
 fragmented domain/scan-time/registry-version/preset/status layout and surfacing `rulesetVersion`,
-which existed in the real data but was never shown anywhere before. Still to come: `shared/[token]`
-view (Phase 5), domain-detail full-report view (Phase 6).
+which existed in the real data but was never shown anywhere before. `shared/[token]` gets this
+for free since it reuses the same component unchanged. Still to come: domain-detail full-report
+view (Phase 6).
 
 ### B. Evidence Rail — `EvidenceRail` (built this session)
 
@@ -110,8 +111,10 @@ eyebrow label + content). Each of the five slots is `ReactNode | null`; `null` r
 available for this finding" rather than an empty gap (a silent gap reads as a layout bug; an
 explicit statement reads as an honest limitation).
 
-**Where it will be used later:** audit report Level 2 findings list (Phase 5), guide pages that
-walk through a specific finding (Phase 4). Not wired into any page yet.
+**Where it will be used later:** the audit report's findings list was the planned first use, but
+that's now a deliberate no — see the Phase 5 progress note below for why (the real `Finding`
+data doesn't have five genuinely distinct fields to fill the pattern's slots). Guide pages that
+walk through a specific finding (Phase 4) remain a candidate. Not wired into any page yet.
 
 ### C. Policy Purpose Lanes — `PurposeLane` (built this session)
 
@@ -310,6 +313,33 @@ assume a state.
   `/audit/[auditId]` isn't in the standard 22-route a11y suite — real reports need a real
   `auditId` that suite can't generate). The one e2e test touching this component (`Print report`
   button) still passes unchanged.
+- **`shared/[token]` — real gap found and fixed at the data layer, not just the page.**
+  `docs/design/EVIDENCE_OBSERVATORY_REDESIGN_SPEC.md` §12 explicitly calls for revoked/expired/
+  invalid to be distinct states, but `getShareForToken()` collapsed all three into a single
+  `null` — and the SQL query itself filtered `revokedAt IS NULL` in the `WHERE` clause, so a
+  revoked token was indistinguishable from one that never existed _at the data layer_, not just
+  in the UI. Changed `getShareForToken` to return a discriminated `ShareResolution` (`valid` /
+  `revoked` / `expired` / `invalid`) computed from the real column values, and updated the page
+  to show distinct, honest copy for each. Only one other caller existed (an integration test),
+  updated alongside. `AuditReportView` benefits from the same `ProvenanceHeader` wiring as the
+  main report automatically, since this page reuses that component unchanged.
+  Verified: pnpm quality clean, the existing agency-branding integration test passes with the
+  new discriminated type, manual verification of the `invalid` state (revoked/expired weren't
+  separately screenshotted — verified by code review of the three-way branch against real
+  column semantics, not by generating those exact DB states, since doing so needs more D1
+  setup than the straightforward logic justified), zero axe-core WCAG violations.
+
+**Deliberately not done: wiring `EvidenceRail` into the findings section.** Checked the real
+`Finding` type and its generation code (`packages/policy/src/findings.ts`) before touching
+anything — `whatHappened` and `evidenceSummary` are literally assigned the same value
+(`conflict.evidence`) in the only construction path that exists. Forcing `EvidenceRail`'s five
+distinct slots onto that would render duplicate text in two rows, which is worse than the
+current `Alert`-based rendering, not better. Fixing it properly means giving the finding
+generator a genuinely distinct observed-vs-interpretation text, which touches
+`packages/policy` — tested business logic, not presentation — and is out of scope for a
+redesign UI pass per this document's own "don't change scanner/policy behaviour unless a
+verified UI requirement makes it unavoidable" rule. Findings left exactly as they were: no
+regression, no forced-fit pattern.
 
 ### Phase 6 — Authentication and customer app
 

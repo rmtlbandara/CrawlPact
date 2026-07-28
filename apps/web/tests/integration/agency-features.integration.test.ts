@@ -275,8 +275,9 @@ describe("agency features: batch import and agency branding (real D1)", () => {
     const token = allowedBody.data.url.split("/shared/")[1]!;
     const { getShareForToken } = await import("../../src/lib/sharing");
     const resolved = await getShareForToken(db, token);
-    expect(resolved?.agencyBranding?.agencyName).toBe("Acme SEO Agency");
-    expect(resolved?.agencyBranding?.clientName).toBe("Client Site Inc.");
+    if (resolved.status !== "valid") throw new Error("expected a valid share");
+    expect(resolved.agencyBranding?.agencyName).toBe("Acme SEO Agency");
+    expect(resolved.agencyBranding?.clientName).toBe("Client Site Inc.");
   });
 
   it("rejects a javascript: URI as a branding logo URL", async () => {
