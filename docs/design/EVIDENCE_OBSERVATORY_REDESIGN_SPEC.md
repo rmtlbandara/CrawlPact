@@ -469,13 +469,38 @@ what changed and what was deliberately left alone, with reasoning.
   by design, mobile-only WebAuthn gate), `pnpm test:a11y` 53/54 (the one failure is the
   pre-existing, already-documented mobile-safari skip-link tooling limitation, confirmed
   unrelated to this branch's changes throughout every single commit this session).
+- **Done: Lighthouse lab measurements**, added `npx lighthouse` (not previously wired into this
+  repo — no config file added, run ad hoc) against a real `pnpm build` served via
+  `wrangler dev`/`preview` (the actual Worker build, not the dev server) at `localhost:8787`,
+  using Playwright's own installed Chromium as the driver (`CHROME_PATH` pointed at it) since
+  Lighthouse's own `chrome-launcher` couldn't authenticate to a browser instance in this
+  environment. **These are lab measurements only, not field data** — per this document's own
+  §15 instruction not to claim field Core Web Vitals from Lighthouse alone.
+
+  | Page                      | Performance | Accessibility | Best Practices | SEO  | LCP  | CLS | TBT |
+  | ------------------------- | ----------- | ------------- | -------------- | ---- | ---- | --- | --- |
+  | `/` (home)                | 98          | 100           | 96             | 100  | 2.3s | 0   | 0ms |
+  | `/pricing`                | 99          | 100           | 100            | 100  | 2.0s | 0   | 0ms |
+  | `/crawlers/gptbot`        | 98          | 100           | 100            | 100  | 2.1s | 0   | 0ms |
+  | `/audit/[id]` (real scan) | 99          | 100           | 96             | 66\* | 2.0s | 0   | 0ms |
+
+  All four LCP values are under the SRS's 2.5s "good" threshold; CLS (0) and TBT (0ms, the lab
+  proxy for INP) are both well under their thresholds too. The two Best Practices 96 scores are
+  the same single cause on both pages — a CSP `Issues panel` flag from the already-documented,
+  accepted `unsafe-inline` CSP gap in `KNOWN_RISKS.md`, not a new defect. \*The report page's SEO
+  66 is **correct, not a regression** — its only failing SEO audit is "page is blocked from
+  indexing," which is true and intentional (`noindex={true}` is required for audit reports); a
+  generic SEO scanner has no way to know a `noindex` page is deliberate.
+
 - **Not done, explicitly**: a regenerated, CI-wired visual-regression baseline (the existing one
   was already confirmed stale before this session started, for unrelated reasons — regenerating
   91 snapshots requires reviewing every image individually per this document's own rules, not a
-  blind bulk update); Lighthouse/Core Web Vitals lab measurements (no Lighthouse tooling is
-  currently wired into this repo); a manual screen-reader walkthrough; and the source document's
-  full A–J final deliverables package (this document plus each phase's commits serve the same
-  purpose, but weren't assembled into that exact format).
+  blind bulk update); a manual screen-reader walkthrough with a human listening (accessibility
+  was verified via axe-core's accessibility-tree analysis throughout every phase, which is real
+  automated coverage, but is not the same thing as a human using VoiceOver or NVDA); and the
+  source document's full A–J final deliverables package assembled into that exact document
+  structure (this spec doc plus each phase's commit messages carry the same information, but
+  weren't reformatted into that specific package).
 
 Per this document's own completion standard: **the redesign has zero known critical or
 high-severity defects and no known regressions after the automated and manual verification
