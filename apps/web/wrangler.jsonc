@@ -43,7 +43,7 @@
     // Browser-exposed by design (Paddle.js needs it client-side) — not a secret.
     "PUBLIC_PADDLE_CLIENT_TOKEN": "live_7744585ebeca2976cd76da4b966",
     "BILLING_ENABLED": "true",
-    "AUDIT_ENGINE_ENABLED": "false",
+    "AUDIT_ENGINE_ENABLED": "true",
     // WebAuthn is not optional config — the browser strictly validates
     // `rpId`/origin against the page it's actually served from, so without
     // these matching the real deployed domain, every passkey ceremony
