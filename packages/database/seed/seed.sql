@@ -2,14 +2,16 @@
 --
 -- This file is for LOCAL DEVELOPMENT ONLY (`pnpm db:seed`, which runs against
 -- the `--local` Wrangler/D1 sqlite database). It must never be applied to a
--- preview or production database.
+-- preview or production database. `db:seed` runs `reference-data.sql` (the
+-- real, environment-safe plan/role/config catalogs — see that file) first,
+-- then this file for the dev-only extras below.
 --
 -- Contents, per Part 1 Step 8:
---   1. Product plans (SRS §8 pricing table — exact values)
---   2. One non-production Super Admin fixture (no email field exists in the
+--   1. One non-production Super Admin fixture (no email field exists in the
 --      schema; this is a display-name-only account with no real-world
---      identity, clearly labelled as a dev fixture)
---   3. Sample crawler operators and a small, source-backed registry of real,
+--      identity, clearly labelled as a dev fixture) — assigned the
+--      `super_admin` role `reference-data.sql` already created.
+--   2. Sample crawler operators and a small, source-backed registry of real,
 --      publicly documented AI crawlers (accurate as of this document's
 --      preparation date — re-verify against each operator's own
 --      documentation before relying on this list in production; see
@@ -19,26 +21,7 @@
 -- The audit engine is disabled by default (see .env.example
 -- AUDIT_ENGINE_ENABLED) and Part 1 never fabricates scan results.
 
--- 1. Plans (SRS §8) ----------------------------------------------------------
-INSERT INTO plans (
-  id, name, annual_price_usd_cents, saved_domain_limit, monitoring_frequency,
-  history_retention_days, manual_rescans_per_domain_per_month,
-  domain_groups_enabled, csv_export_enabled, print_ready_report_tier,
-  private_atom_feed_enabled, batch_import_limit, agency_branding_enabled
-) VALUES
-  ('free', 'Free', 0, 1, 'none', 30, 2, 0, 0, 'basic', 0, 0, 0),
-  ('solo', 'Solo', 7900, 5, 'monthly', 365, 5, 0, 0, 'full', 1, 0, 0),
-  ('pro', 'Pro', 17900, 25, 'weekly', 730, 10, 1, 1, 'full', 1, 10, 0),
-  ('agency', 'Agency', 39900, 100, 'weekly', 1095, 20, 1, 1, 'full', 1, 100, 1);
-
--- 2. Non-production Super Admin fixture --------------------------------------
-INSERT INTO admin_roles (id, name, description) VALUES
-  ('super_admin', 'Super Admin', 'Full operational visibility and control (SRS §28).'),
-  ('registry_manager', 'Registry Manager', 'Manage crawler registry and ruleset releases.'),
-  ('billing_viewer', 'Billing Viewer', 'Read-only visibility into billing and revenue data.'),
-  ('support_viewer', 'Support Viewer', 'Read-only customer support visibility.'),
-  ('security_administrator', 'Security Administrator', 'Manage security events and blocked targets.'),
-  ('content_manager', 'Content Manager', 'Manage public content and system notices.');
+-- 1. Non-production Super Admin fixture --------------------------------------
 
 INSERT INTO users (id, display_name, status, plan_id, is_admin)
 VALUES ('usr_dev_super_admin', 'Founder (Local Dev Fixture)', 'active', 'agency', 1);
@@ -46,7 +29,7 @@ VALUES ('usr_dev_super_admin', 'Founder (Local Dev Fixture)', 'active', 'agency'
 INSERT INTO admin_role_assignments (id, user_id, role_id)
 VALUES ('ara_dev_super_admin', 'usr_dev_super_admin', 'super_admin');
 
--- 3. Crawler operators and a source-backed development registry -------------
+-- 2. Crawler operators and a source-backed development registry -------------
 -- Sources reflect each operator's own published crawler documentation.
 INSERT INTO crawler_operators (id, name, website_url) VALUES
   ('op_openai', 'OpenAI', 'https://openai.com'),
@@ -185,18 +168,5 @@ FROM crawlers;
 INSERT INTO ruleset_versions (id, version_label, description, published_by_user_id, published_at, is_active)
 VALUES ('rules_2026_07_2', '2026.07.2', 'Part 2 ruleset: conflict detection, findings, and Policy Health Score logic (packages/policy).', 'usr_dev_super_admin', strftime('%Y-%m-%dT%H:%M:%fZ', 'now'), 1);
 
--- Baseline runtime configuration (SRS §28.16), validated safe defaults.
-INSERT INTO runtime_configuration (key, value, value_type, description, min_value, max_value) VALUES
-  ('anonymous_audit_daily_limit', '20', 'integer', 'Max anonymous audits per IP per day.', 1, 1000),
-  ('manual_scan_timeout_seconds', '20', 'integer', 'Per-resource fetch timeout during a scan.', 1, 60),
-  ('scan_total_timeout_seconds', '30', 'integer', 'Total wall-clock budget for one scan across all resources (FR-FET-007).', 5, 120),
-  ('max_body_size_bytes', '2097152', 'integer', 'Maximum response body size accepted from a scanned resource.', 1024, 10485760),
-  ('scan_redirect_limit', '5', 'integer', 'Maximum redirects followed per resource (FR-FET-005).', 0, 10),
-  ('scan_external_request_limit', '12', 'integer', 'Maximum external requests per scan (FR-FET-008).', 1, 50),
-  ('maintenance_mode', 'false', 'boolean', 'Global maintenance mode switch (SRS §28.17).', NULL, NULL),
-  ('scheduler_paused', 'false', 'boolean', 'Pauses the scheduled monitoring sweep globally during an incident (SRS §28.10). Paddle webhooks and the public site remain unaffected.', NULL, NULL),
-  ('monitoring_scan_batch_size', '20', 'integer', 'Maximum domains claimed per scheduled monitoring sweep.', 1, 200),
-  ('monitoring_claim_lock_minutes', '15', 'integer', 'How long a claimed domain is locked against a second concurrent sweep.', 1, 120),
-  ('monitoring_failure_pause_threshold', '5', 'integer', 'Consecutive scan failures before monitoring auto-pauses for a domain.', 1, 20),
-  ('anonymous_scan_retention_days', '7', 'integer', 'Days an anonymous (unowned) scan is kept before the daily retention job purges it.', 1, 90),
-  ('account_deletion_grace_period_days', '30', 'integer', 'Cancellable grace period before a pending-deletion account is hard-deleted.', 1, 180);
+-- Runtime configuration baseline (SRS §28.16) now lives in reference-data.sql
+-- (real, environment-safe defaults — not dev-only), applied before this file.
