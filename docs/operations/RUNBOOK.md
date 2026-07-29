@@ -4,11 +4,21 @@ Operational procedures, citing real routes/functions/commands only — nothing h
 hypothetical. Updated Part 3 Step 20 to correct sections that were placeholders in Part 1 and are
 now real, built features.
 
-## Deploying (manual)
+## Deploying (automated — normal path)
 
-There is no automated deploy pipeline — CI builds and validates but never deploys (project rule:
-no production deployment without explicit, in-the-moment permission). To deploy manually once
-authorised:
+**This section is stale as of 2026-07-27 and kept only for the manual/emergency procedure below.**
+The normal deploy path since then is GitHub Actions: `.github/workflows/deploy-preview.yml` runs
+automatically after `CI` succeeds on `main`; `.github/workflows/deploy-production.yml` is
+`workflow_dispatch`-only, requiring a commit SHA and a typed `"DEPLOY PRODUCTION"` confirmation —
+see `docs/deployment/GITHUB_ACTIONS_DEPLOYMENT.md`. Never use direct local `wrangler deploy` as a
+shortcut around that gate; it bypasses the CI/binding/smoke-test verification the workflow
+provides. The manual steps below remain as a genuine emergency fallback (e.g. GitHub Actions
+itself is down) and for local diagnosis.
+
+## Deploying (manual — emergency fallback only)
+
+Project rule: no production deployment without explicit, in-the-moment permission, whether via
+the workflow above or manually. To deploy manually once authorised:
 
 ```bash
 pnpm install

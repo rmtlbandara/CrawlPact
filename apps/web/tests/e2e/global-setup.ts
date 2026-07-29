@@ -43,6 +43,17 @@ const API_WARMUP_REQUESTS: { path: string; body: unknown }[] = [
  * that one-time discovery to happen outside the race window.
  */
 export default async function globalSetup(config: FullConfig): Promise<void> {
+  // This entire warmup exists solely to work around Astro dev's (Vite's)
+  // SSR dependency-optimizer race under *concurrent* Playwright workers —
+  // see the class comment above. Required CI (ci.yml's browser-smoke job,
+  // and scripts/verify-push.sh) runs with a single worker
+  // (playwright.config.ts's workers: 1 in CI), so that race cannot occur
+  // regardless of how many routes exist — the warmup has nothing left to
+  // protect against there. Skipped whenever CI is set; still runs for local
+  // ad hoc `pnpm test:e2e` (no CI env var, default parallel workers against
+  // astro dev), where the original race is still real.
+  if (process.env.CI) return;
+
   const baseURL =
     process.env.PLAYWRIGHT_BASE_URL ?? config.projects[0]?.use?.baseURL ?? "http://localhost:4321";
 

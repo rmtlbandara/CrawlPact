@@ -5,15 +5,16 @@ This directory records material architectural decisions for CrawlPact, in line w
 
 ## Index
 
-| ADR                                                  | Title                                  | Status   |
-| ---------------------------------------------------- | -------------------------------------- | -------- |
-| [ADR-0001](./ADR-0001-APPLICATION-ARCHITECTURE.md)   | Application architecture               | Accepted |
-| [ADR-0002](./ADR-0002-DATABASE-ACCESS.md)            | Database access strategy               | Accepted |
-| [ADR-0003](./ADR-0003-UI-COMPONENT-STRATEGY.md)      | UI component strategy                  | Accepted |
-| [ADR-0004](./ADR-0004-AUTHENTICATION-STRATEGY.md)    | Authentication strategy                | Accepted |
-| [ADR-0005](./ADR-0005-SCANNER-ISOLATION.md)          | Scanner isolation and SSRF containment | Accepted |
-| [ADR-0006](./ADR-0006-CLOUDFLARE-STATIC-DELIVERY.md) | Cloudflare static delivery strategy    | Accepted |
-| [ADR-0007](./ADR-0007-DEPLOYMENT-PIPELINE.md)        | Deployment pipeline                    | Accepted |
+| ADR                                                      | Title                                  | Status   |
+| -------------------------------------------------------- | -------------------------------------- | -------- |
+| [ADR-0001](./ADR-0001-APPLICATION-ARCHITECTURE.md)       | Application architecture               | Accepted |
+| [ADR-0002](./ADR-0002-DATABASE-ACCESS.md)                | Database access strategy               | Accepted |
+| [ADR-0003](./ADR-0003-UI-COMPONENT-STRATEGY.md)          | UI component strategy                  | Accepted |
+| [ADR-0004](./ADR-0004-AUTHENTICATION-STRATEGY.md)        | Authentication strategy                | Accepted |
+| [ADR-0005](./ADR-0005-SCANNER-ISOLATION.md)              | Scanner isolation and SSRF containment | Accepted |
+| [ADR-0006](./ADR-0006-CLOUDFLARE-STATIC-DELIVERY.md)     | Cloudflare static delivery strategy    | Accepted |
+| [ADR-0007](./ADR-0007-DEPLOYMENT-PIPELINE.md)            | Deployment pipeline                    | Accepted |
+| [ADR-0008](./ADR-0008-REMOVE-PIXEL-VISUAL-REGRESSION.md) | Remove pixel visual regression         | Accepted |
 
 ## Process
 

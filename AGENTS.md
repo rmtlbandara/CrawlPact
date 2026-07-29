@@ -74,7 +74,19 @@ pnpm quality         # everything above (minus e2e/a11y/visual) + build
 ## Production deployment
 
 Never deploy to production, and never push to a remote repository, without the user's explicit
-permission for that specific action. CI validates and builds; it never deploys.
+permission for that specific action — ask again even if a previous session was authorized.
+`.github/workflows/ci.yml` only validates and builds; it never deploys. Two dedicated workflows
+handle deployment: `deploy-preview.yml` runs automatically after CI succeeds on `main`;
+`deploy-production.yml` is `workflow_dispatch`-only, requiring a commit SHA and a typed
+`"DEPLOY PRODUCTION"` confirmation. See `docs/deployment/GITHUB_ACTIONS_DEPLOYMENT.md`.
+
+## Merge automation
+
+This repository's GitHub plan can't gate native auto-merge on required status checks (branch
+protection is Pro-only). `.github/workflows/merge-when-green.yml` is the owner-controlled
+substitute: it merges a PR only after CI succeeds for its exact head SHA, and only when the PR
+targets `main`, was opened by the repository owner, and carries an `automerge` label applied
+deliberately — never automatically by CI itself.
 
 ## Definition of done
 

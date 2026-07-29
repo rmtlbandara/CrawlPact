@@ -7,7 +7,18 @@ export default defineConfig({
   globalSetup: "./apps/web/tests/e2e/global-setup.ts",
   fullyParallel: true,
   forbidOnly: !!process.env.CI,
-  retries: process.env.CI ? 2 : 0,
+  // A flaky test that only passes on retry is not clean — CI now reports it
+  // as a real failure rather than papering over it with a second retry (see
+  // docs/architecture/adr/ADR-0008-remove-pixel-visual-regression.md's
+  // sibling reasoning about not masking instability with tolerance/retries).
+  retries: process.env.CI ? 1 : 0,
+  // One worker in CI: this suite includes real D1-mutating auth/admin/domain
+  // journeys against a single shared local D1 file (wrangler --local), and
+  // CI now runs against a production-like built Worker (see ci.yml's
+  // browser-smoke job) rather than many parallel dev-server route compiles —
+  // increase this only after measured evidence shows no shared-state
+  // conflict at higher concurrency.
+  workers: process.env.CI ? 1 : undefined,
   // This suite had never actually run to completion in GitHub Actions CI
   // before 2026-07-27 (the `quality` job always failed first, so
   // `e2e-and-a11y`, which `needs: quality`, was always skipped) — the first
