@@ -60,6 +60,9 @@ configuration, and this repo's own accumulated `KNOWN_RISKS.md` evidence.
   live credential value this session shouldn't handle.
 - The customer dashboard and Super Admin shell nav bars genuinely overflow at 360/768px (a
   pre-existing, disclosed, out-of-scope bug the new responsive-smoke tests surfaced).
+- The public site's `SiteHeader` desktop nav genuinely overflows at exactly 768px (Tailwind's
+  `md:` breakpoint, where it switches on, is narrower than the nav actually needs) — found via a
+  real CI run, disclosed and out of scope here.
 - Deeper E2E stability work (shared auth fixtures instead of ~13 independent passkey
   registrations, a deterministic SSRF-safe scanner test target to remove the `example.com`
   dependency from required CI) is deliberately deferred to a follow-up pass.

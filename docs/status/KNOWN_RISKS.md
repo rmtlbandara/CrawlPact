@@ -316,3 +316,21 @@ changed: it's still correctly skipped under CI (workers: 1 removes the concurren
 existed for, regardless of which server is in use), but the earlier claim that CI was testing
 against "a genuinely built, pre-bundled Worker" no longer applies now that this reverted back to
 `astro dev`.
+
+## Real public-site responsive bug found in real CI (2026-07-29, PR #43, third run)
+
+`responsive-smoke.spec.ts`'s public-route tests (home, pricing, crawler detail) failed at exactly
+768px in real GitHub Actions CI (Linux) with 38px of horizontal overflow — reproduced consistently
+across all three pages, confirmed via a downloaded failure screenshot to be a genuine layout bug,
+not a CI-environment artifact: `SiteHeader.astro` switches from `MobileNav` to its full desktop nav
+(logo, 6 links, "Sign in", and the "Audit domain" button, all in one row) at exactly Tailwind's
+`md:` breakpoint (768px) — but that desktop nav does not actually fit in 768px; the "Audit domain"
+button runs off the right edge of the viewport. 768px is a real, common device width (iPad
+portrait). This is exactly the class of bug the removed pixel visual-regression suite's 768px
+baseline would have silently captured as "correct" forever (see ADR-0008) rather than catching.
+
+**Disclosed, not fixed this pass** — a real product/design decision (reduce the nav, push the
+breakpoint to `lg:`, adjust spacing) rather than a one-line CI fix, and out of scope for a
+release-flow remediation. `responsive-smoke.spec.ts` asserts no horizontal overflow at 360/1280
+for these public pages (both confirmed to actually hold) and skips the assertion specifically at
+768 for now, while still confirming the page renders its heading/key content there.
