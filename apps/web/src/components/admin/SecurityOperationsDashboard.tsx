@@ -145,7 +145,12 @@ export function SecurityOperationsDashboard() {
       <section>
         <div className="flex flex-wrap items-center gap-3">
           <div className="w-64">
-            <Select options={EVENT_TYPES} value={eventType} onValueChange={setEventType} />
+            <Select
+              ariaLabel="Filter security events by type"
+              options={EVENT_TYPES}
+              value={eventType}
+              onValueChange={setEventType}
+            />
           </div>
           <label className="flex items-center gap-2 text-supporting text-neutral-700">
             <input

@@ -1,0 +1,183 @@
+name: Visual regression
+
+# Two jobs, deliberately separate from the main CI gate:
+#
+# - `compare` runs on every push/PR and fails if rendered pages drift from
+#   the committed baseline in apps/web/tests/visual/__screenshots__. It
+#   never writes anything back to the repo.
+# - `update-baseline` only runs when manually triggered (workflow_dispatch)
+#   and is the ONLY way the baseline itself changes — a human (or an
+#   explicitly-authorised agent run) decides when a rendering change is
+#   intentional, reviews the diff, and re-runs this. It commits the
+#   regenerated PNGs straight back to the branch it was run against.
+#
+# The baseline must be generated on ubuntu-latest specifically — Playwright
+# screenshots are platform-specific (font rendering differs from macOS/
+# Windows), so a baseline captured anywhere else will never match this
+# workflow's `compare` job. See docs/testing/VISUAL_QA_MATRIX.md.
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+concurrency:
+  group: visual-regression-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  PUBLIC_APP_ENV: local
+  PUBLIC_SITE_URL: http://localhost:4321
+  SESSION_SIGNING_SECRET: ci-placeholder-secret-value-not-real-00000000
+  WEBAUTHN_RP_ID: localhost
+  WEBAUTHN_RP_ORIGIN: http://localhost:4321
+  PADDLE_API_KEY: ci-placeholder
+  PADDLE_ENVIRONMENT: sandbox
+  PADDLE_WEBHOOK_SECRET: ci-placeholder
+  PADDLE_PRICE_ID_SOLO: pri_ci_placeholder
+  PADDLE_PRICE_ID_PRO: pri_ci_placeholder
+  PADDLE_PRICE_ID_AGENCY: pri_ci_placeholder
+  PUBLIC_PADDLE_CLIENT_TOKEN: ci-placeholder
+  BILLING_ENABLED: "false"
+  AUDIT_ENGINE_ENABLED: "true"
+
+jobs:
+  compare:
+    if: github.event_name != 'workflow_dispatch'
+    name: Compare against committed baseline
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+
+      - uses: pnpm/action-setup@v6
+        with:
+          version: 9.15.0
+
+      - uses: actions/setup-node@v7
+        with:
+          node-version: "22.12.0"
+          cache: pnpm
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Install Playwright browsers
+        run: pnpm exec playwright install --with-deps chromium
+
+      - name: Build
+        run: pnpm build
+
+      - name: Apply D1 migrations and seed data
+        run: pnpm db:migrate && pnpm db:seed
+
+      - name: Write CI-local .dev.vars for Cloudflare secret bindings
+        run: |
+          cat > apps/web/.dev.vars << 'DEVVARS'
+          PUBLIC_APP_ENV=local
+          PUBLIC_SITE_URL=http://localhost:4321
+          SESSION_SIGNING_SECRET=ci-placeholder-secret-value-not-real-00000000
+          WEBAUTHN_RP_ID=localhost
+          WEBAUTHN_RP_ORIGIN=http://localhost:4321
+          PADDLE_API_KEY=ci-placeholder
+          PADDLE_ENVIRONMENT=sandbox
+          PADDLE_WEBHOOK_SECRET=ci-placeholder
+          PADDLE_PRICE_ID_SOLO=pri_ci_placeholder
+          PADDLE_PRICE_ID_PRO=pri_ci_placeholder
+          PADDLE_PRICE_ID_AGENCY=pri_ci_placeholder
+          PUBLIC_PADDLE_CLIENT_TOKEN=ci-placeholder
+          BILLING_ENABLED=false
+          AUDIT_ENGINE_ENABLED=true
+          DEVVARS
+
+      - name: Start preview server
+        run: pnpm --filter @crawlpact/web dev &
+
+      - name: Wait for server
+        run: npx wait-on http://localhost:4321 --timeout 60000
+
+      - name: Visual regression tests
+        run: pnpm test:visual
+        env:
+          PLAYWRIGHT_BASE_URL: http://localhost:4321
+
+      - uses: actions/upload-artifact@v7
+        if: failure()
+        with:
+          name: visual-regression-diff
+          path: playwright-report/
+          retention-days: 14
+
+  update-baseline:
+    if: github.event_name == 'workflow_dispatch'
+    name: Regenerate baseline on ubuntu-latest and commit it back
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          ref: ${{ github.ref_name }}
+
+      - uses: pnpm/action-setup@v6
+        with:
+          version: 9.15.0
+
+      - uses: actions/setup-node@v7
+        with:
+          node-version: "22.12.0"
+          cache: pnpm
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Install Playwright browsers
+        run: pnpm exec playwright install --with-deps chromium
+
+      - name: Build
+        run: pnpm build
+
+      - name: Apply D1 migrations and seed data
+        run: pnpm db:migrate && pnpm db:seed
+
+      - name: Write CI-local .dev.vars for Cloudflare secret bindings
+        run: |
+          cat > apps/web/.dev.vars << 'DEVVARS'
+          PUBLIC_APP_ENV=local
+          PUBLIC_SITE_URL=http://localhost:4321
+          SESSION_SIGNING_SECRET=ci-placeholder-secret-value-not-real-00000000
+          WEBAUTHN_RP_ID=localhost
+          WEBAUTHN_RP_ORIGIN=http://localhost:4321
+          PADDLE_API_KEY=ci-placeholder
+          PADDLE_ENVIRONMENT=sandbox
+          PADDLE_WEBHOOK_SECRET=ci-placeholder
+          PADDLE_PRICE_ID_SOLO=pri_ci_placeholder
+          PADDLE_PRICE_ID_PRO=pri_ci_placeholder
+          PADDLE_PRICE_ID_AGENCY=pri_ci_placeholder
+          PUBLIC_PADDLE_CLIENT_TOKEN=ci-placeholder
+          BILLING_ENABLED=false
+          AUDIT_ENGINE_ENABLED=true
+          DEVVARS
+
+      - name: Start preview server
+        run: pnpm --filter @crawlpact/web dev &
+
+      - name: Wait for server
+        run: npx wait-on http://localhost:4321 --timeout 60000
+
+      - name: Regenerate snapshots
+        run: pnpm test:visual --update-snapshots
+        env:
+          PLAYWRIGHT_BASE_URL: http://localhost:4321
+
+      - name: Commit regenerated baseline
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add apps/web/tests/visual/__screenshots__
+          if git diff --cached --quiet; then
+            echo "No baseline changes to commit."
+          else
+            git commit -m "chore: regenerate visual-regression baseline on ubuntu-latest" -m "Manually triggered via workflow_dispatch. See docs/testing/VISUAL_QA_MATRIX.md."
+            git push origin HEAD:${{ github.ref_name }}
+          fi

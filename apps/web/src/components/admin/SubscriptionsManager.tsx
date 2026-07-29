@@ -155,6 +155,7 @@ export function SubscriptionsManager() {
       {banner && <p className="text-supporting text-neutral-700">{banner}</p>}
       <div className="w-64">
         <Select
+          ariaLabel="Filter subscriptions by status"
           options={[
             { value: "any", label: "All subscriptions" },
             { value: "mismatch", label: "Entitlement mismatch" },

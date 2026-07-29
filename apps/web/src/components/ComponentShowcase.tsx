@@ -17,6 +17,7 @@ import {
   DropdownMenu,
   EmptyState,
   ErrorState,
+  EvidenceRail,
   FormField,
   IconButton,
   Input,
@@ -26,6 +27,8 @@ import {
   Pagination,
   Popover,
   ProgressSteps,
+  ProvenanceHeader,
+  PurposeLane,
   RadioGroup,
   ScoreComponent,
   SearchField,
@@ -83,6 +86,7 @@ export function ComponentShowcase() {
             { value: "weekly", label: "Weekly" },
           ]}
           placeholder="Monitoring frequency"
+          ariaLabel="Monitoring frequency"
         />
         <Combobox
           label="Crawler"
@@ -279,6 +283,72 @@ export function ComponentShowcase() {
         <div className="w-full max-w-sm">
           <ScoreComponent score={{ state: "incomplete" }} />
         </div>
+      </Section>
+
+      <Section title="ProvenanceHeader">
+        <div className="w-full max-w-2xl">
+          <ProvenanceHeader
+            domain="example.com"
+            reportState={{ tone: "success", label: "Complete" }}
+            fields={[
+              { label: "Scan time", value: "28 Jul 2026, 09:12 UTC" },
+              { label: "Registry version", value: "2026.07.1" },
+              { label: "Ruleset version", value: "4" },
+              { label: "Preset", value: "Balanced" },
+            ]}
+          />
+        </div>
+        <div className="w-full max-w-2xl">
+          <ProvenanceHeader
+            domain="incomplete-example.com"
+            reportState={{ tone: "unknown", label: "Incomplete" }}
+            fields={[
+              { label: "Scan time", value: "28 Jul 2026, 09:12 UTC" },
+              { label: "Registry version", value: null },
+              { label: "Ruleset version", value: null },
+              { label: "Preset", value: "Balanced" },
+            ]}
+            context="Shared by Acme Agency on 12 Jan 2026."
+          />
+        </div>
+      </Section>
+
+      <Section title="EvidenceRail">
+        <div className="w-full max-w-xl">
+          <EvidenceRail
+            title="GPTBot rule in robots.txt"
+            item={{
+              observed: "User-agent: GPTBot / Disallow: /private/",
+              interpretation: "GPTBot is blocked from /private/, allowed elsewhere.",
+              impact: "Training crawlers cannot access the disallowed path.",
+              action: "No action needed if this matches your intent.",
+              evidence: <code className="text-code">robots.txt, line 14</code>,
+            }}
+          />
+        </div>
+        <div className="w-full max-w-xl">
+          <EvidenceRail
+            title="llms.txt"
+            item={{
+              observed: null,
+              interpretation: null,
+              impact: null,
+              action: "Consider publishing an llms.txt file to document AI crawler preferences.",
+              evidence: null,
+            }}
+          />
+        </div>
+      </Section>
+
+      <Section title="PurposeLane">
+        <PurposeLane
+          entries={[
+            { purpose: "Search", tone: "success", summary: "4 of 4 crawlers allowed" },
+            { purpose: "Training", tone: "warning", summary: "1 of 3 crawlers blocked" },
+            { purpose: "User-triggered retrieval", tone: "success", summary: "2 of 2 allowed" },
+            { purpose: "Agents", tone: "unknown", summary: "No explicit rule" },
+          ]}
+        />
       </Section>
     </div>
   );

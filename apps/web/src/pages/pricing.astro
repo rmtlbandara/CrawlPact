@@ -7,6 +7,7 @@ const plans = [
   {
     id: "free",
     name: "Free",
+    audience: "For a one-time check on a single site.",
     price: "USD 0",
     domains: 1,
     monitoring: "None",
@@ -23,6 +24,7 @@ const plans = [
   {
     id: "solo",
     name: "Solo",
+    audience: "For individual site owners tracking one project.",
     price: "USD 79",
     domains: 5,
     monitoring: "Monthly",
@@ -39,6 +41,7 @@ const plans = [
   {
     id: "pro",
     name: "Pro",
+    audience: "For growing portfolios that need weekly monitoring.",
     price: "USD 179",
     domains: 25,
     monitoring: "Weekly",
@@ -55,6 +58,7 @@ const plans = [
   {
     id: "agency",
     name: "Agency",
+    audience: "For agencies managing many client domains.",
     price: "USD 399",
     domains: 100,
     monitoring: "Weekly",
@@ -82,7 +86,7 @@ const plans = [
       during checkout. Plan definitions are stored as product data, not hard-coded — see <a
         href="/status"
         class="text-brand-700 underline underline-offset-2">status</a
-      >
+      >{" "}
       for current plan availability.
     </p>
 
@@ -98,7 +102,8 @@ const plans = [
               </p>
             )}
             <h2 class="text-card-heading text-neutral-950">{plan.name}</h2>
-            <p class="mt-1 text-h3 text-neutral-950">{plan.price}/yr</p>
+            <p class="mt-1 text-supporting text-neutral-600">{plan.audience}</p>
+            <p class="mt-2 text-h3 text-neutral-950">{plan.price}/yr</p>
             <p class="mt-2 text-supporting text-neutral-600">
               {plan.domains} domain{plan.domains === 1 ? "" : "s"}
             </p>
@@ -191,7 +196,9 @@ const plans = [
     </div>
 
     <p class="mt-6 text-body text-neutral-700">
-      <a href="/sign-in" class="text-brand-700 underline underline-offset-2">Create an account</a>
+      <a href="/sign-in" class="text-brand-700 underline underline-offset-2">Create an account</a>{
+        " "
+      }
       to upgrade — checkout runs through Paddle from your dashboard's billing page. Paddle handles payment,
       tax, and receipts; CrawlPact never sees your card details.
     </p>

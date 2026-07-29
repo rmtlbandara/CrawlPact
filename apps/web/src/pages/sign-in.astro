@@ -12,7 +12,12 @@ import { PasskeyAuth } from "../components/auth/PasskeyAuth";
   <div class="mx-auto max-w-[480px] px-4 py-20 sm:px-6">
     <h1 class="text-h1 text-neutral-950">Sign in</h1>
     <p class="mt-4 text-body-lg text-neutral-700">
-      CrawlPact signs you in with a passkey — no password, no email.
+      CrawlPact signs you in with a passkey — no password, no email, nothing to remember.
+    </p>
+    <p class="mt-3 text-body text-neutral-600">
+      A passkey uses your device's built-in security — Face ID, Touch ID, Windows Hello, or a
+      security key — instead of a password. Your browser will prompt you directly; CrawlPact never
+      sees or stores the passkey itself. No passkey on this device? Use a recovery code instead.
     </p>
     <div class="mt-8">
       <PasskeyAuth client:load />

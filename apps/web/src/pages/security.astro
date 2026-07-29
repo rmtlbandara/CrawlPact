@@ -7,7 +7,7 @@ import MarketingLayout from "../layouts/MarketingLayout.astro";
   title="Security | CrawlPact"
   description="How CrawlPact protects against SSRF, isolates the scanner, verifies Paddle webhooks, and handles authentication and session security."
 >
-  <article class="mx-auto max-w-[720px] px-4 py-12 sm:px-6">
+  <article class="mx-auto max-w-reading px-4 py-12 sm:px-6">
     <h1 class="text-h1 text-neutral-950">Security</h1>
 
     <h2 class="mt-8 text-h2 text-neutral-950">Scanning safety</h2>
@@ -15,7 +15,7 @@ import MarketingLayout from "../layouts/MarketingLayout.astro";
       CrawlPact only fetches public HTTP/HTTPS resources you specify. All outbound requests pass
       through a single safe-fetch module that rejects private, loopback, link-local, reserved, and
       cloud-metadata addresses, rejects literal IP targets, revalidates every redirect destination,
-      and enforces timeouts, size limits, and a request cap per scan. See
+      and enforces timeouts, size limits, and a request cap per scan. See{" "}
       <a href="/scanner" class="text-brand-700 underline underline-offset-2">scanner information</a
       >.
     </p>

@@ -12,6 +12,16 @@ export async function getStaticPaths() {
 
 const { crawler } = Astro.props;
 const { Content } = await render(crawler);
+
+const allCrawlers = await getCollection("crawlers");
+const relatedCrawlers = allCrawlers
+  .filter(
+    (other) =>
+      other.id !== crawler.id &&
+      (other.data.operator === crawler.data.operator ||
+        other.data.purpose === crawler.data.purpose),
+  )
+  .slice(0, 3);
 ---
 
 <MarketingLayout
@@ -25,7 +35,7 @@ const { Content } = await render(crawler);
     { name: crawler.data.name, url: `/crawlers/${crawler.id}` },
   ]}
 >
-  <article class="mx-auto max-w-[720px] px-4 py-12 sm:px-6">
+  <article class="mx-auto max-w-reading px-4 py-12 sm:px-6">
     <p class="text-metadata font-medium uppercase tracking-wide text-neutral-500">
       {crawler.data.operator}
     </p>
@@ -51,17 +61,56 @@ const { Content } = await render(crawler);
       </div>
     </dl>
 
-    <div class="prose prose-neutral mt-8 max-w-none text-body text-neutral-800">
+    <div class="prose prose-neutral mt-8 max-w-none wrap-break-word text-body text-neutral-800">
       <Content />
     </div>
 
     <a
       href={crawler.data.officialSourceUrl}
-      class="mt-6 inline-block text-body text-brand-700 underline underline-offset-2"
+      class="mt-6 block wrap-break-word text-body text-brand-700 underline underline-offset-2"
       rel="noopener"
     >
       Official source: {crawler.data.officialSourceUrl}
     </a>
+
+    {
+      relatedCrawlers.length > 0 && (
+        <div class="mt-12 border-t border-neutral-200 pt-8">
+          <h2 class="text-h3 text-neutral-950">Related crawlers</h2>
+          <ul class="mt-4 flex flex-col gap-3">
+            {relatedCrawlers.map((related) => (
+              <li>
+                <a
+                  href={`/crawlers/${related.id}`}
+                  class="block rounded-card border border-neutral-200 bg-white p-4 hover:border-brand-300"
+                >
+                  <p class="text-metadata font-medium uppercase tracking-wide text-neutral-500">
+                    {related.data.operator}
+                  </p>
+                  <p class="mt-1 text-card-heading text-neutral-950">{related.data.name}</p>
+                  <p class="mt-1 text-supporting text-neutral-600">
+                    {CRAWLER_PURPOSE_LABELS[related.data.purpose]}
+                  </p>
+                </a>
+              </li>
+            ))}
+          </ul>
+        </div>
+      )
+    }
+
+    <div class="mt-8 rounded-card border border-neutral-200 bg-neutral-50 p-6 text-center">
+      <p class="text-card-heading text-neutral-950">See how this applies to your own site</p>
+      <p class="mt-1.5 text-supporting text-neutral-600">
+        Run a free audit to check your declared AI crawler policy against your own domain.
+      </p>
+      <a
+        href="/audit"
+        class="mt-4 inline-block rounded-control bg-brand-600 px-5 py-2.5 text-body font-medium text-white hover:bg-brand-700"
+      >
+        Audit a domain
+      </a>
+    </div>
   </article>
   <AnalyticsBeacon
     client:load

@@ -64,6 +64,15 @@ jobs:
       - name: Smoke test the deployed preview
         run: pnpm run smoke:preview
 
+      - name: Install Chrome for Lighthouse
+        uses: browser-actions/setup-chrome@v2
+        id: setup-chrome
+
+      - name: Lighthouse budget check against the deployed preview
+        run: pnpm run lighthouse:check https://crawlpact-web-preview.rmtlbandara.workers.dev
+        env:
+          CHROME_PATH: ${{ steps.setup-chrome.outputs.chrome-path }}
+
       - name: Record deployment summary
         if: always()
         run: |

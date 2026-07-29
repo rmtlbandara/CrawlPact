@@ -11,10 +11,29 @@ import { loadReportViewData } from "../../lib/report-view-data";
 const { token } = Astro.params;
 
 const db = createDb(getEnv().DB);
-const share = token ? await getShareForToken(db, token) : null;
-const { report, diffLines, proposedRobotsText } = share
-  ? await loadReportViewData(db, share.scanId)
-  : { report: null, diffLines: null, proposedRobotsText: null };
+const share = token ? await getShareForToken(db, token) : { status: "invalid" as const };
+const { report, diffLines, proposedRobotsText } =
+  share.status === "valid"
+    ? await loadReportViewData(db, share.scanId)
+    : { report: null, diffLines: null, proposedRobotsText: null };
+
+const UNAVAILABLE_COPY: Record<
+  "revoked" | "expired" | "invalid",
+  { title: string; description: string }
+> = {
+  revoked: {
+    title: "This shared link has been revoked",
+    description: "The person who shared this report has revoked access to it.",
+  },
+  expired: {
+    title: "This shared link has expired",
+    description: "This link was created with an expiry date, and that date has passed.",
+  },
+  invalid: {
+    title: "This shared link is not available",
+    description: "This link doesn't match any active shared report.",
+  },
+};
 ---
 
 <MarketingLayout
@@ -26,19 +45,21 @@ const { report, diffLines, proposedRobotsText } = share
 >
   <div class="mx-auto max-w-[960px] px-4 py-16 sm:px-6">
     {
-      report ? (
+      report && share.status === "valid" ? (
         <AuditReportView
           client:load
           report={report}
           proposedRobotsText={proposedRobotsText}
           diffLines={diffLines}
-          agencyBranding={share?.agencyBranding ?? null}
+          agencyBranding={share.agencyBranding}
         />
       ) : (
         <ErrorState
           client:load
-          title="This shared link is not available"
-          description="This link has expired, been revoked, or never existed."
+          title={UNAVAILABLE_COPY[share.status === "valid" ? "invalid" : share.status].title}
+          description={
+            UNAVAILABLE_COPY[share.status === "valid" ? "invalid" : share.status].description
+          }
         />
       )
     }

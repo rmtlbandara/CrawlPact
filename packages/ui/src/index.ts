@@ -37,3 +37,6 @@ export * from "./components/DataTable";
 export * from "./components/CodeBlock";
 export * from "./components/DiffViewer";
 export * from "./components/ScoreComponent";
+export * from "./components/ProvenanceHeader";
+export * from "./components/EvidenceRail";
+export * from "./components/PurposeLane";

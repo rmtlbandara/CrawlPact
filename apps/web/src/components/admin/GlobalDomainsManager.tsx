@@ -200,6 +200,7 @@ export function GlobalDomainsManager() {
         </div>
         <div className="w-48">
           <Select
+            ariaLabel="Filter domains by monitoring state"
             options={[
               { value: "any", label: "Any monitoring state" },
               { value: "active", label: "Active" },

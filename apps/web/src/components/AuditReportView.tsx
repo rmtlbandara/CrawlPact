@@ -1,7 +1,38 @@
 import { useState } from "react";
-import type { AgencyBranding, AuditReportResponse, LlmsTxtSignal } from "@crawlpact/core";
-import { Alert, DiffViewer, ScoreComponent, StatusChip } from "@crawlpact/ui";
+import type {
+  AgencyBranding,
+  AuditReportResponse,
+  AuditStatus,
+  LlmsTxtSignal,
+} from "@crawlpact/core";
+import { Alert, DiffViewer, ProvenanceHeader, ScoreComponent, StatusChip } from "@crawlpact/ui";
 import type { StatusTone } from "@crawlpact/ui";
+
+const STATUS_TONE: Record<AuditStatus, StatusTone> = {
+  queued: "info",
+  running: "info",
+  completed: "success",
+  completed_with_warnings: "warning",
+  incomplete: "unknown",
+  target_unavailable: "error",
+  blocked_for_safety: "error",
+  rate_limited: "warning",
+  internal_failure: "error",
+  engine_disabled: "unknown",
+};
+
+const STATUS_LABEL: Record<AuditStatus, string> = {
+  queued: "Queued",
+  running: "Running",
+  completed: "Complete",
+  completed_with_warnings: "Complete with warnings",
+  incomplete: "Incomplete",
+  target_unavailable: "Target unavailable",
+  blocked_for_safety: "Blocked for safety",
+  rate_limited: "Rate limited",
+  internal_failure: "Internal error",
+  engine_disabled: "Engine disabled",
+};
 
 const RESULT_TONE: Record<string, StatusTone> = {
   allowed: "success",
@@ -351,26 +382,27 @@ export function AuditReportView({
       )}
 
       <section className="rounded-panel border border-neutral-200 bg-white p-6">
-        <div className="flex flex-wrap items-center justify-between gap-4 border-b border-neutral-200 pb-4">
-          <div>
-            <p className="font-mono text-supporting text-neutral-500">{report.domain}</p>
-            <h1 className="text-h2 text-neutral-950">AI crawler policy report</h1>
-          </div>
-          <div className="flex items-center gap-4">
-            <p className="text-supporting text-neutral-500">
-              Scanned {new Date(report.scanDate).toLocaleString()} · Registry{" "}
-              {report.registryVersion ?? "unknown"}
-            </p>
-            <button
-              type="button"
-              onClick={() => window.print()}
-              className="no-print rounded-control border border-neutral-300 px-3 py-1.5 text-supporting font-medium text-neutral-700 hover:bg-neutral-50"
-            >
-              Print report
-            </button>
-          </div>
+        <div className="flex flex-wrap items-center justify-between gap-4 pb-4">
+          <h1 className="text-h2 text-neutral-950">AI crawler policy report</h1>
+          <button
+            type="button"
+            onClick={() => window.print()}
+            className="no-print rounded-control border border-neutral-300 px-3 py-1.5 text-supporting font-medium text-neutral-700 hover:bg-neutral-50"
+          >
+            Print report
+          </button>
         </div>
-        <div className="mt-5 grid gap-6 md:grid-cols-[280px_1fr]">
+        <ProvenanceHeader
+          domain={report.domain}
+          reportState={{ tone: STATUS_TONE[report.status], label: STATUS_LABEL[report.status] }}
+          fields={[
+            { label: "Scan time", value: new Date(report.scanDate).toLocaleString() },
+            { label: "Registry version", value: report.registryVersion },
+            { label: "Ruleset version", value: report.rulesetVersion },
+            { label: "Preset", value: report.preset },
+          ]}
+        />
+        <div className="mt-5 max-w-sm">
           <ScoreComponent
             score={report.score}
             categoryBreakdown={
@@ -378,13 +410,6 @@ export function AuditReportView({
             }
             methodologyHref="/scoring"
           />
-          <div>
-            <p className="text-supporting text-neutral-600">
-              Preset:{" "}
-              <span className="font-medium text-neutral-900">{report.preset ?? "none"}</span> ·
-              Status: <span className="font-medium text-neutral-900">{report.status}</span>
-            </p>
-          </div>
         </div>
       </section>
 
