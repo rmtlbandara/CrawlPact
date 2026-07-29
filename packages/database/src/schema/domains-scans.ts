@@ -1,3 +1,4 @@
+import { isNull } from "drizzle-orm";
 import { integer, sqliteTable, text, uniqueIndex } from "drizzle-orm/sqlite-core";
 import { users } from "./identity";
 import { crawlers, registryVersions, rulesetVersions } from "./registry";
@@ -48,7 +49,11 @@ export const domains = sqliteTable(
     deletedAt: text("deleted_at"),
   },
   (table) => [
-    uniqueIndex("idx_domains_owner_origin_drizzle").on(table.ownerUserId, table.canonicalOrigin),
+    // Partial: only applies to live rows, so a soft-deleted domain doesn't
+    // block re-saving the same origin later (migration 0017).
+    uniqueIndex("idx_domains_owner_origin_live")
+      .on(table.ownerUserId, table.canonicalOrigin)
+      .where(isNull(table.deletedAt)),
   ],
 );
 
