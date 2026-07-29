@@ -66,9 +66,13 @@ skipped — that aggregate is the one required check:
   `wrangler dev --local` serving the actual generated `apps/web/dist/server/wrangler.json`, not
   Astro's dev server. This is a genuinely production-like target: real Cloudflare Assets binding
   behaviour (including its trailing-slash redirect on extension-less paths — see
-  `seo-metadata.spec.ts`), real D1/KV bindings, no Vite dependency-optimizer races. Runs in the
-  official version-matched Playwright container (`mcr.microsoft.com/playwright:v1.62.0-noble`),
-  one worker, one retry — a flaky test is reported as a real failure, not silently re-run green.
+  `seo-metadata.spec.ts`), real D1/KV bindings, no Vite dependency-optimizer races. Runs on a
+  plain `ubuntu-latest` runner with Chromium installed directly (`playwright install --with-deps
+chromium`) — the official Playwright container was tried first but caused `astro build` to
+  fail (Astro's Cloudflare adapter's static prerenderer makes an internal loopback `fetch()`
+  during build that gets `ECONNREFUSED` specifically inside GitHub's `container:` job executor;
+  see `docs/status/KNOWN_RISKS.md`). One worker, one retry — a flaky test is reported as a real
+  failure, not silently re-run green.
 
 Full cross-browser coverage (`mobile-safari`, via `pnpm test:e2e` / `pnpm test:a11y` without the
 `:chromium` suffix) is not part of the required gate — run it locally before a major change or

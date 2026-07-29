@@ -101,11 +101,6 @@ jobs:
   browser-smoke:
     name: Chromium E2E + accessibility smoke (production-like build)
     runs-on: ubuntu-latest
-    # Pinned to the exact @playwright/test version in package.json — no
-    # separate `playwright install --with-deps` step needed, the container
-    # already ships matching browser binaries.
-    container:
-      image: mcr.microsoft.com/playwright:v1.62.0-noble
     steps:
       - uses: actions/checkout@v7
 
@@ -121,7 +116,17 @@ jobs:
       - name: Install dependencies
         run: pnpm install --frozen-lockfile
 
+      - name: Install Playwright Chromium
+        run: pnpm exec playwright install --with-deps chromium
+
       - name: Build
+        # Deliberately NOT run inside the official Playwright container
+        # (mcr.microsoft.com/playwright:...): confirmed live that Astro's
+        # Cloudflare adapter's static prerenderer makes an internal loopback
+        # fetch() during `astro build` that gets ECONNREFUSED specifically
+        # inside GitHub Actions' `container:` job executor (the `quality`
+        # job's identical `pnpm build`, on a plain runner with no container,
+        # succeeds) — see docs/status/KNOWN_RISKS.md.
         run: pnpm build
 
       - name: Apply D1 migrations and seed data
