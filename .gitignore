@@ -46,3 +46,6 @@ results.sarif
 packages/database/.wrangler/
 *.sqlite
 *.sqlite3
+
+# Human-only UI review screenshots (pnpm ui:review) — never a CI baseline
+artifacts/

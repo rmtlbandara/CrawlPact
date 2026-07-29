@@ -1,0 +1,106 @@
+name: Merge when green
+
+# Owner-controlled substitute for native GitHub auto-merge. This repository
+# is private on the GitHub Free plan, where branch protection and rulesets
+# both 403 (confirmed live via the API during the release-flow remediation)
+# — without branch protection, native auto-merge would merge as soon as a PR
+# is "mergeable," without actually waiting for CI, which is unsafe. This
+# workflow only merges after the CI workflow has completed successfully for
+# the PR's exact current head SHA.
+#
+# Trust boundary: this workflow's definition only ever comes from `main`
+# (workflow_run always uses the base branch's workflow file, never a PR
+# branch's), it never checks out or executes PR code, and
+# `workflow_run.pull_requests` is only populated for same-repository PRs —
+# fork PRs are silently excluded by that alone. It only acts on PRs opened by
+# the repository owner, targeting main, carrying an explicit `automerge`
+# label, and only merges the exact SHA that was tested. Any run that isn't a
+# same-repo, owner-authored, labeled PR against main simply does nothing —
+# it never fails the workflow, since most CI runs (pushes to main, WIP PRs
+# without the label) are legitimately not meant to auto-merge.
+
+on:
+  workflow_run:
+    workflows: ["CI"]
+    types: [completed]
+
+permissions:
+  contents: write
+  pull-requests: write
+
+jobs:
+  merge:
+    if: github.event.workflow_run.conclusion == 'success'
+    runs-on: ubuntu-latest
+    steps:
+      - name: Evaluate merge guards
+        id: guard
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          TESTED_SHA: ${{ github.event.workflow_run.head_sha }}
+        run: |
+          should_merge=false
+          number=$(echo '${{ toJSON(github.event.workflow_run.pull_requests) }}' | jq -r '.[0].number // empty')
+
+          if [ -z "$number" ]; then
+            echo "No same-repository pull request associated with this CI run (a push to main, or a fork PR) — nothing to do."
+          else
+            pr=$(gh pr view "$number" --repo "${{ github.repository }}" \
+              --json number,author,isDraft,headRepositoryOwner,headRefOid,labels,mergeable,baseRefName,title)
+            author=$(echo "$pr" | jq -r '.author.login')
+            is_draft=$(echo "$pr" | jq -r '.isDraft')
+            head_sha=$(echo "$pr" | jq -r '.headRefOid')
+            head_owner=$(echo "$pr" | jq -r '.headRepositoryOwner.login')
+            base_ref=$(echo "$pr" | jq -r '.baseRefName')
+            mergeable=$(echo "$pr" | jq -r '.mergeable')
+            has_label=$(echo "$pr" | jq -r '[.labels[].name] | any(. == "automerge")')
+            title=$(echo "$pr" | jq -r '.title')
+
+            echo "PR #$number: author=$author head_owner=$head_owner base=$base_ref draft=$is_draft label=$has_label mergeable=$mergeable head_sha=$head_sha tested_sha=$TESTED_SHA"
+
+            if [ "$head_owner" != "rmtlbandara" ]; then
+              echo "::error::PR head is not in rmtlbandara/CrawlPact — this should be unreachable (pull_requests is only populated for same-repo PRs), refusing defensively."
+              exit 1
+            elif [ "$base_ref" != "main" ]; then
+              echo "PR does not target main — skipping."
+            elif [ "$author" != "rmtlbandara" ]; then
+              echo "PR author is not the repository owner — skipping."
+            elif [ "$is_draft" != "false" ]; then
+              echo "PR is a draft — skipping."
+            elif [ "$has_label" != "true" ]; then
+              echo "PR does not carry the 'automerge' label — skipping."
+            elif [ "$head_sha" != "$TESTED_SHA" ]; then
+              echo "PR head SHA has moved since this CI run started (tested $TESTED_SHA, now $head_sha) — refusing a stale merge."
+            elif [ "$mergeable" != "MERGEABLE" ]; then
+              echo "PR is not mergeable (conflicts or blocking review) — skipping."
+            else
+              should_merge=true
+            fi
+
+            {
+              echo "number=$number"
+              echo "title=$title"
+            } >> "$GITHUB_OUTPUT"
+          fi
+
+          echo "should_merge=$should_merge" >> "$GITHUB_OUTPUT"
+
+      - name: Squash-merge
+        if: steps.guard.outputs.should_merge == 'true'
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          gh pr merge "${{ steps.guard.outputs.number }}" --repo "${{ github.repository }}" \
+            --squash --delete-branch \
+            --subject "${{ steps.guard.outputs.title }} (#${{ steps.guard.outputs.number }})"
+
+      - name: Record merge evidence
+        if: steps.guard.outputs.should_merge == 'true'
+        run: |
+          merge_sha=$(git ls-remote https://github.com/${{ github.repository }} main | cut -f1)
+          {
+            echo "### Merge when green"
+            echo "- PR: #${{ steps.guard.outputs.number }}"
+            echo "- Tested SHA: \`${{ github.event.workflow_run.head_sha }}\`"
+            echo "- Resulting main SHA: \`$merge_sha\`"
+          } >> "$GITHUB_STEP_SUMMARY"

@@ -3,6 +3,35 @@
 Added 2026-07-27 (see `docs/architecture/adr/ADR-0007-DEPLOYMENT-PIPELINE.md` for the full
 reasoning, including two live production bugs found while building this).
 
+## Incidents found and closed since (2026-07-29 release-flow remediation)
+
+Two real, previously-undocumented gaps in this pipeline were found and fixed — recorded here
+rather than only in `docs/status/KNOWN_RISKS.md`, since both are directly relevant to trusting
+this deployment path:
+
+- **Cloudflare Workers Builds (a separate, dashboard-configured Git-integration product, unrelated
+  to the GitHub Actions workflows below) had two active triggers silently deploying
+  `crawlpact-web` straight to production on every push to `main`** — completely bypassing
+  `deploy-production.yml`'s typed-confirmation gate. Confirmed via Workers Builds' own history:
+  a build had deployed `main`'s tip to production with zero relationship to a `workflow_dispatch`.
+  Both triggers were deleted via the Cloudflare API; verified via Cloudflare MCP during this
+  remediation that no Git-triggered build configuration exists for either `crawlpact-web` or
+  `crawlpact-web-preview` — `deploy-production.yml` is confirmed to be the only production path.
+- **`deploy-production.yml`'s own deploy step had a masked-exit-code bug**: `pnpm run
+deploy:production | tee /tmp/deploy-output.txt` without `set -o pipefail` meant a real
+  `wrangler deploy` failure was silently swallowed (`tee` always exits 0), so the workflow reported
+  success even when nothing had actually deployed. Fixed by adding `set -o pipefail` before the
+  pipe.
+
+## Merge automation
+
+`.github/workflows/merge-when-green.yml` is the release flow's auto-merge substitute — see its own
+header comment for the full guard list (same-repo PR, owner-authored, targets `main`, carries an
+`automerge` label, exact tested SHA, mergeable). Native GitHub auto-merge is deliberately **not**
+enabled (`allow_auto_merge: false`): this repository is private on the GitHub Free plan, where
+branch protection and rulesets both 403 — without branch protection to gate on, native auto-merge
+would merge as soon as a PR is "mergeable," not necessarily after CI actually passes.
+
 ## Required GitHub secrets
 
 Set under repo Settings → Secrets and variables → Actions, and referenced by both workflows below.

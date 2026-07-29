@@ -2,13 +2,13 @@
 
 ## Layers
 
-| Layer             | Tool                             | Location                                                                    | What it covers                                                                                                                                                                                                                                                                                                            |
-| ----------------- | -------------------------------- | --------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| Unit              | Vitest (`--project unit`)        | `packages/*/src/**/*.test.ts`, `apps/web/src/**/*.test.ts`                  | Pure logic: normalisation, IP classification, crypto/envelope helpers, scoring, presets, conflicts, recommendations, findings, signals. No network, no D1.                                                                                                                                                                |
-| Integration       | Vitest (`--project integration`) | `**/*.integration.test.ts`                                                  | Real module boundaries against a real D1 (`tests/integration/d1-harness.ts`): auth, billing, domains, monitoring, notifications, agency features, and every Super Admin surface (see below).                                                                                                                              |
-| End-to-end        | Playwright                       | `apps/web/tests/e2e`                                                        | Real browser against a running dev server. Public landing/SEO pages, plus real WebAuthn ceremonies (CDP virtual authenticator) driving registration, sign-in, save-domain-and-scan, account deletion, report printing, and Super Admin flows (dashboard, user search, subscription filtering, webhook retry) — see below. |
-| Accessibility     | Playwright + axe-core            | `apps/web/tests/a11y`                                                       | Automated WCAG 2.2 AA scan of public routes (22 routes, sitemap-driven), skip-link focus, breadcrumb landmarks.                                                                                                                                                                                                           |
-| Visual regression | Playwright                       | `apps/web/tests/visual` (baseline: 13 routes × 7 breakpoints, 91 snapshots) | Cross-breakpoint layout snapshots of public marketing/content pages, run explicitly via `pnpm test:visual`. Not yet wired into CI — see caveat below.                                                                                                                                                                     |
+| Layer            | Tool                             | Location                                                   | What it covers                                                                                                                                                                                                                                                                                                            |
+| ---------------- | -------------------------------- | ---------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Unit             | Vitest (`--project unit`)        | `packages/*/src/**/*.test.ts`, `apps/web/src/**/*.test.ts` | Pure logic: normalisation, IP classification, crypto/envelope helpers, scoring, presets, conflicts, recommendations, findings, signals. No network, no D1.                                                                                                                                                                |
+| Integration      | Vitest (`--project integration`) | `**/*.integration.test.ts`                                 | Real module boundaries against a real D1 (`tests/integration/d1-harness.ts`): auth, billing, domains, monitoring, notifications, agency features, and every Super Admin surface (see below).                                                                                                                              |
+| End-to-end       | Playwright                       | `apps/web/tests/e2e`                                       | Real browser against a running dev server. Public landing/SEO pages, plus real WebAuthn ceremonies (CDP virtual authenticator) driving registration, sign-in, save-domain-and-scan, account deletion, report printing, and Super Admin flows (dashboard, user search, subscription filtering, webhook retry) — see below. |
+| Accessibility    | Playwright + axe-core            | `apps/web/tests/a11y`                                      | Automated WCAG 2.2 AA scan of public routes (22 routes, sitemap-driven), skip-link focus, breadcrumb landmarks.                                                                                                                                                                                                           |
+| Responsive smoke | Playwright                       | `apps/web/tests/e2e/responsive-smoke.spec.ts`              | Functional responsive assertions (no horizontal overflow, key content reachable, mobile nav opens/closes, keyboard focus visible) at 360/768/1280px. Part of the required E2E job — see below and ADR-0008.                                                                                                               |
 
 ## What "integration" means here (SRS §35.2)
 
@@ -55,25 +55,31 @@ catch and integration testing cannot.
 
 ## CI gate
 
-`pnpm quality` (format check, lint, typecheck, unit tests, integration tests, db:validate,
-build) must pass before merge. `test:e2e` and `test:a11y` run against a real dev server (with D1
-migrated and seeded first) and are part of the CI workflow's dedicated job — see
-`.github/workflows/ci.yml`. That job runs with `AUDIT_ENGINE_ENABLED=true` (unlike the `quality`
-job's unit/integration tests, which construct their own local mock env per test and never read
-that process-level variable) so the authenticated/admin/scan e2e journeys can exercise a real
-scan — the one thing that flag being `false` used to smoke-test at the e2e layer (the honest
-`AUDIT_ENGINE_DISABLED` response) is verified more precisely by `audit-api.integration.test.ts`.
+`.github/workflows/ci.yml` runs two jobs concurrently (no dependency between them), plus a final
+aggregate `ci-gate` job that fails if either required job fails, is cancelled, or is unexpectedly
+skipped — that aggregate is the one required check:
 
-**`test:visual` is intentionally not wired into that CI job yet.** Playwright's
-`toHaveScreenshot` snapshot filenames are platform-suffixed (e.g. `-darwin.png`); the committed
-baseline in `apps/web/tests/visual/core-pages.spec.ts-snapshots/` was generated on macOS, but
-`.github/workflows/ci.yml`'s e2e/a11y job runs on `ubuntu-latest`. Adding a bare `test:visual`
-step to that job would fail on every run (Linux has no matching `-linux.png` baseline), not
-because of a real regression. Wiring it in correctly requires generating the baseline inside the
-same environment CI uses (e.g. the official Playwright Docker image, or a one-off `ubuntu-latest`
-run whose output is reviewed and committed) — tracked as follow-up. Until then, `test:visual` is
-a local/manual gate (`pnpm test:visual`), matching CLAUDE.md's "check the change at
-360px/768px/1280px" instruction for UI changes.
+- **`quality`**: format check, lint, typecheck, unit tests, integration tests, `db:validate`,
+  production build (equivalent to `pnpm quality`).
+- **`browser-smoke`**: builds the app for real, then runs the required E2E and accessibility
+  suites — Chromium only (`pnpm test:e2e:chromium` / `pnpm test:a11y:chromium`) — against
+  `wrangler dev --local` serving the actual generated `apps/web/dist/server/wrangler.json`, not
+  Astro's dev server. This is a genuinely production-like target: real Cloudflare Assets binding
+  behaviour (including its trailing-slash redirect on extension-less paths — see
+  `seo-metadata.spec.ts`), real D1/KV bindings, no Vite dependency-optimizer races. Runs in the
+  official version-matched Playwright container (`mcr.microsoft.com/playwright:v1.62.0-noble`),
+  one worker, one retry — a flaky test is reported as a real failure, not silently re-run green.
+
+Full cross-browser coverage (`mobile-safari`, via `pnpm test:e2e` / `pnpm test:a11y` without the
+`:chromium` suffix) is not part of the required gate — run it locally before a major change or
+release, per `docs/release/DEFINITION_OF_DONE.md`.
+
+**Visual regression is intentionally not a CI gate.** A prior pixel-comparison suite
+(`apps/web/tests/visual/**`) was removed after two separate readiness-signal fixes failed to make
+it stable — it still failed ~9.5% of the time on a re-run of an identical, already-baselined
+commit. See `docs/architecture/adr/ADR-0008-remove-pixel-visual-regression.md` for the full
+evidence and what replaced it (the responsive-smoke tests above, plus `pnpm ui:review` for manual
+human review — never a CI gate, never a committed baseline).
 
 ## Test data
 

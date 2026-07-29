@@ -6,6 +6,62 @@ changelog, see the `/changelog` page on the public website.
 All notable changes are grouped by development "Part," per `docs/product/CRAWLPACT_FINAL_SRS.md`
 §37.
 
+## Release-Flow Remediation — CI Redesign, Visual Regression Removal (2026-07-29)
+
+Made the development/release flow fast, deterministic, and free of repository-controlled
+blockers, per a full audit of GitHub Actions history, live GitHub/Cloudflare/Paddle
+configuration, and this repo's own accumulated `KNOWN_RISKS.md` evidence.
+
+### Removed
+
+- **Pixel-by-pixel visual regression** (`.github/workflows/visual-regression.yml`,
+  `playwright.visual.config.ts`, `apps/web/tests/visual/**`, ~51MB of committed baseline PNGs) —
+  it failed ~9.5% of the time on a re-run of an identical, already-baselined commit, and a
+  readiness-signal fix attempt (commit `51f984b`) did not resolve it. See
+  `docs/architecture/adr/ADR-0008-remove-pixel-visual-regression.md`.
+
+### Added
+
+- `apps/web/tests/e2e/responsive-smoke.spec.ts` — deterministic functional responsive tests
+  (no horizontal overflow, key content reachable, mobile nav usable, keyboard focus visible) at
+  360/768/1280px, replacing the removed visual suite.
+- `pnpm ui:review` (`scripts/ui-review.ts`) — optional, git-ignored screenshots for manual human
+  review only; never a CI gate or committed baseline.
+- `pnpm verify:push` (`scripts/verify-push.sh`) and `pnpm check:fast` — local commands that
+  reproduce the required CI gate (and a fast subset of it) before pushing.
+- `.github/workflows/merge-when-green.yml` — an owner-controlled auto-merge substitute (squash-
+  merges an `automerge`-labeled PR once CI succeeds for its exact head SHA), since this
+  repository's GitHub plan can't gate native auto-merge on required status checks (branch
+  protection returns `403`, confirmed live).
+- `docs/architecture/adr/ADR-0008-remove-pixel-visual-regression.md`.
+
+### Changed
+
+- `.github/workflows/ci.yml` redesigned: `quality` and a new `browser-smoke` job now run
+  concurrently (no `needs:` dependency), with a `ci-gate` aggregate as the one required check.
+  `browser-smoke` runs required Chromium-only E2E/accessibility tests against a genuinely
+  production-like local server (`wrangler dev --local` serving the real generated
+  `apps/web/dist/server/wrangler.json`), not Astro's dev server — using the version-matched
+  official Playwright container, one worker, and one retry (a flaky test is now a real reported
+  failure, not silently re-run green).
+- `seo-metadata.spec.ts`'s canonical-tag check now compares against the final served URL rather
+  than the pre-redirect request path — the real built Worker's Assets binding 307-redirects
+  extension-less paths to their trailing-slash form (confirmed the same in production today),
+  which Astro's dev server never exercised.
+- Repository merge settings: squash-only (`allow_merge_commit`/`allow_rebase_merge` now `false`),
+  `delete_branch_on_merge` now `true`.
+
+### Known, disclosed gaps from this pass (see `docs/status/KNOWN_RISKS.md`)
+
+- `deploy-preview.yml` is currently broken (a GitHub Environment secret naming mismatch) —
+  requires the repository owner to reset the `preview` Environment's secrets, since it needs a
+  live credential value this session shouldn't handle.
+- The customer dashboard and Super Admin shell nav bars genuinely overflow at 360/768px (a
+  pre-existing, disclosed, out-of-scope bug the new responsive-smoke tests surfaced).
+- Deeper E2E stability work (shared auth fixtures instead of ~13 independent passkey
+  registrations, a deterministic SSRF-safe scanner test target to remove the `example.com`
+  dependency from required CI) is deliberately deferred to a follow-up pass.
+
 ## Post-Launch Trust Fixes — Legal Pages, Domain Re-save, Branding (2026-07-29)
 
 Two direct `wrangler deploy` pushes straight to production this session (bypassing the guarded

@@ -13,11 +13,16 @@ duplicate work already in progress or already decided against in an ADR.
 
 1. Create a branch off `main`.
 2. Make the change, including tests, in the same commit/PR as any documentation it affects.
-3. Run `pnpm quality` locally. Run `pnpm test:e2e`/`test:a11y` if you touched a page or
-   component.
+3. Run `pnpm verify:push` locally (reproduces the required CI gate — format, lint, typecheck,
+   unit/integration tests, build, and a Chromium E2E/accessibility smoke run against a
+   production-like local server). `pnpm check:fast` gives quicker feedback while iterating.
 4. Open a PR describing what changed and, if relevant, which SRS requirement(s) it addresses —
    reference the requirement ID from `docs/status/REQUIREMENTS_TRACEABILITY.md` where
    applicable.
+5. Once CI is green, apply the `automerge` label to merge automatically — see
+   `.github/workflows/merge-when-green.yml`. This repository's GitHub plan can't gate native
+   auto-merge on required checks, so this label-gated workflow is the deliberate substitute; a PR
+   without the label just sits open until merged manually.
 
 ## Commit and PR conventions
 

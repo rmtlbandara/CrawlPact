@@ -1,18 +1,27 @@
 # Visual QA Matrix
 
-Manual + automated visual QA tracking for SRS §10.56. Columns marked "Automated" are covered by
-`playwright.visual.config.ts` projects; "Manual" items require a human pass (tracked here so
-the check isn't lost between sessions).
+Manual + automated visual QA tracking for SRS §10.56.
 
-| Breakpoint | Automated config                                | Manual pass performed (Part 1) |
-| ---------: | ----------------------------------------------- | ------------------------------ |
-|      360px | `mobile-360` project                            | ✅                             |
-|      390px | `mobile-390` project                            | ✅                             |
-|      480px | `mobile-480` project                            | ✅                             |
-|      768px | `tablet-768` project                            | ✅                             |
-|     1024px | `desktop-1024` project                          | ✅                             |
-|     1280px | `desktop-1280` project                          | ✅                             |
-|     1440px | `desktop-3xl` project (`desktop-1440` viewport) | ✅                             |
+**Historical note (2026-07-29):** this document previously tracked a pixel-comparison Playwright
+suite (`apps/web/tests/visual/**`, `playwright.visual.config.ts`). That suite was removed — see
+`docs/architecture/adr/ADR-0008-remove-pixel-visual-regression.md` for the full evidence (it
+failed ~9.5% of the time on a re-run of an identical, already-baselined commit, even after a
+readiness-signal fix). SRS §10.57 item 16's intent ("core pages pass visual regression tests") is
+now satisfied by `apps/web/tests/e2e/responsive-smoke.spec.ts` (deterministic functional
+assertions — no horizontal overflow, key content reachable, mobile nav usable — at the three
+breakpoints below) plus `pnpm ui:review` for on-demand manual screenshot review. The "Automated
+config" column below is kept for historical reference to what was manually verified in Part 1; it
+no longer refers to a runnable Playwright project.
+
+| Breakpoint | Covered by responsive-smoke today | Manual pass performed (Part 1, historical) |
+| ---------: | :-------------------------------: | ------------------------------------------ |
+|      360px |                ✅                 | ✅                                         |
+|      768px |                ✅                 | ✅                                         |
+|     1280px |                ✅                 | ✅                                         |
+|      390px |          — (manual only)          | ✅                                         |
+|      480px |          — (manual only)          | ✅                                         |
+|     1024px |          — (manual only)          | ✅                                         |
+|     1440px |          — (manual only)          | ✅                                         |
 
 ## Content-driven checks (manual, Part 1 pass)
 
@@ -28,23 +37,10 @@ the check isn't lost between sessions).
 | High contrast (forced colours)       | ⏳ Not yet performed — tracked in `docs/status/KNOWN_RISKS.md`                                                                                                                |
 | Print output                         | ✅ real `.no-print` CSS + "Print report" button, verified by an automated print-media check (`tests/e2e/landing-page.spec.ts`), not just a visual spot-check (Part 3 Step 17) |
 
-## Visual regression baseline (Part 2 Step 20; expanded Part 3 Step 18)
+## Known responsive gap (disclosed, not fixed in this pass)
 
-`apps/web/tests/visual/core-pages.spec.ts` snapshots 13 routes — one per distinct page
-template (`/`, `/about`, `/audit`, `/pricing`, `/crawlers`, `/crawlers/gptbot`, `/guides`,
-`/guides/[slug]`, `/tools`, `/tools/[tool]`, `/methodology`, `/changelog`, and the 404 page) —
-across all seven required breakpoints (91 snapshots total), fulfilling SRS §10.57 item 16
-("core pages pass visual regression tests"). Baselines are committed under
-`apps/web/tests/visual/core-pages.spec.ts-snapshots/`. Run via `pnpm test:visual`; a real
-visual diff fails the run, a baseline-only diff (new route/breakpoint) writes a new snapshot
-that must be reviewed and committed deliberately, not accepted blindly — Part 3 Step 18's
-regeneration was reviewed by inspecting an actual diff image before regenerating (breadcrumb
-addition, corrected source-date text, and the new footer "About" link — all intentional Step
-13/16 changes, not regressions).
-
-Not yet covered: authenticated `/app/*` and `/admin/*` pages (would need a seeded session in the
-Playwright context) and the completed-scan report page (`/audit/[auditId]` only renders the
-disabled-engine state in this environment's CI-parity config, since `AUDIT_ENGINE_ENABLED=false`
-matches production's current default) — tracked as follow-up. The public marketing/audit/guide/
-crawler/tool surface (now 13 templates) is the highest-traffic, most launch-sensitive area and is
-fully covered.
+The customer dashboard and Super Admin shell navigation bars render every link inline with no
+mobile-collapse equivalent to the public site's `MobileNav` — confirmed via
+`responsive-smoke.spec.ts` to genuinely overflow horizontally at 360/768px (516px and 112px of
+overflow respectively). See `docs/status/KNOWN_RISKS.md` for the full entry; out of scope for the
+release-flow remediation that discovered it.
