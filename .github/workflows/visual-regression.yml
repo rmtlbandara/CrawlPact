@@ -3,8 +3,9 @@ name: Visual regression
 # Two jobs, deliberately separate from the main CI gate:
 #
 # - `compare` runs on every push/PR and fails if rendered pages drift from
-#   the committed baseline in apps/web/tests/visual/__screenshots__. It
-#   never writes anything back to the repo.
+#   the committed baseline in apps/web/tests/visual/*-snapshots/ (Playwright's
+#   default per-spec-file convention — there is no __screenshots__ directory).
+#   It never writes anything back to the repo.
 # - `update-baseline` only runs when manually triggered (workflow_dispatch)
 #   and is the ONLY way the baseline itself changes — a human (or an
 #   explicitly-authorised agent run) decides when a rendering change is
@@ -174,7 +175,16 @@ jobs:
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
-          git add apps/web/tests/visual/__screenshots__
+          # Playwright's default snapshot path (no snapshotPathTemplate override
+          # in playwright.visual.config.ts) is <specFile>-snapshots/, not
+          # __screenshots__ — that wrong path here meant this job always
+          # staged zero files and silently no-op'd, so the compare job below
+          # has been failing against a macOS-generated baseline (the only one
+          # that ever got committed, via a local `pnpm test:visual` run) since
+          # this workflow was introduced. Confirmed 2026-07-29: every one of
+          # the 105 committed snapshots is suffixed -darwin.png; ubuntu-latest
+          # needs -linux.png, and none existed.
+          git add 'apps/web/tests/visual/*-snapshots'
           if git diff --cached --quiet; then
             echo "No baseline changes to commit."
           else

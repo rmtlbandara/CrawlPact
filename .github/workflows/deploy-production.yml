@@ -106,11 +106,24 @@ jobs:
           --config apps/web/wrangler.jsonc
 
       - name: Deploy production Worker
-        run: pnpm run deploy:production | tee deploy-output.txt
+        # set -o pipefail is required here: without it, `| tee` always exits 0
+        # (tee's own exit code), so a real `wrangler deploy` failure would be
+        # silently swallowed and this step would report success regardless.
+        # Confirmed live 2026-07-29: exactly this masked a real failure
+        # (scripts/deploy.sh's clean-tree check tripping on deploy-output.txt
+        # itself — see below) across every gated deploy attempt that day,
+        # none of which had actually deployed anything despite showing green.
+        # deploy-output.txt is written to /tmp, not the repo root: writing it
+        # inside the checkout made deploy.sh's own `git status --porcelain`
+        # clean-tree check see an untracked file and refuse to deploy —
+        # tripped by its own sibling step's output file.
+        run: |
+          set -o pipefail
+          pnpm run deploy:production | tee /tmp/deploy-output.txt
 
       - name: Record deployed Worker version
         run: |
-          version_id=$(grep -oE '[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}' deploy-output.txt | tail -1 || true)
+          version_id=$(grep -oE '[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}' /tmp/deploy-output.txt | tail -1 || true)
           echo "worker_version_id=$version_id" >> "$GITHUB_ENV"
           {
             echo "### Production deployment"
@@ -132,7 +145,7 @@ jobs:
         with:
           name: production-deploy-${{ github.event.inputs.commit_sha }}
           path: |
-            deploy-output.txt
+            /tmp/deploy-output.txt
             apps/web/dist/server/wrangler.json
           retention-days: 90
           if-no-files-found: ignore

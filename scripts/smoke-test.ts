@@ -71,7 +71,10 @@ async function run(): Promise<void> {
   const base = baseUrl.replace(/\/$/, "");
 
   await checkPage("Home page", `${base}/`, 200);
-  await checkPage("Pricing page", `${base}/pricing`, 200);
+  // Prerendered static pages (unlike the SSR routes checked below) get a
+  // trailing-slash redirect from the Workers Assets binding — checking the
+  // bare path here would spuriously fail on a real, working deploy.
+  await checkPage("Pricing page", `${base}/pricing/`, 200);
   await checkPage("robots.txt", `${base}/robots.txt`, 200, ["Sitemap:"]);
   await checkPage("sitemap.xml", `${base}/sitemap.xml`, 200);
   await checkPage("Sign-in / registration entry point", `${base}/sign-in`, 200, [
@@ -84,9 +87,15 @@ async function run(): Promise<void> {
   const statusBody = await checkPage("Status page", `${base}/status`, 200, [
     "Free audit (real scan)",
   ]);
+  // Preview always ships AUDIT_ENGINE_ENABLED=false; production enabled it
+  // 2026-07-28 (see CHANGELOG.md) — the honest label differs by target.
   record(
-    "Status page: audit-engine label is honest (disabled)",
-    statusBody.includes("Disabled in this environment"),
+    target === "preview"
+      ? "Status page: audit-engine label is honest (disabled)"
+      : "Status page: audit-engine label is honest (available)",
+    target === "preview"
+      ? statusBody.includes("Disabled in this environment")
+      : statusBody.includes("Available"),
   );
   if (target === "preview") {
     record(
