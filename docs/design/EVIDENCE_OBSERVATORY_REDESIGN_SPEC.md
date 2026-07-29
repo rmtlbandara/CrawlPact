@@ -551,6 +551,30 @@ feat/evidence-observatory-ui-ux-redesign`) and hit a real GitHub constraint: `wo
   baseline cannot exist until after this PR merges to `main`. See `KNOWN_RISKS.md` for the full
   account and the exact follow-up command to run post-merge.
 
+### 12.2 A real defect the new CI wiring caught (2026-07-29)
+
+Opening PR #35 put the forced-colors/zoom test from §12.1 in front of real GitHub Actions CI
+(`ubuntu-latest`) for the first time — and it found a genuine bug that had passed cleanly on this
+session's own macOS Chromium runs: `/crawlers/amazonbot` overflowed by 14px at a 320px viewport
+(WCAG 1.4.10). This is exactly why CI-wiring matters, not a hypothetical — a platform-specific
+font-metrics difference pushed a borderline case over the edge in a way local testing on one OS
+never would have caught.
+
+Root cause, found by inspecting `getBoundingClientRect()` on every element rather than guessing:
+the crawler page's "Official source: `<url>`" link was `inline-block`, and CSS's shrink-to-fit
+width algorithm computes an inline-block's own intrinsic width **ignoring** `overflow-wrap:
+break-word` opportunities — so break-word alone did nothing until the element was switched to
+`block`. Sweeping all 20 crawler + 20 guide pages afterward (not just the one that failed) found
+two more instances of the same bug class inside markdown prose body content itself (inline
+`code` spans containing long unbroken domains, e.g. `developers.openai.com/api/docs/bots` on the
+GPTBot page) — fixed by adding the same wrap behavior to both `[slug].astro` templates' prose
+containers. The reflow test itself was also expanded from one sample crawler/guide page to every
+real content entry (40 pages), since this class of defect is content-driven, not template-driven.
+
+Verified fixed both locally and, more importantly, **on the actual GitHub Actions CI run that
+found it** — the `End-to-end and accessibility smoke tests` check on PR #35 failed on the
+pre-fix commit and passed cleanly on the post-fix commit.
+
 **Still not closeable without a human, by nature, not by choice**: the manual screen-reader
 walkthrough. No amount of additional automated tooling substitutes for a person actually using
 VoiceOver or NVDA — this is flagged rather than worked around.
