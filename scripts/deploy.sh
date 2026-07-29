@@ -23,14 +23,16 @@ if [[ "$target" == "production" ]]; then
     echo "deploy:production: refusing — working tree is not clean." >&2
     exit 1
   fi
-  current_branch="$(git rev-parse --abbrev-ref HEAD)"
-  if [[ "$current_branch" != "main" ]]; then
-    echo "deploy:production: refusing — current branch is '$current_branch', not main." >&2
-    exit 1
-  fi
+  # Deliberately checks the current commit against origin/main's tip by SHA,
+  # not by symbolic branch name (git rev-parse --abbrev-ref HEAD): CI checks
+  # out an exact commit SHA via actions/checkout's `ref:`, which is always a
+  # detached HEAD — abbrev-ref would report literally "HEAD" there, refusing
+  # every real CI-driven deploy outright even when it genuinely is main's
+  # tip. Confirmed live 2026-07-29: this was the first thing to ever exercise
+  # a CI-driven production deploy, and the branch-name check failed it.
   git fetch origin main --quiet || true
   if [[ "$(git rev-parse HEAD)" != "$(git rev-parse origin/main)" ]]; then
-    echo "deploy:production: refusing — local main has diverged from origin/main. Push or pull first." >&2
+    echo "deploy:production: refusing — HEAD is not origin/main's current tip. Push or pull first." >&2
     exit 1
   fi
 fi
