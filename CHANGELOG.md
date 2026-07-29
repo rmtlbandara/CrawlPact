@@ -6,6 +6,36 @@ changelog, see the `/changelog` page on the public website.
 All notable changes are grouped by development "Part," per `docs/product/CRAWLPACT_FINAL_SRS.md`
 §37.
 
+## Post-Launch Trust Fixes — Legal Pages, Domain Re-save, Branding (2026-07-29)
+
+Two direct `wrangler deploy` pushes straight to production this session (bypassing the guarded
+`scripts/build.sh` pipeline added below) put a stale build live again, re-surfacing the
+"Local Development environment" banner bug on `crawlpact.com`'s marketing pages. Root cause
+was already fixed 2026-07-27 (see below); it only reproduces when deploying from a build that
+didn't go through `scripts/build.sh`, e.g. a local `wrangler deploy` run from a machine with a
+`.dev.vars` file present. No code change needed here — the fix is deploying through the gated
+`deploy-production.yml` workflow, which builds from a clean checkout.
+
+### Fixed
+
+- **Privacy Policy, Terms, and Acceptable Use all cited a nonexistent SRS section.** Every one
+  said "Draft, pending formal legal review before production launch (see SRS §39)" — the SRS
+  has no §39, and no section anywhere addresses legal review. Live since the very first commit,
+  on pages real signed-up users rely on. Replaced with an honest notice that doesn't cite a
+  document it isn't in: "Draft — not yet reviewed by a lawyer."
+- **Re-saving a previously-removed domain returned a generic 500.** `domains` had a table-wide
+  `UNIQUE(owner_user_id, canonical_origin)`, but removal is a soft delete (`deleted_at` only);
+  the app's duplicate check filtered to live rows, missed the leftover soft-deleted row, and hit
+  the real unique index on insert. Replaced with a partial unique index scoped to
+  `WHERE deleted_at IS NULL` (migration `0017_domains_unique_origin_excludes_soft_deleted.sql`,
+  applied to production D1).
+
+### Added
+
+- A real CrawlPact logo mark (SRS §10.13) wired into favicon, OG image, public header, app nav,
+  admin sidebar, footer, and printed/exported audit reports (§10.44) — all previously showed
+  plain text or a placeholder letter.
+
 ## Release-Engineering Hardening — CI/CD Pipeline, Environment Contract, Live Production Bugs (2026-07-27)
 
 Full audit and implementation of the development-to-production lifecycle: git/GitHub/Cloudflare/
