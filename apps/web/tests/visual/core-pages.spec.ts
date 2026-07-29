@@ -2,6 +2,7 @@ import { expect, test } from "@playwright/test";
 import { addVirtualAuthenticator } from "../e2e/helpers/webauthn";
 import { registerNewAccount, signInWithPasskey } from "../e2e/helpers/auth";
 import { findUserIdByDisplayName, grantSuperAdmin } from "../e2e/helpers/admin-db";
+import { waitForVisualReadiness } from "./helpers/readiness";
 
 /**
  * Visual regression baseline for SRS §10.56/§10.57 ("core pages pass visual
@@ -45,7 +46,7 @@ const ROUTES = [
 for (const { name, path } of ROUTES) {
   test(`${name} (${path}) matches its visual baseline`, async ({ page }) => {
     await page.goto(path);
-    await page.waitForLoadState("networkidle");
+    await waitForVisualReadiness(page);
     await expect(page).toHaveScreenshot(`${name}.png`, {
       fullPage: true,
       animations: "disabled",
@@ -79,7 +80,7 @@ test.describe("authenticated routes", () => {
     const displayName = `Visual Customer ${Date.now()}-${crypto.randomUUID().slice(0, 8)}`;
     await registerNewAccount(page, displayName);
     await page.goto("/app");
-    await page.waitForLoadState("networkidle");
+    await waitForVisualReadiness(page);
     await expect(page).toHaveScreenshot("app-dashboard-empty.png", {
       fullPage: true,
       animations: "disabled",
@@ -98,7 +99,7 @@ test.describe("authenticated routes", () => {
     await page.waitForURL("**/");
     await signInWithPasskey(page);
     await page.goto("/admin/settings");
-    await page.waitForLoadState("networkidle");
+    await waitForVisualReadiness(page);
     await expect(page).toHaveScreenshot("admin-settings.png", {
       fullPage: true,
       animations: "disabled",
