@@ -1,4 +1,6 @@
 ---
+import BrandMark from "./BrandMark.astro";
+
 const year = new Date().getFullYear();
 
 const columns = [
@@ -41,7 +43,15 @@ const columns = [
     class="mx-auto grid max-w-[1240px] gap-10 px-4 py-12 sm:px-6 md:grid-cols-[1.2fr_1fr_1fr_1fr]"
   >
     <div>
-      <p class="text-h3 font-semibold text-neutral-950">CrawlPact</p>
+      <div class="flex items-center gap-2">
+        <span
+          aria-hidden="true"
+          class="flex size-7 items-center justify-center rounded-control bg-brand-600 text-white"
+        >
+          <BrandMark class="size-4" />
+        </span>
+        <p class="text-h3 font-semibold text-neutral-950">CrawlPact</p>
+      </div>
       <p class="mt-2 max-w-xs text-supporting text-neutral-600">
         AI Crawler Policy Auditor &amp; Monitor. Audit and monitor your website's declared AI
         crawler policy — vendor neutral, evidence based, no AI model required.

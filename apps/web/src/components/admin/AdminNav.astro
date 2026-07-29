@@ -2,6 +2,7 @@
 import { getAdminEnvironment } from "../../lib/admin/environment";
 import { SignOutButton } from "../auth/SignOutButton";
 import { AdminMobileNav } from "./AdminMobileNav";
+import BrandMark from "../BrandMark.astro";
 
 export type Props = { displayName: string };
 const { displayName } = Astro.props;
@@ -81,7 +82,10 @@ function isActive(href: string): boolean {
     aria-label="Super Admin navigation"
   >
     <div class="flex items-center gap-2 border-b border-neutral-800 px-4 py-4">
-      <a href="/admin" class="text-body font-semibold text-white">CrawlPact</a>
+      <a href="/admin" class="flex items-center gap-2 text-body font-semibold text-white">
+        <BrandMark class="size-5" />
+        CrawlPact
+      </a>
       <span
         class="rounded-pill bg-neutral-800 px-2 py-0.5 text-caption font-medium text-neutral-300"
       >

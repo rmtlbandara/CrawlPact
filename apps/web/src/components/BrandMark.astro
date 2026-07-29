@@ -1,0 +1,25 @@
+---
+// The CrawlPact mark: a structured "C" bracket (rules / agreement / protected
+// access) with a route line exiting through its open side into a monitoring
+// node (crawler path + observation point) — see SRS §10.13 "Logo Direction".
+// Colour is inherited via `currentColor` so callers control it with a text
+// colour class; geometry mirrors public/favicon.svg and public/og-image.svg.
+export type Props = { class?: string };
+const { class: className } = Astro.props;
+---
+
+<svg
+  viewBox="0 0 32 32"
+  fill="none"
+  xmlns="http://www.w3.org/2000/svg"
+  aria-hidden="true"
+  class={className}
+>
+  <path
+    d="M21 9h-8a4 4 0 0 0-4 4v6a4 4 0 0 0 4 4h8"
+    stroke="currentColor"
+    stroke-width="2.4"
+    stroke-linecap="round"></path>
+  <path d="M12 16h11" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"></path>
+  <rect x="23.2" y="14.4" width="3.2" height="3.2" rx="0.8" fill="currentColor"></rect>
+</svg>
