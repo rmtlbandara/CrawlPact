@@ -9,7 +9,7 @@
       "Bash(git log*)",
       "Bash(wrangler d1 migrations list*)"
     ],
-    "deny": ["Bash(wrangler deploy*)", "Bash(git push*)", "Bash(rm -rf *)"]
+    "deny": ["Bash(wrangler deploy*)", "Bash(rm -rf *)"]
   },
   "env": {
     "CI": "false"
