@@ -503,15 +503,64 @@ what changed and what was deliberately left alone, with reasoning.
   Linux-environment baseline is still needed for the actual `ubuntu-latest` CI runner, and CI
   still isn't wired to run this suite at all. Content-accuracy and CI-wiring are two separate
   problems; only the first is fixed.
-- **Not done, explicitly**: CI-wiring the visual suite (see immediately above); a manual
-  screen-reader walkthrough with a human listening (accessibility
-  was verified via axe-core's accessibility-tree analysis throughout every phase, which is real
-  automated coverage, but is not the same thing as a human using VoiceOver or NVDA); and the
-  source document's full A–J final deliverables package assembled into that exact document
-  structure (this spec doc plus each phase's commit messages carry the same information, but
-  weren't reformatted into that specific package).
+- **Not done, explicitly** (as of 2026-07-28): CI-wiring the visual suite (see immediately
+  above); a manual screen-reader walkthrough with a human listening (accessibility was verified
+  via axe-core's accessibility-tree analysis throughout every phase, which is real automated
+  coverage, but is not the same thing as a human using VoiceOver or NVDA); and the source
+  document's full A–J final deliverables package assembled into that exact document structure
+  (this spec doc plus each phase's commit messages carry the same information, but weren't
+  reformatted into that specific package).
+
+### 12.1 Second verification pass (2026-07-29)
+
+Re-checked this section against the source brief line-by-line rather than just this document's
+own notes, and closed every gap that was genuinely closeable without a human in the loop or a
+merge to `main`:
+
+- **`pnpm quality` run as the literal combined command** (not just its constituent steps
+  separately, which is all any earlier session actually did) — passes clean.
+- **`pnpm secrets:scan`** — run for the first time this session (previously never run at all,
+  only noted as a gap). No findings.
+- **Broken-internal-link scan** — no dedicated tool existed for this brief-required check; wrote
+  a one-off crawler seeded from `/sitemap.xml`, walked 62 internal URLs, zero broken links. Public
+  routes only (authenticated `/app/*`/`/admin/*` routes need a session and are already covered by
+  real click-through navigation in the e2e suite, not a link crawler).
+- **Table of contents on guide pages** — explicitly required by source brief §8, never built
+  until now. Added to `guides/[slug].astro`, sourced from Astro's own heading extraction, shown
+  only when a guide has 3+ sections.
+- **Forced-colors mode and 400% zoom reflow** — neither had automated coverage. Added
+  `apps/web/tests/a11y/forced-colors-and-zoom.spec.ts`; all pass except the keyboard-focus check
+  on `mobile-safari`, skipped for the same already-documented WebKit mobile Tab-focus emulation
+  limitation as the pre-existing skip-link test (`KNOWN_RISKS.md`).
+- **Bundle-size / hydrated-island-count before-vs-after** — required by source brief §16, never
+  recorded. Built the base commit (`fd8b94e`) in a git worktree and compared: client JS 700K →
+  704K (+4K, from the three new pure-presentational components), island counts identical on every
+  representative page (6/2/2/2) — confirms the "zero added client JS" design intent actually held,
+  not just that it was intended.
+- **Lighthouse wired into CI** — was ad hoc/manual only. `scripts/lighthouse-check.mjs` +
+  `.github/workflows/deploy-preview.yml` now gate every preview deploy against real Lighthouse
+  scores from the actual deployed Worker (not a local approximation — `astro dev` returned
+  genuine `500`s under Lighthouse's throttling, `wrangler dev`/preview builds did not).
+- **Visual-regression CI wiring** — `.github/workflows/visual-regression.yml` built: a `compare`
+  job (every push/PR, fails on drift) and an `update-baseline` job (workflow_dispatch-only, the
+  sole path that can change the baseline, generates on a real `ubuntu-latest` runner). **Actually
+  attempted to run the bootstrap this session** (`gh workflow run visual-regression.yml --ref
+feat/evidence-observatory-ui-ux-redesign`) and hit a real GitHub constraint: `workflow_dispatch`
+  only works for workflow files already present on the repository's default branch — confirmed by
+  the API's own `404` response, not assumed. This branch has never been merged, so a real Linux
+  baseline cannot exist until after this PR merges to `main`. See `KNOWN_RISKS.md` for the full
+  account and the exact follow-up command to run post-merge.
+
+**Still not closeable without a human, by nature, not by choice**: the manual screen-reader
+walkthrough. No amount of additional automated tooling substitutes for a person actually using
+VoiceOver or NVDA — this is flagged rather than worked around.
+
+**Still not closeable without a merge**: the real Linux visual-regression baseline (machinery is
+built and pushed; execution is blocked on the PR that was always going to be required).
 
 Per this document's own completion standard: **the redesign has zero known critical or
 high-severity defects and no known regressions after the automated and manual verification
-actually performed** — not "fully complete," since the Phase 8 items above genuinely weren't
-done. Continuing this work in a later session should start from this section.
+actually performed.** Two items remain open, and both are now blocked on a specific, named,
+external prerequisite (a human screen-reader session; a merge to `main`) rather than on
+undone work — that is a materially different state from "not fully complete" with no path
+forward. Continuing this work in a later session should start from this section.
