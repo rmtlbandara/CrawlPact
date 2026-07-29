@@ -22,31 +22,35 @@ export default defineConfig({
   projects: [
     {
       name: "mobile-360",
-      use: { viewport: { width: 360, height: 740 }, ...devices["Desktop Chrome"] },
+      // devices["Desktop Chrome"] carries its own viewport (1280x720), so it
+      // must be spread first — otherwise it silently overwrites the explicit
+      // viewport below and every "mobile"/"tablet" project actually
+      // screenshots at desktop width. See docs/status/KNOWN_RISKS.md.
+      use: { ...devices["Desktop Chrome"], viewport: { width: 360, height: 740 } },
     },
     {
       name: "mobile-390",
-      use: { viewport: { width: 390, height: 844 }, ...devices["Desktop Chrome"] },
+      use: { ...devices["Desktop Chrome"], viewport: { width: 390, height: 844 } },
     },
     {
       name: "mobile-480",
-      use: { viewport: { width: 480, height: 900 }, ...devices["Desktop Chrome"] },
+      use: { ...devices["Desktop Chrome"], viewport: { width: 480, height: 900 } },
     },
     {
       name: "tablet-768",
-      use: { viewport: { width: 768, height: 1024 }, ...devices["Desktop Chrome"] },
+      use: { ...devices["Desktop Chrome"], viewport: { width: 768, height: 1024 } },
     },
     {
       name: "desktop-1024",
-      use: { viewport: { width: 1024, height: 800 }, ...devices["Desktop Chrome"] },
+      use: { ...devices["Desktop Chrome"], viewport: { width: 1024, height: 800 } },
     },
     {
       name: "desktop-1280",
-      use: { viewport: { width: 1280, height: 900 }, ...devices["Desktop Chrome"] },
+      use: { ...devices["Desktop Chrome"], viewport: { width: 1280, height: 900 } },
     },
     {
       name: "desktop-1440",
-      use: { viewport: { width: 1440, height: 960 }, ...devices["Desktop Chrome"] },
+      use: { ...devices["Desktop Chrome"], viewport: { width: 1440, height: 960 } },
     },
   ],
 });

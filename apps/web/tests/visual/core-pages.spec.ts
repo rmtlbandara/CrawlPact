@@ -15,6 +15,17 @@ import { findUserIdByDisplayName, grantSuperAdmin } from "../e2e/helpers/admin-d
  * layouts, the DB-driven changelog, and the 404 page) — not just the
  * original six core public routes.
  */
+// Guards against the exact bug this suite has already hit once: a project's
+// viewport getting silently overridden by a later-spread device preset (see
+// playwright.visual.config.ts). Every project name ends in its intended
+// width (e.g. "mobile-360"), so this asserts the real, live viewport used to
+// render the page — not just what the config file claims — before any
+// screenshot in this file is taken.
+test.beforeEach(async ({ page }, testInfo) => {
+  const expectedWidth = Number(testInfo.project.name.split("-").pop());
+  expect(page.viewportSize()?.width).toBe(expectedWidth);
+});
+
 const ROUTES = [
   { name: "home", path: "/" },
   { name: "about", path: "/about" },
