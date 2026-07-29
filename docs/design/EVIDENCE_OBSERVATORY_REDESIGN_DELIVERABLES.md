@@ -56,7 +56,8 @@ requirement was reduced, reinterpreted, or silently dropped.
 - **Starting branch:** `feat/evidence-observatory-ui-ux-redesign`
 - **Starting commit SHA:** `fd8b94e70fd7be21bc332c589a2b66528b10ce54` (`origin/main` at branch
   creation)
-- **Ending local commit SHA:** `8a13208` (29 commits ahead of `origin/main` as of this document)
+- **Ending local commit SHA:** `4e5edb9` (35 commits ahead of `origin/main` as of this document —
+  see PR [#35](https://github.com/rmtlbandara/CrawlPact/pull/35) for the full set)
 - **Existing failures discovered before this work began:** none new — the pre-session baseline
   (`pnpm quality` full pass, `test:e2e` 25/38 with 4 worker-contention timeouts confirmed passing
   in isolation, `test:a11y` 51/54 with 1 pre-existing documented mobile-safari tooling
@@ -198,10 +199,27 @@ Exact commands and results, most recent full run:
 - Admin list pagination is designed but not wired to any admin page (`admin/users`,
   `admin/webhooks` render all rows unpaginated) — confirmed still present during Phase 7 review,
   real feature work, not a redesign-scope item.
-- Visual-regression suite's CI-wiring and cross-platform (macOS vs. `ubuntu-latest`) baseline gap
-  — content is now accurate (this session), but CI-wiring and a Linux baseline are still needed.
-- No manual screen-reader walkthrough has ever been performed on this product (pre-existing gap,
-  reconfirmed still open).
+- No manual screen-reader walkthrough has ever been performed on this product. This is the one
+  item in this whole redesign that genuinely cannot be closed by an agent working alone — it
+  needs a human using VoiceOver or NVDA.
+
+**Resolved during the second verification pass (2026-07-29)** — see
+`EVIDENCE_OBSERVATORY_REDESIGN_SPEC.md` §12.1 for full detail:
+
+- `pnpm quality` (the literal combined command) and `pnpm secrets:scan` both run and pass clean
+  for the first time this session.
+- A broken-internal-link scan (62 URLs from the sitemap, zero broken) and a bundle-size/
+  island-count before-vs-after comparison (700K → 704K, identical island counts — the "zero
+  added client JS" claim is now verified, not just asserted) were both performed.
+- Lighthouse is now wired into CI (`scripts/lighthouse-check.mjs` +
+  `.github/workflows/deploy-preview.yml`), gating every preview deploy against the real deployed
+  Worker.
+- Visual-regression CI-wiring is built (`.github/workflows/visual-regression.yml`): a `compare`
+  job runs on every PR now (confirmed running for real on this PR); an `update-baseline` job
+  generates a real Linux baseline but is **workflow_dispatch-only and can only target a workflow
+  file already on the default branch** — a real GitHub constraint hit and confirmed via a live
+  `gh workflow run` `404` this session, not a guess. It can only run once this PR merges. Tracked
+  as the one remaining action item in this section.
 
 **Deferred improvements** (not defects, just not done):
 
@@ -209,7 +227,6 @@ Exact commands and results, most recent full run:
   `Finding` data was checked and found not to have five genuinely distinct fields — fixing that
   properly means changing `packages/policy`'s finding-generation logic, out of this redesign's
   scope.
-- Lighthouse is not wired into CI (this session's measurements were ad hoc, run manually).
 - The domain-detail page's full-report view could also use `ProvenanceHeader` — noted as a
   Phase 6 candidate in the spec doc, not done.
 
@@ -225,16 +242,18 @@ about production behaviour beyond what `docs/status/IMPLEMENTATION_STATUS.md` an
 ## J. Deployment status
 
 - **No production deployment was performed.** No `wrangler deploy` command was run at any point
-  this session; `wrangler deploy*` remains a hard deny in `.claude/settings.json` throughout.
-- **No push or remote PR to `main` was performed.** All 29 commits live on
-  `feat/evidence-observatory-ui-ux-redesign`, pushed to `origin` at the user's explicit request
-  earlier in this session. `origin/main` is unchanged from `fd8b94e70fd7be21bc332c589a2b66528b10ce54`
-  throughout — confirmed directly after an accidental `git push origin main` was correctly
-  rejected by git as a non-fast-forward push (see the branch's own history for that incident;
-  nothing was lost or overwritten).
-- **Exact safe next step for review:** open a pull request from
-  `feat/evidence-observatory-ui-ux-redesign` into `main` for human review, or continue this
-  session's work (Phase 8's remaining items: CI-wiring the visual suite with a Linux-generated
-  baseline, a real screen-reader walkthrough, Lighthouse-in-CI). Either way, nothing further
-  should touch `main` or production without the user's separate, explicit, in-the-moment
-  authorization, per this repository's own `CLAUDE.md`.
+  across this work; `wrangler deploy*` remains a hard deny in `.claude/settings.json` throughout.
+- **`origin/main` remains unchanged** from `fd8b94e70fd7be21bc332c589a2b66528b10ce54` throughout
+  this entire redesign. Nothing has merged into it.
+- **A pull request is now open**: [#35](https://github.com/rmtlbandara/CrawlPact/pull/35),
+  `feat/evidence-observatory-ui-ux-redesign` → `main`, 36 commits, opened for human review — not
+  merged, not auto-mergeable, no approval given by this session on its own behalf. CI is running
+  against it for real (both the existing quality/e2e/a11y gate and the new visual-regression
+  `compare` job).
+- **Exact next step, in order**: (1) human review and merge of PR #35; (2) once merged, run `gh
+workflow run visual-regression.yml --ref main` once to generate the real Linux baseline, review
+  the generated PNGs, confirm `compare` goes green on the next PR; (3) schedule a human
+  screen-reader session — the one item nothing in this pipeline can automate. None of this
+  implies or authorizes a production deploy; that remains a separate decision requiring the
+  user's explicit, in-the-moment permission at the time it's actually requested, per this
+  repository's own `CLAUDE.md`.
