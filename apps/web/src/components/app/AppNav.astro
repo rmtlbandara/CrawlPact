@@ -1,6 +1,7 @@
 ---
 import { SignOutButton } from "../auth/SignOutButton";
 import { NotificationBadge } from "./NotificationBadge";
+import BrandMark from "../BrandMark.astro";
 
 export type Props = { displayName: string };
 const { displayName } = Astro.props;
@@ -23,7 +24,15 @@ function isActive(href: string): boolean {
 <header class="border-b border-neutral-200 bg-white">
   <div class="mx-auto flex max-w-[1100px] items-center justify-between gap-4 px-4 py-3 sm:px-6">
     <nav class="flex items-center gap-1" aria-label="Dashboard navigation">
-      <a href="/" class="mr-4 text-body font-semibold text-neutral-950"> CrawlPact </a>
+      <a href="/" class="mr-4 flex items-center gap-2 text-body font-semibold text-neutral-950">
+        <span
+          aria-hidden="true"
+          class="flex size-7 items-center justify-center rounded-control bg-brand-600 text-white"
+        >
+          <BrandMark class="size-4" />
+        </span>
+        CrawlPact
+      </a>
       {
         links.map((link) => (
           <a

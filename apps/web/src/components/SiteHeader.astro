@@ -1,5 +1,6 @@
 ---
 import { MobileNav } from "./MobileNav";
+import BrandMark from "./BrandMark.astro";
 
 const links = [
   { label: "Product", href: "/#product" },
@@ -30,8 +31,9 @@ function isCurrentSection(href: string): boolean {
       <span
         aria-hidden="true"
         class="flex size-8 items-center justify-center rounded-control bg-brand-600 text-white"
-        >C</span
       >
+        <BrandMark class="size-5" />
+      </span>
       CrawlPact
     </a>
 
