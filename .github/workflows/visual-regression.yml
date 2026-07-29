@@ -184,7 +184,7 @@ jobs:
           # this workflow was introduced. Confirmed 2026-07-29: every one of
           # the 105 committed snapshots is suffixed -darwin.png; ubuntu-latest
           # needs -linux.png, and none existed.
-          git add 'apps/web/tests/visual/*-snapshots'
+          git add apps/web/tests/visual/core-pages.spec.ts-snapshots
           if git diff --cached --quiet; then
             echo "No baseline changes to commit."
           else
