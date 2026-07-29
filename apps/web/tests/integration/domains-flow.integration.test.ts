@@ -345,4 +345,30 @@ describe("saved domains, groups, and account management (real D1)", () => {
     );
     expect(response.status).toBe(403);
   });
+
+  it("allows re-saving a domain after it was removed (soft-deleted row must not block re-creation)", async () => {
+    const { cookie: freshCookie } = await signUpTestUser("Remi");
+
+    const createResponse = await createDomainRoute(
+      ctx(jsonRequest("http://x/domains", "POST", { target: "reusable-example.com" }, freshCookie)),
+    );
+    expect(createResponse.status).toBe(201);
+    const created = await readJson<{ domainId: string }>(createResponse);
+    if (!created.ok) throw new Error("create failed");
+
+    const deleteResponse = await deleteDomainRoute(
+      ctx(mutatingRequest("http://x/domains/x", "DELETE", freshCookie), {
+        domainId: created.data.domainId,
+      }),
+    );
+    expect(deleteResponse.status).toBe(200);
+
+    const recreateResponse = await createDomainRoute(
+      ctx(jsonRequest("http://x/domains", "POST", { target: "reusable-example.com" }, freshCookie)),
+    );
+    expect(recreateResponse.status).toBe(201);
+    const recreated = await readJson<{ domainId: string }>(recreateResponse);
+    if (!recreated.ok) throw new Error("recreate failed");
+    expect(recreated.data.domainId).not.toBe(created.data.domainId);
+  });
 });
