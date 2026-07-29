@@ -1,4 +1,6 @@
 import { expect, test } from "@playwright/test";
+import { readdirSync } from "node:fs";
+import { fileURLToPath } from "node:url";
 
 /**
  * Two automated checks the existing a11y suite didn't cover:
@@ -25,6 +27,20 @@ const REPRESENTATIVE_ROUTES = [
   "/guides/applebot-vs-applebot-extended",
   "/sign-in",
 ];
+
+// Reflow overflow on these two templates is content-driven (a long
+// unbroken official-source URL or inline `code` token), not
+// template-driven — one sample page per template isn't enough to catch
+// it, as a real CI run against /crawlers/gptbot and /crawlers/chatgpt-user
+// proved. Sweep every real content entry instead of guessing which ones
+// are long enough to matter.
+const contentDir = fileURLToPath(new URL("../../src/content/", import.meta.url));
+const CRAWLER_ROUTES = readdirSync(new URL("crawlers/", `file://${contentDir}`))
+  .filter((f) => f.endsWith(".md"))
+  .map((f) => `/crawlers/${f.replace(/\.md$/, "")}`);
+const GUIDE_ROUTES = readdirSync(new URL("guides/", `file://${contentDir}`))
+  .filter((f) => f.endsWith(".md"))
+  .map((f) => `/guides/${f.replace(/\.md$/, "")}`);
 
 test.describe("forced-colors mode", () => {
   // Synthetic Tab-key focus is unreliable under WebKit's mobile-device
@@ -53,19 +69,29 @@ test.describe("forced-colors mode", () => {
   }
 });
 
+function expectNoReflowOverflow(route: string) {
+  test(`${route} has no horizontal scrolling at a 320px effective viewport`, async ({ page }) => {
+    await page.setViewportSize({ width: 320, height: 690 });
+    await page.goto(route);
+    const scrollWidth = await page.evaluate(() => document.documentElement.scrollWidth);
+    const clientWidth = await page.evaluate(() => document.documentElement.clientWidth);
+    expect(
+      scrollWidth,
+      `scrollWidth (${scrollWidth}) should not exceed clientWidth (${clientWidth})`,
+    ).toBeLessThanOrEqual(
+      clientWidth + 1, // 1px tolerance for sub-pixel rounding
+    );
+  });
+}
+
 test.describe("400% zoom reflow (WCAG 1.4.10)", () => {
   for (const route of REPRESENTATIVE_ROUTES) {
-    test(`${route} has no horizontal scrolling at a 320px effective viewport`, async ({ page }) => {
-      await page.setViewportSize({ width: 320, height: 690 });
-      await page.goto(route);
-      const scrollWidth = await page.evaluate(() => document.documentElement.scrollWidth);
-      const clientWidth = await page.evaluate(() => document.documentElement.clientWidth);
-      expect(
-        scrollWidth,
-        `scrollWidth (${scrollWidth}) should not exceed clientWidth (${clientWidth})`,
-      ).toBeLessThanOrEqual(
-        clientWidth + 1, // 1px tolerance for sub-pixel rounding
-      );
-    });
+    expectNoReflowOverflow(route);
+  }
+});
+
+test.describe("400% zoom reflow — every crawler and guide content page", () => {
+  for (const route of [...CRAWLER_ROUTES, ...GUIDE_ROUTES]) {
+    expectNoReflowOverflow(route);
   }
 });

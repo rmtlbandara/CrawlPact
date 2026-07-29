@@ -61,13 +61,13 @@ const relatedCrawlers = allCrawlers
       </div>
     </dl>
 
-    <div class="prose prose-neutral mt-8 max-w-none text-body text-neutral-800">
+    <div class="prose prose-neutral mt-8 max-w-none wrap-break-word text-body text-neutral-800">
       <Content />
     </div>
 
     <a
       href={crawler.data.officialSourceUrl}
-      class="mt-6 inline-block text-body text-brand-700 underline underline-offset-2"
+      class="mt-6 block wrap-break-word text-body text-brand-700 underline underline-offset-2"
       rel="noopener"
     >
       Official source: {crawler.data.officialSourceUrl}
