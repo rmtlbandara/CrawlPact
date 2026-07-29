@@ -14,8 +14,8 @@ duplicate work already in progress or already decided against in an ADR.
 1. Create a branch off `main`.
 2. Make the change, including tests, in the same commit/PR as any documentation it affects.
 3. Run `pnpm verify:push` locally (reproduces the required CI gate — format, lint, typecheck,
-   unit/integration tests, build, and a Chromium E2E/accessibility smoke run against a
-   production-like local server). `pnpm check:fast` gives quicker feedback while iterating.
+   unit/integration tests, build, and a Chromium E2E/accessibility smoke run). `pnpm check:fast`
+   gives quicker feedback while iterating.
 4. Open a PR describing what changed and, if relevant, which SRS requirement(s) it addresses —
    reference the requirement ID from `docs/status/REQUIREMENTS_TRACEABILITY.md` where
    applicable.

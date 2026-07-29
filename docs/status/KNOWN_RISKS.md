@@ -289,3 +289,30 @@ Found while implementing the CI/CD and release-flow redesign described in
 | Risk                                                                                                                                                        | Detail                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                     | Status                                                                                                                                                                                                                                                                                                                                                                        |
 | ----------------------------------------------------------------------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | `browser-smoke`'s official-Playwright-container approach failed in real GitHub Actions CI (never reproduced locally, since local testing never used Docker) | `astro build` failed with `fetch failed` / `connect ECONNREFUSED 127.0.0.1:<ephemeral-port>` inside `@astrojs/cloudflare`'s `prerenderer.js` (`getStaticPaths`'s internal loopback fetch during static prerendering) — reproducibly, specifically when the job ran inside GitHub Actions' `container: mcr.microsoft.com/playwright:v1.62.0-noble` executor. The `quality` job's identical `pnpm build`, on a plain (non-containerized) `ubuntu-latest` runner, succeeded in the same run — isolating the container itself as the differentiator, not the build or the app. | **Fixed** — dropped the job-level `container:`; `browser-smoke` now runs on a plain `ubuntu-latest` runner with an explicit `playwright install --with-deps chromium` step instead. Loses a minor CI-speed optimization (pre-installed browser binaries) in exchange for proven reliability — matches this remediation's own priority (deterministic over marginally faster). |
+
+## Built-server E2E reverted after reproducing a real crash in actual CI (2026-07-29, PR #43)
+
+Testing required E2E against a real built Worker (`wrangler dev --local` serving
+`apps/web/dist/server/wrangler.json`) instead of Astro's dev server was implemented, verified
+clean in 3+ consecutive local runs, pushed, and then **failed in real GitHub Actions CI** — twice,
+identically. Root cause, confirmed by downloading the actual `wrangler-dev.log` artifact from the
+failed run: `wrangler dev --local`'s own D1 connection breaks (empty `[ERROR]`,
+`ProxyController2.emitErrorEvent`/`castErrorCause`) once a test performs a direct D1 write via a
+**separate** `wrangler d1 execute --local` process (`tests/e2e/helpers/admin-db.ts`'s
+`grantSuperAdmin`, used by every Super Admin e2e test) while the live server holds its own open
+D1 connection to the same local sqlite file — both processes touching one file concurrently. This
+reproduced 100% of the time in real CI (Linux, GitHub-hosted runner), not just an artifact of
+local testing on macOS.
+
+**Reverted**: `ci.yml`'s `browser-smoke` job and `scripts/verify-push.sh` both use `astro dev`
+again, matching each other so `verify:push` keeps meaning what it claims (a real local
+reproduction of the CI gate). The genuinely-production-like-server idea is real and still worth
+pursuing — a disclosed Phase 2 item — but needs a real fix for the D1-access conflict first (e.g.
+routing `admin-db.ts`'s writes through the running server's own D1 binding via an authenticated
+test-only endpoint, instead of a second process), not just retrying the same approach.
+
+This is also the reason `global-setup.ts`'s warmup-skip-under-`CI` logic's stated rationale
+changed: it's still correctly skipped under CI (workers: 1 removes the concurrency the warmup
+existed for, regardless of which server is in use), but the earlier claim that CI was testing
+against "a genuinely built, pre-bundled Worker" no longer applies now that this reverted back to
+`astro dev`.

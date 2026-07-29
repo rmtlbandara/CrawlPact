@@ -99,7 +99,7 @@ jobs:
         run: pnpm build
 
   browser-smoke:
-    name: Chromium E2E + accessibility smoke (production-like build)
+    name: Chromium E2E + accessibility smoke
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v7
@@ -119,34 +119,16 @@ jobs:
       - name: Install Playwright Chromium
         run: pnpm exec playwright install --with-deps chromium
 
-      - name: Build
-        # Deliberately NOT run inside the official Playwright container
-        # (mcr.microsoft.com/playwright:...): confirmed live that Astro's
-        # Cloudflare adapter's static prerenderer makes an internal loopback
-        # fetch() during `astro build` that gets ECONNREFUSED specifically
-        # inside GitHub Actions' `container:` job executor (the `quality`
-        # job's identical `pnpm build`, on a plain runner with no container,
-        # succeeds) — see docs/status/KNOWN_RISKS.md.
-        run: pnpm build
-
       - name: Apply D1 migrations and seed data
         run: pnpm db:migrate && pnpm db:seed
 
-      - name: Write CI-local .dev.vars for the built Worker
-        # wrangler resolves .dev.vars relative to the *config file's own
-        # directory*, not cwd (confirmed in wrangler's own
-        # getVarsForDev/getLocalPersistencePath source) — since this job runs
-        # `wrangler dev` against the generated apps/web/dist/server/wrangler.json,
-        # the override file must live at apps/web/dist/server/.dev.vars, not
-        # apps/web/.dev.vars (which is where astro dev's platform proxy reads
-        # it from instead). Without this, the built Worker would boot with
-        # the production vars baked into the build (WEBAUTHN_RP_ID=
-        # crawlpact.com, etc. — plain `pnpm build` bakes the top-level
-        # wrangler.jsonc vars, not env.preview/production-specific ones),
-        # which would fail every passkey ceremony against localhost:4321.
+      - name: Write CI-local .dev.vars for Cloudflare secret bindings
+        # SESSION_SIGNING_SECRET/PADDLE_API_KEY/PADDLE_WEBHOOK_SECRET are
+        # secret_text bindings, not wrangler.jsonc vars — Astro's Cloudflare
+        # dev-mode platform proxy only receives secret values from a local
+        # .dev.vars file.
         run: |
-          mkdir -p apps/web/dist/server
-          cat > apps/web/dist/server/.dev.vars << 'DEVVARS'
+          cat > apps/web/.dev.vars << 'DEVVARS'
           PUBLIC_APP_ENV=local
           PUBLIC_SITE_URL=http://localhost:4321
           SESSION_SIGNING_SECRET=ci-placeholder-secret-value-not-real-00000000
@@ -163,29 +145,24 @@ jobs:
           AUDIT_ENGINE_ENABLED=true
           DEVVARS
 
-      - name: Start production-like Worker (wrangler dev --local)
-        # --persist-to explicitly points at the same directory
-        # `pnpm db:migrate`/`db:seed` already persisted to by default (their
-        # default, unset --persist-to resolves relative to apps/web/wrangler.jsonc's
-        # own directory, i.e. apps/web/.wrangler/state) — the generated
-        # apps/web/dist/server/wrangler.json lives one directory deeper, so
-        # without this override wrangler dev would default to a different,
-        # empty local D1/KV state.
+      - name: Start preview server
+        # Deliberately Astro dev mode, not `wrangler dev --local` against the
+        # built Worker: confirmed live (twice — once locally, once in this
+        # exact CI job) that wrangler dev --local crashes outright
+        # (Miniflare's D1 connection breaks) once a test's direct D1 write
+        # via a separate `wrangler d1 execute --local` process (
+        # tests/e2e/helpers/admin-db.ts, used to grant super_admin) runs
+        # concurrently with the live server holding its own D1 connection to
+        # the same local sqlite file. Astro dev's simpler platform-proxy D1
+        # access does not hold that same kind of connection and does not
+        # exhibit this crash. Reverting this one piece to dev mode — real
+        # production-like built-server E2E testing is deferred to a
+        # disclosed follow-up needing a real fix for that D1 access conflict
+        # (e.g. routing admin-db.ts's writes through the running server
+        # instead of a second process) — see docs/status/KNOWN_RISKS.md.
+        run: pnpm --filter @crawlpact/web dev &
         env:
-          # Disables an AI-agent-oriented wrangler feature (on by default in
-          # 4.114.0), not needed for an automated test run — an early
-          # suspect (since ruled out) in a dev-server crash found while
-          # designing this job; disabled defensively regardless. See
-          # docs/status/KNOWN_RISKS.md for the crash's actual confirmed
-          # root cause (global-setup.ts's warmup, now fixed).
-          X_LOCAL_EXPLORER: "false"
-        run: |
-          pnpm exec wrangler dev \
-            --config apps/web/dist/server/wrangler.json \
-            --local \
-            --persist-to apps/web/.wrangler/state \
-            --port 4321 \
-            > /tmp/wrangler-dev.log 2>&1 &
+          AUDIT_ENGINE_ENABLED: "true"
 
       - name: Wait for server
         run: npx wait-on http://localhost:4321 --timeout 60000
@@ -208,8 +185,6 @@ jobs:
           path: |
             playwright-report/
             test-results/
-            /tmp/wrangler-dev.log
-            apps/web/dist/server/wrangler.json
           retention-days: 14
           if-no-files-found: ignore
 

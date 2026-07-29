@@ -46,16 +46,12 @@ export default async function globalSetup(config: FullConfig): Promise<void> {
   // This entire warmup exists solely to work around Astro dev's (Vite's)
   // SSR dependency-optimizer race under *concurrent* Playwright workers —
   // see the class comment above. Required CI (ci.yml's browser-smoke job,
-  // and scripts/verify-push.sh) now runs against a genuinely built,
-  // pre-bundled Worker (wrangler dev --local against
-  // apps/web/dist/server/wrangler.json, no Vite dev-server involved at all)
-  // with a single worker (playwright.config.ts's workers: 1 in CI) — neither
-  // condition this warmup exists for is present. Confirmed empirically this
-  // warmup is not just unnecessary but actively harmful against that target:
-  // its `/api/auth/login/begin` warmup POST reproducibly crashed
-  // `wrangler dev --local` outright (see docs/status/KNOWN_RISKS.md).
-  // Skipped whenever CI is set; still runs for local ad hoc `pnpm test:e2e`
-  // against astro dev, where it remains genuinely needed.
+  // and scripts/verify-push.sh) runs with a single worker
+  // (playwright.config.ts's workers: 1 in CI), so that race cannot occur
+  // regardless of how many routes exist — the warmup has nothing left to
+  // protect against there. Skipped whenever CI is set; still runs for local
+  // ad hoc `pnpm test:e2e` (no CI env var, default parallel workers against
+  // astro dev), where the original race is still real.
   if (process.env.CI) return;
 
   const baseURL =

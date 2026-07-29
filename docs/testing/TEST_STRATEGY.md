@@ -61,18 +61,18 @@ skipped — that aggregate is the one required check:
 
 - **`quality`**: format check, lint, typecheck, unit tests, integration tests, `db:validate`,
   production build (equivalent to `pnpm quality`).
-- **`browser-smoke`**: builds the app for real, then runs the required E2E and accessibility
-  suites — Chromium only (`pnpm test:e2e:chromium` / `pnpm test:a11y:chromium`) — against
-  `wrangler dev --local` serving the actual generated `apps/web/dist/server/wrangler.json`, not
-  Astro's dev server. This is a genuinely production-like target: real Cloudflare Assets binding
-  behaviour (including its trailing-slash redirect on extension-less paths — see
-  `seo-metadata.spec.ts`), real D1/KV bindings, no Vite dependency-optimizer races. Runs on a
-  plain `ubuntu-latest` runner with Chromium installed directly (`playwright install --with-deps
-chromium`) — the official Playwright container was tried first but caused `astro build` to
-  fail (Astro's Cloudflare adapter's static prerenderer makes an internal loopback `fetch()`
-  during build that gets `ECONNREFUSED` specifically inside GitHub's `container:` job executor;
-  see `docs/status/KNOWN_RISKS.md`). One worker, one retry — a flaky test is reported as a real
-  failure, not silently re-run green.
+- **`browser-smoke`**: runs the required E2E and accessibility suites — Chromium only
+  (`pnpm test:e2e:chromium` / `pnpm test:a11y:chromium`) — against Astro's dev server. Testing
+  against a genuinely production-like target (`wrangler dev --local` serving the real generated
+  `apps/web/dist/server/wrangler.json`) was attempted during this job's redesign and reverted:
+  confirmed live, twice, that it crashes outright once a test's direct D1 write via a separate
+  `wrangler d1 execute --local` process (`tests/e2e/helpers/admin-db.ts`, used to grant
+  `super_admin`) runs concurrently with the live server holding its own D1 connection to the same
+  local sqlite file. Fixing that conflict (e.g. routing `admin-db.ts`'s writes through the
+  running server instead of a second process) is a disclosed follow-up — see
+  `docs/status/KNOWN_RISKS.md`. Runs on a plain `ubuntu-latest` runner with Chromium installed
+  directly (`playwright install --with-deps chromium`); one worker, one retry — a flaky test is
+  reported as a real failure, not silently re-run green.
 
 Full cross-browser coverage (`mobile-safari`, via `pnpm test:e2e` / `pnpm test:a11y` without the
 `:chromium` suffix) is not part of the required gate — run it locally before a major change or

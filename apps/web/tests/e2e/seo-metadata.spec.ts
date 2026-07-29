@@ -62,8 +62,9 @@ test.describe("Sitemap-listed pages carry correct, unique SEO metadata", () => {
       if (canonical) {
         // Compare against the final URL actually served, not the originally
         // requested sitemap path: the Cloudflare Workers Assets binding
-        // (exercised when testing against a real built Worker — see ci.yml's
-        // browser-smoke job — but not by Astro's dev server) 307-redirects
+        // (exercised only against a real deployed/built Worker, not Astro's
+        // dev server — confirmed while briefly testing CI against
+        // wrangler dev --local, see docs/status/KNOWN_RISKS.md) 307-redirects
         // extension-less paths to their trailing-slash form (e.g. /about ->
         // /about/, confirmed the same on production). Trailing slash itself
         // is normalized away before comparing: canonical generation is

@@ -8,7 +8,8 @@
 set -euo pipefail
 cd "$(dirname "$0")/.."
 
-DEV_VARS_PATH="apps/web/dist/server/.dev.vars"
+DEV_VARS_PATH="apps/web/.dev.vars"
+DEV_VARS_BACKUP=""
 SERVER_PID=""
 
 cleanup() {
@@ -16,9 +17,24 @@ cleanup() {
     kill "$SERVER_PID" 2>/dev/null || true
     wait "$SERVER_PID" 2>/dev/null || true
   fi
-  rm -f "$DEV_VARS_PATH"
+  # Astro 7's `astro dev` daemonizes by default, so $SERVER_PID may not be
+  # the real long-lived process — fall back to freeing the port directly.
+  lsof -ti:4321 2>/dev/null | xargs -r kill -9 2>/dev/null || true
+  # apps/web/.dev.vars is the developer's own real local-dev secrets file —
+  # never delete it outright. Restore whatever was there before this script
+  # ran (or remove the temp file if there was nothing to restore).
+  if [[ -n "$DEV_VARS_BACKUP" ]]; then
+    mv "$DEV_VARS_BACKUP" "$DEV_VARS_PATH"
+  else
+    rm -f "$DEV_VARS_PATH"
+  fi
 }
 trap cleanup EXIT
+
+if [[ -f "$DEV_VARS_PATH" ]]; then
+  DEV_VARS_BACKUP="$(mktemp)"
+  cp "$DEV_VARS_PATH" "$DEV_VARS_BACKUP"
+fi
 
 echo "==> Checking Node/pnpm versions"
 node_version="$(node --version)"
@@ -61,8 +77,7 @@ pnpm run db:validate
 echo "==> Production build"
 pnpm run build
 
-echo "==> Writing temporary CI-local .dev.vars (git-ignored, deleted on exit)"
-mkdir -p apps/web/dist/server
+echo "==> Writing temporary CI-local .dev.vars (restored to what was there before, on exit)"
 cat > "$DEV_VARS_PATH" << 'DEVVARS'
 PUBLIC_APP_ENV=local
 PUBLIC_SITE_URL=http://localhost:4321
@@ -80,34 +95,26 @@ BILLING_ENABLED=false
 AUDIT_ENGINE_ENABLED=true
 DEVVARS
 
-echo "==> Starting the production-like local Worker (wrangler dev --local)"
-# X_LOCAL_EXPLORER disabled: wrangler 4.114.0 enables this AI-agent-oriented
-# feature by default; it's not needed for an automated test run, and an
-# earlier (since corrected) hypothesis suspected it in a dev-server crash
-# found while building this script — disabled defensively regardless of
-# whether that suspicion held up. See docs/status/KNOWN_RISKS.md for the
-# crash's actual confirmed root cause (global-setup.ts's warmup, now fixed).
-X_LOCAL_EXPLORER=false pnpm exec wrangler dev \
-  --config apps/web/dist/server/wrangler.json \
-  --local \
-  --persist-to apps/web/.wrangler/state \
-  --port 4321 \
-  > /tmp/verify-push-wrangler-dev.log 2>&1 &
+echo "==> Starting the preview server (astro dev)"
+# Deliberately Astro dev mode, not `wrangler dev --local` against the built
+# Worker — confirmed live (locally, and in this exact CI job) that wrangler
+# dev --local crashes outright once a test's direct D1 write via a separate
+# `wrangler d1 execute --local` process (tests/e2e/helpers/admin-db.ts, used
+# to grant super_admin) runs concurrently with the live server holding its
+# own D1 connection to the same local sqlite file. Matches ci.yml's
+# browser-smoke job exactly, so this script keeps meaning what it claims to
+# mean: a local reproduction of the real required CI gate. See
+# docs/status/KNOWN_RISKS.md.
+AUDIT_ENGINE_ENABLED=true pnpm --filter @crawlpact/web dev > /tmp/verify-push-server.log 2>&1 &
 SERVER_PID=$!
 
 if ! npx wait-on http://localhost:4321 --timeout 60000; then
-  echo "verify:push: the local Worker never came up — see /tmp/verify-push-wrangler-dev.log" >&2
-  cat /tmp/verify-push-wrangler-dev.log >&2 || true
+  echo "verify:push: the local server never came up — see /tmp/verify-push-server.log" >&2
+  cat /tmp/verify-push-server.log >&2 || true
   exit 1
 fi
 
 echo "==> Required Chromium E2E smoke"
-# CI=true matters here, not just cosmetically: without it, playwright.config.ts
-# uses its local defaults — multiple parallel workers and its own spawned
-# webServer (astro dev) — instead of the single-worker, already-running-
-# built-server config this script actually set up. Running many concurrent
-# workers against wrangler dev --local this way is what reproduced a real
-# Miniflare crash while building this script — see docs/status/KNOWN_RISKS.md.
 CI=true PLAYWRIGHT_BASE_URL=http://localhost:4321 pnpm run test:e2e:chromium
 
 echo "==> Required Chromium accessibility smoke"

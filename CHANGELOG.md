@@ -39,15 +39,17 @@ configuration, and this repo's own accumulated `KNOWN_RISKS.md` evidence.
 
 - `.github/workflows/ci.yml` redesigned: `quality` and a new `browser-smoke` job now run
   concurrently (no `needs:` dependency), with a `ci-gate` aggregate as the one required check.
-  `browser-smoke` runs required Chromium-only E2E/accessibility tests against a genuinely
-  production-like local server (`wrangler dev --local` serving the real generated
-  `apps/web/dist/server/wrangler.json`), not Astro's dev server — using the version-matched
-  official Playwright container, one worker, and one retry (a flaky test is now a real reported
-  failure, not silently re-run green).
+  `browser-smoke` runs required Chromium-only E2E/accessibility tests (one worker, one retry — a
+  flaky test is now a real reported failure, not silently re-run green). Testing against a real
+  built Worker (`wrangler dev --local`) instead of Astro's dev server was attempted and reverted
+  after it reproducibly crashed the dev server when a test's direct D1 write (a separate
+  `wrangler d1 execute --local` process) ran concurrently with the live server's own D1
+  connection — a disclosed follow-up, see `docs/status/KNOWN_RISKS.md`.
 - `seo-metadata.spec.ts`'s canonical-tag check now compares against the final served URL rather
-  than the pre-redirect request path — the real built Worker's Assets binding 307-redirects
-  extension-less paths to their trailing-slash form (confirmed the same in production today),
-  which Astro's dev server never exercised.
+  than the pre-redirect request path, normalizing trailing slashes — the real Cloudflare Assets
+  binding 307-redirects extension-less paths to their trailing-slash form (confirmed the same in
+  production today), which Astro's dev server doesn't exercise but was briefly tested against
+  while designing this change.
 - Repository merge settings: squash-only (`allow_merge_commit`/`allow_rebase_merge` now `false`),
   `delete_branch_on_merge` now `true`.
 
