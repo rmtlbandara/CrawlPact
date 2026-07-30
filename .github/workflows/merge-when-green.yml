@@ -27,6 +27,12 @@ on:
 permissions:
   contents: write
   pull-requests: write
+  # Needed only for the final "Dispatch a real CI run" step below
+  # (gh workflow run calls the workflow-dispatch API) — without this, the
+  # default GITHUB_TOKEN gets a 403 "Resource not accessible by
+  # integration" on that call even though the merge itself succeeds. Found
+  # live the first time this step ran — see docs/status/KNOWN_RISKS.md.
+  actions: write
 
 jobs:
   merge:
