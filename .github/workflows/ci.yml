@@ -178,7 +178,7 @@ jobs:
           --local
           --config apps/web/dist/server/wrangler.json
           --persist-to apps/web/.wrangler/state
-          --port 4321 &
+          --port 4321 > wrangler-dev.log 2>&1 &
         env:
           X_LOCAL_EXPLORER: "false"
 
@@ -203,6 +203,7 @@ jobs:
           path: |
             playwright-report/
             test-results/
+            wrangler-dev.log
           retention-days: 14
           if-no-files-found: ignore
 
