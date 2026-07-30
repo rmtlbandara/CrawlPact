@@ -533,29 +533,52 @@ agency-logo upload UI, the `Modal` fix) — the one failure seen
 (`mobile-safari`/skip-link-focus) is the pre-existing, already-documented Playwright/WebKit `Tab`
 limitation above, not a regression.
 
-## `admin-flows.spec.ts`'s subscription-filter test flaked twice in a row in real CI (found 2026-07-30)
+## ~~`admin-flows.spec.ts`'s subscription-filter test flaked twice in a row in real CI~~ (found 2026-07-30) — **first fix attempt was itself incomplete; corrected same day**
 
 Unrelated to the `networkidle` removal above (this file wasn't touched by that change) — flagged
 because it recurred twice consecutively on two different real CI runs, recovering both times via
 Playwright's built-in retry, which is exactly the "flaky test papered over by retry" pattern this
 repo's own testing philosophy treats as a real failure, not a clean pass.
 
-**Root cause**: `packages/ui/src/components/Select.tsx`'s Radix `Select.Content` mounts in a
-portal and does an async popper-positioning pass immediately after opening. A click on an option
-that lands during that repositioning window can be swallowed — the click physically fires, Radix
-sees it, but not against the coordinates the option settles at a moment later. This is the same
-general class of issue as the hydration races fixed above (an interaction landing before the UI is
-actually ready to receive it), just triggered by portal/positioning timing instead of island
-hydration.
+**Root cause**: `SubscriptionsManager` is a `client:load` island, so its `Select` trigger already
+exists (server-rendered) before hydration — clicking it before Radix's handler attaches opens
+nothing, so the "Past due" option never mounts. Not a Radix popper-positioning issue as first
+suspected.
 
-**Fix**: `admin-flows.spec.ts`'s subscription-filter test now uses the same `retryUntilSettled`
-helper, retrying the open+select against the trigger's own displayed value actually updating to
-"Past due" (a fast, synchronous-with-React-state signal) rather than assuming the first click
-landed cleanly. Grepped the rest of the e2e suite for `getByRole("option"` — this is the only
-Radix Select interaction in it, so no other latent instance of this exists today.
+**First fix attempt (incomplete)**: wrapped the open+select in the same `retryUntilSettled` helper
+used for the `networkidle` removal above, verifying the trigger's displayed value updated. This
+_looked_ fixed (25 consecutive clean local runs, one clean real-CI run) but was still genuinely
+flaky — it recurred in real CI again the same day, and reproduced locally on a subsequent
+`pnpm verify:push` run. **The bug was in the fix itself**: the retry's second step —
+`page.getByRole("option", { name: "Past due" }).click()` — had no explicit timeout. When the first
+attempt's dropdown never opened (no option to find), that unbounded `.click()` fell back to
+Playwright's default actionability wait and silently consumed the _entire_ outer retry budget on
+one attempt, instead of failing fast and letting the loop actually retry. Every other
+`retryUntilSettled` call site added that same day used a bounded `expect(...).toBeVisible({timeout})`
+or `waitForResponse({timeout})` as its second step, which — unlike a bare second `.click()` —
+already respects an explicit timeout; this was the one call site structured differently, and the
+one that stayed broken.
 
-Verified: 28 of 30 manual local runs clean before the fix (2 failures, both in an early batch
-against a server that had just cold-started — consistent with Astro dev's first-hit compile race
-`ensureRealPage` already exists for, not this issue specifically); 25 consecutive clean runs after
-applying the fix (10 warm-server, 15 with tracing enabled, 3 more against a freshly-restarted
-server); 3 consecutive clean `pnpm verify:push` runs.
+**Real fix**: give every step inside the retry its own explicit short timeout
+(`combobox.click({ timeout: 1_000 })`, `option.click({ timeout: 1_000 })`, plus the existing
+assertion) so a failed attempt fails fast and the loop gets multiple real attempts within its
+window. Grepped the e2e suite for `getByRole("option"` — this is the only Radix Select interaction
+in it, so no other latent instance of this pattern exists today.
+
+**Also found while investigating**: the exact same root cause (a `client:load`/`client:idle`
+island's trigger existing pre-hydration, so a premature click opens/does nothing) affects every
+"Sign out" click in the e2e/a11y suite — `SignOutButton` is `client:load`. A click before
+hydration is a real click with no effect, so the following `page.waitForURL("**/")` hangs until
+the test timeout. This had been a latent, pre-existing race (not introduced by any change this
+session) that simply hadn't been noticed before. Fixed all 5 call sites
+(`auth-and-account.spec.ts` ×3, `setup/admin.setup.ts`, `a11y/home.spec.ts`) the same way as the
+other hydration races: retry the click against the real `POST /api/auth/logout` request actually
+firing.
+
+Verified after the corrected fix: 25 consecutive clean runs of the subscription-filter test alone,
+5 consecutive clean runs of the full `admin-flows.spec.ts` + `auth-and-account.spec.ts` combination
+(covering both the Select fix and the sign-out fixes together), 3 consecutive clean
+`pnpm verify:push` runs. The lesson generalized: a retry helper is only as good as its own
+internal timeouts — an unbounded step inside a "fix" can silently reproduce the exact flake it was
+meant to eliminate, and passing 25 times isn't proof against a bug that only manifests when the
+race is actually lost, which local runs may simply not trigger often.

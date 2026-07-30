@@ -2,6 +2,7 @@ import { test as setup } from "@playwright/test";
 import { addVirtualAuthenticator } from "../helpers/webauthn";
 import { registerNewAccount, signInWithPasskey } from "../helpers/auth";
 import { grantSuperAdminToCurrentUser } from "../helpers/admin-db";
+import { retryUntilSettled } from "../helpers/hydration";
 import {
   ADMIN_STORAGE_STATE,
   ADMIN_FIXTURE_DISPLAY_NAME_PREFIX,
@@ -26,7 +27,16 @@ setup("authenticate as a shared Super Admin fixture", async ({ page }) => {
   const displayName = `${ADMIN_FIXTURE_DISPLAY_NAME_PREFIX} ${Date.now()}-${crypto.randomUUID().slice(0, 8)}`;
   await registerNewAccount(page, displayName);
   await grantSuperAdminToCurrentUser(page);
-  await page.getByRole("button", { name: "Sign out" }).click();
+  // SignOutButton is a `client:load` island — a click before it hydrates
+  // is a real click with no effect, so the resulting waitForURL would hang
+  // until the test timeout. Retry against the real logout request actually
+  // firing instead.
+  await retryUntilSettled(async () => {
+    await Promise.all([
+      page.waitForResponse((res) => res.url().includes("/api/auth/logout"), { timeout: 1_000 }),
+      page.getByRole("button", { name: "Sign out" }).click(),
+    ]);
+  });
   await page.waitForURL("**/");
   await signInWithPasskey(page);
   await page.context().storageState({ path: ADMIN_STORAGE_STATE });

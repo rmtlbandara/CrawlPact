@@ -38,7 +38,18 @@ test.describe("Passkey account lifecycle", () => {
     await registerNewAccount(page, displayName);
     await expect(page.getByRole("heading", { name: "Overview" })).toBeVisible();
 
-    await page.getByRole("button", { name: "Sign out" }).click();
+    // SignOutButton is a `client:load` island — a click before it hydrates
+    // is a real click with no effect, so the resulting waitForURL would
+    // hang until the test timeout. Retry against the real logout request
+    // actually firing instead.
+    await retryUntilSettled(async () => {
+      await Promise.all([
+        page.waitForResponse((res) => res.url().includes("/api/auth/logout"), {
+          timeout: 1_000,
+        }),
+        page.getByRole("button", { name: "Sign out" }).click(),
+      ]);
+    });
     await page.waitForURL("**/");
 
     await signInWithPasskey(page);
@@ -111,7 +122,18 @@ test.describe("Recovery code sign-in", () => {
     const recoveryCodes = await registerNewAccountCapturingRecoveryCodes(page, displayName);
     expect(recoveryCodes.length).toBeGreaterThan(0);
 
-    await page.getByRole("button", { name: "Sign out" }).click();
+    // SignOutButton is a `client:load` island — a click before it hydrates
+    // is a real click with no effect, so the resulting waitForURL would
+    // hang until the test timeout. Retry against the real logout request
+    // actually firing instead.
+    await retryUntilSettled(async () => {
+      await Promise.all([
+        page.waitForResponse((res) => res.url().includes("/api/auth/logout"), {
+          timeout: 1_000,
+        }),
+        page.getByRole("button", { name: "Sign out" }).click(),
+      ]);
+    });
     await page.waitForURL("**/");
 
     // Simulate a lost passkey: sign back in with a saved recovery code
@@ -132,7 +154,18 @@ test.describe("Recovery code sign-in", () => {
 
     // The code is single-use — replaying it must be rejected, not silently
     // create a second session.
-    await page.getByRole("button", { name: "Sign out" }).click();
+    // SignOutButton is a `client:load` island — a click before it hydrates
+    // is a real click with no effect, so the resulting waitForURL would
+    // hang until the test timeout. Retry against the real logout request
+    // actually firing instead.
+    await retryUntilSettled(async () => {
+      await Promise.all([
+        page.waitForResponse((res) => res.url().includes("/api/auth/logout"), {
+          timeout: 1_000,
+        }),
+        page.getByRole("button", { name: "Sign out" }).click(),
+      ]);
+    });
     await page.waitForURL("**/");
     await page.goto("/sign-in");
     // A click before PasskeyAuth's `client:load` island hydrates has no
