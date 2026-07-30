@@ -74,18 +74,21 @@ skipped — that aggregate is the one required check:
 - **`quality`**: format check, lint, typecheck, unit tests, integration tests, `db:validate`,
   production build (equivalent to `pnpm quality`).
 - **`browser-smoke`**: runs the required E2E and accessibility suites — Chromium only
-  (`pnpm test:e2e:chromium` / `pnpm test:a11y:chromium`) — against a real built Worker
-  (`wrangler dev --local` serving the generated `apps/web/dist/server/wrangler.json`), the
-  genuinely production-like target. An earlier attempt at this crashed outright in real CI once a
-  test's direct D1 write via a _separate_ `wrangler d1 execute --local` process
-  (`tests/e2e/helpers/admin-db.ts`, used to grant `super_admin`) ran concurrently with the live
-  server holding its own D1 connection to the same local sqlite file — reverted to Astro dev mode
-  at the time. Fixed by routing `admin-db.ts`'s writes through the _running server's own D1
-  binding_ instead, via env-gated test-only API routes (`apps/web/src/pages/api/test-only/*`) that
-  never exist outside `PUBLIC_APP_ENV=local`; see `docs/status/KNOWN_RISKS.md` for the full
-  history. Runs on a plain `ubuntu-latest` runner with Chromium installed directly
-  (`playwright install --with-deps chromium`); one worker, one retry — a flaky test is reported as
-  a real failure, not silently re-run green.
+  (`pnpm test:e2e:chromium` / `pnpm test:a11y:chromium`) — against Astro's dev server. Testing
+  against a genuinely production-like target (`wrangler dev --local` serving the real generated
+  `apps/web/dist/server/wrangler.json`) has been attempted twice and reverted both times: the
+  first attempt crashed via a _second_ `wrangler d1 execute --local` process
+  (`tests/e2e/helpers/admin-db.ts`, used to grant `super_admin`) racing the live server's own D1
+  connection to the same local sqlite file — fixed by routing `admin-db.ts`'s writes through the
+  running server itself instead, via env-gated test-only API routes
+  (`apps/web/src/pages/api/test-only/*`) that never exist outside `PUBLIC_APP_ENV=local`. Retrying
+  with that fix in place then surfaced a _second_, distinct `wrangler dev --local` crash (on a
+  real usernameless passkey sign-in, not D1 concurrency) in 2 of 3 real CI runs — see
+  `docs/status/KNOWN_RISKS.md` for the full evidence and history. `admin-db.ts`'s fix is kept
+  regardless (it's a real improvement on its own), but the built-server E2E target itself remains
+  a disclosed, unresolved follow-up. Runs on a plain `ubuntu-latest` runner with Chromium installed
+  directly (`playwright install --with-deps chromium`); one worker, one retry — a flaky test is
+  reported as a real failure, not silently re-run green.
 
 Full cross-browser coverage (`mobile-safari`, via `pnpm test:e2e` / `pnpm test:a11y` without the
 `:chromium` suffix) is not part of the required gate — run it locally before a major change or
