@@ -92,7 +92,7 @@ test.describe("Passkey account lifecycle", () => {
 test.describe("Recovery code sign-in", () => {
   test.beforeEach(async ({ page, browserName }) => {
     test.skip(browserName !== "chromium", "WebAuthn virtual authenticator is Chromium-only.");
-    await clearRecoveryCodeRateLimit();
+    await clearRecoveryCodeRateLimit(page);
     await addVirtualAuthenticator(page);
   });
 
@@ -153,7 +153,7 @@ test.describe("Anonymous audit report", () => {
     // first, this test fails deterministically after ~20 cumulative runs
     // with the real, correctly-working "daily limit" error instead of ever
     // reaching /audit/*.
-    await clearAnonymousAuditRateLimit();
+    await clearAnonymousAuditRateLimit(page);
     await page.goto("/");
     await page.waitForLoadState("networkidle");
     await page.getByLabel("Domain or URL to audit").first().fill("example.com");

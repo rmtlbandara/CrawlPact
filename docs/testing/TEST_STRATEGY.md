@@ -76,13 +76,17 @@ skipped — that aggregate is the one required check:
 - **`browser-smoke`**: runs the required E2E and accessibility suites — Chromium only
   (`pnpm test:e2e:chromium` / `pnpm test:a11y:chromium`) — against Astro's dev server. Testing
   against a genuinely production-like target (`wrangler dev --local` serving the real generated
-  `apps/web/dist/server/wrangler.json`) was attempted during this job's redesign and reverted:
-  confirmed live, twice, that it crashes outright once a test's direct D1 write via a separate
-  `wrangler d1 execute --local` process (`tests/e2e/helpers/admin-db.ts`, used to grant
-  `super_admin`) runs concurrently with the live server holding its own D1 connection to the same
-  local sqlite file. Fixing that conflict (e.g. routing `admin-db.ts`'s writes through the
-  running server instead of a second process) is a disclosed follow-up — see
-  `docs/status/KNOWN_RISKS.md`. Runs on a plain `ubuntu-latest` runner with Chromium installed
+  `apps/web/dist/server/wrangler.json`) has been attempted twice and reverted both times: the
+  first attempt crashed via a _second_ `wrangler d1 execute --local` process
+  (`tests/e2e/helpers/admin-db.ts`, used to grant `super_admin`) racing the live server's own D1
+  connection to the same local sqlite file — fixed by routing `admin-db.ts`'s writes through the
+  running server itself instead, via env-gated test-only API routes
+  (`apps/web/src/pages/api/test-only/*`) that never exist outside `PUBLIC_APP_ENV=local`. Retrying
+  with that fix in place then surfaced a _second_, distinct `wrangler dev --local` crash (on a
+  real usernameless passkey sign-in, not D1 concurrency) in 2 of 3 real CI runs — see
+  `docs/status/KNOWN_RISKS.md` for the full evidence and history. `admin-db.ts`'s fix is kept
+  regardless (it's a real improvement on its own), but the built-server E2E target itself remains
+  a disclosed, unresolved follow-up. Runs on a plain `ubuntu-latest` runner with Chromium installed
   directly (`playwright install --with-deps chromium`); one worker, one retry — a flaky test is
   reported as a real failure, not silently re-run green.
 

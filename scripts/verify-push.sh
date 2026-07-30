@@ -97,14 +97,16 @@ DEVVARS
 
 echo "==> Starting the preview server (astro dev)"
 # Deliberately Astro dev mode, not `wrangler dev --local` against the built
-# Worker — confirmed live (locally, and in this exact CI job) that wrangler
-# dev --local crashes outright once a test's direct D1 write via a separate
-# `wrangler d1 execute --local` process (tests/e2e/helpers/admin-db.ts, used
-# to grant super_admin) runs concurrently with the live server holding its
-# own D1 connection to the same local sqlite file. Matches ci.yml's
-# browser-smoke job exactly, so this script keeps meaning what it claims to
-# mean: a local reproduction of the real required CI gate. See
-# docs/status/KNOWN_RISKS.md.
+# Worker. This PR fixed the originally-diagnosed crash cause (a *second*
+# `wrangler d1 execute --local` process racing this server's own D1
+# connection) — but real CI then reproduced a SECOND, distinct wrangler dev
+# --local crash on a real usernameless passkey sign-in, unrelated to D1
+# concurrency (login/begin is pure WebCrypto, no DB access at all). See
+# docs/status/KNOWN_RISKS.md's "Built-server E2E: a second, distinct
+# wrangler dev --local crash" entry for the full evidence. Reverting to
+# Astro dev mode again — matches ci.yml's browser-smoke job exactly, so
+# this script keeps meaning what it claims to mean: a local reproduction of
+# the real required CI gate.
 AUDIT_ENGINE_ENABLED=true pnpm --filter @crawlpact/web dev > /tmp/verify-push-server.log 2>&1 &
 SERVER_PID=$!
 

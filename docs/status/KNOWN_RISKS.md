@@ -317,6 +317,47 @@ existed for, regardless of which server is in use), but the earlier claim that C
 against "a genuinely built, pre-bundled Worker" no longer applies now that this reverted back to
 `astro dev`.
 
+## Built-server E2E: the second-process D1 conflict is fixed, but retrying it surfaced a SECOND, distinct wrangler dev --local crash (2026-07-30, Phase 2 PR C)
+
+The specific conflict this doc's entry above diagnosed — `admin-db.ts` shelling out to its own
+`wrangler d1 execute --local` while the live server held its own D1 connection to the same sqlite
+file — **is fixed**: that second process is gone. `admin-db.ts` now calls a set of env-gated,
+test-only API routes (`apps/web/src/pages/api/test-only/*`, gated by
+`apps/web/src/lib/test-only.ts`: hard 404 unless `PUBLIC_APP_ENV === "local"`, plus a fixed
+non-secret shared-header value, fail-closed if that var is ever unset — see this file's
+`assertTestOnlyAccess` security-review fix) that write through the _running server's own D1
+binding_ instead, via `page.request` rather than `execFile`. `grant-super-admin.ts` is self-service
+(grants `super_admin` to whichever session cookie the caller's `page.request` carries, via
+`requireSession` — not an arbitrary target — sidestepping the bootstrap problem of needing an
+already-admin session to create the first admin fixture).
+
+Retrying `wrangler dev --local` against the real built Worker with that fix in place passed 4/4
+consecutive local `pnpm verify:push` runs (35/35 e2e, 80/80 a11y) and the first real CI run
+(PR #49) — but a second real-CI dispatch of the exact same commit, and a subsequent push, both
+then hit a **different** wrangler dev --local crash: an empty `[ERROR]` with no message body,
+immediately after a real usernameless passkey sign-in
+(`POST /api/auth/login/begin` → the browser's WebAuthn ceremony → `login/finish`). Confirmed via
+the downloaded `wrangler-dev.log` artifact — the crash is not this doc's D1-concurrency bug:
+`login/begin` (`apps/web/src/lib/auth/webauthn.ts`'s `beginPasskeyAuthentication`) does no D1
+access at all, only WebCrypto (`generateAuthenticationOptions` + an HMAC `signToken`); the crash
+happens on whatever request follows (never logged — wrangler dies before it can log the next
+line), most likely `login/finish`, which does read `users`/`passkey_credentials`/
+`admin_role_assignments` — plausibly some Miniflare D1-connection fragility triggered by reads
+shortly after the `grant-super-admin` route's own write, but this is not confirmed. 2 of 3 real CI
+runs failed this way; 4 of 4 local runs on macOS never did — consistent with this repo's other
+findings that GitHub Actions' Linux runner surfaces `wrangler dev --local` instability invisible
+locally. Wrangler's own crash output flagged a newer release (4.115.0, this repo pins 4.114.0) as
+a concrete first thing to try before investigating further.
+
+**Reverted again**: `ci.yml`'s `browser-smoke` job and `scripts/verify-push.sh` both went back to
+`astro dev`, same as the original revert above — real CI reliability decides this gate, not a
+clean local run or even one clean real CI run. The test-only-endpoint work is kept (it's a genuine
+fix for the conflict it targeted, and removes a real second-process race regardless of whether
+built-server E2E ever lands), but built-server E2E itself is disclosed as **still not achieved**,
+now for a different, deeper reason than originally diagnosed. Next step, if picked up again: try
+the wrangler 4.115.0 upgrade first, then re-verify with the same 3-consecutive-real-CI-runs bar
+(not just local) before trusting it.
+
 ## ~~Real public-site responsive bug found in real CI~~ (2026-07-29, PR #43, third run) — **Fixed 2026-07-30**
 
 `responsive-smoke.spec.ts`'s public-route tests (home, pricing, crawler detail) failed at exactly

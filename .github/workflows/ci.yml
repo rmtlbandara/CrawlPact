@@ -156,19 +156,22 @@ jobs:
 
       - name: Start preview server
         # Deliberately Astro dev mode, not `wrangler dev --local` against the
-        # built Worker: confirmed live (twice — once locally, once in this
-        # exact CI job) that wrangler dev --local crashes outright
-        # (Miniflare's D1 connection breaks) once a test's direct D1 write
-        # via a separate `wrangler d1 execute --local` process (
-        # tests/e2e/helpers/admin-db.ts, used to grant super_admin) runs
-        # concurrently with the live server holding its own D1 connection to
-        # the same local sqlite file. Astro dev's simpler platform-proxy D1
-        # access does not hold that same kind of connection and does not
-        # exhibit this crash. Reverting this one piece to dev mode — real
-        # production-like built-server E2E testing is deferred to a
-        # disclosed follow-up needing a real fix for that D1 access conflict
-        # (e.g. routing admin-db.ts's writes through the running server
-        # instead of a second process) — see docs/status/KNOWN_RISKS.md.
+        # built Worker. This PR fixed the originally-diagnosed crash cause
+        # (a *second* `wrangler d1 execute --local` process racing this
+        # server's own D1 connection) by routing admin-db.ts's writes through
+        # this same running server instead — but real CI then reproduced a
+        # SECOND, distinct wrangler dev --local crash (empty `[ERROR]`, no
+        # message body) immediately after a real usernameless
+        # `POST /api/auth/login/begin` → `login/finish` sign-in, 2 of 3 real
+        # CI runs, never once locally. That request path doesn't touch D1 at
+        # all (`login/begin` is pure WebCrypto), so this is not the same bug
+        # this PR fixed — see docs/status/KNOWN_RISKS.md's "Built-server E2E:
+        # a second, distinct wrangler dev --local crash" entry for the full
+        # evidence (including the downloaded wrangler-dev.log) and a
+        # concrete next lead (wrangler flagged a newer 4.115.0 release in its
+        # own crash output). Reverting to Astro dev mode again until that's
+        # actually root-caused — real CI reliability, not local passes, is
+        # what decides this gate.
         run: pnpm --filter @crawlpact/web dev &
         env:
           AUDIT_ENGINE_ENABLED: "true"
