@@ -353,3 +353,21 @@ the first real automerge.
 `pull_request`/`push` triggers) and a new step at the end of `merge-when-green.yml` that
 explicitly calls `gh workflow run ci.yml --ref main` right after a successful merge, using the
 documented `workflow_dispatch` exception to get a real CI run against the new tip.
+
+## `ci.yml`'s new `workflow_dispatch` trigger caused gitleaks to full-history-scan and false-positive (found 2026-07-30)
+
+Immediately after adding `workflow_dispatch` to `ci.yml` (the fix above) and using it to get a CI
+run for `main`'s tip, `gitleaks-action` flagged `PUBLIC_PADDLE_CLIENT_TOKEN`'s value in
+`apps/web/wrangler.jsonc:44` as a `generic-api-key` leak. This value is not a secret — it's
+Paddle.js's client-side checkout token, already documented in that file's own comment as
+"Browser-exposed by design ... not a secret," and has been live in production since 2026-07-26
+with zero incident. Root cause: `gitleaks-action`'s scan strategy depends on the triggering
+event — `push`/`pull_request` give it a commit range to diff incrementally, while
+`workflow_dispatch` has no such range, so it fell back to a full-history scan (confirmed in the
+run log: "100 commits scanned," `git log -p -U0 --full-history --all`) and surfaced an old commit
+no incremental scan had ever included in its diff.
+
+**Fixed** — added `.gitleaks.toml` with a narrow `[allowlist]` regex for this exact known-public
+value (`extend.useDefault = true`, so the real ruleset is unchanged — only this one value is
+excepted). The real Paddle secrets (`PADDLE_API_KEY`, `PADDLE_WEBHOOK_SECRET`) are Cloudflare
+Worker `secret_text` bindings and never appear in this repository in any form.

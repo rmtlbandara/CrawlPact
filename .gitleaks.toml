@@ -1,0 +1,21 @@
+title = "CrawlPact gitleaks config"
+
+# Extends gitleaks' built-in default ruleset rather than replacing it — this
+# file only adds a narrow allowlist entry, it never redefines detection
+# rules.
+[extend]
+useDefault = true
+
+[allowlist]
+description = "Values that are intentionally public, not secrets that leaked"
+regexes = [
+  # Paddle.js's client-side checkout token — apps/web/wrangler.jsonc's own
+  # comment documents this: "Browser-exposed by design (Paddle.js needs it
+  # client-side) — not a secret." Flagged as a false positive by gitleaks'
+  # generic-api-key rule specifically when ci.yml's `workflow_dispatch`
+  # trigger causes a full-history scan instead of push/pull_request's
+  # incremental diff scan (see docs/status/KNOWN_RISKS.md). The real Paddle
+  # secrets (PADDLE_API_KEY, PADDLE_WEBHOOK_SECRET) are Cloudflare Worker
+  # `secret_text` bindings and never appear in this repository at all.
+  '''live_7744585ebeca2976cd76da4b966''',
+]
