@@ -160,6 +160,11 @@ Worker Custom Domain already attached (`crawlpact.com` → `crawlpact-web`, prod
 - `crawlpact.com` — canonical apex, production. **Live**, serving the real app as of 2026-07-26.
 - `www.crawlpact.com` — permanently redirects (301) to the apex. **Confirmed working**, one hop,
   both `http://` and `https://` variants, path and query string preserved.
+- `e2e-fixture.crawlpact.com` — a separate, minimal, static Cloudflare Worker
+  (`apps/e2e-fixture/`), **not** the main `crawlpact-web` app. Test infrastructure only: a real,
+  CrawlPact-controlled scan target for two required e2e tests (`auth-and-account.spec.ts`) that
+  need a genuine, publicly-resolvable HTTP origin — see `docs/status/KNOWN_RISKS.md`'s "SSRF-safe
+  deterministic scanner test target" entry. Never referenced by production app code.
 - `preview.crawlpact.com` — not provisioned. Preview is currently reachable only via its
   `*.workers.dev` subdomain (`crawlpact-web-preview.<account-subdomain>.workers.dev`); the
   `WEBAUTHN_RP_ID`/`WEBAUTHN_RP_ORIGIN`/`PUBLIC_SITE_URL` preview values in `wrangler.jsonc` are

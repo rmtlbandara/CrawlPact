@@ -1,0 +1,13 @@
+{
+  "name": "@crawlpact/e2e-fixture",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "deploy": "wrangler deploy"
+  },
+  "devDependencies": {
+    "@cloudflare/workers-types": "5.20260727.1",
+    "wrangler": "4.114.0"
+  }
+}
