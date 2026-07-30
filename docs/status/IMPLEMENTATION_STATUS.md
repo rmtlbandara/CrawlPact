@@ -455,7 +455,17 @@ Every lib module above has a corresponding `*.integration.test.ts` file under
 Client groups, batch domain import with per-row error reporting, portfolio filters (group/
 monitoring-state/score-band/has-findings), client-safe share links with limited agency branding
 (explicitly never removes CrawlPact's disclosed technical/legal limitations) —
-`agency-features.integration.test.ts` (5 tests).
+`agency-features.integration.test.ts` (5 tests), `admin-shared-reports-revoke.integration.test.ts`.
+
+**2026-07-30**: the agency-branding logo field was changed from a customer-typed external URL to
+a real image upload, stored in R2 (`AGENCY_LOGOS` bucket) — see
+`docs/data/D1_R2_DATA_PLACEMENT_POLICY.md`'s 2026-07-30 entry, which formally reopened and
+resolved the "R2 not adopted" decision for this one use case. Content is sniffed from real magic
+bytes (`apps/web/src/lib/agency-logo.ts`), never a client-supplied `Content-Type`/filename; SVG is
+rejected outright (XSS risk). `POST /api/admin/shared-reports/:shareId/revoke` deletes the R2
+object after the D1 revoke commits (`docs/data/DATA_RETENTION.md`'s "Object storage cleanup"
+section). Disclosed, not-yet-built gap: bulk revocation and account/domain-deletion purge don't
+clean up orphaned logo objects yet — see `docs/status/KNOWN_RISKS.md`.
 
 ### SEO content minimum (SRS §30.4) — met and exceeded
 

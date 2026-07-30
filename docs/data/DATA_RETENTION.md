@@ -106,12 +106,26 @@ one view) — see `docs/status/KNOWN_RISKS.md`.
 
 ## Object storage cleanup
 
-Not applicable. R2 is not currently adopted (`docs/data/D1_R2_DATA_PLACEMENT_POLICY.md`,
-2026-07-26) — there are no objects to coordinate deletion of alongside a D1 row, no orphan-object
-detection needed, and nothing beyond the D1 `DELETE`/`UPDATE` operations above runs during the
-daily retention purge (confirmed by the 2026-07-26 architecture audit reading the full
-`lib/data-retention.ts` file). If R2 is ever adopted, this section must be updated so that object
-deletion is coordinated with (and never precedes) the D1 reference it corresponds to.
+R2 was adopted 2026-07-30 for one narrow use case: agency-branding logo uploads
+(`docs/data/D1_R2_DATA_PLACEMENT_POLICY.md`'s 2026-07-30 entry, `AGENCY_LOGOS` bucket). The rule
+for any code that deletes a D1 row/reference alongside an R2 object it points to: **R2 deletion
+must never precede the D1 reference** — update/delete the D1 row first, and only delete the R2
+object after that write has actually committed. A failed R2 delete after a successful D1 update
+just leaves an orphan object for a future cleanup pass; deleting the R2 object first and then
+failing the D1 write would leave a live D1 reference pointing at nothing.
+
+- **Handled**: `POST /api/admin/shared-reports/:shareId/revoke` (`adminRevokeShare` in
+  `lib/sharing.ts`) follows this order — the D1 `revokedAt` update runs and returns the logo's R2
+  object key (if any) from the row it just updated, and only then is `AGENCY_LOGOS.delete(...)`
+  called.
+- **Known gap, disclosed rather than fixed in the same pass**: bulk revocation
+  (`revokeAllSharedReportsForUser` in `lib/admin/users.ts`, used by
+  `POST /api/admin/users/:userId/revoke-shared-reports`) does not look up or delete any logo
+  objects for the shares it revokes — those R2 objects become orphaned. Similarly, nothing in
+  `lib/data-retention.ts`'s daily purge (domain/account deletion) deletes a departing user's
+  uploaded logo objects. Given this feature's low expected volume (one small image per
+  agency-branded share, capped at 1 MiB), the practical storage impact today is small — see
+  `docs/status/KNOWN_RISKS.md`.
 
 ## What's still open
 

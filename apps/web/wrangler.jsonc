@@ -24,6 +24,9 @@
   // an earlier deploy attempt hitting this same undocumented requirement)
   // rather than provisioning a new one.
   "kv_namespaces": [{ "binding": "SESSION", "id": "e092c1f4171243cf801b5af24070dfca" }],
+  // Holds only agency-branding logo uploads (docs/data/D1_R2_DATA_PLACEMENT_POLICY.md's
+  // 2026-07-30 revisit entry) — nothing else is ever written here.
+  "r2_buckets": [{ "binding": "AGENCY_LOGOS", "bucket_name": "crawlpact" }],
   "triggers": {
     // Daily at 03:00 UTC. Drives both the monitoring sweep (lib/monitoring.ts
     // — re-scans domains whose monthly/weekly schedule is due) and the data
@@ -74,6 +77,9 @@
         },
       ],
       "kv_namespaces": [{ "binding": "SESSION", "id": "6c940efc0991477a88fa9f730c53b476" }],
+      // Distinct bucket from production, same reasoning as the D1/KV
+      // separation above — never reuse the production bucket here.
+      "r2_buckets": [{ "binding": "AGENCY_LOGOS", "bucket_name": "crawlpact-preview" }],
       "vars": {
         "PUBLIC_APP_ENV": "preview",
         // Real serving origin: the `crawlpact-web-preview` Worker's

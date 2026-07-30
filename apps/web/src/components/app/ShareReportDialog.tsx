@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useRef, useState } from "react";
 import { Alert, Button, Checkbox, FormField, Input, Modal, Textarea } from "@crawlpact/ui";
 import type { ShareSummary } from "@crawlpact/core";
 
@@ -24,14 +24,45 @@ export function ShareReportDialog({ auditId, agencyBrandingAllowed }: Props) {
   const [expiresInDays, setExpiresInDays] = useState("30");
   const [addBranding, setAddBranding] = useState(false);
   const [agencyName, setAgencyName] = useState("");
-  const [logoUrl, setLogoUrl] = useState("");
+  const [logoPath, setLogoPath] = useState<string | null>(null);
+  const [logoUploading, setLogoUploading] = useState(false);
+  const [logoError, setLogoError] = useState<string | null>(null);
   const [clientName, setClientName] = useState("");
   const [introText, setIntroText] = useState("");
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
   function reset() {
     setError(null);
     setShare(null);
     setCopied(false);
+    setLogoPath(null);
+    setLogoError(null);
+  }
+
+  async function handleLogoSelected(file: File | undefined) {
+    if (!file) return;
+    setLogoError(null);
+    setLogoUploading(true);
+    try {
+      const formData = new FormData();
+      formData.set("file", file);
+      const response = await fetch("/api/agency-branding/logo", {
+        method: "POST",
+        body: formData,
+      });
+      const body = (await response.json()) as {
+        ok: boolean;
+        data?: { logoUrl: string };
+        error?: { message: string };
+      };
+      if (!body.ok || !body.data) {
+        setLogoError(body.error?.message ?? "Could not upload this logo.");
+        return;
+      }
+      setLogoPath(body.data.logoUrl);
+    } finally {
+      setLogoUploading(false);
+    }
   }
 
   async function handleCreate() {
@@ -43,7 +74,7 @@ export function ShareReportDialog({ auditId, agencyBrandingAllowed }: Props) {
         addBranding && agencyBrandingAllowed
           ? {
               agencyName: agencyName.trim() || undefined,
-              logoUrl: logoUrl.trim() || undefined,
+              logoUrl: logoPath ?? undefined,
               clientName: clientName.trim() || undefined,
               introText: introText.trim() || undefined,
             }
@@ -168,14 +199,38 @@ export function ShareReportDialog({ auditId, agencyBrandingAllowed }: Props) {
                     maxLength={120}
                   />
                 </FormField>
-                <FormField label="Logo URL" description="Must be a public http(s) image URL.">
+                <FormField
+                  label="Logo"
+                  description="PNG, JPEG, GIF, or WebP, up to 1 MB."
+                  error={logoError ?? undefined}
+                >
                   <Input
-                    type="url"
-                    value={logoUrl}
-                    onChange={(e) => setLogoUrl(e.target.value)}
-                    maxLength={500}
+                    ref={fileInputRef}
+                    type="file"
+                    accept="image/png,image/jpeg,image/gif,image/webp"
+                    disabled={logoUploading}
+                    onChange={(e) => void handleLogoSelected(e.target.files?.[0])}
                   />
                 </FormField>
+                {logoPath && (
+                  <div className="flex items-center gap-3">
+                    <img
+                      src={logoPath}
+                      alt="Logo preview"
+                      className="h-10 max-w-[120px] object-contain"
+                    />
+                    <Button
+                      type="button"
+                      variant="secondary"
+                      onClick={() => {
+                        setLogoPath(null);
+                        if (fileInputRef.current) fileInputRef.current.value = "";
+                      }}
+                    >
+                      Remove
+                    </Button>
+                  </div>
+                )}
                 <FormField label="Client name" description="Who this report is prepared for.">
                   <Input
                     value={clientName}

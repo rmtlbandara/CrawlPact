@@ -26,7 +26,14 @@ export const POST: APIRoute = async ({ request, params }) => {
       requestId,
     });
 
-    await adminRevokeShare(db, shareId);
+    const { logoObjectKey } = await adminRevokeShare(db, shareId);
+    // Deleted only after the D1 revoke above has already committed — see
+    // docs/data/DATA_RETENTION.md's "R2 deletion must never precede the D1
+    // reference" rule (a failed R2 delete here just leaves an orphan object
+    // for the retention sweep, never a dangling reference to live bytes).
+    if (logoObjectKey) {
+      await getEnv().AGENCY_LOGOS.delete(logoObjectKey);
+    }
     return jsonResponse(ok({ shareId, revoked: true }, requestId), 200);
   } catch (error) {
     return jsonErrorResponse(error, requestId);

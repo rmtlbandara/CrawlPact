@@ -1,5 +1,6 @@
 import { afterAll, beforeAll, describe, expect, it, vi } from "vitest";
 import { createD1TestHarness } from "./d1-harness";
+import { createFakeR2Bucket } from "./fake-r2-bucket";
 import {
   createVirtualCredential,
   simulateAuthentication,
@@ -79,6 +80,7 @@ describe("saved domains, groups, and account management (real D1)", () => {
     dispose = harness.dispose;
     mockEnv = {
       DB: harness.db,
+      AGENCY_LOGOS: createFakeR2Bucket(),
       PUBLIC_APP_ENV: "local",
       PUBLIC_SITE_URL: ORIGIN,
       SESSION_SIGNING_SECRET: "integration-test-secret-value-long-enough",

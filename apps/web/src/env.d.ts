@@ -10,6 +10,7 @@
  */
 type CloudflareRuntimeEnv = {
   DB: D1Database;
+  AGENCY_LOGOS: R2Bucket;
   PUBLIC_APP_ENV: "local" | "preview" | "production";
   PUBLIC_SITE_URL: string;
   SESSION_SIGNING_SECRET: string;

@@ -3,6 +3,18 @@ import { schema } from "@crawlpact/database";
 import type { Database } from "@crawlpact/database";
 import type { AgencyBranding } from "@crawlpact/core";
 import { bytesToBase64Url } from "./base64url";
+import { objectKeyFromLogoUrl } from "./agency-logo";
+
+/** The R2 object key of a revoked share's agency logo, if it had one — the
+ * caller (a route, which owns R2 binding access) deletes it from R2 only
+ * after this D1 update has already succeeded, per
+ * docs/data/DATA_RETENTION.md's "R2 deletion must never precede the D1
+ * reference" rule. */
+function logoObjectKeyFromStoredBranding(agencyBrandingJson: string | null): string | null {
+  if (!agencyBrandingJson) return null;
+  const branding = JSON.parse(agencyBrandingJson) as AgencyBranding;
+  return branding.logoUrl ? objectKeyFromLogoUrl(branding.logoUrl) : null;
+}
 
 async function hashShareToken(token: string): Promise<string> {
   const digest = await crypto.subtle.digest("SHA-256", new TextEncoder().encode(token));
@@ -66,13 +78,26 @@ export async function listShares(db: Database, userId: string, scanId: string) {
     );
 }
 
-export async function revokeShare(db: Database, userId: string, shareId: string): Promise<boolean> {
-  const result = await db
+export type RevokeShareResult = { revoked: boolean; logoObjectKey: string | null };
+
+export async function revokeShare(
+  db: Database,
+  userId: string,
+  shareId: string,
+): Promise<RevokeShareResult> {
+  const [row] = await db
     .update(schema.sharedReports)
     .set({ revokedAt: new Date().toISOString() })
     .where(and(eq(schema.sharedReports.id, shareId), eq(schema.sharedReports.ownerUserId, userId)))
-    .returning({ id: schema.sharedReports.id });
-  return result.length > 0;
+    .returning({
+      id: schema.sharedReports.id,
+      agencyBranding: schema.sharedReports.agencyBranding,
+    });
+  if (!row) return { revoked: false, logoObjectKey: null };
+  return {
+    revoked: true,
+    logoObjectKey: logoObjectKeyFromStoredBranding(row.agencyBranding),
+  };
 }
 
 /** SRS §28.9 (Super Admin "Shared reports" nav item): every shared report
@@ -90,11 +115,16 @@ export async function listAllSharedReports(db: Database) {
 
 /** Admin revocation needs no ownership check — that's the whole point of
  * an administrative override — unlike the customer-facing `revokeShare`. */
-export async function adminRevokeShare(db: Database, shareId: string): Promise<void> {
-  await db
+export async function adminRevokeShare(
+  db: Database,
+  shareId: string,
+): Promise<{ logoObjectKey: string | null }> {
+  const result = await db
     .update(schema.sharedReports)
     .set({ revokedAt: new Date().toISOString() })
-    .where(eq(schema.sharedReports.id, shareId));
+    .where(eq(schema.sharedReports.id, shareId))
+    .returning({ agencyBranding: schema.sharedReports.agencyBranding });
+  return { logoObjectKey: logoObjectKeyFromStoredBranding(result[0]?.agencyBranding ?? null) };
 }
 
 /**

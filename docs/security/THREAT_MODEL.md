@@ -13,6 +13,9 @@ as later parts add Super Admin (Part 3) and agency features.
   ever handled by CrawlPact — Paddle is merchant of record)
 - Private notification feed tokens and shared-report tokens
 - The crawler registry (integrity matters: a bad entry could mislead every customer's report)
+- Uploaded agency-branding logo images (R2, `AGENCY_LOGOS` bucket) — publicly served by design
+  (shared reports have no login), so confidentiality isn't the concern; integrity (never letting
+  an upload become a script-execution vector) is
 - CrawlPact's own infrastructure (D1, Worker) and its ability to serve the public site
 
 ## Actors and motivations
@@ -51,6 +54,20 @@ as later parts add Super Admin (Part 3) and agency features.
 - **Abuse / volumetric** — anonymous audits are capped per IP per day
   (`runtime_configuration.anonymous_audit_daily_limit`), recovery-code and account-scan-related
   attempts are rate-limited per IP, all logged to `security_events`.
+- **File upload (agency-branding logo, added 2026-07-30)** — the only user-uploaded binary
+  content in this codebase (`POST /api/agency-branding/logo`). Real content is sniffed from the
+  file's own magic bytes (`lib/agency-logo.ts`'s `detectImageType`), never trusted from a
+  client-supplied `Content-Type` header or filename; SVG is rejected outright (it can carry
+  inline `<script>`/event-handler payloads — the same class of risk ADR-0005's SSRF chokepoint
+  discipline exists to prevent elsewhere). The object key is always server-generated
+  (`{userId}/{uuid}.{ext}`), never client-supplied, so there's no path-traversal or key-collision
+  surface. Size capped at 1 MiB, gated behind the same `agencyBrandingEnabled` plan check the
+  share route uses, and rate-limited per IP. The serving route
+  (`GET /api/agency-branding/logo/[userId]/[filename]`) is deliberately public/unauthenticated
+  (shared reports are viewed by third parties with no account) but safe to be so: the bucket
+  holds nothing but what the upload route ever wrote, so an arbitrary-key read can only ever
+  return a legitimately uploaded logo, never other CrawlPact data. See
+  `docs/data/D1_R2_DATA_PLACEMENT_POLICY.md`'s 2026-07-30 entry.
 - **Registry integrity** — publication requires a reliable source, verified token, purpose
   classification, and administrator approval (FR-REG-005); releases are immutable.
 - **Data minimisation / retention** — a daily job purges anonymous scans after 7 days, owned scan
