@@ -442,3 +442,36 @@ implicitly depend on (order-dependent fragility), and the recovery-codes/registe
 tests are testing the registration ceremony itself. These keep dedicated fresh registrations by
 design, not oversight. Verified: full e2e suite (`pnpm exec playwright test`, both projects) and
 required Chromium suite both pass clean; `pnpm verify:push` passes 3 consecutive clean runs.
+
+## SSRF-safe deterministic scanner test target (Phase 2 PR D, 2026-07-30)
+
+`auth-and-account.spec.ts`'s two required e2e tests that trigger a real scan ("saves a domain and
+triggers a real manual scan", "prints a report via the real print button") depended on
+`example.com` — a third party CrawlPact has no control over. The scanner's `safeFetch` chokepoint
+(ADR-0005) does real DNS-over-HTTPS resolution and a real HTTP fetch on purpose, so no in-process
+mock is possible for a real browser-driven e2e test; the only fix is a real, publicly-resolvable
+origin CrawlPact itself owns.
+
+**Provisioned** (with the repository owner's explicit go-ahead for this specific resource):
+`e2e-fixture.crawlpact.com`, a new, separate, minimal Cloudflare Worker
+(`apps/e2e-fixture/`, deployed via `wrangler deploy` from that directory — not part of the root
+`pnpm build`/`pnpm quality` scripts, matching its status as standalone test infrastructure rather
+than an app package) serving fixed, version-controlled `/`, `/robots.txt`, and `/llms.txt`
+content. Attached as a Workers Custom Domain under the same `crawlpact.com` zone the production
+Worker already uses — confirmed working with the same Wrangler OAuth token already used for every
+other deploy in this repo (no additional zone-level access needed, same as the existing production
+custom domain).
+
+**Non-obvious finding**: Cloudflare's zone-level "AI Crawl Control" feature (already documented
+above, in "Items that need a dashboard check", for the production apex) also intercepts and fully
+replaces `/robots.txt` for this new subdomain — the Worker's own hand-written robots.txt content is
+never actually served; every request gets Cloudflare's managed block instead. This doesn't affect
+either test (neither asserts on specific `robots.txt` rules, only that a real scan produces a
+score or an honest failure), and the Cloudflare-managed content is itself stable/zone-configured
+rather than arbitrary, so the fixture is still far more deterministic than `example.com` — but it
+means `apps/e2e-fixture/src/worker.ts`'s `ROBOTS_TXT` constant is currently dead code in practice
+for real requests through the proxied domain. Left in place (harmless, and correct if AI Crawl
+Control is ever disabled for this zone) rather than removed, with this note as the explanation.
+
+Verified: 3 consecutive clean `pnpm verify:push` runs (35/35 e2e, 80/80 a11y) with the two tests
+now targeting the live fixture domain instead of `example.com`.

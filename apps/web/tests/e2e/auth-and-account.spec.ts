@@ -8,6 +8,12 @@ import {
 import { ensureRealPage } from "./helpers/navigation";
 import { clearAnonymousAuditRateLimit, clearRecoveryCodeRateLimit } from "./helpers/admin-db";
 
+// A small, CrawlPact-controlled static site (apps/e2e-fixture) used as the
+// real scan target for the two tests below — replaces a prior dependency
+// on example.com (a third party CrawlPact has no control over) with a
+// stable, version-controlled origin. See apps/e2e-fixture/wrangler.jsonc.
+const SCAN_FIXTURE_DOMAIN = "e2e-fixture.crawlpact.com";
+
 /**
  * Real browser journeys through the customer-facing account/domain flows
  * (SRS §35.3: passkey registration, sign-in, save domain, manual scan,
@@ -44,9 +50,9 @@ test.describe("Passkey account lifecycle", () => {
 
     await page.goto("/app/domains");
     await ensureRealPage(page);
-    await page.getByLabel("Domain").fill("example.com");
+    await page.getByLabel("Domain").fill(SCAN_FIXTURE_DOMAIN);
     await page.getByRole("button", { name: "Save domain" }).click();
-    const domainLink = page.getByRole("link", { name: /example\.com/ }).first();
+    const domainLink = page.getByRole("link", { name: SCAN_FIXTURE_DOMAIN }).first();
     await expect(domainLink).toBeVisible();
     await domainLink.click();
 
@@ -56,9 +62,9 @@ test.describe("Passkey account lifecycle", () => {
     // handleRescan() does `window.location.reload()` on success — wait for
     // the reload to actually complete rather than racing it.
     await page.waitForLoadState("networkidle");
-    // A real scan ran synchronously against a real target (example.com) —
-    // either it completed with a score, or it honestly failed; either is
-    // proof the real pipeline ran, not a fabricated result.
+    // A real scan ran synchronously against a real, CrawlPact-controlled
+    // target — either it completed with a score, or it honestly failed;
+    // either is proof the real pipeline ran, not a fabricated result.
     await expect(
       page.getByText(/Re-scan not started/).or(page.locator("text=/\\d+\\s*\\/\\s*100/")),
     ).toBeVisible({ timeout: 15_000 });
@@ -143,10 +149,10 @@ test.describe("Recovery code sign-in", () => {
 
 test.describe("Anonymous audit report", () => {
   test("prints a report via the real print button", async ({ page }) => {
-    // A real scan against a real external target (example.com) competing
-    // with other tests' real scans against the same single dev server can
-    // legitimately take longer than Playwright's default 30s test timeout
-    // under concurrent load — generous but not unbounded.
+    // A real scan against a real target competing with other tests' real
+    // scans against the same single dev server can legitimately take
+    // longer than Playwright's default 30s test timeout under concurrent
+    // load — generous but not unbounded.
     test.setTimeout(60_000);
     // The anonymous-audit daily cap (SRS §28.8) is shared across every run
     // of this suite from this machine/CI-runner's IP — without resetting it
@@ -156,7 +162,7 @@ test.describe("Anonymous audit report", () => {
     await clearAnonymousAuditRateLimit(page);
     await page.goto("/");
     await page.waitForLoadState("networkidle");
-    await page.getByLabel("Domain or URL to audit").first().fill("example.com");
+    await page.getByLabel("Domain or URL to audit").first().fill(SCAN_FIXTURE_DOMAIN);
     await page.getByRole("button", { name: "Audit domain" }).first().click();
     await page.waitForURL("**/audit/*", { timeout: 45_000 });
 

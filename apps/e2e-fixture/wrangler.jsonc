@@ -1,0 +1,15 @@
+{
+  "$schema": "node_modules/wrangler/config-schema.json",
+  "name": "crawlpact-e2e-fixture",
+  "main": "./src/worker.ts",
+  "compatibility_date": "2026-07-01",
+  // A deliberately tiny, static, CrawlPact-controlled scan target for the
+  // two required e2e tests (auth-and-account.spec.ts) that need a real
+  // publicly-resolvable HTTP origin to scan — see docs/status/KNOWN_RISKS.md
+  // and docs/architecture/adr/ for why this can't be mocked (the scanner's
+  // safe-fetch chokepoint does real DNS + real HTTP, on purpose). Never
+  // referenced by, or given any special treatment in, the production app —
+  // it's just an ordinary scan target that happens to be one CrawlPact
+  // itself owns, so its content is version-controlled and stable.
+  "routes": [{ "pattern": "e2e-fixture.crawlpact.com", "custom_domain": true }],
+}
