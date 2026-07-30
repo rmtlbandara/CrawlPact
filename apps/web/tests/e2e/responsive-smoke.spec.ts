@@ -1,7 +1,5 @@
 import { expect, test, type Page } from "@playwright/test";
-import { addVirtualAuthenticator } from "./helpers/webauthn";
-import { registerNewAccount, signInWithPasskey } from "./helpers/auth";
-import { findUserIdByDisplayName, grantSuperAdmin } from "./helpers/admin-db";
+import { CUSTOMER_STORAGE_STATE, ADMIN_STORAGE_STATE } from "./helpers/fixture-accounts";
 
 /**
  * Replaces the deleted pixel-by-pixel visual regression suite (see
@@ -75,38 +73,38 @@ test.describe("Responsive layout smoke", () => {
     });
   }
 
+  // Both tests below reuse the shared customer/admin fixtures (see
+  // setup/customer.setup.ts, setup/admin.setup.ts) instead of registering a
+  // fresh passkey — safe here since both are read-only render checks.
   test.describe("authenticated shells", () => {
     test.skip(({ browserName }) => browserName !== "chromium", "WebAuthn is Chromium-only.");
 
-    test("customer dashboard renders without horizontal overflow", async ({ page }) => {
-      await addVirtualAuthenticator(page);
-      const displayName = `Responsive Customer ${Date.now()}-${crypto.randomUUID().slice(0, 8)}`;
-      await registerNewAccount(page, displayName);
-      for (const viewport of VIEWPORTS) {
-        await page.setViewportSize({ width: viewport.width, height: viewport.height });
-        await page.goto("/app");
-        await page.waitForLoadState("networkidle");
-        await expect(page.getByRole("heading", { level: 1 })).toBeVisible();
-        await assertNoHorizontalOverflow(page);
-      }
+    test.describe("customer dashboard", () => {
+      test.use({ storageState: CUSTOMER_STORAGE_STATE });
+
+      test("renders without horizontal overflow", async ({ page }) => {
+        for (const viewport of VIEWPORTS) {
+          await page.setViewportSize({ width: viewport.width, height: viewport.height });
+          await page.goto("/app");
+          await page.waitForLoadState("networkidle");
+          await expect(page.getByRole("heading", { level: 1 })).toBeVisible();
+          await assertNoHorizontalOverflow(page);
+        }
+      });
     });
 
-    test("Super Admin shell renders without horizontal overflow", async ({ page }) => {
-      await addVirtualAuthenticator(page);
-      const displayName = `Responsive Admin ${Date.now()}-${crypto.randomUUID().slice(0, 8)}`;
-      await registerNewAccount(page, displayName);
-      const userId = await findUserIdByDisplayName(displayName);
-      await grantSuperAdmin(userId);
-      await page.getByRole("button", { name: "Sign out" }).click();
-      await page.waitForURL("**/");
-      await signInWithPasskey(page);
-      for (const viewport of VIEWPORTS) {
-        await page.setViewportSize({ width: viewport.width, height: viewport.height });
-        await page.goto("/admin/settings");
-        await page.waitForLoadState("networkidle");
-        await expect(page.getByRole("heading", { level: 1 })).toBeVisible();
-        await assertNoHorizontalOverflow(page);
-      }
+    test.describe("Super Admin shell", () => {
+      test.use({ storageState: ADMIN_STORAGE_STATE });
+
+      test("renders without horizontal overflow", async ({ page }) => {
+        for (const viewport of VIEWPORTS) {
+          await page.setViewportSize({ width: viewport.width, height: viewport.height });
+          await page.goto("/admin/settings");
+          await page.waitForLoadState("networkidle");
+          await expect(page.getByRole("heading", { level: 1 })).toBeVisible();
+          await assertNoHorizontalOverflow(page);
+        }
+      });
     });
   });
 

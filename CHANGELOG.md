@@ -6,6 +6,36 @@ changelog, see the `/changelog` page on the public website.
 All notable changes are grouped by development "Part," per `docs/product/CRAWLPACT_FINAL_SRS.md`
 §37.
 
+## Release-Flow Remediation Phase 2 — Shared Auth Fixtures, Automerge Reliability (2026-07-30)
+
+### Added
+
+- `apps/web/tests/e2e/setup/customer.setup.ts` / `admin.setup.ts` — Playwright "setup project"
+  fixtures that register one real account each, save authenticated `storageState`, and let other
+  specs opt in via `test.use({ storageState: ... })` instead of re-running a real WebAuthn
+  ceremony. `admin-flows.spec.ts` (4 tests) and `responsive-smoke.spec.ts` (2 tests) migrated,
+  cutting 6 independent ceremonies down to 2. See `docs/testing/TEST_STRATEGY.md`.
+
+### Fixed
+
+Three real bugs found while `merge-when-green.yml` handled its first few automated merges (PR
+#44-#47) — all now self-healing for future PRs:
+
+- Merges made with the workflow's default `GITHUB_TOKEN` never triggered `ci.yml`'s `push`
+  trigger on `main` (documented GitHub anti-recursion behavior) — `deploy-production.yml`'s
+  "CI succeeded for this exact commit" check would have permanently refused every automerged
+  commit. Fixed by adding `workflow_dispatch` to `ci.yml` and having `merge-when-green.yml`
+  explicitly call it after a successful merge.
+- That fix itself needed `actions: write`, missing from the workflow's `permissions:` block —
+  added.
+- `ci.yml`'s new `workflow_dispatch` trigger made `gitleaks-action` fall back to a full-history
+  scan (no commit range to diff incrementally) instead of its usual incremental scan, surfacing
+  `PUBLIC_PADDLE_CLIENT_TOKEN` — a value that's intentionally public (Paddle.js needs it
+  client-side, already documented as such) — as a false-positive leak. Fixed with a narrow
+  `.gitleaks.toml` allowlist entry for that one value; the real ruleset is unchanged.
+
+See `docs/status/KNOWN_RISKS.md` for full root-cause detail on each.
+
 ## Release-Flow Remediation Phase 2 — Nav Overflow Fixes (2026-07-30)
 
 Fixed the two real, disclosed responsive-layout bugs the new `responsive-smoke.spec.ts` suite
