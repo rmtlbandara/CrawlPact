@@ -6,6 +6,26 @@ changelog, see the `/changelog` page on the public website.
 All notable changes are grouped by development "Part," per `docs/product/CRAWLPACT_FINAL_SRS.md`
 §37.
 
+## Release-Flow Remediation Phase 2 — Nav Overflow Fixes (2026-07-30)
+
+Fixed the two real, disclosed responsive-layout bugs the new `responsive-smoke.spec.ts` suite
+surfaced during Phase 1 (see `docs/status/KNOWN_RISKS.md`), rather than leaving them deferred.
+
+### Fixed
+
+- **`SiteHeader.astro`'s desktop nav overflowed at 640/768px** (the "Audit domain" button ran
+  off-screen) — the nav switched on at this project's remapped `md:` breakpoint (640px, not
+  Tailwind's stock 768px the original bug report mischaracterized it as), too narrow for the full
+  row. Moved the switch to `xl:` (1024px).
+- **Customer dashboard (`AppNav.astro`) had no mobile nav at all** — built `AppMobileNav.tsx`
+  mirroring the existing `MobileNav.tsx`/`AdminMobileNav.tsx` pattern.
+- **Super Admin shell's header bar overflowed at 360/768px** — not the sidebar (`AdminMobileNav`
+  already worked correctly), but the surrounding header's display name and "Customer view" link
+  rendering unconditionally. Hid the display name below `sm:`, made "Customer view" icon-only
+  below `xl:`.
+- Corrected several stale doc/comment claims describing this project's remapped breakpoint scale
+  (`packages/ui/src/tokens/tokens.css`) using Tailwind's stock `md:`/`lg:` meanings.
+
 ## Release-Flow Remediation — CI Redesign, Visual Regression Removal (2026-07-29)
 
 Made the development/release flow fast, deterministic, and free of repository-controlled

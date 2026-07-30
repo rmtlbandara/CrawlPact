@@ -1,6 +1,7 @@
 ---
 import { SignOutButton } from "../auth/SignOutButton";
 import { NotificationBadge } from "./NotificationBadge";
+import { AppMobileNav } from "./AppMobileNav";
 import BrandMark from "../BrandMark.astro";
 
 export type Props = { displayName: string };
@@ -23,7 +24,7 @@ function isActive(href: string): boolean {
 
 <header class="border-b border-neutral-200 bg-white">
   <div class="mx-auto flex max-w-[1100px] items-center justify-between gap-4 px-4 py-3 sm:px-6">
-    <nav class="flex items-center gap-1" aria-label="Dashboard navigation">
+    <div class="flex items-center gap-1">
       <a href="/" class="mr-4 flex items-center gap-2 text-body font-semibold text-neutral-950">
         <span
           aria-hidden="true"
@@ -34,24 +35,34 @@ function isActive(href: string): boolean {
         CrawlPact
       </a>
       {
-        links.map((link) => (
-          <a
-            href={link.href}
-            aria-current={isActive(link.href) ? "page" : undefined}
-            class={`rounded-control px-3 py-2 text-body font-medium ${
-              isActive(link.href)
-                ? "bg-brand-50 text-brand-700"
-                : "text-neutral-700 hover:bg-neutral-100"
-            }`}
-          >
-            {link.label}
-            {link.href === "/app/notifications" && <NotificationBadge client:load />}
-          </a>
-        ))
+        /* This project remaps Tailwind's breakpoint scale (packages/ui/src/tokens/tokens.css
+          — md:640px, lg:768px, xl:1024px). Below `xl`, AppMobileNav takes over — confirmed
+          via a real Playwright test that this link list has no room at 360/768px
+          (516px of horizontal overflow) since it was previously always rendered. See
+          docs/status/KNOWN_RISKS.md and apps/web/tests/e2e/responsive-smoke.spec.ts. */
       }
-    </nav>
+      <nav class="hidden items-center gap-1 xl:flex" aria-label="Dashboard navigation">
+        {
+          links.map((link) => (
+            <a
+              href={link.href}
+              aria-current={isActive(link.href) ? "page" : undefined}
+              class={`rounded-control px-3 py-2 text-body font-medium ${
+                isActive(link.href)
+                  ? "bg-brand-50 text-brand-700"
+                  : "text-neutral-700 hover:bg-neutral-100"
+              }`}
+            >
+              {link.label}
+              {link.href === "/app/notifications" && <NotificationBadge client:load />}
+            </a>
+          ))
+        }
+      </nav>
+      <AppMobileNav client:idle links={links} currentPath={currentPath} />
+    </div>
     <div class="flex items-center gap-3">
-      <span class="text-supporting text-neutral-600">{displayName}</span>
+      <span class="hidden text-supporting text-neutral-600 sm:inline">{displayName}</span>
       <SignOutButton client:load />
     </div>
   </div>

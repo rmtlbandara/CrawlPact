@@ -33,43 +33,32 @@ test.describe("Responsive layout smoke", () => {
     test.describe(`at ${viewport.width}px`, () => {
       test.use({ viewport: { width: viewport.width, height: viewport.height } });
 
-      // SiteHeader.astro switches from MobileNav to the full desktop nav
-      // (logo + 6 links + Sign in + Audit domain button, all in one row) at
-      // exactly Tailwind's `md:` breakpoint (768px) — confirmed here as a
-      // real, pre-existing bug: that desktop nav does not actually fit in
-      // 768px and overflows (the "Audit domain" button runs off-screen).
-      // Disclosed in docs/status/KNOWN_RISKS.md as a real, out-of-scope
-      // product bug this remediation's improved testing surfaced, not
-      // fixed here. Overflow is asserted at 360/1280, where it's confirmed
-      // to actually hold.
-      const skipOverflowCheck = viewport.width === 768;
-
       test("home page renders the audit form without horizontal overflow", async ({ page }) => {
         await page.goto("/");
         await page.waitForLoadState("networkidle");
         await expect(page.getByRole("heading", { level: 1 })).toBeVisible();
         await expect(page.getByRole("button", { name: "Audit domain" }).first()).toBeVisible();
-        if (!skipOverflowCheck) await assertNoHorizontalOverflow(page);
+        await assertNoHorizontalOverflow(page);
       });
 
       test("pricing page renders its plans without horizontal overflow", async ({ page }) => {
         await page.goto("/pricing");
         await page.waitForLoadState("networkidle");
         await expect(page.getByRole("heading", { level: 1 })).toBeVisible();
-        if (!skipOverflowCheck) await assertNoHorizontalOverflow(page);
+        await assertNoHorizontalOverflow(page);
       });
 
       test("a crawler detail page renders without horizontal overflow", async ({ page }) => {
         await page.goto("/crawlers/gptbot");
         await page.waitForLoadState("networkidle");
         await expect(page.getByRole("heading", { level: 1 })).toBeVisible();
-        if (!skipOverflowCheck) await assertNoHorizontalOverflow(page);
+        await assertNoHorizontalOverflow(page);
       });
 
-      // MobileNav.tsx is `md:hidden` — Tailwind's `md` breakpoint is 768px,
-      // so the "Open menu" button is already hidden (desktop nav shown
-      // instead) at exactly 768px and above.
-      if (viewport.width < 768) {
+      // MobileNav.tsx is `xl:hidden` — this project's remapped `xl:`
+      // breakpoint is 1024px (see SiteHeader.astro), so the "Open menu"
+      // button is present at both 360 and 768, hidden only at 1280.
+      if (viewport.width < 1024) {
         test("mobile navigation opens and closes without leaving stray horizontal overflow", async ({
           page,
         }) => {
@@ -86,20 +75,10 @@ test.describe("Responsive layout smoke", () => {
     });
   }
 
-  // The customer/admin dashboard nav bars (DashboardNav / AdminNav) render
-  // every link inline with no mobile-collapse equivalent to the public
-  // site's MobileNav — confirmed here: a real, pre-existing horizontal
-  // overflow (516px on the customer dashboard, 112px on the Super Admin
-  // shell) at 360/768px, disclosed in docs/status/KNOWN_RISKS.md as a real,
-  // out-of-scope-for-this-remediation product gap rather than silently
-  // loosened or hidden. Only the desktop breakpoint is asserted here until
-  // that's fixed; heading visibility is still checked at every breakpoint.
   test.describe("authenticated shells", () => {
     test.skip(({ browserName }) => browserName !== "chromium", "WebAuthn is Chromium-only.");
 
-    test("customer dashboard renders without horizontal overflow at desktop width", async ({
-      page,
-    }) => {
+    test("customer dashboard renders without horizontal overflow", async ({ page }) => {
       await addVirtualAuthenticator(page);
       const displayName = `Responsive Customer ${Date.now()}-${crypto.randomUUID().slice(0, 8)}`;
       await registerNewAccount(page, displayName);
@@ -108,15 +87,11 @@ test.describe("Responsive layout smoke", () => {
         await page.goto("/app");
         await page.waitForLoadState("networkidle");
         await expect(page.getByRole("heading", { level: 1 })).toBeVisible();
-        if (viewport.width >= 1280) {
-          await assertNoHorizontalOverflow(page);
-        }
+        await assertNoHorizontalOverflow(page);
       }
     });
 
-    test("Super Admin shell renders without horizontal overflow at desktop width", async ({
-      page,
-    }) => {
+    test("Super Admin shell renders without horizontal overflow", async ({ page }) => {
       await addVirtualAuthenticator(page);
       const displayName = `Responsive Admin ${Date.now()}-${crypto.randomUUID().slice(0, 8)}`;
       await registerNewAccount(page, displayName);
@@ -130,9 +105,7 @@ test.describe("Responsive layout smoke", () => {
         await page.goto("/admin/settings");
         await page.waitForLoadState("networkidle");
         await expect(page.getByRole("heading", { level: 1 })).toBeVisible();
-        if (viewport.width >= 1280) {
-          await assertNoHorizontalOverflow(page);
-        }
+        await assertNoHorizontalOverflow(page);
       }
     });
   });

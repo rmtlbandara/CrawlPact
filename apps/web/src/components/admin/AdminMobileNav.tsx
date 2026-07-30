@@ -8,12 +8,15 @@ export type AdminNavGroup = {
 };
 
 /**
- * Below `lg` (1024px) the desktop sidebar in AdminNav.astro is hidden
- * entirely with no replacement — an admin had no way to reach any of the 20
- * admin sections from a phone or tablet. This mirrors the public site's
+ * Below `lg` the desktop sidebar in AdminNav.astro is hidden entirely with
+ * no replacement — an admin had no way to reach any of the 20 admin
+ * sections from a phone or tablet. This mirrors the public site's
  * MobileNav pattern (same Drawer/IconButton primitives) so an admin can
  * still act (e.g. pause the scheduler, resolve a security event) from a
- * smaller screen.
+ * smaller screen. Note: this project remaps Tailwind's breakpoint scale
+ * (packages/ui/src/tokens/tokens.css) — `lg:` here means 768px, not
+ * Tailwind's stock 1024px (a stale version of this comment previously said
+ * 1024px).
  */
 export function AdminMobileNav({
   groups,

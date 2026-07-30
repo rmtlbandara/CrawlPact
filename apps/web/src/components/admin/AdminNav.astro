@@ -1,4 +1,5 @@
 ---
+import { ArrowLeftRight } from "lucide-react";
 import { getAdminEnvironment } from "../../lib/admin/environment";
 import { SignOutButton } from "../auth/SignOutButton";
 import { AdminMobileNav } from "./AdminMobileNav";
@@ -141,12 +142,21 @@ function isActive(href: string): boolean {
           </a>
         </div>
         <div class="flex items-center gap-3">
-          <span class="text-supporting text-neutral-600">{displayName}</span>
+          <span class="hidden text-supporting text-neutral-600 sm:inline">{displayName}</span>
+          {
+            /* Icon always visible (so mobile admins can still reach it — AdminMobileNav's
+              drawer only lists admin sections, not this), label only at `xl` (1024px in
+              this project's remapped scale) once there's room. Part of fixing the real
+              112px header-bar overflow at 360/768px — see docs/status/KNOWN_RISKS.md. */
+          }
           <a
             href="/app"
-            class="rounded-control border border-neutral-300 px-3 py-1.5 text-supporting font-medium text-neutral-700 hover:bg-neutral-50"
+            aria-label="Customer view"
+            title="Customer view"
+            class="flex items-center gap-1.5 rounded-control border border-neutral-300 px-3 py-1.5 text-supporting font-medium text-neutral-700 hover:bg-neutral-50"
           >
-            Customer view
+            <ArrowLeftRight aria-hidden="true" size={16} />
+            <span class="hidden xl:inline">Customer view</span>
           </a>
           <SignOutButton client:load />
         </div>

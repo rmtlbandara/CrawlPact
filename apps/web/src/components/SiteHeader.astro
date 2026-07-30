@@ -13,6 +13,15 @@ const links = [
 
 const currentPath = Astro.url.pathname;
 
+// This project remaps Tailwind's breakpoint scale (packages/ui/src/tokens/tokens.css —
+// md:640px, lg:768px, xl:1024px, not Tailwind's stock 768/1024/1280). The desktop nav
+// below previously switched on at `md:` (640px, confirmed via the real remap, not the
+// 768px this bug was originally — incorrectly — described as) and didn't fit: the full
+// row (logo + 6 links + Sign in + Audit a domain) needs more than 640px or 768px. Now
+// switches on at `xl:` (1024px), matching MobileNav.tsx below — see
+// docs/status/KNOWN_RISKS.md for the original bug report and
+// apps/web/tests/e2e/responsive-smoke.spec.ts for the regression coverage.
+
 // "Product" is a homepage anchor, not a distinct section, so it's excluded
 // from current-page indication — only real standalone routes are marked.
 function isCurrentSection(href: string): boolean {
@@ -37,7 +46,7 @@ function isCurrentSection(href: string): boolean {
       CrawlPact
     </a>
 
-    <nav aria-label="Primary" class="hidden md:block">
+    <nav aria-label="Primary" class="hidden xl:block">
       <ul class="flex items-center gap-6 text-body text-neutral-700">
         {
           links.map((link) => (
@@ -59,7 +68,7 @@ function isCurrentSection(href: string): boolean {
       </ul>
     </nav>
 
-    <div class="hidden items-center gap-3 md:flex">
+    <div class="hidden items-center gap-3 xl:flex">
       <a href="/sign-in" class="text-body text-neutral-700 hover:text-brand-700">Sign in</a>
       <a
         href="/audit"
