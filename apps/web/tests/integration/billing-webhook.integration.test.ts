@@ -388,4 +388,92 @@ describe("Paddle billing webhook (real D1, self-generated HMAC signatures)", () 
     const body = await readJson<{ outcome: string }>(response);
     if (body.ok) expect(body.data.outcome).toBe("ignored_unhandled_type");
   });
+
+  it("ignores a draft transaction with no customer_id yet, rather than failing it", async () => {
+    // Paddle sends transaction.created for a checkout still in progress,
+    // before a customer is attached — customer_id is genuinely null. This
+    // must not be recorded as a processing failure (it would otherwise
+    // retry to permanently_failed for something that was never wrong).
+    const response = await postWebhook({
+      event_id: "evt_draft_txn",
+      event_type: "transaction.created",
+      occurred_at: "2026-01-08T00:00:00.000000Z",
+      data: {
+        id: "txn_draft_1",
+        customer_id: null,
+        status: "draft",
+        currency_code: "USD",
+        details: { totals: { grand_total: "7900", tax: "0" } },
+      },
+    });
+    expect(response.status).toBe(200);
+    const body = await readJson<{ outcome: string }>(response);
+    if (body.ok) expect(body.data.outcome).toBe("ignored_no_customer_yet");
+
+    const [event] = await db
+      .select()
+      .from(schema.webhookEvents)
+      .where(eq(schema.webhookEvents.paddleEventId, "evt_draft_txn"))
+      .limit(1);
+    expect(event!.status).toBe("ignored");
+
+    const [txn] = await db
+      .select()
+      .from(schema.transactions)
+      .where(eq(schema.transactions.paddleTransactionId, "txn_draft_1"))
+      .limit(1);
+    expect(txn).toBeUndefined();
+  });
+
+  it("processes both events when two related deliveries for a brand-new subscription race concurrently", async () => {
+    // Paddle fires subscription.created and subscription.activated within
+    // milliseconds of each other; Workers can process two such deliveries
+    // concurrently. Both requests find no existing row and race to insert
+    // one — the loser must fall back to updating the winner's row instead
+    // of surfacing a UNIQUE-constraint failure.
+    function racePayload(eventId: string, eventType: string, occurredAt: string, status: string) {
+      const p = payloadFor({ eventId, eventType, occurredAt, status });
+      return { ...p, data: { ...p.data, id: "sub_race_1" } };
+    }
+
+    const [first, second] = await Promise.all([
+      postWebhook(
+        racePayload(
+          "evt_race_created",
+          "subscription.created",
+          "2026-01-09T00:00:00.000000Z",
+          "trialing",
+        ),
+      ),
+      postWebhook(
+        racePayload(
+          "evt_race_activated",
+          "subscription.activated",
+          "2026-01-09T00:00:00.500000Z",
+          "active",
+        ),
+      ),
+    ]);
+    expect(first.status).toBe(200);
+    expect(second.status).toBe(200);
+    const firstBody = await readJson<{ outcome: string }>(first);
+    const secondBody = await readJson<{ outcome: string }>(second);
+    if (firstBody.ok) expect(firstBody.data.outcome).toBe("processed");
+    if (secondBody.ok) expect(secondBody.data.outcome).toBe("processed");
+
+    const subs = await db
+      .select()
+      .from(schema.subscriptions)
+      .where(eq(schema.subscriptions.paddleSubscriptionId, "sub_race_1"));
+    expect(subs).toHaveLength(1);
+
+    for (const paddleEventId of ["evt_race_created", "evt_race_activated"]) {
+      const [e] = await db
+        .select()
+        .from(schema.webhookEvents)
+        .where(eq(schema.webhookEvents.paddleEventId, paddleEventId))
+        .limit(1);
+      expect(e!.status).toBe("processed");
+    }
+  });
 });
