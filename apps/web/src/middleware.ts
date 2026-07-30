@@ -15,7 +15,9 @@ import { getEnv } from "./lib/env";
  * `<script>`/`style` content with no nonce support wired up yet — a
  * disclosed, real limitation (see docs/security/THREAT_MODEL.md), not a
  * silently-accepted gap. It still blocks loading script/style/frame
- * content from any origin other than this site and Paddle's checkout.
+ * content from any origin other than this site, Paddle's checkout, and
+ * Google Analytics (an explicit, authorised deviation from SRS §6.2's
+ * "no external analytics vendors" — see docs/status/KNOWN_RISKS.md).
  */
 export const onRequest = defineMiddleware(async (context, next) => {
   const response = await next();
@@ -24,11 +26,11 @@ export const onRequest = defineMiddleware(async (context, next) => {
 
   const csp = [
     "default-src 'self'",
-    "script-src 'self' 'unsafe-inline' https://cdn.paddle.com",
+    "script-src 'self' 'unsafe-inline' https://cdn.paddle.com https://www.googletagmanager.com",
     "style-src 'self' 'unsafe-inline'",
     "img-src 'self' data: https:",
     "font-src 'self' data:",
-    "connect-src 'self' https://*.paddle.com",
+    "connect-src 'self' https://*.paddle.com https://www.google-analytics.com https://*.google-analytics.com https://www.googletagmanager.com",
     "frame-src https://*.paddle.com",
     "frame-ancestors 'none'",
     "base-uri 'self'",

@@ -3,6 +3,8 @@ import BaseLayout from "./BaseLayout.astro";
 import type { Breadcrumb } from "./BaseLayout.astro";
 import SiteHeader from "../components/SiteHeader.astro";
 import SiteFooter from "../components/SiteFooter.astro";
+import GoogleAnalytics from "../components/GoogleAnalytics.astro";
+import { getEnv } from "../lib/env";
 
 export type Props = {
   title: string;
@@ -25,6 +27,10 @@ const {
   updatedDate,
   breadcrumbs,
 } = Astro.props;
+
+// Marketing-only, explicit SRS §6.2 deviation (see docs/status/KNOWN_RISKS.md).
+// Gated to production so local/preview traffic never reaches Google Analytics.
+const isProduction = getEnv().PUBLIC_APP_ENV === "production";
 ---
 
 <BaseLayout
@@ -37,6 +43,7 @@ const {
   updatedDate={updatedDate}
   breadcrumbs={breadcrumbs}
 >
+  {isProduction && <GoogleAnalytics />}
   <div class="flex min-h-screen flex-col">
     <SiteHeader />
     <main id="main-content" tabindex="-1" class="flex-1">

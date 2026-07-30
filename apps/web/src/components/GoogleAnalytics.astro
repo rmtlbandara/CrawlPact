@@ -1,0 +1,24 @@
+---
+/**
+ * Explicit SRS §6.2 deviation, informed product-owner decision — see
+ * docs/status/KNOWN_RISKS.md. Only ever rendered by MarketingLayout.astro
+ * when `PUBLIC_APP_ENV === "production"`; never on the authenticated
+ * app/admin layouts, and never in local/preview.
+ *
+ * Kept as its own component (rather than inlined in MarketingLayout) because
+ * Astro's compiler cannot parse a `<script is:inline>` body containing `{}`
+ * when the tag itself sits inside a `{condition && (...)}` JSX expression —
+ * this file's `<script>` tags stay at the template root, so the caller only
+ * ever nests a plain `<GoogleAnalytics />` element inside that expression.
+ */
+---
+
+<script async is:inline src="https://www.googletagmanager.com/gtag/js?id=G-1W5HP7S561"></script>
+<script is:inline>
+  window.dataLayer = window.dataLayer || [];
+  function gtag() {
+    dataLayer.push(arguments);
+  }
+  gtag("js", new Date());
+  gtag("config", "G-1W5HP7S561");
+</script>
