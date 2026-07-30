@@ -96,6 +96,8 @@ jobs:
 
       - name: Record merge evidence
         if: steps.guard.outputs.should_merge == 'true'
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
           merge_sha=$(git ls-remote https://github.com/${{ github.repository }} main | cut -f1)
           {
@@ -104,3 +106,15 @@ jobs:
             echo "- Tested SHA: \`${{ github.event.workflow_run.head_sha }}\`"
             echo "- Resulting main SHA: \`$merge_sha\`"
           } >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Dispatch a real CI run for the resulting main commit
+        # The squash-merge above used this workflow's default GITHUB_TOKEN,
+        # so it never triggered ci.yml's `push` trigger (see that file's
+        # comment) — main's new tip would otherwise never get its own CI
+        # run, and deploy-production.yml could never verify it. A
+        # workflow_dispatch call is the documented exception to that
+        # restriction.
+        if: steps.guard.outputs.should_merge == 'true'
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: gh workflow run ci.yml --repo "${{ github.repository }}" --ref main
