@@ -35,6 +35,18 @@ filtering, and webhook retry). These use a real Chromium DevTools Protocol virtu
 `tests/integration/virtual-authenticator.ts` builds for integration tests — the actual
 `navigator.credentials.create()`/`.get()` ceremony runs in a real page context.
 
+**Shared authenticated fixtures** (`playwright.config.ts`'s `setup-customer`/`setup-admin`
+projects, `apps/web/tests/e2e/setup/*.setup.ts`): sessions are a single opaque `HttpOnly` cookie
+looked up against a D1 `sessions` row (`apps/web/src/lib/auth/session.ts`) — no client-held
+credential material is needed after the initial WebAuthn ceremony, so a captured Playwright
+`storageState` (which does capture `HttpOnly` cookies) is enough to authenticate a fresh context
+without re-running the ceremony. `admin-flows.spec.ts` (all 4 tests) and `responsive-smoke.spec.ts`
+(2 tests) opt into this via `test.use({ storageState: ... })`, cutting 6 independent real
+ceremonies down to 2. Tests that mutate account-identifying state (saving a domain, requesting
+deletion) or that test the registration/recovery-code ceremony itself keep their own dedicated
+fresh registration — sharing a fixture there would make other tests' assumptions
+order-dependent.
+
 Remaining §35.3 items without dedicated e2e coverage yet (scheduled scan, Paddle purchase/portal,
 agency report, table filtering beyond subscriptions, keyboard-only navigation beyond what
 `tests/a11y` already covers) are a disclosed gap, not a silent one — see

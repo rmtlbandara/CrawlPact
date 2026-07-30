@@ -383,3 +383,21 @@ PR merged correctly.
 **Fixed** — added `actions: write` to the workflow's `permissions:` block; the default
 `GITHUB_TOKEN` needs this explicitly to call the workflow-dispatch API, the same way it already
 needed `contents: write`/`pull-requests: write` for the merge itself.
+
+## Shared authenticated e2e fixtures (Phase 2, 2026-07-30) — partial resolution of the deferred ceremony-count item
+
+Phase 1 deferred "shared auth fixtures instead of ~13 independent passkey registrations" to
+Phase 2. Implemented via Playwright's standard "setup project" pattern
+(`apps/web/tests/e2e/setup/customer.setup.ts`/`admin.setup.ts`, `playwright.config.ts`'s
+`setup-customer`/`setup-admin` projects with `dependencies` on `chromium`/`mobile-safari`) — each
+runs once, registers a real account via a genuine WebAuthn ceremony, and saves the resulting
+session cookie as Playwright `storageState`. `admin-flows.spec.ts` (4 tests) and
+`responsive-smoke.spec.ts` (2 tests) now opt into the shared fixtures via
+`test.use({ storageState: ... })`, cutting 6 independent ceremonies down to 2.
+
+**Deliberately not migrated further** — `auth-and-account.spec.ts`'s domain-save and
+account-deletion tests mutate account-identifying state that other tests would otherwise
+implicitly depend on (order-dependent fragility), and the recovery-codes/register-then-reauth
+tests are testing the registration ceremony itself. These keep dedicated fresh registrations by
+design, not oversight. Verified: full e2e suite (`pnpm exec playwright test`, both projects) and
+required Chromium suite both pass clean; `pnpm verify:push` passes 3 consecutive clean runs.

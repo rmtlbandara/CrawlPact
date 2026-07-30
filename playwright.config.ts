@@ -13,9 +13,7 @@ export default defineConfig({
   // sibling reasoning about not masking instability with tolerance/retries).
   retries: process.env.CI ? 1 : 0,
   // One worker in CI: this suite includes real D1-mutating auth/admin/domain
-  // journeys against a single shared local D1 file (wrangler --local), and
-  // CI now runs against a production-like built Worker (see ci.yml's
-  // browser-smoke job) rather than many parallel dev-server route compiles —
+  // journeys against a single shared local D1 file (wrangler --local) —
   // increase this only after measured evidence shows no shared-state
   // conflict at higher concurrency.
   workers: process.env.CI ? 1 : undefined,
@@ -44,7 +42,24 @@ export default defineConfig({
         timeout: 60_000,
       },
   projects: [
-    { name: "chromium", use: { ...devices["Desktop Chrome"] } },
-    { name: "mobile-safari", use: { ...devices["iPhone 13"] } },
+    // Run once each, before chromium/mobile-safari, and save an
+    // authenticated storageState (session cookie) that specs opt into via
+    // `test.use({ storageState: ... })` — see helpers/fixture-accounts.ts.
+    // Standard Playwright "setup project" pattern; not used anywhere else
+    // in this repo before now.
+    { name: "setup-customer", testMatch: /customer\.setup\.ts/ },
+    { name: "setup-admin", testMatch: /admin\.setup\.ts/ },
+    {
+      name: "chromium",
+      use: { ...devices["Desktop Chrome"] },
+      testIgnore: /.*\.setup\.ts/,
+      dependencies: ["setup-customer", "setup-admin"],
+    },
+    {
+      name: "mobile-safari",
+      use: { ...devices["iPhone 13"] },
+      testIgnore: /.*\.setup\.ts/,
+      dependencies: ["setup-customer", "setup-admin"],
+    },
   ],
 });
