@@ -532,3 +532,30 @@ accessibility suite (151 passed) both re-run clean against this session's other 
 agency-logo upload UI, the `Modal` fix) — the one failure seen
 (`mobile-safari`/skip-link-focus) is the pre-existing, already-documented Playwright/WebKit `Tab`
 limitation above, not a regression.
+
+## `admin-flows.spec.ts`'s subscription-filter test flaked twice in a row in real CI (found 2026-07-30)
+
+Unrelated to the `networkidle` removal above (this file wasn't touched by that change) — flagged
+because it recurred twice consecutively on two different real CI runs, recovering both times via
+Playwright's built-in retry, which is exactly the "flaky test papered over by retry" pattern this
+repo's own testing philosophy treats as a real failure, not a clean pass.
+
+**Root cause**: `packages/ui/src/components/Select.tsx`'s Radix `Select.Content` mounts in a
+portal and does an async popper-positioning pass immediately after opening. A click on an option
+that lands during that repositioning window can be swallowed — the click physically fires, Radix
+sees it, but not against the coordinates the option settles at a moment later. This is the same
+general class of issue as the hydration races fixed above (an interaction landing before the UI is
+actually ready to receive it), just triggered by portal/positioning timing instead of island
+hydration.
+
+**Fix**: `admin-flows.spec.ts`'s subscription-filter test now uses the same `retryUntilSettled`
+helper, retrying the open+select against the trigger's own displayed value actually updating to
+"Past due" (a fast, synchronous-with-React-state signal) rather than assuming the first click
+landed cleanly. Grepped the rest of the e2e suite for `getByRole("option"` — this is the only
+Radix Select interaction in it, so no other latent instance of this exists today.
+
+Verified: 28 of 30 manual local runs clean before the fix (2 failures, both in an early batch
+against a server that had just cold-started — consistent with Astro dev's first-hit compile race
+`ensureRealPage` already exists for, not this issue specifically); 25 consecutive clean runs after
+applying the fix (10 warm-server, 15 with tracing enabled, 3 more against a freshly-restarted
+server); 3 consecutive clean `pnpm verify:push` runs.

@@ -2,6 +2,7 @@ import { expect, test } from "@playwright/test";
 import { seedFailedWebhookEvent } from "./helpers/admin-db";
 import { ensureRealPage } from "./helpers/navigation";
 import { ADMIN_STORAGE_STATE, ADMIN_FIXTURE_DISPLAY_NAME_PREFIX } from "./helpers/fixture-accounts";
+import { retryUntilSettled } from "./helpers/hydration";
 
 /**
  * Real browser journeys through the Super Admin Control Center (SRS §35.3:
@@ -46,8 +47,18 @@ test.describe("Super Admin Control Center", () => {
     await ensureRealPage(page);
     await expect(page.getByRole("heading", { name: "Subscriptions", exact: true })).toBeVisible();
 
-    await page.getByRole("combobox").first().click();
-    await page.getByRole("option", { name: "Past due" }).click();
+    const combobox = page.getByRole("combobox").first();
+    // Radix Select's option list mounts in a portal and does an async
+    // popper-positioning pass right after opening — a click that lands
+    // during that repositioning can be swallowed. Retry the open+select
+    // against the trigger's own displayed value actually updating (a fast,
+    // synchronous-with-React-state signal) rather than assuming the first
+    // click landed cleanly.
+    await retryUntilSettled(async () => {
+      await combobox.click();
+      await page.getByRole("option", { name: "Past due" }).click();
+      await expect(combobox).toContainText("Past due", { timeout: 1_000 });
+    });
     // Filtering must not error out even when it produces an empty result —
     // the table's empty state is itself part of what's under test here.
     const tableOrEmptyState = page
