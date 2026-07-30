@@ -9,6 +9,15 @@ on:
   pull_request:
   push:
     branches: [main]
+  # Explicitly dispatched by merge-when-green.yml right after it squash-merges
+  # a PR: GitHub does not trigger `push`-based workflows from an action taken
+  # with the default GITHUB_TOKEN (documented, deliberate anti-recursion
+  # behaviour — `workflow_dispatch`/`repository_dispatch` are the two
+  # explicit exceptions). Without this, main's own post-merge CI run would
+  # never exist, and deploy-production.yml's "CI succeeded for this exact
+  # commit" check would permanently refuse every automerged commit. See
+  # docs/status/KNOWN_RISKS.md.
+  workflow_dispatch:
 
 concurrency:
   group: ci-${{ github.ref }}

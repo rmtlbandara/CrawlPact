@@ -335,3 +335,21 @@ captured as "correct" forever (see ADR-0008) rather than catching.
 scale), reusing the existing `MobileNav`/desktop-nav complementary pair rather than inventing a
 new collapse pattern. `responsive-smoke.spec.ts` now asserts no horizontal overflow at all three
 breakpoints for the public pages.
+
+## `merge-when-green.yml`'s merges never got their own CI run on `main` (found 2026-07-30, PR #44)
+
+After `merge-when-green.yml` squash-merged PR #44 automatically for the first time, `main`'s new
+tip (`5ec2a4e`) never appeared in `gh run list --workflow ci.yml --branch main` at all. Root
+cause: GitHub does not trigger `push`-based workflow runs from an action taken using a workflow's
+own default `GITHUB_TOKEN` (documented, deliberate anti-recursion behavior) — `workflow_dispatch`
+and `repository_dispatch` are the two explicit exceptions. Since `merge-when-green.yml`'s
+squash-merge step uses `GITHUB_TOKEN`, the resulting push to `main` silently never fired `ci.yml`'s
+`on: push` trigger. This would have permanently blocked `deploy-production.yml`'s "CI succeeded
+for this exact commit" safety check for every future automerged commit — a real, load-bearing gap
+in the Phase 1 auto-merge design, only surfaced because a real deploy was attempted right after
+the first real automerge.
+
+**Fixed** — added `workflow_dispatch:` to `ci.yml` (harmless addition alongside its existing
+`pull_request`/`push` triggers) and a new step at the end of `merge-when-green.yml` that
+explicitly calls `gh workflow run ci.yml --ref main` right after a successful merge, using the
+documented `workflow_dispatch` exception to get a real CI run against the new tip.
