@@ -1,126 +1,78 @@
-import { execFile } from "node:child_process";
-import { promisify } from "node:util";
-import path from "node:path";
-import { fileURLToPath } from "node:url";
+import type { Page } from "@playwright/test";
 
 /**
- * Direct-D1 setup helpers for e2e tests that need to grant an admin role or
- * seed an otherwise-unreachable state (a failed webhook event) before a
- * browser journey exercises it. Playwright tests run against the real local
- * dev D1 via a live `astro dev` server, not the isolated per-test harness
- * `tests/integration/d1-harness.ts` uses — there is no in-process D1 binding
- * to write through here, so this shells out to `wrangler d1 execute --local`,
- * mirroring the same raw-SQL pattern `admin-users.integration.test.ts` uses
- * to grant `super_admin` directly.
+ * Test-fixture setup for e2e tests that need to grant an admin role or
+ * seed an otherwise-unreachable state (a failed webhook event, a
+ * rate-limit reset) before a browser journey exercises it. These call the
+ * env-gated apps/web/src/pages/api/test-only/* routes through the page's
+ * own request context (which shares cookies with the browser, so a call
+ * made while signed in carries that session) rather than shelling out to a
+ * second `wrangler d1 execute --local` process — a second process writing
+ * to the same local D1 sqlite file while the live dev/preview server holds
+ * its own connection to it reliably crashed `wrangler dev --local` (see
+ * docs/status/KNOWN_RISKS.md), which is exactly the concurrency conflict
+ * this fetch-through-the-running-server approach eliminates.
+ *
+ * The shared secret here is intentionally not a real secret — see
+ * apps/web/src/lib/test-only.ts for why a fixed, committed value is fine
+ * (it's a second gate behind PUBLIC_APP_ENV === "local", which alone
+ * already makes these routes unreachable in preview/production).
  */
+const TEST_FIXTURE_SECRET = "e2e-test-fixture-only-not-a-secret";
 
-const execFileAsync = promisify(execFile);
-const webDir = path.resolve(fileURLToPath(import.meta.url), "../../../..");
+// page.request is a raw HTTP client, not a browser-originated fetch — it
+// never sends an Origin header on its own, which trips require-session.ts's
+// CSRF same-origin check on any POST. Send the one this suite's own server
+// expects (PUBLIC_SITE_URL, same default playwright.config.ts uses).
+const SITE_ORIGIN = process.env.PLAYWRIGHT_BASE_URL ?? "http://localhost:4321";
 
-function sleep(ms: number): Promise<void> {
-  return new Promise((resolve) => setTimeout(resolve, ms));
-}
-
-/** Playwright runs these setup calls from multiple parallel workers, each
- * spawning its own `wrangler d1 execute` subprocess against the same local
- * D1 sqlite file — under real concurrency this can collide with a
- * transient `SQLITE_BUSY (SQLITE_BUSY_SNAPSHOT)` lock error (confirmed
- * empirically running the full suite with default parallelism). Retrying
- * with a short backoff resolves it directly, rather than relying on
- * Playwright's own test-level retry to paper over it by re-running the
- * whole test (which only happens in CI's `retries: 2` config anyway, not
- * in a plain local `pnpm test:e2e` run). */
-async function d1Execute(sql: string): Promise<string> {
-  const args = [
-    "wrangler",
-    "d1",
-    "execute",
-    "crawlpact-db",
-    "--local",
-    "--config",
-    "wrangler.jsonc",
-    "--json",
-    "--command",
-    sql,
-  ];
-  let lastError: unknown;
-  for (let attempt = 0; attempt < 6; attempt++) {
-    try {
-      const { stdout } = await execFileAsync("npx", args, { cwd: webDir });
-      return stdout;
-    } catch (error) {
-      // Any wrangler d1 execute failure under this suite's real parallel
-      // load has, in practice, been transient lock/contention on the
-      // shared local D1 file (confirmed by re-running the exact same
-      // failing command standalone immediately afterwards and having it
-      // succeed) — not a genuine SQL error, which this narrow test-setup
-      // helper otherwise has no reason to produce. Retry broadly rather
-      // than pattern-matching a specific error string, since the exact
-      // wording varies (SQLITE_BUSY, SQLITE_BUSY_SNAPSHOT, and others seen
-      // empirically that didn't contain "SQLITE_BUSY" at all).
-      lastError = error;
-      await sleep(200 * (attempt + 1));
-    }
+async function postTestOnly(page: Page, path: string, data?: unknown): Promise<void> {
+  const response = await page.request.post(path, {
+    headers: { "X-Test-Fixture-Secret": TEST_FIXTURE_SECRET, Origin: SITE_ORIGIN },
+    data,
+  });
+  if (!response.ok()) {
+    throw new Error(`${path} failed: ${response.status()} ${await response.text()}`);
   }
-  throw lastError;
 }
 
-export async function findUserIdByDisplayName(displayName: string): Promise<string> {
-  const out = await d1Execute(
-    `SELECT id FROM users WHERE display_name = '${displayName.replace(/'/g, "''")}' LIMIT 1;`,
-  );
-  const parsed = JSON.parse(out) as [{ results: [{ id: string }] }];
-  const id = parsed[0]?.results?.[0]?.id;
-  if (!id) throw new Error(`No user found with display name ${displayName}`);
-  return id;
-}
-
-export async function grantSuperAdmin(userId: string): Promise<void> {
-  // login/finish.ts only sets `isAdminSession` when BOTH `users.is_admin`
-  // is true AND an active admin_role_assignments row exists — mirrors
-  // admin-users.integration.test.ts's fixture setup, which does the same
-  // two writes.
-  await d1Execute(`UPDATE users SET is_admin = 1 WHERE id = '${userId}';`);
-  await d1Execute(
-    `INSERT INTO admin_role_assignments (id, user_id, role_id) VALUES ('${crypto.randomUUID()}', '${userId}', 'super_admin');`,
-  );
+/**
+ * Grants `super_admin` to whichever account `page` is currently signed in
+ * as (self-service — see grant-super-admin.ts for why it's scoped to the
+ * caller's own session rather than an arbitrary target).
+ */
+export async function grantSuperAdminToCurrentUser(page: Page): Promise<void> {
+  await postTestOnly(page, "/api/test-only/grant-super-admin");
 }
 
 /**
  * Clears the anonymous-audit daily rate limit's counter (`security_events`
- * rows with `event_type = 'rate_limit'`, keyed by the caller's IP hash — see
- * `lib/auth/rate-limit.ts`). Every e2e run submits a real anonymous audit
- * from the same machine/CI-runner IP, sharing one counter across the whole
- * suite *and* across however many times this suite has run today — the
- * production 20/day cap is real, correct abuse protection, but that makes
- * the anonymous-audit e2e test non-repeatable without a reset. No other e2e
- * test asserts on rate-limit state, so a full clear here is safe.
+ * rows with `event_type = 'rate_limit'`, keyed by the caller's IP hash —
+ * see `lib/auth/rate-limit.ts`). Every e2e run submits a real anonymous
+ * audit from the same machine/CI-runner IP, sharing one counter across the
+ * whole suite *and* across however many times this suite has run today —
+ * the production 20/day cap is real, correct abuse protection, but that
+ * makes the anonymous-audit e2e test non-repeatable without a reset.
  */
-export async function clearAnonymousAuditRateLimit(): Promise<void> {
-  await d1Execute(`DELETE FROM security_events WHERE event_type = 'rate_limit';`);
+export async function clearAnonymousAuditRateLimit(page: Page): Promise<void> {
+  await postTestOnly(page, "/api/test-only/clear-rate-limit", { kind: "anonymous_audit" });
 }
 
 /**
  * Clears the recovery-code brute-force rate limit's counter (`security_events`
  * rows with `event_type = 'recovery_code_failure'` — see
  * `pages/api/auth/recovery-codes/redeem.ts`, 5 failed attempts per 15
- * minutes per IP). Every e2e run that exercises an invalid/reused recovery
- * code shares this same counter with every other such run from this
- * machine/CI-runner's IP within the same 15-minute window — without
- * resetting it first, repeated local/CI runs eventually trip the real,
- * correctly-working lockout instead of reaching the behaviour under test.
+ * minutes per IP). Without resetting it first, repeated local/CI runs
+ * eventually trip the real, correctly-working lockout instead of reaching
+ * the behaviour under test.
  */
-export async function clearRecoveryCodeRateLimit(): Promise<void> {
-  await d1Execute(`DELETE FROM security_events WHERE event_type = 'recovery_code_failure';`);
+export async function clearRecoveryCodeRateLimit(page: Page): Promise<void> {
+  await postTestOnly(page, "/api/test-only/clear-rate-limit", { kind: "recovery_code" });
 }
 
 /** Seeds a `failed` webhook event so the admin webhooks e2e test has
  * something real and eligible to retry, without waiting for a real Paddle
  * delivery to fail. */
-export async function seedFailedWebhookEvent(): Promise<void> {
-  const now = new Date().toISOString();
-  const eventId = crypto.randomUUID();
-  await d1Execute(
-    `INSERT INTO webhook_events (id, paddle_event_id, event_type, status, payload_redacted, error, attempts, received_at, occurred_at) VALUES ('${crypto.randomUUID()}', 'evt_e2e_${eventId}', 'transaction.completed', 'failed', '{}', 'Simulated failure seeded for e2e retry test', 1, '${now}', '${now}');`,
-  );
+export async function seedFailedWebhookEvent(page: Page): Promise<void> {
+  await postTestOnly(page, "/api/test-only/seed-failed-webhook");
 }

@@ -2,7 +2,7 @@ import { expect, test } from "@playwright/test";
 import AxeBuilder from "@axe-core/playwright";
 import { addVirtualAuthenticator } from "../e2e/helpers/webauthn";
 import { registerNewAccount, signInWithPasskey } from "../e2e/helpers/auth";
-import { findUserIdByDisplayName, grantSuperAdmin } from "../e2e/helpers/admin-db";
+import { grantSuperAdminToCurrentUser } from "../e2e/helpers/admin-db";
 
 /**
  * Accessibility smoke tests (SRS §35.5, Step 14; expanded Part 3 Step 17).
@@ -79,8 +79,7 @@ test.describe("authenticated routes", () => {
     await addVirtualAuthenticator(page);
     const displayName = `A11y Admin ${Date.now()}-${crypto.randomUUID().slice(0, 8)}`;
     await registerNewAccount(page, displayName);
-    const userId = await findUserIdByDisplayName(displayName);
-    await grantSuperAdmin(userId);
+    await grantSuperAdminToCurrentUser(page);
     await page.getByRole("button", { name: "Sign out" }).click();
     await page.waitForURL("**/");
     await signInWithPasskey(page);

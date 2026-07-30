@@ -1,7 +1,7 @@
 import { test as setup } from "@playwright/test";
 import { addVirtualAuthenticator } from "../helpers/webauthn";
 import { registerNewAccount, signInWithPasskey } from "../helpers/auth";
-import { findUserIdByDisplayName, grantSuperAdmin } from "../helpers/admin-db";
+import { grantSuperAdminToCurrentUser } from "../helpers/admin-db";
 import {
   ADMIN_STORAGE_STATE,
   ADMIN_FIXTURE_DISPLAY_NAME_PREFIX,
@@ -25,8 +25,7 @@ setup("authenticate as a shared Super Admin fixture", async ({ page }) => {
   await addVirtualAuthenticator(page);
   const displayName = `${ADMIN_FIXTURE_DISPLAY_NAME_PREFIX} ${Date.now()}-${crypto.randomUUID().slice(0, 8)}`;
   await registerNewAccount(page, displayName);
-  const userId = await findUserIdByDisplayName(displayName);
-  await grantSuperAdmin(userId);
+  await grantSuperAdminToCurrentUser(page);
   await page.getByRole("button", { name: "Sign out" }).click();
   await page.waitForURL("**/");
   await signInWithPasskey(page);

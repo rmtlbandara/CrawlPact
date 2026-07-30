@@ -290,7 +290,7 @@ Found while implementing the CI/CD and release-flow redesign described in
 | ----------------------------------------------------------------------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | `browser-smoke`'s official-Playwright-container approach failed in real GitHub Actions CI (never reproduced locally, since local testing never used Docker) | `astro build` failed with `fetch failed` / `connect ECONNREFUSED 127.0.0.1:<ephemeral-port>` inside `@astrojs/cloudflare`'s `prerenderer.js` (`getStaticPaths`'s internal loopback fetch during static prerendering) — reproducibly, specifically when the job ran inside GitHub Actions' `container: mcr.microsoft.com/playwright:v1.62.0-noble` executor. The `quality` job's identical `pnpm build`, on a plain (non-containerized) `ubuntu-latest` runner, succeeded in the same run — isolating the container itself as the differentiator, not the build or the app. | **Fixed** — dropped the job-level `container:`; `browser-smoke` now runs on a plain `ubuntu-latest` runner with an explicit `playwright install --with-deps chromium` step instead. Loses a minor CI-speed optimization (pre-installed browser binaries) in exchange for proven reliability — matches this remediation's own priority (deterministic over marginally faster). |
 
-## Built-server E2E reverted after reproducing a real crash in actual CI (2026-07-29, PR #43)
+## ~~Built-server E2E reverted after reproducing a real crash in actual CI~~ (2026-07-29, PR #43) — **Fixed 2026-07-30 (Phase 2, PR C)**
 
 Testing required E2E against a real built Worker (`wrangler dev --local` serving
 `apps/web/dist/server/wrangler.json`) instead of Astro's dev server was implemented, verified
@@ -316,6 +316,22 @@ changed: it's still correctly skipped under CI (workers: 1 removes the concurren
 existed for, regardless of which server is in use), but the earlier claim that CI was testing
 against "a genuinely built, pre-bundled Worker" no longer applies now that this reverted back to
 `astro dev`.
+
+**Fixed**: root cause was the _second process_ — `admin-db.ts` shelling out to its own
+`wrangler d1 execute --local` while the live server held its own D1 connection to the same sqlite
+file. Replaced that second process with a set of env-gated, test-only API routes
+(`apps/web/src/pages/api/test-only/*`, gated by `apps/web/src/lib/test-only.ts`: hard 404 unless
+`PUBLIC_APP_ENV === "local"`, plus a fixed non-secret shared-header value) that write through the
+_running server's own D1 binding_ instead. `grant-super-admin.ts` is self-service (grants
+`super_admin` to whichever session cookie the calling `page.request` carries, via
+`requireSession` — not an arbitrary target — sidestepping the bootstrap problem of needing an
+already-admin session to create the first admin fixture). `admin-db.ts` now calls these routes
+through `page.request` rather than `execFile`. `ci.yml`'s `browser-smoke` job and
+`scripts/verify-push.sh` both switched back to `wrangler dev --local` against
+`apps/web/dist/server/wrangler.json` (with `--persist-to apps/web/.wrangler/state` and
+`X_LOCAL_EXPLORER=false`, matching this doc's other `wrangler dev --local` notes below). Verified
+3 consecutive clean `pnpm verify:push` runs (35/35 e2e, 80/80 a11y) against the real built Worker
+before this was trusted — same bar as the original, since-reverted attempt.
 
 ## ~~Real public-site responsive bug found in real CI~~ (2026-07-29, PR #43, third run) — **Fixed 2026-07-30**
 

@@ -58,7 +58,7 @@ test.describe("Super Admin Control Center", () => {
   });
 
   test("an admin can retry a failed webhook event", async ({ page }) => {
-    await seedFailedWebhookEvent();
+    await seedFailedWebhookEvent(page);
     await page.goto("/admin/webhooks");
     await ensureRealPage(page);
     await expect(page.getByRole("heading", { name: "Webhooks" })).toBeVisible();
