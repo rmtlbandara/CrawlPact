@@ -188,9 +188,12 @@ methodologyHref="/scoring" />` with **no `categoryBreakdown` prop** — every re
 - **Weaknesses:** None found relative to spec. `MobileNav.tsx` correctly uses a Radix `Dialog`
   (`Drawer`) with focus trap/Escape, matching `docs/design/ACCESSIBILITY_REQUIREMENTS.md`.
 - **Trust / value / conversion:** N/A (navigation chrome) — no issues found.
-- **Mobile:** `MobileNav` is `md:hidden`/desktop nav is `hidden md:block` — correct breakpoint
-  split. A previously-fixed Playwright race (mobile Safari hydration) is documented in
-  `KNOWN_RISKS.md` as resolved.
+- **Mobile:** `MobileNav` is `xl:hidden`/desktop nav is `hidden xl:block`. **Historical note**:
+  this row previously said `md:`/768px was "correct" — it wasn't; the desktop nav didn't fit at
+  either this project's remapped `md:` (640px) or `lg:` (768px), a real overflow bug found via
+  Playwright and fixed by moving the split to `xl:` (1024px, this project's remapped scale — see
+  `packages/ui/src/tokens/tokens.css`). See `docs/status/KNOWN_RISKS.md`. A previously-fixed
+  Playwright race (mobile Safari hydration) is documented there as resolved.
 - **Accessibility:** `aria-label="Primary"` on nav, `aria-hidden` on decorative logo glyph,
   `IconButton` requires a `label` prop (enforced by the component's own type).
 - **Recommendation:** None required.

@@ -23,14 +23,23 @@ desktop breakpoints, per SRS §10.14.
 
 ## Navigation
 
-Desktop: static horizontal nav (`SiteHeader.astro`, server-rendered, no JS). Mobile: a single
-React island (`MobileNav.tsx`) renders a hamburger trigger and a `Drawer`-based menu — this is
-one of only two client-side islands most marketing pages load (the other is the audit form),
-in service of SRS §9.22's "minimise JavaScript".
+Desktop: static horizontal nav (`SiteHeader.astro`, server-rendered, no JS), switching to
+`MobileNav.tsx` below `xl:` (1024px) — moved from `md:` (640px) 2026-07-30 after a real,
+Playwright-confirmed overflow bug (the desktop nav didn't fit at either 640px or 768px; see
+`docs/status/KNOWN_RISKS.md`). Mobile: a single React island (`MobileNav.tsx`) renders a hamburger
+trigger and a `Drawer`-based menu — this is one of only two client-side islands most marketing
+pages load (the other is the audit form), in service of SRS §9.22's "minimise JavaScript".
 
-The Super Admin shell's desktop sidebar (`AdminNav.astro`) is `hidden lg:flex` — below 1024px it
-had no replacement at all until 2026-07-26, when `AdminMobileNav.tsx` (the same `Drawer`/
-`IconButton` pattern as the public site's `MobileNav`) was added to the admin header.
+The customer dashboard (`AppNav.astro`) follows the identical pattern via `AppMobileNav.tsx`
+(added 2026-07-30, same `Drawer`/`IconButton` primitives) below `xl:`.
+
+The Super Admin shell's desktop sidebar (`AdminNav.astro`) is `hidden lg:flex` — `lg:` in this
+project's remapped scale is **768px**, not Tailwind's stock 1024px. Below that width it had no
+replacement at all until 2026-07-26, when `AdminMobileNav.tsx` (the same `Drawer`/`IconButton`
+pattern) was added to the admin header — that fixed the sidebar's own links, but a separate bug
+in the header bar surrounding it (the "Customer view" link and display name rendering
+unconditionally, with no responsive treatment) still overflowed at 360/768px until fixed
+2026-07-30 (icon-only "Customer view" below `xl:`, display name hidden below `sm:`).
 
 ## Tables
 
@@ -40,7 +49,11 @@ need this yet — it exists as a foundation for Part 3+'s domain/admin tables.
 
 ## Verification status
 
-Automated checks: Playwright visual-regression config (`playwright.visual.config.ts`) covers
-the seven SRS §10.56 breakpoints. Manual verification against real devices and 200% browser
-zoom is tracked in `docs/testing/VISUAL_QA_MATRIX.md` and was performed against the built
-preview during Part 1's quality gate (see `docs/status/IMPLEMENTATION_STATUS.md`).
+Automated checks: `apps/web/tests/e2e/responsive-smoke.spec.ts` asserts real functional behaviour
+(no horizontal overflow, key content reachable, mobile nav usable) at the three SRS breakpoints
+(360/768/1280px) as part of the required E2E gate — replacing the pixel-comparison
+`playwright.visual.config.ts` suite removed 2026-07-29 (see
+`docs/architecture/adr/ADR-0008-remove-pixel-visual-regression.md`). Manual verification against
+real devices and 200% browser zoom is tracked in `docs/testing/VISUAL_QA_MATRIX.md` and was
+performed against the built preview during Part 1's quality gate (see
+`docs/status/IMPLEMENTATION_STATUS.md`).

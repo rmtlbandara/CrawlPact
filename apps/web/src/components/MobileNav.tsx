@@ -8,7 +8,10 @@ export type NavLink = { label: string; href: string };
  * The only client-side JS on most marketing pages (SRS §9.22: "minimise
  * JavaScript"). Desktop navigation is plain static markup in
  * SiteHeader.astro; this island only handles the mobile collapsible menu
- * (SRS §9.6, §10.15).
+ * (SRS §9.6, §10.15). The `xl:hidden` below must stay the exact mirror of
+ * SiteHeader.astro's `xl:block`/`xl:flex` — this project remaps Tailwind's
+ * breakpoint scale (see that file's comment), so `xl:` here means 1024px,
+ * not Tailwind's stock 1280px.
  */
 // "Product" is a homepage anchor, not a distinct section, so it's excluded
 // from current-page indication — only real standalone routes are marked
@@ -32,7 +35,7 @@ export function MobileNav({
   const [open, setOpen] = useState(false);
 
   return (
-    <div className="md:hidden">
+    <div className="xl:hidden">
       <IconButton icon={<Menu />} label="Open menu" onClick={() => setOpen(true)} />
       <Drawer open={open} onOpenChange={setOpen} title="Menu" side="right">
         <nav aria-label="Primary">
