@@ -371,3 +371,15 @@ no incremental scan had ever included in its diff.
 value (`extend.useDefault = true`, so the real ruleset is unchanged — only this one value is
 excepted). The real Paddle secrets (`PADDLE_API_KEY`, `PADDLE_WEBHOOK_SECRET`) are Cloudflare
 Worker `secret_text` bindings and never appear in this repository in any form.
+
+## `merge-when-green.yml`'s CI-dispatch step got HTTP 403 (found 2026-07-30, PR #46)
+
+The fix two entries above (explicitly dispatching `ci.yml` via `gh workflow run` after a merge)
+itself failed the first time it ran: `HTTP 403: Resource not accessible by integration`. The
+merge itself still succeeded (that step runs first and doesn't need this permission) — only the
+trailing dispatch step failed, misleadingly marking the whole workflow run red even though the
+PR merged correctly.
+
+**Fixed** — added `actions: write` to the workflow's `permissions:` block; the default
+`GITHUB_TOKEN` needs this explicitly to call the workflow-dispatch API, the same way it already
+needed `contents: write`/`pull-requests: write` for the merge itself.
