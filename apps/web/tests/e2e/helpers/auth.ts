@@ -1,5 +1,6 @@
-import type { Page } from "@playwright/test";
+import { expect, type Page } from "@playwright/test";
 import { ensureRealPage } from "./navigation";
+import { retryUntilSettled } from "./hydration";
 
 /** Runs the real passkey sign-up ceremony in the browser (requires a virtual
  * authenticator already attached via `addVirtualAuthenticator`). Ends on
@@ -19,11 +20,14 @@ export async function registerNewAccountCapturingRecoveryCodes(
   displayName: string,
 ): Promise<string[]> {
   await page.goto("/sign-in");
-  // PasskeyAuth is a `client:load` React island — wait for hydration before
-  // interacting, otherwise a click can fire before React attaches its
-  // handler (same race documented in tests/e2e/landing-page.spec.ts).
-  await page.waitForLoadState("networkidle");
-  await page.getByRole("button", { name: "Create account", exact: true }).click();
+  // PasskeyAuth is a `client:load` React island — a click before it
+  // attaches its handler is a real click with no effect. Retry against the
+  // concrete expected effect (the display-name field appearing) rather
+  // than an indirect, unreliable `networkidle` wait.
+  await retryUntilSettled(async () => {
+    await page.getByRole("button", { name: "Create account", exact: true }).click();
+    await expect(page.getByLabel("Display name")).toBeVisible({ timeout: 1_000 });
+  });
   await page.getByLabel("Display name").fill(displayName);
   const [response] = await Promise.all([
     page.waitForResponse((res) => res.url().includes("/api/auth/register/finish")),
@@ -43,8 +47,18 @@ export async function registerNewAccountCapturingRecoveryCodes(
  * `registerNewAccount` call in the same browser context). */
 export async function signInWithPasskey(page: Page): Promise<void> {
   await page.goto("/sign-in");
-  await page.waitForLoadState("networkidle");
-  await page.getByRole("button", { name: "Sign in with passkey" }).click();
+  // "Sign in with passkey" triggers a real POST /api/auth/login/begin — a
+  // click before hydration attaches its handler produces no such request,
+  // so retry against that concrete network effect rather than
+  // `networkidle`.
+  await retryUntilSettled(async () => {
+    await Promise.all([
+      page.waitForResponse((res) => res.url().includes("/api/auth/login/begin"), {
+        timeout: 1_000,
+      }),
+      page.getByRole("button", { name: "Sign in with passkey" }).click(),
+    ]);
+  });
   await page.waitForURL("**/app");
   await ensureRealPage(page);
 }
