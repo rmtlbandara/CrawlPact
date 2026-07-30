@@ -29,6 +29,13 @@ export function mutatingRequest(url: string, method: string, cookie?: string): R
   return new Request(url, { method, headers });
 }
 
+/** For multipart/form-data uploads (e.g. the agency-branding logo route). */
+export function formDataRequest(url: string, formData: FormData, cookie?: string): Request {
+  const headers: Record<string, string> = { Origin: TEST_ORIGIN };
+  if (cookie) headers["Cookie"] = cookie;
+  return new Request(url, { method: "POST", headers, body: formData });
+}
+
 export function ctx(request: Request, params: Record<string, string | undefined> = {}) {
   return { request, params, url: new URL(request.url) } as never;
 }

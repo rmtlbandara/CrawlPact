@@ -1,6 +1,7 @@
 import { afterAll, afterEach, beforeAll, describe, expect, it, vi } from "vitest";
 import type { D1Database } from "@cloudflare/workers-types";
 import { createD1TestHarness } from "./d1-harness";
+import { createFakeR2Bucket } from "./fake-r2-bucket";
 import { createVirtualCredential, simulateRegistration } from "./virtual-authenticator";
 import { cookieFromResponse, ctx, getRequest, jsonRequest, readJson } from "./test-helpers";
 
@@ -33,6 +34,7 @@ describe("Super Admin subscription and entitlement operations (real D1)", () => 
     db = harness.db;
     mockEnv = {
       DB: harness.db,
+      AGENCY_LOGOS: createFakeR2Bucket(),
       PUBLIC_APP_ENV: "local",
       PUBLIC_SITE_URL: ORIGIN,
       SESSION_SIGNING_SECRET: "integration-test-secret-value-long-enough",

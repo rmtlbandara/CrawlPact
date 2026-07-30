@@ -145,9 +145,12 @@ not automatically, and re-run the full test suite after doing so.
 
 ## Object storage (R2)
 
-**Not used.** See `docs/data/D1_R2_DATA_PLACEMENT_POLICY.md` (2026-07-26) for the evidence-based
-decision not to adopt R2 at this time, and the concrete triggers that would reopen that decision.
-No `r2_buckets` binding exists in `wrangler.jsonc`.
+**Adopted 2026-07-30, narrowly.** One bucket, `AGENCY_LOGOS` binding → `crawlpact` (production) /
+`crawlpact-preview` (preview), holding only agency-branding logo uploads (SRS §29). See
+`docs/data/D1_R2_DATA_PLACEMENT_POLICY.md`'s 2026-07-30 entry for the decision (revisit trigger #1
+fired: a real file-upload feature replaced the old URL-only branding field) and
+`apps/web/wrangler.jsonc` for the binding. Nothing else uses R2 — the rest of
+`D1_R2_DATA_PLACEMENT_POLICY.md`'s "Keep in D1" analysis is unchanged.
 
 ## DNS, SSL, and domain configuration (Phase 14)
 

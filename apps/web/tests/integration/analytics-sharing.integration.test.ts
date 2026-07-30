@@ -3,6 +3,7 @@ import { eq } from "drizzle-orm";
 import { createDb, schema } from "@crawlpact/database";
 import type { Database } from "@crawlpact/database";
 import { createD1TestHarness } from "./d1-harness";
+import { createFakeR2Bucket } from "./fake-r2-bucket";
 import { createVirtualCredential, simulateRegistration } from "./virtual-authenticator";
 import { cookieFromResponse, ctx, jsonRequest, readJson } from "./test-helpers";
 
@@ -56,6 +57,7 @@ describe("first-party analytics + report sharing (real D1)", () => {
     db = createDb(harness.db);
     mockEnv = {
       DB: harness.db,
+      AGENCY_LOGOS: createFakeR2Bucket(),
       PUBLIC_APP_ENV: "local",
       PUBLIC_SITE_URL: ORIGIN,
       SESSION_SIGNING_SECRET: "integration-test-secret-value-long-enough",

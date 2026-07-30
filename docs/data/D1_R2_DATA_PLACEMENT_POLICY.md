@@ -137,6 +137,48 @@ is created in this pass, since there are no objects to describe yet — this is 
 migration that actually introduces the first R2 use case, at which point it should be designed
 against that use case's real requirements rather than speculatively now.
 
+## 2026-07-30: revisit trigger #1 fired — R2 adopted for agency logo uploads
+
+Trigger #1 ("A real file-upload feature is added... Any binary upload is an immediate, clear R2
+candidate") fired: the agency-branding "Logo URL" field (SRS §29, `ShareReportDialog.tsx`) is
+replaced with a real image upload instead of an externally-hosted URL the customer typed in.
+
+**Adopted, narrowly**: one new R2 bucket (`AGENCY_LOGOS` binding, `crawlpact-agency-logos` /
+`crawlpact-agency-logos-preview`), holding only agency-logo images. Nothing else moves to R2 — the
+rest of this document's "Keep in D1" analysis is unchanged.
+
+- **Object key**: `{userId}/{uuid}.{ext}` — server-generated only; the uploader never supplies the
+  key. `ext` is derived from real content sniffed from the file's magic bytes
+  (`apps/web/src/lib/agency-logo.ts`), never from a client-supplied filename or `Content-Type`
+  header.
+- **Upload path**: `POST /api/agency-branding/logo` — authenticated, gated on
+  `plan.agencyBrandingEnabled` (same check `share.ts` already used for the URL field), rate-limited
+  per IP (`isRateLimited`/`recordSecurityEvent`, scope `agency_logo_upload`), ≤1 MiB, PNG/JPEG/WebP/
+  GIF only (SVG explicitly rejected — inline `<script>`/event-handler XSS risk in an uploaded
+  "image" is exactly the kind of thing ADR-0005's SSRF chokepoint discipline exists to prevent
+  elsewhere in this codebase; the same discipline applies here).
+- **Serving path**: `GET /api/agency-branding/logo/[userId]/[filename]` — public, unauthenticated
+  (shared reports are viewed by third parties with no CrawlPact account), streams straight from the
+  dedicated bucket. Safe to be a fully public read: the bucket holds nothing but what this one
+  upload route ever wrote, so an arbitrary-key read can only ever return a legitimately uploaded
+  logo, never other CrawlPact data.
+- **`agencyBrandingSchema.logoUrl`** (`packages/core/src/api/contracts/sharing.ts`) now accepts only
+  a path matching the serving route's own shape, not an arbitrary URL — `share.ts` additionally
+  checks the path's `{userId}` segment matches the caller's own session before accepting it, so one
+  user can never reference another's uploaded logo even if they guessed/enumerated its UUID.
+- **Cleanup**: single-share revocation (`POST /api/admin/shared-reports/:shareId/revoke`) deletes
+  the associated R2 object after the D1 revoke commits — see
+  `docs/data/DATA_RETENTION.md`'s "Object storage cleanup" section for the ordering rule this
+  follows. **Not built in this pass** (disclosed, not silent): bulk revocation
+  (`revokeAllSharedReportsForUser`) and the daily retention purge's domain/account deletion path
+  don't look up or delete logo objects — those paths will orphan R2 objects. Given this feature's
+  low expected volume (one small image per agency-branded share, capped at 1 MiB), this is a real
+  but currently small gap — see `docs/status/KNOWN_RISKS.md`.
+
+This is the R2 adoption the "Store in R2 (deferred — no current candidate)" section above expected
+to eventually happen — its inventory should be read alongside this section now that one real
+object type exists.
+
 ## Related documents
 
 - `docs/deployment/CLOUDFLARE_ARCHITECTURE_AUDIT.md` — Phase 1 evidence this policy is built on.

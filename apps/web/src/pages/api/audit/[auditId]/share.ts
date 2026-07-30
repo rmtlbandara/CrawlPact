@@ -5,6 +5,7 @@ import { getEnv } from "../../../../lib/env";
 import { requireSession } from "../../../../lib/auth/require-session";
 import { createShare } from "../../../../lib/sharing";
 import { getPlan } from "../../../../lib/plan";
+import { logoPathBelongsToUser } from "../../../../lib/agency-logo";
 import { trackEvent } from "../../../../lib/analytics";
 import { jsonErrorResponse, jsonResponse } from "../../../../lib/json-response";
 
@@ -40,6 +41,14 @@ export const POST: APIRoute = async ({ request, params }) => {
           "FORBIDDEN",
           "Your plan does not include agency branding on shared reports.",
         );
+      }
+      // The schema already restricts logoUrl to our own upload route's path
+      // shape — this additionally confirms the embedded user id is the
+      // caller's own, so one user can never reference another's uploaded
+      // logo even by guessing/enumerating its object key.
+      const { logoUrl } = parsed.data.agencyBranding;
+      if (logoUrl && !logoPathBelongsToUser(logoUrl, user.id)) {
+        throw new ApiError("FORBIDDEN", "This logo was not uploaded by you.");
       }
     }
 
