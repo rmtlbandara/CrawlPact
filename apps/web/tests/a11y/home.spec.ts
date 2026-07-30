@@ -3,6 +3,7 @@ import AxeBuilder from "@axe-core/playwright";
 import { addVirtualAuthenticator } from "../e2e/helpers/webauthn";
 import { registerNewAccount, signInWithPasskey } from "../e2e/helpers/auth";
 import { grantSuperAdminToCurrentUser } from "../e2e/helpers/admin-db";
+import { retryUntilSettled } from "../e2e/helpers/hydration";
 
 /**
  * Accessibility smoke tests (SRS §35.5, Step 14; expanded Part 3 Step 17).
@@ -80,7 +81,18 @@ test.describe("authenticated routes", () => {
     const displayName = `A11y Admin ${Date.now()}-${crypto.randomUUID().slice(0, 8)}`;
     await registerNewAccount(page, displayName);
     await grantSuperAdminToCurrentUser(page);
-    await page.getByRole("button", { name: "Sign out" }).click();
+    // SignOutButton is a `client:load` island — a click before it hydrates
+    // is a real click with no effect, so the resulting waitForURL would
+    // hang until the test timeout. Retry against the real logout request
+    // actually firing instead.
+    await retryUntilSettled(async () => {
+      await Promise.all([
+        page.waitForResponse((res) => res.url().includes("/api/auth/logout"), {
+          timeout: 1_000,
+        }),
+        page.getByRole("button", { name: "Sign out" }).click(),
+      ]);
+    });
     await page.waitForURL("**/");
     await signInWithPasskey(page);
     await page.goto("/admin");

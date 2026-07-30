@@ -48,15 +48,19 @@ test.describe("Super Admin Control Center", () => {
     await expect(page.getByRole("heading", { name: "Subscriptions", exact: true })).toBeVisible();
 
     const combobox = page.getByRole("combobox").first();
-    // Radix Select's option list mounts in a portal and does an async
-    // popper-positioning pass right after opening — a click that lands
-    // during that repositioning can be swallowed. Retry the open+select
-    // against the trigger's own displayed value actually updating (a fast,
-    // synchronous-with-React-state signal) rather than assuming the first
-    // click landed cleanly.
+    // SubscriptionsManager is a `client:load` island — the trigger already
+    // exists (server-rendered) before hydration, so `combobox.click()`
+    // itself never blocks; but a click before hydration attaches Radix's
+    // handler opens nothing, so the "Past due" option never mounts at all.
+    // Without an explicit timeout, the *option* click would then use
+    // Playwright's default actionability wait for an element that may
+    // never appear that attempt — silently consuming the whole outer retry
+    // budget on a single try instead of actually retrying. Give every step
+    // its own short timeout so a failed attempt fails fast and the retry
+    // loop gets multiple real attempts.
     await retryUntilSettled(async () => {
-      await combobox.click();
-      await page.getByRole("option", { name: "Past due" }).click();
+      await combobox.click({ timeout: 1_000 });
+      await page.getByRole("option", { name: "Past due" }).click({ timeout: 1_000 });
       await expect(combobox).toContainText("Past due", { timeout: 1_000 });
     });
     // Filtering must not error out even when it produces an empty result —
