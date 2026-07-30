@@ -7,6 +7,7 @@ import {
 } from "./helpers/auth";
 import { ensureRealPage } from "./helpers/navigation";
 import { clearAnonymousAuditRateLimit, clearRecoveryCodeRateLimit } from "./helpers/admin-db";
+import { retryUntilSettled } from "./helpers/hydration";
 
 // A small, CrawlPact-controlled static site (apps/e2e-fixture) used as the
 // real scan target for the two tests below — replaces a prior dependency
@@ -59,12 +60,13 @@ test.describe("Passkey account lifecycle", () => {
     await page.waitForURL("**/app/domains/*");
     await ensureRealPage(page);
     await page.getByRole("button", { name: "Re-scan now" }).click();
-    // handleRescan() does `window.location.reload()` on success — wait for
-    // the reload to actually complete rather than racing it.
-    await page.waitForLoadState("networkidle");
-    // A real scan ran synchronously against a real, CrawlPact-controlled
-    // target — either it completed with a score, or it honestly failed;
-    // either is proof the real pipeline ran, not a fabricated result.
+    // handleRescan() does `window.location.reload()` on success — the
+    // assertion below already waits (with a generous timeout) through the
+    // reload and the real scan itself, so no separate readiness wait is
+    // needed. A real scan ran synchronously against a real,
+    // CrawlPact-controlled target — either it completed with a score, or
+    // it honestly failed; either is proof the real pipeline ran, not a
+    // fabricated result.
     await expect(
       page.getByText(/Re-scan not started/).or(page.locator("text=/\\d+\\s*\\/\\s*100/")),
     ).toBeVisible({ timeout: 15_000 });
@@ -115,8 +117,13 @@ test.describe("Recovery code sign-in", () => {
     // Simulate a lost passkey: sign back in with a saved recovery code
     // instead of `signInWithPasskey`.
     await page.goto("/sign-in");
-    await page.waitForLoadState("networkidle");
-    await page.getByRole("button", { name: "Recovery code" }).click();
+    // A click before PasskeyAuth's `client:load` island hydrates has no
+    // effect — retry against the concrete effect (the recovery-code field
+    // appearing) instead of an indirect `networkidle` wait.
+    await retryUntilSettled(async () => {
+      await page.getByRole("button", { name: "Recovery code" }).click();
+      await expect(page.getByLabel("Recovery code")).toBeVisible({ timeout: 1_000 });
+    });
     await page.getByLabel("Recovery code").fill(recoveryCodes[0]!);
     await page.getByRole("button", { name: "Sign in with recovery code" }).click();
     await page.waitForURL("**/app");
@@ -128,8 +135,13 @@ test.describe("Recovery code sign-in", () => {
     await page.getByRole("button", { name: "Sign out" }).click();
     await page.waitForURL("**/");
     await page.goto("/sign-in");
-    await page.waitForLoadState("networkidle");
-    await page.getByRole("button", { name: "Recovery code" }).click();
+    // A click before PasskeyAuth's `client:load` island hydrates has no
+    // effect — retry against the concrete effect (the recovery-code field
+    // appearing) instead of an indirect `networkidle` wait.
+    await retryUntilSettled(async () => {
+      await page.getByRole("button", { name: "Recovery code" }).click();
+      await expect(page.getByLabel("Recovery code")).toBeVisible({ timeout: 1_000 });
+    });
     await page.getByLabel("Recovery code").fill(recoveryCodes[0]!);
     await page.getByRole("button", { name: "Sign in with recovery code" }).click();
     await expect(page.getByText("That didn't work")).toBeVisible();
@@ -138,8 +150,13 @@ test.describe("Recovery code sign-in", () => {
 
   test("rejects an invalid recovery code without creating a session", async ({ page }) => {
     await page.goto("/sign-in");
-    await page.waitForLoadState("networkidle");
-    await page.getByRole("button", { name: "Recovery code" }).click();
+    // A click before PasskeyAuth's `client:load` island hydrates has no
+    // effect — retry against the concrete effect (the recovery-code field
+    // appearing) instead of an indirect `networkidle` wait.
+    await retryUntilSettled(async () => {
+      await page.getByRole("button", { name: "Recovery code" }).click();
+      await expect(page.getByLabel("Recovery code")).toBeVisible({ timeout: 1_000 });
+    });
     await page.getByLabel("Recovery code").fill("NOTAREAL-CODE1-XXXXX");
     await page.getByRole("button", { name: "Sign in with recovery code" }).click();
     await expect(page.getByText("That didn't work")).toBeVisible();
@@ -161,9 +178,18 @@ test.describe("Anonymous audit report", () => {
     // reaching /audit/*.
     await clearAnonymousAuditRateLimit(page);
     await page.goto("/");
-    await page.waitForLoadState("networkidle");
-    await page.getByLabel("Domain or URL to audit").first().fill(SCAN_FIXTURE_DOMAIN);
-    await page.getByRole("button", { name: "Audit domain" }).first().click();
+    const auditButton = page.getByRole("button", { name: "Audit domain" }).first();
+    // AuditForm is a `client:load` island — a submit before it hydrates has
+    // no effect. Its Button sets `aria-busy`/disabled synchronously on a
+    // real submit (before the slow real scan even starts), so retry against
+    // that fast, concrete signal instead of an indirect `networkidle` wait;
+    // once it fires, the real (slow) scan is genuinely underway and the
+    // generous waitForURL timeout below covers it.
+    await retryUntilSettled(async () => {
+      await page.getByLabel("Domain or URL to audit").first().fill(SCAN_FIXTURE_DOMAIN);
+      await auditButton.click();
+      await expect(auditButton).toBeDisabled({ timeout: 1_000 });
+    });
     await page.waitForURL("**/audit/*", { timeout: 45_000 });
 
     let printCalled = false;
@@ -175,7 +201,15 @@ test.describe("Anonymous audit report", () => {
         (window as unknown as { __e2ePrintCalled: () => void }).__e2ePrintCalled();
     });
 
-    await page.getByRole("button", { name: "Print report" }).click();
-    await expect.poll(() => printCalled).toBe(true);
+    // The print button is also a hydrating island — retry the click
+    // against `printCalled` actually flipping, rather than assuming the
+    // very first click landed after hydration completed. This is the most
+    // likely real cause of this test's occasional real-CI flake (a click
+    // landing right as the audit-report page's own islands were still
+    // attaching handlers).
+    await retryUntilSettled(async () => {
+      await page.getByRole("button", { name: "Print report" }).click();
+      await expect.poll(() => printCalled, { timeout: 1_000 }).toBe(true);
+    });
   });
 });

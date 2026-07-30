@@ -497,3 +497,38 @@ title/description/close-button header and the footer buttons stay fixed, and onl
 content section scrolls (`overflow-y-auto`). Verified via the same manual browser check: the full
 upload → preview → "Create link" → public shared-report-page → logo-image-loads round trip now
 completes successfully.
+
+## Remaining `networkidle` waits removed from the e2e suite (2026-07-30)
+
+The original release-flow remediation brief explicitly called out `networkidle` as an unreliable
+readiness signal to remove (`rg 'networkidle' .`) — this was done for the browser-smoke server
+startup path during Phase 1, but 17 call sites remained across
+`apps/web/tests/e2e/{auth-and-account,landing-page,responsive-smoke}.spec.ts` and
+`helpers/{auth,navigation}.ts`, missed at the time.
+
+**Real, concrete motivation, not just following the letter of the brief**: the one flaky test seen
+twice in real CI this session (`auth-and-account.spec.ts`'s "prints a report via the real print
+button", `expect.poll(() => printCalled).toBe(true)` timing out) used `networkidle` as its
+readiness signal before the exact click that then flaked. The actual root cause was never a
+network-idle-timing issue — it's a hydration race: the print button (and every other
+`client:load`/`client:idle` React island interacted with in this suite) attaches its click handler
+asynchronously after paint, and `networkidle` is at best an indirect, slow proxy for "hydration is
+probably done by now," not a guarantee of it.
+
+**Fix**: `apps/web/tests/e2e/helpers/hydration.ts`'s new `retryUntilSettled` helper retries the
+interaction itself against its own concrete expected effect (a field appearing, a network request
+firing, a button going `aria-busy`, a boolean flipping) instead of waiting on an indirect network
+signal beforehand — a real click that lands before hydration produces no such effect, so it's
+retried; one that lands after hydration succeeds immediately. `ensureRealPage` (the Astro
+dev-server empty-shell-on-first-hit workaround, a different, unrelated race) now polls the actual
+condition it cares about (`document.body.innerHTML.trim().length > 0`) directly via
+`waitForFunction` instead of using `networkidle` as an indirect proxy for the same thing.
+
+Verified: 3 consecutive clean `pnpm verify:push` runs (35/35 e2e, 80/80 a11y, each run measurably
+faster — e2e alone dropped from ~55-60s to ~32-40s locally). The previously-flaky print-report test
+run 5x in isolation with 0 failures. The full cross-browser suite (`pnpm exec playwright test`,
+chromium + mobile-safari, 57 passed/11 Chromium-only-WebAuthn skips) and full cross-browser
+accessibility suite (151 passed) both re-run clean against this session's other changes (the
+agency-logo upload UI, the `Modal` fix) — the one failure seen
+(`mobile-safari`/skip-link-focus) is the pre-existing, already-documented Playwright/WebKit `Tab`
+limitation above, not a regression.

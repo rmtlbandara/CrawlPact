@@ -1,5 +1,6 @@
 import { expect, test, type Page } from "@playwright/test";
 import { CUSTOMER_STORAGE_STATE, ADMIN_STORAGE_STATE } from "./helpers/fixture-accounts";
+import { retryUntilSettled } from "./helpers/hydration";
 
 /**
  * Replaces the deleted pixel-by-pixel visual regression suite (see
@@ -33,7 +34,6 @@ test.describe("Responsive layout smoke", () => {
 
       test("home page renders the audit form without horizontal overflow", async ({ page }) => {
         await page.goto("/");
-        await page.waitForLoadState("networkidle");
         await expect(page.getByRole("heading", { level: 1 })).toBeVisible();
         await expect(page.getByRole("button", { name: "Audit domain" }).first()).toBeVisible();
         await assertNoHorizontalOverflow(page);
@@ -41,14 +41,12 @@ test.describe("Responsive layout smoke", () => {
 
       test("pricing page renders its plans without horizontal overflow", async ({ page }) => {
         await page.goto("/pricing");
-        await page.waitForLoadState("networkidle");
         await expect(page.getByRole("heading", { level: 1 })).toBeVisible();
         await assertNoHorizontalOverflow(page);
       });
 
       test("a crawler detail page renders without horizontal overflow", async ({ page }) => {
         await page.goto("/crawlers/gptbot");
-        await page.waitForLoadState("networkidle");
         await expect(page.getByRole("heading", { level: 1 })).toBeVisible();
         await assertNoHorizontalOverflow(page);
       });
@@ -61,10 +59,15 @@ test.describe("Responsive layout smoke", () => {
           page,
         }) => {
           await page.goto("/");
-          await page.waitForLoadState("networkidle");
-          await page.getByRole("button", { name: "Open menu" }).click();
           const dialog = page.getByRole("dialog");
-          await expect(dialog).toBeVisible();
+          // MobileNav is a hydrating island — a click before it attaches
+          // its handler has no effect, so retry against the concrete
+          // effect (the dialog opening) instead of an indirect
+          // `networkidle` wait.
+          await retryUntilSettled(async () => {
+            await page.getByRole("button", { name: "Open menu" }).click();
+            await expect(dialog).toBeVisible({ timeout: 1_000 });
+          });
           await assertNoHorizontalOverflow(page);
           await page.getByRole("button", { name: "Close panel" }).click();
           await expect(dialog).toBeHidden();
@@ -86,7 +89,6 @@ test.describe("Responsive layout smoke", () => {
         for (const viewport of VIEWPORTS) {
           await page.setViewportSize({ width: viewport.width, height: viewport.height });
           await page.goto("/app");
-          await page.waitForLoadState("networkidle");
           await expect(page.getByRole("heading", { level: 1 })).toBeVisible();
           await assertNoHorizontalOverflow(page);
         }
@@ -100,7 +102,6 @@ test.describe("Responsive layout smoke", () => {
         for (const viewport of VIEWPORTS) {
           await page.setViewportSize({ width: viewport.width, height: viewport.height });
           await page.goto("/admin/settings");
-          await page.waitForLoadState("networkidle");
           await expect(page.getByRole("heading", { level: 1 })).toBeVisible();
           await assertNoHorizontalOverflow(page);
         }
@@ -110,7 +111,7 @@ test.describe("Responsive layout smoke", () => {
 
   test("keyboard focus is visible when tabbing from the top of the home page", async ({ page }) => {
     await page.goto("/");
-    await page.waitForLoadState("networkidle");
+    await expect(page.getByRole("heading", { level: 1 })).toBeVisible();
     await page.keyboard.press("Tab");
     const focusIsVisible = await page.evaluate(() => {
       const el = document.activeElement;

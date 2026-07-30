@@ -11,9 +11,14 @@ import type { Page } from "@playwright/test";
  */
 export async function ensureRealPage(page: Page): Promise<void> {
   for (let attempt = 0; attempt < 4; attempt++) {
-    await page.waitForLoadState("networkidle");
-    const isEmpty = await page.evaluate(() => document.body.innerHTML.trim().length === 0);
-    if (!isEmpty) return;
+    // Poll the actual condition we care about (real content rendered)
+    // instead of `networkidle`, an indirect, slower proxy for the same
+    // thing that doesn't guarantee it either.
+    const hasContent = await page
+      .waitForFunction(() => document.body.innerHTML.trim().length > 0, { timeout: 5_000 })
+      .then(() => true)
+      .catch(() => false);
+    if (hasContent) return;
     await page.waitForTimeout(500 * (attempt + 1));
     await page.reload();
   }
