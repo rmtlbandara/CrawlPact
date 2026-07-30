@@ -69,6 +69,18 @@ function redactPayload(data: Record<string, unknown>): Record<string, unknown> {
   return rest;
 }
 
+/**
+ * The D1/Drizzle driver wraps the real SQLite error (e.g. "UNIQUE constraint
+ * failed: ...") in `.cause` rather than `.message`, so `error.message` alone
+ * ("Failed query: ... params: ...") doesn't say *why* a query failed. Include
+ * both so a stored failure is diagnosable without re-deriving it from timing.
+ */
+function describeError(error: unknown): string {
+  if (!(error instanceof Error)) return String(error);
+  const cause = error.cause instanceof Error ? error.cause.message : undefined;
+  return cause ? `${error.message}\ncause: ${cause}` : error.message;
+}
+
 export const PADDLE_TO_LOCAL_STATUS: Record<
   string,
   (typeof schema.subscriptions.$inferSelect)["status"] | undefined
@@ -81,7 +93,12 @@ export const PADDLE_TO_LOCAL_STATUS: Record<
 };
 
 export type ProcessOutcome =
-  "processed" | "duplicate" | "ignored_out_of_order" | "ignored_unhandled_type" | "failed";
+  | "processed"
+  | "duplicate"
+  | "ignored_out_of_order"
+  | "ignored_unhandled_type"
+  | "ignored_no_customer_yet"
+  | "failed";
 
 async function findOrCreateBillingCustomer(
   db: Database,
@@ -99,14 +116,26 @@ async function findOrCreateBillingCustomer(
 
   const id = crypto.randomUUID();
   const now = new Date().toISOString();
-  await db.insert(schema.billingCustomers).values({
-    id,
-    userId,
-    paddleCustomerId,
-    createdAt: now,
-    updatedAt: now,
-  });
-  return id;
+  const inserted = await db
+    .insert(schema.billingCustomers)
+    .values({ id, userId, paddleCustomerId, createdAt: now, updatedAt: now })
+    // Paddle commonly fires customer.created alongside the first
+    // transaction/subscription event for a brand-new customer within
+    // milliseconds of each other, and Workers can process both deliveries
+    // concurrently. Without this, the loser of that race hits
+    // billing_customers' UNIQUE constraint (on paddle_customer_id, or on
+    // user_id if this account already has a row) and the event is wrongly
+    // recorded as failed even though the customer now exists.
+    .onConflictDoNothing()
+    .returning({ id: schema.billingCustomers.id });
+  if (inserted[0]) return inserted[0].id;
+
+  const [winner] = await db
+    .select()
+    .from(schema.billingCustomers)
+    .where(eq(schema.billingCustomers.paddleCustomerId, paddleCustomerId))
+    .limit(1);
+  return winner?.id ?? null;
 }
 
 async function isOutOfOrder(
@@ -223,19 +252,34 @@ async function handleSubscriptionEvent(
       })
       .where(eq(schema.subscriptions.id, existingSub.id));
   } else {
-    subscriptionRowId = crypto.randomUUID();
-    await db.insert(schema.subscriptions).values({
-      id: subscriptionRowId,
-      billingCustomerId,
-      paddleSubscriptionId,
-      planId: resolvedPlanId,
-      status: localStatus,
-      currentPeriodEnd: currentBillingPeriod?.ends_at ?? null,
-      cancelAtPeriodEnd: scheduledChange?.action === "cancel",
-      lastPaddleEventId: event.eventId,
-      createdAt: now,
-      updatedAt: now,
-    });
+    const inserted = await db
+      .insert(schema.subscriptions)
+      .values({
+        id: crypto.randomUUID(),
+        billingCustomerId,
+        paddleSubscriptionId,
+        planId: resolvedPlanId,
+        status: localStatus,
+        currentPeriodEnd: currentBillingPeriod?.ends_at ?? null,
+        cancelAtPeriodEnd: scheduledChange?.action === "cancel",
+        lastPaddleEventId: event.eventId,
+        createdAt: now,
+        updatedAt: now,
+      })
+      // Paddle fires related subscription events (e.g. subscription.created
+      // and subscription.activated) within milliseconds of each other, so a
+      // concurrent delivery can insert this row between our SELECT above and
+      // this INSERT. Re-run the handler now that the row exists — it will
+      // take the `existingSub` branch above and apply this event as an
+      // update, instead of surfacing a UNIQUE-constraint failure for an
+      // otherwise-valid event.
+      .onConflictDoNothing({ target: schema.subscriptions.paddleSubscriptionId })
+      .returning({ id: schema.subscriptions.id });
+
+    if (!inserted[0]) {
+      return handleSubscriptionEvent(db, event, priceIdMap);
+    }
+    subscriptionRowId = inserted[0].id;
   }
 
   // `billingCustomer.userId` can be null if the account was deleted after
@@ -273,7 +317,13 @@ async function handleTransactionEvent(
   const details = data.details as { totals?: { grand_total?: string; tax?: string } } | undefined;
   const customData = data.custom_data as { userId?: string } | null | undefined;
 
-  if (!paddleTransactionId || !paddleCustomerId || !status) return { outcome: "failed" };
+  if (!paddleTransactionId || !status) return { outcome: "failed" };
+  // Paddle sends transaction.created/transaction.updated for a transaction
+  // still in "draft" status while checkout is in progress, before a
+  // customer is attached — customer_id is genuinely null at that point, not
+  // a malformed payload. Nothing to sync yet; a later event on the same
+  // transaction id will carry the customer once checkout completes.
+  if (!paddleCustomerId) return { outcome: "ignored_no_customer_yet" };
 
   const billingCustomerId = await findOrCreateBillingCustomer(
     db,
@@ -305,18 +355,33 @@ async function handleTransactionEvent(
       .set({ status })
       .where(eq(schema.transactions.id, existingTxn.id));
   } else {
-    await db.insert(schema.transactions).values({
-      id: crypto.randomUUID(),
-      paddleTransactionId,
-      billingCustomerId,
-      subscriptionId: subscriptionRowId ?? null,
-      currency: currencyCode ?? "USD",
-      grossAmountCents: Number(details?.totals?.grand_total ?? 0),
-      taxAmountCents: details?.totals?.tax ? Number(details.totals.tax) : null,
-      status,
-      occurredAt: event.occurredAt,
-      createdAt: now,
-    });
+    const inserted = await db
+      .insert(schema.transactions)
+      .values({
+        id: crypto.randomUUID(),
+        paddleTransactionId,
+        billingCustomerId,
+        subscriptionId: subscriptionRowId ?? null,
+        currency: currencyCode ?? "USD",
+        grossAmountCents: Number(details?.totals?.grand_total ?? 0),
+        taxAmountCents: details?.totals?.tax ? Number(details.totals.tax) : null,
+        status,
+        occurredAt: event.occurredAt,
+        createdAt: now,
+      })
+      // Paddle fires related transaction events (e.g. transaction.created
+      // and transaction.ready) within milliseconds of each other, so a
+      // concurrent delivery can insert this row between our SELECT above and
+      // this INSERT. Re-run the handler now that the row exists — it will
+      // take the `existingTxn` branch above and apply this event's status as
+      // an update, instead of surfacing a UNIQUE-constraint failure for an
+      // otherwise-valid event.
+      .onConflictDoNothing({ target: schema.transactions.paddleTransactionId })
+      .returning({ id: schema.transactions.id });
+
+    if (!inserted[0]) {
+      return handleTransactionEvent(db, event);
+    }
   }
 
   return { outcome: "processed", billingCustomerId, subscriptionRowId };
@@ -427,7 +492,7 @@ export async function processPaddleWebhookEvent(
       .update(schema.webhookEvents)
       .set({
         status: attempts >= MAX_ATTEMPTS_BEFORE_GIVING_UP ? "permanently_failed" : "failed",
-        error: error instanceof Error ? error.message : String(error),
+        error: describeError(error),
       })
       .where(eq(schema.webhookEvents.id, webhookEventRowId));
     return "failed";
