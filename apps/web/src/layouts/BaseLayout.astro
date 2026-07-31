@@ -14,6 +14,17 @@ export type Props = {
   publishedDate?: string;
   updatedDate?: string;
   breadcrumbs?: Breadcrumb[];
+  /** Additional JSON-LD nodes appended to the sitewide @graph — e.g. WebApplication, HowTo. */
+  extraJsonLd?: Record<string, unknown>[];
+  /**
+   * Social-preview image path, e.g. "/og/crawlers.png". Defaults to
+   * "/og/default.png". Must be a raster format (PNG/JPEG/WebP) — Facebook,
+   * X, LinkedIn, Slack, Discord, WhatsApp, and iMessage do not reliably
+   * render SVG for og:image, so the source SVGs in
+   * scripts/og-image-sources/ are pre-rasterized by
+   * scripts/generate-og-images.mjs rather than served directly.
+   */
+  ogImage?: string;
 };
 
 const {
@@ -25,6 +36,8 @@ const {
   publishedDate,
   updatedDate,
   breadcrumbs,
+  extraJsonLd,
+  ogImage = "/og/default.png",
 } = Astro.props;
 const siteUrl = Astro.site ?? new URL("https://crawlpact.com");
 
@@ -46,7 +59,7 @@ const environmentLabel: string | null = (() => {
   }
 })();
 const canonicalUrl = new URL(canonicalPath ?? Astro.url.pathname, siteUrl).toString();
-const ogImageUrl = new URL("/og-image.svg", siteUrl).toString();
+const ogImageUrl = new URL(ogImage, siteUrl).toString();
 
 const jsonLdGraph: Record<string, unknown>[] = [
   {
@@ -85,6 +98,10 @@ if (breadcrumbs && breadcrumbs.length > 0) {
     })),
   });
 }
+
+if (extraJsonLd && extraJsonLd.length > 0) {
+  jsonLdGraph.push(...extraJsonLd);
+}
 ---
 
 <!doctype html>
@@ -102,6 +119,7 @@ if (breadcrumbs && breadcrumbs.length > 0) {
     <meta property="og:url" content={canonicalUrl} />
     <meta property="og:site_name" content="CrawlPact" />
     <meta property="og:image" content={ogImageUrl} />
+    <meta property="og:image:type" content="image/png" />
     <meta property="og:image:width" content="1200" />
     <meta property="og:image:height" content="630" />
     {

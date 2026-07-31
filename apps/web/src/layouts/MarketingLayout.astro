@@ -15,6 +15,8 @@ export type Props = {
   publishedDate?: string;
   updatedDate?: string;
   breadcrumbs?: Breadcrumb[];
+  extraJsonLd?: Record<string, unknown>[];
+  ogImage?: string;
 };
 
 const {
@@ -26,6 +28,8 @@ const {
   publishedDate,
   updatedDate,
   breadcrumbs,
+  extraJsonLd,
+  ogImage,
 } = Astro.props;
 
 // Marketing-only, explicit SRS §6.2 deviation (see docs/status/KNOWN_RISKS.md).
@@ -42,6 +46,8 @@ const isProduction = getEnv().PUBLIC_APP_ENV === "production";
   publishedDate={publishedDate}
   updatedDate={updatedDate}
   breadcrumbs={breadcrumbs}
+  extraJsonLd={extraJsonLd}
+  ogImage={ogImage}
 >
   {isProduction && <GoogleAnalytics />}
   <div class="flex min-h-screen flex-col">

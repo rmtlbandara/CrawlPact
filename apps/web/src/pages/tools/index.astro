@@ -7,26 +7,31 @@ const tools = [
     href: "/tools/ai-crawler-checker",
     title: "AI crawler checker",
     body: "Check whether a specific documented AI crawler appears allowed or blocked for a domain.",
+    signal: "Crawler registry match",
   },
   {
     href: "/tools/robots-txt-ai-validator",
     title: "Robots.txt AI validator",
     body: "Validate robots.txt syntax and AI-crawler-specific groups against RFC 9309 behaviour.",
+    signal: "robots.txt",
   },
   {
     href: "/tools/rsl-validator",
     title: "RSL validator",
     body: "Validate supported RSL syntax and view declared permissions and prohibitions.",
+    signal: "RSL",
   },
   {
     href: "/tools/llms-txt-validator",
     title: "llms.txt validator",
     body: "Validate llms.txt and llms-full.txt structure and linked resources.",
+    signal: "llms.txt",
   },
   {
     href: "/tools/content-signals-checker",
     title: "Content Signals checker",
     body: "Detect recognised Content Signals and identify contradictions with crawler-specific rules.",
+    signal: "Content Signals",
   },
 ];
 ---
@@ -34,17 +39,36 @@ const tools = [
 <MarketingLayout
   title="Free AI Crawler Policy Tools | CrawlPact"
   description="Free validators for robots.txt AI crawler rules, RSL, llms.txt, and Content Signals."
+  ogImage="/og/tools.png"
 >
   <div class="mx-auto max-w-[1240px] px-4 py-12 sm:px-6">
     <h1 class="text-h1 text-neutral-950">Free tools</h1>
     <p class="mt-3 max-w-2xl text-body-lg text-neutral-700">
-      Free validators for the public signals CrawlPact's full audit evaluates together.
+      Free validators for the public signals CrawlPact's full audit evaluates together. Each one
+      runs a full scan of the domain you enter and takes you straight to the relevant section of the
+      report.
     </p>
+
+    <div class="mt-6 rounded-card border border-neutral-200 bg-neutral-50 p-5">
+      <h2 class="text-card-heading text-neutral-950">A tool, or the full audit?</h2>
+      <p class="mt-2 text-body text-neutral-700">
+        Use an individual tool when you already know which signal you care about — for example,
+        confirming a single crawler is blocked, or checking whether an <code>llms.txt</code> file validates.
+        Use the{" "}
+        <a href="/audit" class="text-brand-700 underline underline-offset-2">full audit</a> when you want
+        every signal evaluated together, a Policy Health Score, and conflict detection across signals
+        (for example, <code>robots.txt</code> allowing a crawler that RSL prohibits).
+      </p>
+    </div>
+
     <ul class="mt-8 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
       {
         tools.map((tool) => (
           <li class="rounded-card border border-neutral-200 bg-white p-5">
-            <h2 class="text-card-heading text-neutral-950">
+            <p class="text-metadata font-medium uppercase tracking-wide text-neutral-500">
+              {tool.signal}
+            </p>
+            <h2 class="mt-1 text-card-heading text-neutral-950">
               <a href={tool.href} class="hover:text-brand-700">
                 {tool.title}
               </a>
@@ -54,5 +78,31 @@ const tools = [
         ))
       }
     </ul>
+
+    <div class="mt-10 text-left">
+      <h2 class="text-h3 text-neutral-950">How these work</h2>
+      <p class="mt-3 text-body text-neutral-700">
+        Enter a domain or full URL. CrawlPact retrieves the relevant public resource directly — no
+        account, no installation, and no server-log access required. Only the specific, bounded
+        resources relevant to AI crawler policy are retrieved and stored; see{" "}
+        <a href="/scanner" class="text-brand-700 underline underline-offset-2"
+          >scanner information</a
+        >
+        for exactly what is and isn't fetched, and{" "}
+        <a href="/privacy" class="text-brand-700 underline underline-offset-2">privacy</a> for retention.
+      </p>
+      <p class="mt-3 text-body text-neutral-700">
+        Every tool here uses the same parser and rules as the full audit — there is no separate,
+        simplified logic that could disagree with it. See{" "}
+        <a href="/methodology" class="text-brand-700 underline underline-offset-2">methodology</a>{
+          " "
+        }
+        for how each signal is evaluated, and{" "}
+        <a href="/limitations" class="text-brand-700 underline underline-offset-2">limitations</a>{
+          " "
+        }
+        for what a result does and doesn't prove.
+      </p>
+    </div>
   </div>
 </MarketingLayout>

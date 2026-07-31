@@ -7,9 +7,10 @@ import { AuditForm } from "../../components/AuditForm";
 <MarketingLayout
   title="RSL Validator | Free Tool | CrawlPact"
   description="Validate supported RSL syntax and view declared permissions, prohibitions, and licensing terms for a domain."
+  ogImage="/og/tools.png"
   breadcrumbs={[
     { name: "Free tools", url: "/tools" },
-    { name: "RSL validator", url: "/tools/rsl-validator" },
+    { name: "RSL validator", url: "/tools/rsl-validator/" },
   ]}
 >
   <div class="mx-auto max-w-reading px-4 py-16 text-center sm:px-6">
@@ -22,6 +23,67 @@ import { AuditForm } from "../../components/AuditForm";
     </p>
     <div class="mt-8 flex justify-center">
       <AuditForm client:load idPrefix="rsl-validator" focus="rsl" />
+    </div>
+
+    <div class="mt-12 text-left">
+      <h2 class="text-h3 text-neutral-950">What this checks</h2>
+      <ul class="mt-3 list-disc pl-5 text-body text-neutral-700">
+        <li>
+          Retrieves <code>/.well-known/rsl.xml</code> and parses it against the RSL 1.0 specification
+          (published December 2025, governed by the RSL Technical Steering Committee — an industry consortium,
+          not a standards body).
+        </li>
+        <li>Shows declared permitted and prohibited uses, and any stated payment terms.</li>
+        <li>Flags a missing file as informational, not as an error.</li>
+      </ul>
+
+      <h2 class="mt-8 text-h3 text-neutral-950">What this does not check</h2>
+      <p class="mt-3 text-body text-neutral-700">
+        RSL is a machine-readable declaration, not technical enforcement — no crawler is required to
+        read or respect it. This also does not check whether the declaration agrees with the
+        domain's{" "}
+        <code>robots.txt</code> or Content Signals; see the comparison guide below and{" "}
+        <a href="/limitations" class="text-brand-700 underline underline-offset-2">limitations</a>.
+      </p>
+
+      <h2 class="mt-8 text-h3 text-neutral-950">Related</h2>
+      <ul class="mt-3 list-disc pl-5 text-body text-neutral-700">
+        <li>
+          <a
+            href="/guides/how-to-publish-an-rsl-declaration/"
+            class="text-brand-700 underline underline-offset-2">How to publish an RSL declaration</a
+          >
+        </li>
+        <li>
+          <a
+            href="/guides/rsl-vs-content-signals-vs-robots-txt/"
+            class="text-brand-700 underline underline-offset-2"
+            >RSL vs. Content Signals vs. robots.txt: which one wins when they disagree</a
+          >
+        </li>
+        <li>
+          <a
+            href="/guides/rsl-or-content-signals-not-detected/"
+            class="text-brand-700 underline underline-offset-2"
+            >Why RSL or Content Signals might not be detected</a
+          >
+        </li>
+      </ul>
+    </div>
+
+    <div class="mt-8 rounded-card border border-neutral-200 bg-neutral-50 p-6 text-center">
+      <p class="text-card-heading text-neutral-950">Want the complete picture?</p>
+      <p class="mt-1.5 text-supporting text-neutral-600">
+        This checker is a view into a full CrawlPact audit, which also covers{" "}
+        <code>robots.txt</code>, <code>llms.txt</code>, Content Signals, and your Policy Health
+        Score.
+      </p>
+      <a
+        href="/audit"
+        class="mt-4 inline-block rounded-control bg-brand-600 px-5 py-2.5 text-body font-medium text-white hover:bg-brand-700"
+      >
+        Run the full audit
+      </a>
     </div>
   </div>
 </MarketingLayout>
