@@ -1149,3 +1149,40 @@ webhook handler and its out-of-order protection were not modified as part of thi
 belongs in a dedicated, separately-reviewed billing-critical change. `pnpm test:a11y:chromium`
 (82 tests) passed in full against a live dev server, including the four pages whose date rendering
 changed in this section.
+
+## 26. Production deployment and post-deploy hotfix (2026-07-31)
+
+PR #59 was pushed, CI passed, merged to `main` (squash commit `e245793`), and CI re-verified for
+that exact commit — all preconditions `deploy-production.yml` requires. Dispatched with the
+required typed confirmation. The workflow applied `0018_incidents.sql` to the live D1 database,
+deployed the Worker, and verified bindings — all succeeded — but its final step, the automated
+production smoke test, failed two checks: `Status page: contains "Free audit (real scan)"` and
+`Status page: audit-engine label is honest (available)`.
+
+**Root cause**: the `/status` rewrite in §21/this release replaced the literal capability label
+`scripts/smoke-test.ts` depends on with a paraphrase ("Real scan enabled." instead of "Free audit
+(real scan): Available."), silently weakening the exact honesty disclosure `CLAUDE.md` requires
+for `AUDIT_ENGINE_ENABLED`. This was not caught by `pnpm quality` or `pnpm verify:push` locally,
+because neither runs the production smoke test against a real Cloudflare deployment — only
+`deploy-production.yml`'s own smoke-test step, run after the Worker is already live, exercises
+this exact check. Production was live with this defect for approximately 45 minutes between the
+two deploy runs.
+
+**Fix**: a dedicated one-line hotfix restoring the literal wording, verified locally (build,
+prettier, direct `curl` against a fresh dev server), opened as PR #60, CI-checked, squash-merged
+as `ca6c3c1`, and deployed via a second `deploy-production.yml` run — this run's smoke test passed
+in full.
+
+**Independent final verification** (not accepted on the workflow's own report alone): ran
+`node scripts/smoke-test.ts production https://crawlpact.com` directly against the live site after
+the second deploy completed. **32/32 checks passed**, including live confirmation of: the
+corrected `Disallow: /audit/` form in `robots.txt` (PR #58, previously merged but not yet deployed
+— now live), the honest `"Free audit (real scan): Available."` status label, complete absence of
+the removed homepage artwork section, correct trust-config-driven dates on `/privacy`, and the two
+new Amazon crawler pages resolving with `HTTP 200`.
+
+This is the exact scenario `docs/status/KNOWN_RISKS.md`'s standing rule addresses: a claim of
+"deployed successfully" was not accepted until independently re-verified against the live site,
+and the gap between "the deploy workflow ran" and "the deploy workflow's own smoke test actually
+passed" was treated as a real, unresolved failure requiring a fix — not smoothed over or retried
+blindly.
