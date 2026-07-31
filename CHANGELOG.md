@@ -3,6 +3,25 @@
 This file tracks engineering-level changes to the CrawlPact repository. For the customer-facing
 changelog, see the `/changelog` page on the public website.
 
+## Production deployment (2026-07-31)
+
+PR #59 (this release's full change set, squash-merged as `e245793`) deployed to production via
+`deploy-production.yml`. The `0018_incidents.sql` migration applied cleanly to the live D1
+database; the Worker deployed and binding verification passed; the post-deploy smoke test then
+caught a real regression: the rewritten `/status` page (part of #59) had silently dropped the
+literal `"Free audit (real scan)"` / `"Available"` capability-honesty label the smoke test (and
+the underlying `AUDIT_ENGINE_ENABLED` honesty requirement) depends on, replacing it with a
+paraphrase. Production was live with this defect for approximately 45 minutes.
+
+Fixed in a dedicated one-line hotfix (PR #60, squash-merged as `ca6c3c1`), verified locally
+(fresh build, prettier, direct dev-server `curl`), CI-checked, and redeployed via a second
+`deploy-production.yml` run against `ca6c3c1` — that run's smoke test passed in full. Independently
+re-verified afterward by running `scripts/smoke-test.ts production https://crawlpact.com` directly
+against the live site: **32/32 checks passed**, including live confirmation that
+`robots.txt` now serves the corrected `Disallow: /audit/` form (PR #58), the homepage artwork
+section is fully absent, the four trust-config-driven dates render correctly, and the new
+Amazon crawler pages (`/crawlers/amzn-searchbot/`, `/crawlers/amzn-user/`) are live.
+
 ## Final release pass: robots.txt cleanup, homepage artwork removed, trust-metadata config (2026-07-31)
 
 Full log: `docs/reports/CRAWLPACT_PRODUCTION_CONTENT_TRUST_SEO_AUDIT.md` §25 (final synthesis).
