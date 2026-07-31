@@ -1,5 +1,13 @@
 import { defineMiddleware } from "astro:middleware";
 import { getEnv } from "./lib/env";
+import {
+  CSP_HEADER_VALUE,
+  HSTS_VALUE,
+  PERMISSIONS_POLICY_VALUE,
+  REFERRER_POLICY_VALUE,
+  X_CONTENT_TYPE_OPTIONS_VALUE,
+  X_FRAME_OPTIONS_VALUE,
+} from "./lib/security-headers";
 
 /**
  * Security response headers applied to every SSR request (SRS §33, Part 2
@@ -7,8 +15,10 @@ import { getEnv } from "./lib/env";
  * static HTML served directly off the Workers Assets binding and never run
  * this middleware at all — `apps/web/public/_headers` carries the same
  * headers for those, since a live production check found the site's own
- * homepage shipping with zero security headers otherwise. Keep both in
- * sync by hand; there's no single source both read from.
+ * homepage shipping with zero security headers otherwise. Both read the
+ * same constants from `lib/security-headers.ts`; `_headers` can't import
+ * that module directly (it's a static file Cloudflare reads, not code), so
+ * `lib/security-headers.test.ts` asserts the two stay in sync instead.
  *
  * The CSP here allows `'unsafe-inline'` for scripts/styles because Astro's
  * island-hydration bootstrap and Tailwind's runtime both emit inline
@@ -24,33 +34,13 @@ export const onRequest = defineMiddleware(async (context, next) => {
 
   const isLocal = getEnv().PUBLIC_APP_ENV === "local";
 
-  const csp = [
-    "default-src 'self'",
-    "script-src 'self' 'unsafe-inline' https://cdn.paddle.com https://www.googletagmanager.com",
-    "style-src 'self' 'unsafe-inline'",
-    "img-src 'self' data: https:",
-    "font-src 'self' data:",
-    "connect-src 'self' https://*.paddle.com https://www.google-analytics.com https://*.google-analytics.com https://www.googletagmanager.com",
-    "frame-src https://*.paddle.com",
-    "frame-ancestors 'none'",
-    "base-uri 'self'",
-    "form-action 'self'",
-    "object-src 'none'",
-  ].join("; ");
-
-  response.headers.set("Content-Security-Policy", csp);
-  response.headers.set("X-Content-Type-Options", "nosniff");
-  response.headers.set("X-Frame-Options", "DENY");
-  response.headers.set("Referrer-Policy", "strict-origin-when-cross-origin");
-  response.headers.set(
-    "Permissions-Policy",
-    "camera=(), microphone=(), geolocation=(), payment=(self)",
-  );
+  response.headers.set("Content-Security-Policy", CSP_HEADER_VALUE);
+  response.headers.set("X-Content-Type-Options", X_CONTENT_TYPE_OPTIONS_VALUE);
+  response.headers.set("X-Frame-Options", X_FRAME_OPTIONS_VALUE);
+  response.headers.set("Referrer-Policy", REFERRER_POLICY_VALUE);
+  response.headers.set("Permissions-Policy", PERMISSIONS_POLICY_VALUE);
   if (!isLocal) {
-    response.headers.set(
-      "Strict-Transport-Security",
-      "max-age=63072000; includeSubDomains; preload",
-    );
+    response.headers.set("Strict-Transport-Security", HSTS_VALUE);
   }
 
   // SRS §30.3: private, admin, authenticated-app, and arbitrary-report

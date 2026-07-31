@@ -46,11 +46,11 @@ export const GET: APIRoute = async ({ site }) => {
   const entries: UrlEntry[] = [
     ...STATIC_ROUTES.map((path) => ({ path })),
     ...crawlers.map((crawler) => ({
-      path: `/crawlers/${crawler.id}`,
+      path: `/crawlers/${crawler.id}/`,
       lastmod: crawler.data.lastVerified,
     })),
     ...guides.map((guide) => ({
-      path: `/guides/${guide.id}`,
+      path: `/guides/${guide.id}/`,
       lastmod: guide.data.updatedDate ?? guide.data.publishedDate,
     })),
   ];
