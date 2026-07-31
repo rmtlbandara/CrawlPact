@@ -1,0 +1,73 @@
+---
+// Decorative hero mark: a stack of website windows (repeated audits over
+// time) with the current one under examination — a lens resting over the
+// page content, verified with a checkmark. No text, no motion. Sized to
+// use the hero's available space rather than sit small in the corner.
+export type Props = { class?: string };
+const { class: className } = Astro.props;
+---
+
+<svg
+  viewBox="0 0 380 300"
+  fill="none"
+  xmlns="http://www.w3.org/2000/svg"
+  aria-hidden="true"
+  class={className}
+>
+  <!-- Back card: an earlier scan, mostly hidden -->
+  <rect
+    x="40"
+    y="30"
+    width="170"
+    height="130"
+    rx="14"
+    fill="#f7f9fa"
+    stroke="#edf1f3"
+    stroke-width="2"></rect>
+
+  <!-- Middle card: another earlier scan, a hint of its own chrome -->
+  <rect
+    x="75"
+    y="60"
+    width="180"
+    height="135"
+    rx="14"
+    fill="#ffffff"
+    stroke="#dde3e7"
+    stroke-width="2"></rect>
+  <circle cx="89" cy="74" r="3" fill="#dde3e7"></circle>
+  <circle cx="101" cy="74" r="3" fill="#dde3e7"></circle>
+  <circle cx="113" cy="74" r="3" fill="#dde3e7"></circle>
+  <rect x="89" y="83" width="70" height="6" rx="3" fill="#edf1f3"></rect>
+
+  <!-- Front card: the current audit, in full detail -->
+  <rect
+    x="110"
+    y="90"
+    width="195"
+    height="145"
+    rx="14"
+    fill="#ffffff"
+    stroke="#c8d0d6"
+    stroke-width="2"></rect>
+  <line x1="110" y1="118" x2="305" y2="118" stroke="#dde3e7" stroke-width="2"></line>
+  <circle cx="124" cy="104" r="4" fill="#c8d0d6"></circle>
+  <circle cx="138" cy="104" r="4" fill="#c8d0d6"></circle>
+  <circle cx="152" cy="104" r="4" fill="#c8d0d6"></circle>
+
+  <rect x="124" y="134" width="108" height="9" rx="4.5" fill="#c8d0d6"></rect>
+  <rect x="124" y="151" width="150" height="7" rx="3.5" fill="#dde3e7"></rect>
+  <rect x="124" y="166" width="130" height="7" rx="3.5" fill="#dde3e7"></rect>
+  <rect x="124" y="181" width="95" height="7" rx="3.5" fill="#edf1f3"></rect>
+
+  <!-- Lens: the audit in progress, verified -->
+  <line x1="321" y1="246" x2="338" y2="263" stroke="#176b87" stroke-width="8" stroke-linecap="round"
+  ></line>
+  <circle cx="300" cy="225" r="30" fill="#ffffff" stroke="#176b87" stroke-width="6"></circle>
+  <path
+    d="M287 226 L297 235 L314 213"
+    stroke="#176b87"
+    stroke-width="4.5"
+    stroke-linecap="round"
+    stroke-linejoin="round"></path>
+</svg>
