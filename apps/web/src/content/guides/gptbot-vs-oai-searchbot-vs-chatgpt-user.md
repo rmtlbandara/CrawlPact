@@ -3,6 +3,7 @@ title: "GPTBot vs. OAI-SearchBot vs. ChatGPT-User: which should you block?"
 description: "OpenAI operates three separate crawler tokens for three separate purposes. A decision guide for choosing which, if any, to disallow."
 category: "decision"
 publishedDate: "2026-07-24"
+relatedCrawlerSlugs: ["gptbot", "oai-searchbot", "chatgpt-user"]
 ---
 
 OpenAI documents three distinct crawler tokens, each triggered by a different thing. Treating

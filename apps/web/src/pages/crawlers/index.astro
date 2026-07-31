@@ -16,11 +16,20 @@ const purposeGroups = CRAWLER_PURPOSES.map((purpose) => ({
     .filter((crawler) => crawler.data.purpose === purpose)
     .sort((a, b) => a.data.name.localeCompare(b.data.name)),
 })).filter((group) => group.crawlers.length > 0);
+
+// Computed from the actual collection, never hard-coded, so this can't drift
+// from what's really published.
+const operatorCount = new Set(crawlers.map((c) => c.data.operator)).size;
+const latestVerifiedDate = crawlers.reduce(
+  (latest, c) => (c.data.lastVerified > latest ? c.data.lastVerified : latest),
+  crawlers[0]?.data.lastVerified ?? "",
+);
 ---
 
 <MarketingLayout
   title="AI Crawler Directory | CrawlPact"
   description="Reference pages for documented AI search, training, user-triggered, and agent crawlers, with official sources and last-verified dates."
+  ogImage="/og/crawlers.png"
 >
   <div class="mx-auto max-w-[1240px] px-4 py-12 sm:px-6">
     <h1 class="text-h1 text-neutral-950">AI crawler directory</h1>
@@ -32,6 +41,22 @@ const purposeGroups = CRAWLER_PURPOSES.map((purpose) => ({
       }
       for how entries are verified.
     </p>
+    <p class="mt-3 text-supporting text-neutral-500">
+      {crawlers.length} crawlers from {operatorCount} operators · most recently verified{" "}
+      {new Date(latestVerifiedDate).toLocaleDateString()}
+    </p>
+
+    <div class="mt-6 rounded-card border border-neutral-200 bg-neutral-50 p-5">
+      <h2 class="text-card-heading text-neutral-950">How entries are verified</h2>
+      <p class="mt-2 text-body text-neutral-700">
+        Each entry requires a reliable official source, a verified user-agent token, a purpose
+        classification, and a verification date before publication. Entries are re-checked against
+        each operator's own current documentation on a rolling basis, not left to go stale
+        indefinitely — see the last-verified date on each crawler's page. One entry (Bingbot) has no
+        dedicated reference page yet, disclosed on its registry record, because its official source
+        could not be reliably fetched.
+      </p>
+    </div>
 
     {
       purposeGroups.map((group) => (
@@ -44,7 +69,7 @@ const purposeGroups = CRAWLER_PURPOSES.map((purpose) => ({
                   {crawler.data.operator}
                 </p>
                 <h3 class="mt-1 text-card-heading text-neutral-950">
-                  <a href={`/crawlers/${crawler.id}`} class="hover:text-brand-700">
+                  <a href={`/crawlers/${crawler.id}/`} class="hover:text-brand-700">
                     {crawler.data.name}
                   </a>
                 </h3>

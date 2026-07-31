@@ -10,7 +10,20 @@ a concise, structured entry point to a site's most relevant content, in Markdown
 
 ## Step 1: Create the file at your domain root
 
-Place a plain-text file at `/llms.txt` — for example `https://example.com/llms.txt`.
+Place a plain-text file at `/llms.txt` — for example `https://example.com/llms.txt`. Where that
+file physically lives depends on your hosting:
+
+- **Static-site hosts** (Cloudflare Pages/Workers Assets, Netlify, Vercel, or any static-site
+  generator, including this site) — put the file in the project's static-assets directory (often
+  named `public/`), so it's copied to the site root unchanged at build time, alongside files like
+  `robots.txt` and `favicon.ico`.
+- **WordPress** — a real file placed directly in the site's web root (via SFTP or your host's file
+  manager) is served as-is; Apache and Nginx check for a matching file on disk before handing the
+  request to WordPress's own routing, so no plugin is required if you have direct file access. If
+  your host doesn't allow that, a small plugin (or a `functions.php` snippet hooked to WordPress's
+  `init` action, matching the request path and outputting the content with a `text/plain`
+  content-type) can serve it instead — the same technique WordPress itself uses to serve a virtual
+  `robots.txt` when no physical file exists.
 
 ## Step 2: Start with a top-level Markdown heading
 

@@ -30,5 +30,11 @@ uses consistently across its own documentation and is the value CrawlPact matche
 
 ## Site-owner controls
 
-Standard `robots.txt` disallow rules apply. See [/limitations](/limitations) for what a
-`robots.txt` rule can and cannot guarantee.
+Disallowing `Googlebot` removes a page from Google Search indexing entirely — the most
+consequential single crawler decision on this list for most public websites, since it governs
+organic search visibility rather than any AI-training-specific use. It is separate from
+`Google-Extended` (generative-AI training opt-out) and `Google-CloudVertexBot`
+(site-owner-requested Vertex AI Agent crawls): blocking either of those does not affect Search
+indexing, and blocking `Googlebot` does not, by itself, opt content out of the AI training use
+`Google-Extended` governs. See [/limitations](/limitations) for what a `robots.txt` rule can and
+cannot guarantee.

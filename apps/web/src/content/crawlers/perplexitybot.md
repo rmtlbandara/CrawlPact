@@ -12,6 +12,14 @@ summary: "Indexes web content to power Perplexity's AI-generated search answers.
 `PerplexityBot` crawls and indexes web content that Perplexity's search product may cite when
 answering user queries.
 
+## Site-owner controls
+
+Disallowing `PerplexityBot` removes this content from consideration when Perplexity's search
+product cites sources in its AI-generated answers. It does not affect `Perplexity-User`, the
+separate user-triggered fetcher Perplexity documents, which operates independently of indexing
+decisions. See [/limitations](/limitations) for what a `robots.txt` rule can and cannot
+guarantee.
+
 ## Related crawler
 
 Perplexity also documents `Perplexity-User`, a separate user-triggered crawler that fetches a

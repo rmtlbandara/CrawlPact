@@ -25,4 +25,4 @@ Disallow: /
 
 This creates a dedicated group for a single crawler token without affecting the wildcard group
 that other, unlisted crawlers fall back to. CrawlPact's recommendation engine generates rules in
-this shape, preserving unrelated existing directives (SRS FR-REC-004).
+this shape, preserving unrelated existing directives.

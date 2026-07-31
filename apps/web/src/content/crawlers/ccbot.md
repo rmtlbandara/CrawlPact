@@ -19,3 +19,12 @@ Crawl itself. A website that blocks every named AI-training crawler but leaves `
 unaddressed may still have its content indirectly available for training through downstream
 reuse of the Common Crawl corpus — a conflict CrawlPact surfaces explicitly rather than
 silently.
+
+## Site-owner controls
+
+Disallowing `CCBot` removes this content from future Common Crawl dataset snapshots going
+forward. It has no effect on any downstream party that already holds an earlier snapshot, and no
+effect on any other operator's crawler evaluated separately by CrawlPact (such as `GPTBot` or
+`ClaudeBot`) — `CCBot` governs only Common Crawl's own future crawling, not a broader
+AI-training relationship. See [/limitations](/limitations) for what a `robots.txt` rule can and
+cannot guarantee.

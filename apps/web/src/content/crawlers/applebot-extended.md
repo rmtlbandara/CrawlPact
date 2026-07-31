@@ -13,7 +13,11 @@ summary: "Controls use of website content for training Apple Intelligence and ot
 use in training Apple's generative AI models, separate from the base `Applebot` crawler used for
 Siri and Spotlight indexing.
 
-## Related crawler
+## Site-owner controls
 
-As with Google's pairing of `Googlebot`/`Google-Extended`, disallowing `Applebot-Extended` alone
-leaves standard Apple indexing (`Applebot`) unaffected.
+Disallowing `Applebot-Extended` opts this content out of training Apple Intelligence and other
+Apple generative AI models specifically. As with Google's pairing of `Googlebot`/`Google-Extended`,
+it leaves standard Apple indexing for Siri and Spotlight Suggestions (`Applebot`) unaffected — the
+two tokens are evaluated independently, and `Applebot-Extended` does not itself perform a separate
+crawl; it layers a training-use restriction on top of Apple's existing `Applebot` access. See
+[/limitations](/limitations) for what a `robots.txt` rule can and cannot guarantee.

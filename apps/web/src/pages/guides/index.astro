@@ -11,6 +11,7 @@ const guides = (await getCollection("guides")).sort(
 <MarketingLayout
   title="AI Crawler Policy Guides | CrawlPact"
   description="Decision, implementation, and troubleshooting guides for configuring AI crawler access in robots.txt and related signals."
+  ogImage="/og/guides.png"
 >
   <div class="mx-auto max-w-[1240px] px-4 py-12 sm:px-6">
     <h1 class="text-h1 text-neutral-950">Guides</h1>
@@ -27,7 +28,7 @@ const guides = (await getCollection("guides")).sort(
               {guide.data.category}
             </p>
             <h2 class="mt-1 text-card-heading text-neutral-950">
-              <a href={`/guides/${guide.id}`} class="hover:text-brand-700">
+              <a href={`/guides/${guide.id}/`} class="hover:text-brand-700">
                 {guide.data.title}
               </a>
             </h2>

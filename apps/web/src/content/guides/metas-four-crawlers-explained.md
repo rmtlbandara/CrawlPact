@@ -3,6 +3,8 @@ title: "Meta's four crawlers explained: ExternalAgent, WebIndexer, ExternalAds, 
 description: "Meta documents four separate crawler tokens with four separate purposes. A decision guide for telling them apart before writing a robots.txt rule."
 category: "decision"
 publishedDate: "2026-07-24"
+relatedCrawlerSlugs:
+  ["meta-externalagent", "meta-webindexer", "meta-externalads", "meta-externalfetcher"]
 ---
 
 Meta documents more separate crawler tokens than most other operators, each for a distinct
@@ -36,3 +38,6 @@ since `robots.txt` groups never match on operator identity, only the exact token
 that Meta's own documentation writes these tokens in lowercase in the literal HTTP header (e.g.
 `meta-externalagent/1.1`) — matching is case-insensitive per RFC 9309, so either capitalisation
 works in a rule.
+
+Check which of Meta's four tokens your own `robots.txt` actually covers with the
+[AI crawler checker](/tools/ai-crawler-checker/).

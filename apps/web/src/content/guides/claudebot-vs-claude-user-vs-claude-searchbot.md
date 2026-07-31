@@ -3,6 +3,7 @@ title: "ClaudeBot vs. Claude-User vs. Claude-SearchBot: which should you block?"
 description: "Anthropic operates three separate crawler tokens for training, user-triggered retrieval, and search. A decision guide for configuring each independently."
 category: "decision"
 publishedDate: "2026-07-24"
+relatedCrawlerSlugs: ["claudebot", "claude-user", "claude-searchbot"]
 ---
 
 Like OpenAI, Anthropic documents three separate crawler tokens rather than one combined identity.

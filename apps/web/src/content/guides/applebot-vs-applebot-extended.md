@@ -3,6 +3,7 @@ title: "Applebot vs. Applebot-Extended: Search/Siri vs. Apple Intelligence"
 description: "Apple separates its long-standing search crawler from a newer, generative-AI-specific opt-out token. A decision guide for telling them apart."
 category: "decision"
 publishedDate: "2026-07-24"
+relatedCrawlerSlugs: ["applebot-extended"]
 ---
 
 Apple operates `Applebot`, a long-established crawler for Siri and Spotlight Suggestions, and a
@@ -32,3 +33,6 @@ Because `Applebot-Extended` is the newer of the two tokens, some `robots.txt` fi
 a rule for `Applebot` and assume it also covers the newer AI-training opt-out. It doesn't — the
 two tokens are matched independently, so an AI-training opt-out intent requires an explicit
 `Applebot-Extended` rule.
+
+Check which of the two your own `robots.txt` actually covers with the
+[AI crawler checker](/tools/ai-crawler-checker/).

@@ -40,6 +40,10 @@ const guides = defineCollection({
     category: z.enum(["decision", "implementation", "troubleshooting"]),
     publishedDate: z.string(),
     updatedDate: z.string().optional(),
+    // Explicit, source-of-truth link to the crawler-reference pages this
+    // guide discusses by name — lets a crawler page show "related guides"
+    // without fragile keyword-matching against guide body text.
+    relatedCrawlerSlugs: z.array(z.string()).optional(),
   }),
 });
 

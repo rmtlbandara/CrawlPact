@@ -4,8 +4,8 @@ operator: "Google"
 userAgentToken: "Google-Extended"
 purpose: "training"
 lifecycleStatus: "active"
-officialSourceUrl: "https://developers.google.com/search/docs/crawling-indexing/google-extended"
-lastVerified: "2026-07-01"
+officialSourceUrl: "https://developers.google.com/search/docs/crawling-indexing/google-common-crawlers"
+lastVerified: "2026-07-30"
 summary: "Controls use of website content for training Gemini and Vertex AI generative models, independent of Search indexing."
 ---
 
