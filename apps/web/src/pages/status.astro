@@ -35,7 +35,7 @@ const LEVEL_TONE_CLASS: Record<PublicStatusLevel, string> = {
 // that detail text — this system only escalates their displayed status
 // with incidents, it does not replace the existing checks.
 const COMPONENT_DETAIL: Partial<Record<string, string>> = {
-  audit_scanner: auditEngineEnabled ? "Real scan enabled." : "Disabled in this environment.",
+  audit_scanner: `Free audit (real scan): ${auditEngineEnabled ? "Available" : "Disabled in this environment"}.`,
   billing_checkout: environment.paddleBillingConfigured
     ? `Paddle billing available (${environment.label}).`
     : "Paddle billing not configured in this environment.",
