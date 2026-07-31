@@ -1,6 +1,14 @@
 ---
 export const prerender = true;
 import MarketingLayout from "../layouts/MarketingLayout.astro";
+import { TRUST_CONFIG } from "../lib/trust-config";
+
+const effectiveDate = new Date(TRUST_CONFIG.policyEffectiveDate).toLocaleDateString("en-GB", {
+  day: "numeric",
+  month: "long",
+  year: "numeric",
+  timeZone: "UTC",
+});
 ---
 
 <MarketingLayout
@@ -10,8 +18,10 @@ import MarketingLayout from "../layouts/MarketingLayout.astro";
   <article class="mx-auto max-w-reading px-4 py-12 sm:px-6">
     <h1 class="text-h1 text-neutral-950">Privacy policy</h1>
     <p class="mt-3 text-supporting text-neutral-500">
-      Draft — not yet reviewed by a lawyer. This page describes CrawlPact's actual technical data
-      practices as implemented.
+      This page describes CrawlPact's actual technical data practices as implemented.
+    </p>
+    <p class="mt-1 text-supporting text-neutral-500">
+      Effective and last updated: {effectiveDate}.
     </p>
 
     <h2 class="mt-8 text-h2 text-neutral-950">What CrawlPact collects</h2>
@@ -37,12 +47,12 @@ import MarketingLayout from "../layouts/MarketingLayout.astro";
 
     <h2 class="mt-8 text-h2 text-neutral-950">Third parties</h2>
     <p class="mt-3 text-body text-neutral-700">
-      Cloudflare provides hosting, storage (D1), and scheduled execution. Paddle is CrawlPact's
-      merchant of record for billing and independently sends payment-related communications. Google
-      Analytics is used on public marketing pages (this page, the homepage, pricing, and similar
-      pages) to measure visits; it is not loaded on the authenticated app or admin areas. CrawlPact
-      does not use any third-party email, SMS, push-notification, AI API, or external authentication
-      provider.
+      {TRUST_CONFIG.infrastructureProviders.join(", ")} provides hosting, storage (D1), and scheduled
+      execution. {TRUST_CONFIG.billingProvider} is CrawlPact's merchant of record for billing and independently
+      sends payment-related communications. {TRUST_CONFIG.analyticsProvider}{" "}
+      is used on public marketing pages (this page, the homepage, pricing, and similar pages) to measure
+      visits; it is not loaded on the authenticated app or admin areas. CrawlPact does not use any third-party
+      email, SMS, push-notification, AI API, or external authentication provider.
     </p>
 
     <h2 class="mt-8 text-h2 text-neutral-950">Retention</h2>
