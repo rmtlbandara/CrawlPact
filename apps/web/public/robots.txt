@@ -2,7 +2,7 @@ User-agent: *
 Allow: /
 
 Disallow: /api/
-Disallow: /audit/*
+Disallow: /audit/
 Disallow: /app
 Disallow: /sign-in
 Disallow: /dev/

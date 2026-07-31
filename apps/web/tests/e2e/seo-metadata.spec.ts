@@ -135,3 +135,33 @@ test.describe("Non-indexable routes are genuinely excluded", () => {
     expect(html).toContain('content="noindex');
   });
 });
+
+test.describe("robots.txt", () => {
+  test("excludes /audit/ via a plain path-prefix rule, allows marketing pages, and blocks no specific AI crawler", async ({
+    request,
+  }) => {
+    const response = await request.get("/robots.txt");
+    expect(response.ok()).toBe(true);
+    const body = await response.text();
+
+    // Plain path-prefix form, not the non-standard wildcard `/audit/*` —
+    // both match the same URLs under Google's spec, but the prefix form is
+    // portable to crawlers that don't support wildcards.
+    expect(body).toContain("Disallow: /audit/");
+    expect(body).not.toContain("Disallow: /audit/*");
+
+    expect(body).toContain("Allow: /");
+    expect(body).toContain("Sitemap: https://crawlpact.com/sitemap.xml");
+
+    // No crawler-specific rules at all — every AI crawler falls through to
+    // the default `User-agent: *` group above, same as any other bot.
+    const userAgentLines = body.split("\n").filter((line) => line.startsWith("User-agent:"));
+    expect(userAgentLines).toEqual(["User-agent: *"]);
+
+    for (const path of ["/", "/pricing", "/tools", "/crawlers", "/guides"]) {
+      const pageResponse = await request.get(path);
+      expect(pageResponse.ok()).toBe(true);
+      expect(pageResponse.headers()["x-robots-tag"] ?? "").not.toContain("noindex");
+    }
+  });
+});
