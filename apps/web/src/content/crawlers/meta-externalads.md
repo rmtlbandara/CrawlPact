@@ -21,5 +21,8 @@ so this does not change how a `Disallow` rule applies.
 
 ## Site-owner controls
 
-Standard `robots.txt` disallow rules apply. See [/limitations](/limitations) for what a
-`robots.txt` rule can and cannot guarantee.
+Disallowing `Meta-ExternalAds` affects only Meta's advertising- and business-product-related
+crawling of this content. It does not affect `Meta-ExternalAgent` (AI training),
+`Meta-WebIndexer` (search), or `Meta-ExternalFetcher` (user-triggered agent fetches) — Meta
+documents each as a separate token, and CrawlPact evaluates them independently. See
+[/limitations](/limitations) for what a `robots.txt` rule can and cannot guarantee.

@@ -12,7 +12,17 @@ form. It is a declaration, not technical enforcement.
 ## Step 1: Create the file at the well-known RSL location
 
 Place an XML file at `/.well-known/rsl.xml` — for example
-`https://example.com/.well-known/rsl.xml`.
+`https://example.com/.well-known/rsl.xml`. As with any file under `/.well-known/`, where it
+physically lives depends on your hosting:
+
+- **Static-site hosts** (Cloudflare Pages/Workers Assets, Netlify, Vercel, or any static-site
+  generator) — create a `.well-known/rsl.xml` path inside the project's static-assets directory
+  (often named `public/`); it's copied to the site root unchanged at build time.
+- **WordPress** — a real file placed directly at `.well-known/rsl.xml` in the site's web root (via
+  SFTP or your host's file manager) is served as-is, since Apache/Nginx serve a matching file from
+  disk before invoking WordPress's own routing. If direct file access isn't available, a plugin or
+  a `functions.php` snippet hooked to WordPress's `init` action can match the request path and
+  output the XML with an `application/xml` content-type instead.
 
 ## Step 2: Declare a license element
 

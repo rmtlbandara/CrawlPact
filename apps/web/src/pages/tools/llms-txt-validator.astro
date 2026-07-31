@@ -7,9 +7,10 @@ import { AuditForm } from "../../components/AuditForm";
 <MarketingLayout
   title="llms.txt Validator | Free Tool | CrawlPact"
   description="Validate llms.txt and llms-full.txt structure, status, and linked resources for a domain."
+  ogImage="/og/tools.png"
   breadcrumbs={[
     { name: "Free tools", url: "/tools" },
-    { name: "llms.txt validator", url: "/tools/llms-txt-validator" },
+    { name: "llms.txt validator", url: "/tools/llms-txt-validator/" },
   ]}
 >
   <div class="mx-auto max-w-reading px-4 py-16 text-center sm:px-6">
@@ -21,6 +22,54 @@ import { AuditForm } from "../../components/AuditForm";
     </p>
     <div class="mt-8 flex justify-center">
       <AuditForm client:load idPrefix="llms-txt-validator" focus="llms" />
+    </div>
+
+    <div class="mt-12 text-left">
+      <h2 class="text-h3 text-neutral-950">What this checks</h2>
+      <ul class="mt-3 list-disc pl-5 text-body text-neutral-700">
+        <li>Retrieves <code>/llms.txt</code> and, if present, <code>/llms-full.txt</code>.</li>
+        <li>Checks file size and whether a top-level Markdown heading is present.</li>
+        <li>Lists the linked resources the file points to.</li>
+      </ul>
+
+      <h2 class="mt-8 text-h3 text-neutral-950">What this does not check</h2>
+      <p class="mt-3 text-body text-neutral-700">
+        <code>llms.txt</code> is an independent community proposal, not an IETF or W3C standard — no AI
+        system is known to require or guarantee use of it. A missing file is treated as informational,
+        not as a fault. See{" "}
+        <a href="/limitations" class="text-brand-700 underline underline-offset-2">limitations</a>.
+      </p>
+
+      <h2 class="mt-8 text-h3 text-neutral-950">Related</h2>
+      <ul class="mt-3 list-disc pl-5 text-body text-neutral-700">
+        <li>
+          <a
+            href="/guides/how-to-publish-an-llms-txt-file/"
+            class="text-brand-700 underline underline-offset-2">How to publish an llms.txt file</a
+          >
+        </li>
+        <li>
+          <a
+            href="/guides/llms-txt-not-validating/"
+            class="text-brand-700 underline underline-offset-2"
+            >Why an llms.txt file isn't validating</a
+          >
+        </li>
+      </ul>
+    </div>
+
+    <div class="mt-8 rounded-card border border-neutral-200 bg-neutral-50 p-6 text-center">
+      <p class="text-card-heading text-neutral-950">Want the complete picture?</p>
+      <p class="mt-1.5 text-supporting text-neutral-600">
+        This checker is a view into a full CrawlPact audit, which also covers{" "}
+        <code>robots.txt</code>, RSL, Content Signals, and your Policy Health Score.
+      </p>
+      <a
+        href="/audit"
+        class="mt-4 inline-block rounded-control bg-brand-600 px-5 py-2.5 text-body font-medium text-white hover:bg-brand-700"
+      >
+        Run the full audit
+      </a>
     </div>
   </div>
 </MarketingLayout>

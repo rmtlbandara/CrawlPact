@@ -57,6 +57,22 @@ pages (`apps/web/src/content/crawlers/*.md`) cover 20 of the 21 as of Part 3 —
 (Bingbot) is a deliberate, documented exception (its official source page could not be fetched
 and read during verification), not an oversight; see `SOURCE_VERIFICATION_POLICY.md`.
 
+**Correction pending publication as a new release (not yet 2026.07.3's live state):** a
+2026-07-30 re-verification pass against each operator's current documentation found (1)
+`Google-Extended`'s cited source URL had gone stale — Google retired the standalone page and
+folded its content into `.../google-common-crawlers` (also already cited by
+`Google-CloudVertexBot`/`GoogleOther`) — and (2) Amazon's own documentation separately publishes
+two further tokens not yet in the registry: `Amzn-SearchBot` (search) and `Amzn-User`
+(user-triggered), both explicitly excluded from AI training per Amazon's own text, mirroring how
+OpenAI/Anthropic/Perplexity/Meta are already split by purpose rather than folded into one
+"mixed" entry. `packages/database/seed/reference-data.sql` and the corresponding
+`apps/web/src/content/crawlers/*.md` pages have been corrected accordingly (23 crawlers total).
+Because registry releases are immutable, this correction still needs to be published as a new
+registry release (e.g. `2026.07.4`) through the normal registry-manager workflow — reference
+data is safe to re-run into any environment, but making it the _active_ release in a database
+that already has `2026.07.3` active requires an explicit publish action, not just an edit to
+this seed file.
+
 ## Registry drift vs. website drift (FR-REG-009/010)
 
 A change in a crawler's registry record must never be presented as if the _website_ changed.

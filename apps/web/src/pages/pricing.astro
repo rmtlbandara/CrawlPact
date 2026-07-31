@@ -73,11 +73,32 @@ const plans = [
     recommended: false,
   },
 ];
+
+const webApplicationJsonLd = {
+  "@type": "WebApplication",
+  name: "CrawlPact",
+  applicationCategory: "BusinessApplication",
+  operatingSystem: "Any (web-based)",
+  offers: plans.map((plan) => {
+    const [, priceAmount] = plan.price.split(" ");
+    return {
+      "@type": "Offer",
+      name: `${plan.name} plan`,
+      price: priceAmount,
+      priceCurrency: "USD",
+      priceSpecification: {
+        "@type": "UnitPriceSpecification",
+        billingDuration: "P1Y",
+      },
+    };
+  }),
+};
 ---
 
 <MarketingLayout
   title="Pricing | CrawlPact"
   description="Annual pricing for CrawlPact's AI crawler policy auditing and monitoring plans, from a free single-domain audit to agency-scale portfolio monitoring."
+  extraJsonLd={[webApplicationJsonLd]}
 >
   <div class="mx-auto max-w-[1240px] px-4 py-12 sm:px-6">
     <h1 class="text-h1 text-neutral-950">Pricing</h1>

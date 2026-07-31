@@ -48,10 +48,33 @@ const auditEngineEnabled = getEnv().AUDIT_ENGINE_ENABLED === "true";
       </li>
       <li>
         Uses roughly 12 external requests per scan, each with connection, first-byte, and total-scan
-        timeouts.
+        timeouts, and each response capped at roughly 2 MB.
       </li>
       <li>Follows at most five redirects, revalidating each destination before following it.</li>
+      <li>
+        If a target blocks, rate-limits, or otherwise refuses the scanner, that refusal is reported
+        as a finding — not silently ignored, and never presented as if the resource were absent.
+      </li>
     </ul>
+
+    <h2 class="mt-8 text-h2 text-neutral-950">What the scanner does not scan</h2>
+    <ul class="mt-3 list-disc pl-5 text-body text-neutral-700">
+      <li>Authentication-gated pages, or anything behind a login.</li>
+      <li>
+        Content that only appears after client-side JavaScript runs — the scanner reads the raw HTTP
+        response, it does not render a page in a browser.
+      </li>
+      <li>
+        An entire website — sitemap-listed URLs are sampled within a bounded limit, not crawled
+        exhaustively.
+      </li>
+    </ul>
+    <p class="mt-3 text-body text-neutral-700">
+      Private, authenticated, and internal systems are excluded by design, not by omission — a
+      public policy audit has no legitimate reason to reach them. See{" "}
+      <a href="/privacy" class="text-brand-700 underline underline-offset-2">privacy</a> for how long
+      retrieved evidence is kept.
+    </p>
 
     <h2 class="mt-8 text-h2 text-neutral-950">What the scanner never does</h2>
     <ul class="mt-3 list-disc pl-5 text-body text-neutral-700">

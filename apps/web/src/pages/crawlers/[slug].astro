@@ -22,17 +22,23 @@ const relatedCrawlers = allCrawlers
         other.data.purpose === crawler.data.purpose),
   )
   .slice(0, 3);
+
+const allGuides = await getCollection("guides");
+const relatedGuides = allGuides.filter((guide) =>
+  guide.data.relatedCrawlerSlugs?.includes(crawler.id),
+);
 ---
 
 <MarketingLayout
   title={`${crawler.data.name} (${crawler.data.operator}) | CrawlPact Crawler Directory`}
   description={crawler.data.summary}
-  canonicalPath={`/crawlers/${crawler.id}`}
+  canonicalPath={`/crawlers/${crawler.id}/`}
+  ogImage="/og/crawlers.png"
   ogType="article"
   publishedDate={crawler.data.lastVerified}
   breadcrumbs={[
     { name: "Crawler directory", url: "/crawlers" },
-    { name: crawler.data.name, url: `/crawlers/${crawler.id}` },
+    { name: crawler.data.name, url: `/crawlers/${crawler.id}/` },
   ]}
 >
   <article class="mx-auto max-w-reading px-4 py-12 sm:px-6">
@@ -65,6 +71,25 @@ const relatedCrawlers = allCrawlers
       <Content />
     </div>
 
+    <h2 class="mt-8 text-h3 text-neutral-950">Example robots.txt configuration</h2>
+    <p class="mt-2 text-body text-neutral-700">
+      To disallow {crawler.data.name} specifically, without affecting any other crawler:
+    </p>
+    <pre
+      class="mt-3 overflow-x-auto rounded-card bg-neutral-950 p-4 text-supporting text-neutral-50"><code>User-agent: {crawler.data.userAgentToken}
+Disallow: /</code></pre>
+    <p class="mt-3 text-body text-neutral-700">
+      If no dedicated <code>User-agent: {crawler.data.userAgentToken}</code> group exists in a domain's{
+        " "
+      }
+      <code>robots.txt</code>, this crawler falls back to whatever the wildcard{" "}
+      <code>User-agent: *</code> group says (RFC 9309) — see{" "}
+      <a
+        href="/guides/robots-txt-syntax-basics/"
+        class="text-brand-700 underline underline-offset-2">robots.txt syntax basics</a
+      > for how group selection works.
+    </p>
+
     <a
       href={crawler.data.officialSourceUrl}
       class="mt-6 block wrap-break-word text-body text-brand-700 underline underline-offset-2"
@@ -72,6 +97,35 @@ const relatedCrawlers = allCrawlers
     >
       Official source: {crawler.data.officialSourceUrl}
     </a>
+    <p class="mt-2 text-supporting text-neutral-500">
+      Verified against the source above as of {crawler.data.lastVerified} — see{" "}
+      <a
+        href="/methodology#registry-verification"
+        class="text-brand-700 underline underline-offset-2"
+        >how CrawlPact verifies crawler information</a
+      >.
+    </p>
+
+    {
+      relatedGuides.length > 0 && (
+        <div class="mt-12 border-t border-neutral-200 pt-8">
+          <h2 class="text-h3 text-neutral-950">Related guides</h2>
+          <ul class="mt-4 flex flex-col gap-3">
+            {relatedGuides.map((guide) => (
+              <li>
+                <a
+                  href={`/guides/${guide.id}/`}
+                  class="block rounded-card border border-neutral-200 bg-white p-4 hover:border-brand-300"
+                >
+                  <p class="text-card-heading text-neutral-950">{guide.data.title}</p>
+                  <p class="mt-1 text-supporting text-neutral-600">{guide.data.description}</p>
+                </a>
+              </li>
+            ))}
+          </ul>
+        </div>
+      )
+    }
 
     {
       relatedCrawlers.length > 0 && (
@@ -81,7 +135,7 @@ const relatedCrawlers = allCrawlers
             {relatedCrawlers.map((related) => (
               <li>
                 <a
-                  href={`/crawlers/${related.id}`}
+                  href={`/crawlers/${related.id}/`}
                   class="block rounded-card border border-neutral-200 bg-white p-4 hover:border-brand-300"
                 >
                   <p class="text-metadata font-medium uppercase tracking-wide text-neutral-500">
@@ -102,7 +156,10 @@ const relatedCrawlers = allCrawlers
     <div class="mt-8 rounded-card border border-neutral-200 bg-neutral-50 p-6 text-center">
       <p class="text-card-heading text-neutral-950">See how this applies to your own site</p>
       <p class="mt-1.5 text-supporting text-neutral-600">
-        Run a free audit to check your declared AI crawler policy against your own domain.
+        Run a free audit to check your declared AI crawler policy against your own domain, or use
+        the <a href="/tools/ai-crawler-checker/" class="text-brand-700 underline underline-offset-2"
+          >AI crawler checker</a
+        > to check this one crawler specifically.
       </p>
       <a
         href="/audit"

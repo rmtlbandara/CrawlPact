@@ -3,6 +3,7 @@ title: "PerplexityBot vs. Perplexity-User: which should you block?"
 description: "Perplexity separates its search-indexing crawler from its user-triggered fetcher. A decision guide for configuring each independently."
 category: "decision"
 publishedDate: "2026-07-24"
+relatedCrawlerSlugs: ["perplexitybot", "perplexity-user"]
 ---
 
 Perplexity documents two crawler tokens with a clear, stated separation: one for indexing, one for
@@ -32,4 +33,5 @@ Site owners who want to "opt out of AI training" sometimes disallow `PerplexityB
 training effect, then are surprised their site loses Perplexity search visibility with no
 training-related benefit, since Perplexity's own documentation states this crawler isn't used for
 that purpose. Confirm what a token actually does — via the
-[crawler directory](/crawlers) — before writing a rule intended to achieve a specific outcome.
+[crawler directory](/crawlers) — before writing a rule intended to achieve a specific outcome, or
+check your own `robots.txt` directly with the [AI crawler checker](/tools/ai-crawler-checker/).

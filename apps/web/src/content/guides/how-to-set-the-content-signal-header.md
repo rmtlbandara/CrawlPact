@@ -23,15 +23,36 @@ Content-Signal: search=yes, ai-train=no
 Where you configure this depends on your hosting setup — the header needs to be added by
 whatever serves your responses:
 
-- **Reverse proxy / web server** (Nginx, Apache, Caddy): add a response header directive in your
-  site configuration.
-- **CDN or edge platform** (Cloudflare, Fastly, and similar): most offer a response-header
-  transform rule in their dashboard or configuration file.
-- **Application framework**: set the header directly in your application's response-handling
+- **Netlify** — a `_headers` file in your publish directory:
+  ```
+  /*
+    Content-Signal: search=yes, ai-train=no
+  ```
+- **Vercel** — a `headers` entry in `vercel.json`:
+  ```json
+  {
+    "headers": [
+      {
+        "source": "/(.*)",
+        "headers": [{ "key": "Content-Signal", "value": "search=yes, ai-train=no" }]
+      }
+    ]
+  }
+  ```
+- **Cloudflare Pages/Workers Assets** — a `_headers` file at your project root, in the same
+  `path` / `  Header: value` format Netlify uses (this is the same mechanism CrawlPact's own
+  site uses for its security headers).
+- **Reverse proxy / web server** (Nginx, Apache, Caddy) — add a response header directive in your
+  site configuration (e.g. Nginx's `add_header`, Apache's `Header set`).
+- **WordPress** — a `functions.php` snippet (or a small plugin) hooked to the `send_headers`
+  action, calling `header('Content-Signal: search=yes, ai-train=no')`, since WordPress's own
+  request handling is what generates the response.
+- **Application framework** — set the header directly in your application's response-handling
   code if you control it there instead.
 
-The exact configuration syntax is specific to your platform — consult your server's or CDN's own
-documentation for adding a custom response header.
+If your platform isn't listed above, consult its documentation for adding a custom response
+header — the syntax varies, but the underlying task (attach one HTTP header to every response) is
+the same everywhere.
 
 ## Step 3: Verify
 

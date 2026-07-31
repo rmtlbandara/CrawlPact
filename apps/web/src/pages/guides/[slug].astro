@@ -20,19 +20,34 @@ const relatedGuides = allGuides
 // one — shorter guides (a couple of headings) read fine top-to-bottom.
 const tocHeadings = headings.filter((h) => h.depth <= 2);
 const showToc = tocHeadings.length >= 3;
+
+// HowTo schema only for guides with real, numbered "Step N" headings — never
+// fabricated for guides that aren't actually structured as sequential steps.
+const stepHeadings = headings.filter((h) => /^step\s+\d+/i.test(h.text));
+const howToJsonLd =
+  stepHeadings.length >= 2
+    ? {
+        "@type": "HowTo",
+        name: guide.data.title,
+        description: guide.data.description,
+        step: stepHeadings.map((h) => ({ "@type": "HowToStep", name: h.text })),
+      }
+    : null;
 ---
 
 <MarketingLayout
   title={`${guide.data.title} | CrawlPact Guides`}
   description={guide.data.description}
-  canonicalPath={`/guides/${guide.id}`}
+  canonicalPath={`/guides/${guide.id}/`}
+  ogImage="/og/guides.png"
   ogType="article"
   publishedDate={guide.data.publishedDate}
   updatedDate={guide.data.updatedDate}
   breadcrumbs={[
     { name: "Guides", url: "/guides" },
-    { name: guide.data.title, url: `/guides/${guide.id}` },
+    { name: guide.data.title, url: `/guides/${guide.id}/` },
   ]}
+  extraJsonLd={howToJsonLd ? [howToJsonLd] : []}
 >
   <article class="mx-auto max-w-reading px-4 py-12 sm:px-6">
     <p class="text-metadata font-medium uppercase tracking-wide text-neutral-500">
@@ -82,7 +97,7 @@ const showToc = tocHeadings.length >= 3;
             {relatedGuides.map((related) => (
               <li>
                 <a
-                  href={`/guides/${related.id}`}
+                  href={`/guides/${related.id}/`}
                   class="block rounded-card border border-neutral-200 bg-white p-4 hover:border-brand-300"
                 >
                   <p class="text-card-heading text-neutral-950">{related.data.title}</p>

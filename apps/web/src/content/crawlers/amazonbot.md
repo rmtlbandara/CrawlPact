@@ -22,5 +22,9 @@ specific request.
 
 ## Site-owner controls
 
-Standard `robots.txt` disallow rules apply. See [/limitations](/limitations) for what a
-`robots.txt` rule can and cannot guarantee.
+Disallowing `Amazonbot` opts this content out of Amazon's general product-improvement crawling,
+including any possible AI-model-training use its documentation describes. It does not affect the
+separate `Amzn-SearchBot` (search-experience indexing) or `Amzn-User` (user-triggered fetches)
+tokens Amazon documents on the same page — both explicitly excluded from AI training use, and
+evaluated independently by CrawlPact. See [/limitations](/limitations) for what a `robots.txt`
+rule can and cannot guarantee.

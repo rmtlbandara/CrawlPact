@@ -38,7 +38,7 @@ export const POST: APIRoute = async ({ request, params }) => {
       if (result.reason === "admin_minimum_passkeys") {
         throw new ApiError(
           "VALIDATION_FAILED",
-          "Administrator accounts must keep at least two registered passkeys (SRS §28.20). Add another one first.",
+          "Administrator accounts must keep at least two registered passkeys. Add another one first.",
         );
       }
       throw new ApiError("NOT_FOUND", "This passkey does not exist.");

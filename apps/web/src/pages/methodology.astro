@@ -1,6 +1,16 @@
 ---
 export const prerender = true;
 import MarketingLayout from "../layouts/MarketingLayout.astro";
+import { TRUST_CONFIG } from "../lib/trust-config";
+
+const lastSubstantiveUpdate = new Date(
+  TRUST_CONFIG.methodologyLastSubstantiveUpdate,
+).toLocaleDateString("en-GB", {
+  day: "numeric",
+  month: "long",
+  year: "numeric",
+  timeZone: "UTC",
+});
 ---
 
 <MarketingLayout
@@ -22,7 +32,7 @@ import MarketingLayout from "../layouts/MarketingLayout.astro";
     <p class="mt-3 text-body text-neutral-700">
       The parser follows RFC 9309 behaviour as closely as practical: a crawler matches the most
       specific <code>User-agent</code> group naming its token, falling back to the wildcard group; within
-      a group, the longest matching path rule wins between conflicting
+      a group, the longest matching path rule wins between conflicting{" "}
       <code>Allow</code>/<code>Disallow</code> directives. Original text, line numbers, and group boundaries
       are preserved so every result can cite its exact evidence.
     </p>
@@ -46,12 +56,119 @@ import MarketingLayout from "../layouts/MarketingLayout.astro";
       drift) or CrawlPact's registry changed (registry drift), never randomness.
     </p>
 
-    <h2 class="mt-8 text-h2 text-neutral-950">Registry verification</h2>
+    <h2 id="registry-verification" class="mt-8 text-h2 text-neutral-950">Registry verification</h2>
     <p class="mt-3 text-body text-neutral-700">
       A crawler is not published to the registry without a reliable official source, a verified
       user-agent token, a purpose classification, a verification date, and administrator approval.
       Registry releases are immutable once published; historical scans retain the registry version
       they were evaluated against.
+    </p>
+
+    <h2 class="mt-8 text-h2 text-neutral-950">What each signal can and can't tell you</h2>
+    <p class="mt-3 text-body text-neutral-700">
+      Every signal CrawlPact retrieves is a declaration, not a guarantee. The table below states
+      plainly what CrawlPact can and cannot conclude from each one, and how mature the underlying
+      specification actually is — a signal isn't more trustworthy just because CrawlPact checks it.
+    </p>
+    <div class="mt-4 overflow-x-auto" tabindex="0" role="region" aria-label="Signal support matrix">
+      <table class="w-full min-w-reading border-collapse text-left text-body">
+        <thead>
+          <tr class="border-b border-neutral-200 text-supporting font-medium text-neutral-600">
+            <th scope="col" class="py-2 pr-4">Signal</th>
+            <th scope="col" class="py-2 pr-4">CrawlPact can infer</th>
+            <th scope="col" class="py-2 pr-4">CrawlPact cannot infer</th>
+            <th scope="col" class="py-2">Specification maturity</th>
+          </tr>
+        </thead>
+        <tbody class="divide-y divide-neutral-100 align-top">
+          <tr>
+            <td class="py-3 pr-4 font-medium text-neutral-900"><code>robots.txt</code></td>
+            <td class="py-3 pr-4 text-neutral-700">
+              Whether a specific crawler token appears allowed or disallowed for a given path, per
+              the retrieved file's own rules.
+            </td>
+            <td class="py-3 pr-4 text-neutral-700">
+              Whether the crawler actually honours it, or whether the same file is served
+              identically to every requester (some sites vary responses by IP or user-agent).
+            </td>
+            <td class="py-3 text-neutral-700">RFC 9309 — IETF Proposed Standard (Sept 2022)</td>
+          </tr>
+          <tr>
+            <td class="py-3 pr-4 font-medium text-neutral-900"
+              >Meta robots / <code>X-Robots-Tag</code></td
+            >
+            <td class="py-3 pr-4 text-neutral-700">
+              The indexing/following instruction declared for the specific page(s) checked.
+            </td>
+            <td class="py-3 pr-4 text-neutral-700">
+              Whether the same directive applies sitewide — checks are bounded, not a full-site
+              crawl.
+            </td>
+            <td class="py-3 text-neutral-700">
+              Widely supported convention documented by major search engines, not an IETF/W3C
+              standard.
+            </td>
+          </tr>
+          <tr>
+            <td class="py-3 pr-4 font-medium text-neutral-900"><code>llms.txt</code></td>
+            <td class="py-3 pr-4 text-neutral-700">
+              Presence, file structure, and linked resources.
+            </td>
+            <td class="py-3 pr-4 text-neutral-700">
+              Whether any AI system reads or acts on it — a missing file carries no implication
+              either way.
+            </td>
+            <td class="py-3 text-neutral-700">
+              Independent community proposal (first published Sept 2024) — not an IETF or W3C
+              standard.
+            </td>
+          </tr>
+          <tr>
+            <td class="py-3 pr-4 font-medium text-neutral-900">RSL</td>
+            <td class="py-3 pr-4 text-neutral-700">
+              Declared permitted/prohibited uses and any stated payment terms.
+            </td>
+            <td class="py-3 pr-4 text-neutral-700">
+              Enforcement — RSL is a machine-readable declaration, not a technical control, and no
+              crawler is required to honour it.
+            </td>
+            <td class="py-3 text-neutral-700">
+              RSL 1.0 (published Dec 2025), governed by an industry technical steering committee —
+              not an IETF/W3C standard.
+            </td>
+          </tr>
+          <tr>
+            <td class="py-3 pr-4 font-medium text-neutral-900">Content Signals</td>
+            <td class="py-3 pr-4 text-neutral-700">
+              Declared <code>search</code>/<code>ai-train</code>/<code>ai-input</code> values.
+            </td>
+            <td class="py-3 pr-4 text-neutral-700">
+              Real-world effect — as of this writing, no major crawler operator is known to act on
+              this signal.
+            </td>
+            <td class="py-3 text-neutral-700">
+              A single vendor's proposal (Sept 2025), not ratified. A separate IETF effort (AI
+              Preferences) is still in draft.
+            </td>
+          </tr>
+          <tr>
+            <td class="py-3 pr-4 font-medium text-neutral-900">Sitemap</td>
+            <td class="py-3 pr-4 text-neutral-700">
+              Which URLs the site declares, from a bounded sample.
+            </td>
+            <td class="py-3 pr-4 text-neutral-700">
+              Full site coverage — CrawlPact samples a sitemap, it does not crawl an entire site.
+            </td>
+            <td class="py-3 text-neutral-700">
+              Long-standing multi-engine convention (sitemaps.org), not an IETF/W3C standard.
+            </td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+
+    <p class="mt-8 text-supporting text-neutral-500">
+      Last substantive update: {lastSubstantiveUpdate}.
     </p>
   </article>
 </MarketingLayout>

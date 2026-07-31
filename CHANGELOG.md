@@ -3,8 +3,238 @@
 This file tracks engineering-level changes to the CrawlPact repository. For the customer-facing
 changelog, see the `/changelog` page on the public website.
 
+## Final release pass: robots.txt cleanup, homepage artwork removed, trust-metadata config (2026-07-31)
+
+Full log: `docs/reports/CRAWLPACT_PRODUCTION_CONTENT_TRUST_SEO_AUDIT.md` §25 (final synthesis).
+
+### Fixed
+
+- Source-controlled `apps/web/public/robots.txt`: `Disallow: /audit/*` → `Disallow: /audit/`
+  (the standard path-prefix form; the wildcard was non-standard and unnecessary since
+  `Disallow: /audit/` already excludes everything under that path per RFC 9309). Landed and
+  merged to `main` in PR #58 (commit `fd8eae5`), with a dedicated regression test
+  (`apps/web/src/lib/robots-txt.test.ts`, 5 assertions) asserting no AI-crawler-specific
+  directives are ever reintroduced into this file.
+
+### Removed
+
+- The homepage's inline-SVG "Policy Evidence Map" artwork section
+  (`apps/web/src/components/PolicyEvidenceMap.astro`, wired into `index.astro`'s hero) — built and
+  shipped earlier in this workstream, then removed at the product owner's explicit instruction
+  before this release ("remove only the new section with the art work on the home page. It is not
+  appropriate."). Fully removed with no residual references, imports, or CSS; verified via a clean
+  rebuild and a direct grep of rendered HTML output for zero matches.
+
+### Added
+
+- `apps/web/src/lib/trust-config.ts` — a single typed source (`TRUST_CONFIG`) for trust-relevant
+  facts referenced on multiple pages (billing/infrastructure/analytics providers, policy
+  effective dates, registry/ruleset version labels, data-retention summary), so a date or provider
+  name is defined once instead of re-typed identically across `privacy.astro`, `terms.astro`,
+  `acceptable-use.astro`, and `methodology.astro`. Legal-identity fields
+  (`legalEntityName`, `registeredAddress`, `governingJurisdiction`, `securityContact`,
+  `privacyContact`, `correctionsContact`) are explicitly `null`, not a placeholder string — see
+  `docs/release/LEGAL_INFORMATION_CHECKLIST.md`, which nothing in this repository fabricates a
+  value for. Wired the four legal/methodology pages to read their "Effective and last updated" /
+  "Last substantive update" dates from this config instead of a hand-typed literal string;
+  rendered output verified unchanged (`30 July 2026`, `31 July 2026`).
+
+### Clarified (no behavioral change)
+
+- Reworded `docs/release/LEGAL_INFORMATION_CHECKLIST.md` and its `docs/status/KNOWN_RISKS.md`
+  entry from "release blocker" to "deferred, scoped items only" — the missing legal-identity
+  information blocks a specific, named set of items (governing-law clause, named data controller,
+  `/.well-known/security.txt`, a public corrections channel), not this release as a whole. This
+  reflects the product owner's explicit 2026-07-31 instruction to proceed with release despite
+  this known, tracked, and honestly-disclosed gap.
+
+## Cloudflare AI-bot block resolved; platform-specific guide content added (2026-07-31)
+
+Full log: `docs/reports/CRAWLPACT_PRODUCTION_CONTENT_TRUST_SEO_AUDIT.md` §24.
+
+### Fixed
+
+- **CrawlPact's own production `robots.txt` no longer blocks the AI crawlers its product audits.**
+  The product owner disabled Cloudflare's Managed robots.txt / AI-bot-blocking feature in the
+  dashboard (not something this session's API token has permission to read or change).
+  Independently re-verified by fetching live production `robots.txt` directly: it now matches
+  `apps/web/public/robots.txt` exactly, with no Cloudflare-managed block and none of the
+  previously-present per-crawler `Disallow` rules. No repository file changed for this fix — it
+  was a Cloudflare zone-configuration change outside version control.
+
+### Added
+
+- Concrete, source-verified platform-specific implementation steps (Netlify `_headers`, Vercel
+  `vercel.json`, Cloudflare Pages/Workers `_headers`, WordPress `functions.php`/plugin) added to
+  `how-to-set-the-content-signal-header.md`, `how-to-publish-an-llms-txt-file.md`, and
+  `how-to-publish-an-rsl-declaration.md`, replacing "consult your platform's own documentation"
+  with actual syntax — Netlify and Vercel syntax verified directly against current official docs.
+
+### Still unresolved (confirmed independently, not modified)
+
+Legal entity name, registered address, jurisdiction, and contact details
+(`docs/release/LEGAL_INFORMATION_CHECKLIST.md`) — every field still reads `(not provided)`.
+
+## Crawler page "Site-owner controls" standardization (2026-07-31)
+
+Full log: `docs/reports/CRAWLPACT_PRODUCTION_CONTENT_TRUST_SEO_AUDIT.md` §23.
+
+### Changed
+
+Replaced generic "Standard robots.txt disallow rules apply" boilerplate (or added a missing
+section entirely) on 14 crawler-reference pages with crawler-specific content explaining what
+blocking that token affects and which sibling tokens from the same operator remain unaffected:
+`amazonbot.md`, `googlebot.md`, `googleother.md`, `google-cloudvertexbot.md`,
+`meta-externalads.md`, `meta-externalfetcher.md`, `meta-webindexer.md`, `amzn-searchbot.md`,
+`amzn-user.md`, `applebot-extended.md`, `ccbot.md`, `meta-externalagent.md`, `oai-searchbot.md`,
+`perplexitybot.md`. `gptbot.md` and `google-extended.md` were reviewed and found to already meet
+the bar under a differently-named heading — left unchanged. No frontmatter, metadata, or test
+changes required; `lastVerified` dates intentionally not bumped (facts reused from already-verified
+data on file, not freshly re-checked against a primary source this pass).
+
+## Crawler and guide content-completeness pass (2026-07-31)
+
+Full log: `docs/reports/CRAWLPACT_PRODUCTION_CONTENT_TRUST_SEO_AUDIT.md` §22.
+
+### Added
+
+- Crawler pages (`crawlers/[slug].astro`, applies to all 22 pages identically): an example
+  `robots.txt` block generated from each crawler's real token, a wildcard-fallback explanation,
+  a link to the AI crawler checker tool, and a source-verification note linking to
+  `/methodology#registry-verification` (new anchor added to that heading).
+- `relatedCrawlerSlugs` field on the guides content schema, set on the 7 guides genuinely about
+  specific crawlers — crawler pages now show a real "Related guides" section derived from this,
+  not keyword-matching.
+- Tool links added to 5 decision guides that named the AI crawler checker's use case without
+  linking to it; `google-extended-vs-googlebot.md` fixed to link to both crawler pages it discusses
+  by name (previously linked to neither despite mentioning both repeatedly).
+
+### Fixed
+
+- A repeat instance of the round-5 Astro whitespace-collapsing bug, introduced by this round's own
+  new template code — caught by re-running the same static sweep before shipping, fixed and
+  verified via rendered HTML.
+
+## Editorial policy, incident tracking system, trust-metadata config (2026-07-31)
+
+Full log: `docs/reports/CRAWLPACT_PRODUCTION_CONTENT_TRUST_SEO_AUDIT.md` §21. Design doc for the
+incident system: `docs/architecture/INCIDENT_TRACKING_SYSTEM_DESIGN.md`.
+
+### Added
+
+- `docs/seo/EDITORIAL_SOURCE_AND_CONTENT_POLICY.md` — editorial ownership, acceptable sources,
+  conflict resolution, review workflow, and an explicit, honest statement of how AI assistance is
+  used in producing content.
+- **Incident tracking system**: `packages/database/migrations/0018_incidents.sql` +
+  `schema/incidents.ts` (two new, purely additive tables — `incidents`, `incident_updates`;
+  actor references nullable with `ON DELETE SET NULL` from the start), `lib/status/components.ts`
+  (canonical component list), `lib/admin/incidents.ts` + `api/admin/incidents/**` (admin
+  create/update, mirroring the existing `system_notices` feature's auth/audit pattern),
+  `components/admin/IncidentsManager.tsx` + `pages/admin/incidents/index.astro` (Super Admin UI,
+  added to `AdminNav.astro`), `lib/status/public-status.ts` (the public status adapter —
+  incidents can only escalate a component's status, never mask a worse internal signal).
+  `status.astro` rewritten to show overall status, per-component status, current incidents with
+  full update timelines, scheduled maintenance, recently-resolved incidents, and an honest
+  "no uptime measurement exists yet" statement instead of a fabricated percentage.
+- `docs/release/LEGAL_INFORMATION_CHECKLIST.md` — every required legal field explicitly marked
+  `(not provided)`; no value invented.
+- `docs/status/BILLING_WEBHOOK_RACE_TEST_FLAKE.md` — precise root cause (the test's
+  `Promise.all`-fired requests can complete in either order; the handler's out-of-order protection
+  is correct, the test's fixed-outcome assertion is not) and recommended remediation. Neither the
+  handler nor the test was changed.
+- Tests: `admin-incidents.integration.test.ts` (8 tests, real D1) and `status/components.test.ts`
+  (4 unit tests).
+
+### Fixed
+
+- **12 instances of a real, sitewide Astro whitespace-collapsing bug** (`<code>`/`<a>` content
+  directly abutting the preceding word with no rendered space, e.g. "Try<code>example.com") across
+  7 files — including one on the homepage hero that predates this workstream, confirming it's a
+  genuine pre-existing pattern. All fixed with an explicit `{" "}` separator and verified via
+  direct HTML output inspection, not just re-reading the source.
+
+### Deliberately not done
+
+- The new migration was applied to the **local** D1 database only, to exercise the feature during
+  development — not to production. Applying it to production and deploying this code are separate
+  production-infrastructure actions requiring their own explicit authorization.
+- No legal-page rewrites requiring jurisdiction/legal-entity information.
+- No change to the billing webhook handler or its out-of-order protection.
+
 All notable changes are grouped by development "Part," per `docs/product/CRAWLPACT_FINAL_SRS.md`
 §37.
+
+## Production Content, Trust, and SEO Audit — Phase 7/8/10 gaps (2026-07-31)
+
+Continuation of the audit below. Full log: `docs/reports/CRAWLPACT_PRODUCTION_CONTENT_TRUST_SEO_AUDIT.md` §19.
+
+### Added
+
+- `/crawlers`: computed (never hard-coded) crawler-page count, operator count, and latest
+  verification date, plus a "how entries are verified" explainer.
+- `/tools`: a "tool vs. full audit" explainer, per-tool signal labels, and a "how these work"
+  section — previously just a title and five one-line links.
+- `/methodology`: a signal-support matrix (what CrawlPact can/cannot infer per signal, with
+  accurate specification-maturity notes) and a last-substantive-update date.
+- `/about`: one paragraph distinguishing CrawlPact from a WAF, crawler blocker, log-analytics
+  service, or general-purpose SEO crawler.
+
+### Fixed
+
+- A real WCAG violation (`scrollable-region-focusable`) on the new methodology table, caught by
+  `pnpm test:a11y`, fixed by applying the same `tabindex`/`role`/`aria-label` pattern already used
+  on `pricing.astro`'s comparison table.
+
+## Production Content, Trust, and SEO Audit — P0/P1/P2 fixes (2026-07-30)
+
+Full findings and implementation log: `docs/reports/CRAWLPACT_PRODUCTION_CONTENT_TRUST_SEO_AUDIT.md`.
+
+### Fixed
+
+- Removed the "Draft — not yet reviewed by a lawyer" banner from `/privacy`, `/terms`, and
+  `/acceptable-use`.
+- Removed "Super Admin Control Center" from the public `/status` capability list.
+- Removed three leaked internal `SRS FR-xxx`/`§xx` citations from user-facing strings: the
+  homepage FAQ (+ its `FAQPage` JSON-LD), a public guide, and the passkey-removal API error.
+- Fixed a canonical/redirect mismatch affecting every crawler and guide detail page — the
+  canonical tag pointed at a non-trailing-slash URL that itself 307-redirected, instead of the
+  URL Cloudflare actually serves. Sitemap and internal "Related" links updated to match.
+- Fixed a dead citation URL for the `Google-Extended` registry entry.
+- Added visible effective/last-updated dates to `/privacy`, `/terms`, `/acceptable-use`.
+- Unified the previously hand-duplicated CSP/security headers between `middleware.ts` and
+  `public/_headers` into one shared source (`lib/security-headers.ts`), with a test asserting the
+  two stay in sync.
+- **Social preview images were silently broken on every page**: the site served a single SVG for
+  `og:image`, but Facebook, X, LinkedIn, Slack, Discord, WhatsApp, and iMessage do not reliably
+  render SVG as a link-preview image. Replaced with real PNGs (1200×630), rasterized from source
+  SVGs via Playwright (already a project dependency — no new dependency, no image-generation
+  service) by `scripts/generate-og-images.mjs`, with category-specific variants for the homepage,
+  crawler directory, guides, and tools.
+
+### Added
+
+- `Amzn-SearchBot` and `Amzn-User` as separate crawler-registry entries and public reference
+  pages, verified directly against Amazon's own documentation, consistent with how other
+  multi-token operators (OpenAI, Anthropic, Perplexity, Meta) are already modeled. Publishing this
+  as production's active registry release still requires a proper release-publish action — noted
+  as a manual follow-up in `docs/registry/CRAWLER_REGISTRY_GOVERNANCE.md`.
+- `WebApplication` structured data on `/pricing`, built from the same `plans` array the visible
+  pricing table renders (no separate, driftable data).
+- `HowTo` structured data on guides with genuine `Step N:` headings (4 guides qualified).
+- Substantive "What this checks" / "What this doesn't check" / "Related" content on all 5 free
+  tool pages, which previously had only a form and a one-line description.
+
+### Investigated, not resolved here
+
+- CrawlPact's own production `robots.txt` (via a Cloudflare-managed "Managed content" block)
+  disallows GPTBot, ClaudeBot, Google-Extended, CCBot, Applebot-Extended, Amazonbot, Bytespider,
+  and `meta-externalagent` from crawling `crawlpact.com` itself. Traced to Cloudflare's Bot
+  Management `ai_bots_protection` zone setting — but the connected API token lacks the Bot
+  Management permission scope, so it could not be read or changed via API. Needs either a broader
+  token scope or a manual change in the Cloudflare dashboard (Security → Bots).
+- Legal entity name, registered address, jurisdiction, and a verified contact channel remain
+  undetermined — deliberately not fabricated. Recorded as a release blocker; blocks `/terms`'
+  governing-law clause and a real `/.well-known/security.txt`.
 
 ## Release-Flow Remediation Phase 2 — Shared Auth Fixtures, Automerge Reliability (2026-07-30)
 

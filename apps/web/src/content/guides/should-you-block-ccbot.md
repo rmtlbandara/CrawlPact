@@ -3,6 +3,7 @@ title: "Should you block CCBot? What it does and doesn't stop"
 description: "CCBot builds the open Common Crawl corpus, which many other AI model trainers reuse. A decision guide for what blocking it actually achieves."
 category: "decision"
 publishedDate: "2026-07-24"
+relatedCrawlerSlugs: ["ccbot"]
 ---
 
 [`CCBot`](/crawlers/ccbot) is operated by the Common Crawl Foundation, a nonprofit that publishes
@@ -33,4 +34,6 @@ research purpose category on this crawler reflects that its data has a wider dow
 than a single operator's own training pipeline, and CrawlPact cannot verify or enumerate every
 downstream reuse.
 
-See [/limitations](/limitations) for what a `robots.txt` rule can and cannot guarantee.
+See [/limitations](/limitations) for what a `robots.txt` rule can and cannot guarantee, or check
+whether your own site currently allows or blocks CCBot with the
+[AI crawler checker](/tools/ai-crawler-checker/).

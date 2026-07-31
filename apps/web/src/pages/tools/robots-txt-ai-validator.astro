@@ -7,9 +7,10 @@ import { AuditForm } from "../../components/AuditForm";
 <MarketingLayout
   title="Robots.txt AI Validator | Free Tool | CrawlPact"
   description="Validate robots.txt syntax and AI-crawler-specific user-agent groups against RFC 9309 behaviour."
+  ogImage="/og/tools.png"
   breadcrumbs={[
     { name: "Free tools", url: "/tools" },
-    { name: "Robots.txt AI validator", url: "/tools/robots-txt-ai-validator" },
+    { name: "Robots.txt AI validator", url: "/tools/robots-txt-ai-validator/" },
   ]}
 >
   <div class="mx-auto max-w-reading px-4 py-16 text-center sm:px-6">
@@ -22,9 +23,68 @@ import { AuditForm } from "../../components/AuditForm";
     <div class="mt-8 flex justify-center">
       <AuditForm client:load idPrefix="robots-txt-validator" focus="robots" />
     </div>
-    <p class="mt-6 text-supporting text-neutral-500">
-      See <a href="/methodology" class="text-brand-700 underline underline-offset-2">methodology</a> for
-      parsing rules.
-    </p>
+
+    <div class="mt-12 text-left">
+      <h2 class="text-h3 text-neutral-950">What this checks</h2>
+      <ul class="mt-3 list-disc pl-5 text-body text-neutral-700">
+        <li>
+          Retrieves <code>robots.txt</code> and parses it using the same RFC 9309 group-matching logic
+          CrawlPact's scanner uses — longest-path-wins, wildcard-group fallback, and case-insensitive
+          user-agent matching.
+        </li>
+        <li>
+          Flags duplicate <code>User-agent</code> groups for the same token and conflicting rules.
+        </li>
+        <li>
+          Shows the exact matched rule and line number for each documented AI crawler token, not
+          just whether the file parses.
+        </li>
+      </ul>
+
+      <h2 class="mt-8 text-h3 text-neutral-950">What this does not check</h2>
+      <p class="mt-3 text-body text-neutral-700">
+        <code>robots.txt</code> is a voluntary declaration — this cannot confirm any crawler actually
+        honours it, and a syntactically valid file can still be logically wrong for what you intend. See{
+          " "
+        }
+        <a href="/limitations" class="text-brand-700 underline underline-offset-2">limitations</a>.
+      </p>
+
+      <h2 class="mt-8 text-h3 text-neutral-950">Related</h2>
+      <ul class="mt-3 list-disc pl-5 text-body text-neutral-700">
+        <li>
+          <a
+            href="/guides/robots-txt-syntax-basics/"
+            class="text-brand-700 underline underline-offset-2"
+            >robots.txt syntax basics for AI crawler tokens</a
+          >
+        </li>
+        <li>
+          <a
+            href="/guides/robots-txt-rule-not-blocking-a-crawler/"
+            class="text-brand-700 underline underline-offset-2"
+            >Why a robots.txt rule isn't blocking a crawler</a
+          >
+        </li>
+        <li>
+          <a href="/methodology" class="text-brand-700 underline underline-offset-2">methodology</a> for
+          the full parsing rules
+        </li>
+      </ul>
+    </div>
+
+    <div class="mt-8 rounded-card border border-neutral-200 bg-neutral-50 p-6 text-center">
+      <p class="text-card-heading text-neutral-950">Want the complete picture?</p>
+      <p class="mt-1.5 text-supporting text-neutral-600">
+        This checker is a view into a full CrawlPact audit, which also covers <code>llms.txt</code>,
+        RSL, Content Signals, and your Policy Health Score.
+      </p>
+      <a
+        href="/audit"
+        class="mt-4 inline-block rounded-control bg-brand-600 px-5 py-2.5 text-body font-medium text-white hover:bg-brand-700"
+      >
+        Run the full audit
+      </a>
+    </div>
   </div>
 </MarketingLayout>

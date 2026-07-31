@@ -583,3 +583,27 @@ Verified after the corrected fix: 25 consecutive clean runs of the subscription-
 internal timeouts — an unbounded step inside a "fix" can silently reproduce the exact flake it was
 meant to eliminate, and passing 25 times isn't proof against a bug that only manifests when the
 race is actually lost, which local runs may simply not trigger often.
+
+## No legal entity, address, jurisdiction, or verified contact exists anywhere in the repository (found 2026-07-30, explicitly deferred by product owner 2026-07-31)
+
+Confirmed by search across `package.json`, `wrangler.jsonc`, `privacy.astro`, `terms.astro`,
+`acceptable-use.astro`, and `SiteFooter.astro` — none contain a legal entity name, registered
+address, governing jurisdiction, or a verified privacy/security/support contact channel. This is
+not something to fill with invented values, and the product owner has explicitly instructed this
+release to proceed without it. Full checklist of exactly what's missing and what each item blocks:
+`docs/release/LEGAL_INFORMATION_CHECKLIST.md`. It blocks only a specific, scoped set of items —
+not the release as a whole: no jurisdiction-specific terms-of-service clauses, no named privacy
+data controller, no `/.well-known/security.txt` (would require a fake contact to publish), no
+public content-correction submission channel
+(`docs/seo/EDITORIAL_SOURCE_AND_CONTENT_POLICY.md`). Resolve before publishing any of those
+specific items.
+
+## `billing-webhook.integration.test.ts`'s concurrent-race test flakes under load (found 2026-07-30, root-caused 2026-07-31)
+
+See `docs/status/BILLING_WEBHOOK_RACE_TEST_FLAKE.md` for the full root-cause analysis and
+recommended remediation. Summary: the test's own `Promise.all`-based concurrency simulation
+doesn't guarantee which of the two fired requests actually writes to the database first, so under
+real load the webhook handler's (correct) out-of-order protection can classify the "later" request
+as `ignored_out_of_order` instead of the test's assumed `processed` — deliberately not fixed as
+part of this workstream since it touches billing-critical ordering logic and needs its own
+dedicated review.

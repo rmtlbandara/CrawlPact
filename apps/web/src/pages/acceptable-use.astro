@@ -1,6 +1,14 @@
 ---
 export const prerender = true;
 import MarketingLayout from "../layouts/MarketingLayout.astro";
+import { TRUST_CONFIG } from "../lib/trust-config";
+
+const effectiveDate = new Date(TRUST_CONFIG.policyEffectiveDate).toLocaleDateString("en-GB", {
+  day: "numeric",
+  month: "long",
+  year: "numeric",
+  timeZone: "UTC",
+});
 ---
 
 <MarketingLayout
@@ -9,7 +17,9 @@ import MarketingLayout from "../layouts/MarketingLayout.astro";
 >
   <article class="mx-auto max-w-reading px-4 py-12 sm:px-6">
     <h1 class="text-h1 text-neutral-950">Acceptable use</h1>
-    <p class="mt-3 text-supporting text-neutral-500">Draft — not yet reviewed by a lawyer.</p>
+    <p class="mt-3 text-supporting text-neutral-500">
+      Effective and last updated: {effectiveDate}.
+    </p>
 
     <h2 class="mt-8 text-h2 text-neutral-950">Permitted use</h2>
     <p class="mt-3 text-body text-neutral-700">
