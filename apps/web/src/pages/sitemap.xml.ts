@@ -7,7 +7,7 @@ export const prerender = true;
  * Hand-written sitemap covering only reviewed public pages (SRS §30.3:
  * "XML sitemaps shall contain only reviewed public pages... Thin
  * programmatic pages shall not be generated."). Deliberately excludes
- * /audit/*, /shared/*, /app, /sign-in, /admin, and /dev/* — see
+ * /audit/, /shared/*, /app, /sign-in, /admin, and /dev/* — see
  * public/robots.txt for the matching Disallow rules and middleware.ts for
  * the matching X-Robots-Tag header on those routes.
  */
