@@ -133,3 +133,7 @@ Features requiring validation or future approval before being treated as in-scop
 - `docs/status/REQUIREMENTS_TRACEABILITY.md` — SRS requirement-level status
 - `docs/product/CRAWLPACT_FINAL_SRS.md` — full requirements specification
 - `docs/roadmap/CRAWLPACT_IMPROVEMENT_IMPLEMENTATION_PLAN.md` — phase roadmap
+- `docs/brand/BRAND_POSITIONING_AND_MESSAGING_SYSTEM.md`,
+  `docs/brand/CLAIMS_AND_MESSAGING_GUIDE.md` — canonical positioning, category, tagline, and the
+  full governed claim/messaging system this page's "Prohibited claims"/"Approved claims" sections
+  feed into (established Phase 2, 2026-08-03)

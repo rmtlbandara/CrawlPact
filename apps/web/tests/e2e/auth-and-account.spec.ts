@@ -211,7 +211,7 @@ test.describe("Anonymous audit report", () => {
     // reaching /audit/*.
     await clearAnonymousAuditRateLimit(page);
     await page.goto("/");
-    const auditButton = page.getByRole("button", { name: "Audit domain" }).first();
+    const auditButton = page.getByRole("button", { name: "Audit a domain" }).first();
     // AuditForm is a `client:load` island — a submit before it hydrates has
     // no effect. Its Button sets `aria-busy`/disabled synchronously on a
     // real submit (before the slow real scan even starts), so retry against

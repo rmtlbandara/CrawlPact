@@ -14,8 +14,32 @@ the "Production deployment" entries below for the established pattern).
 
 ## Unreleased
 
-_(No unreleased engineering-level changes at this time — see `docs/status/CURRENT_STATE.md` for
-current production status.)_
+### Added
+
+- Phase 2 (Brand Positioning and Messaging System): established
+  `docs/brand/{BRAND_POSITIONING_AND_MESSAGING_SYSTEM,VOICE_AND_STYLE_GUIDE,
+PRODUCT_TERMINOLOGY_GLOSSARY,CLAIMS_AND_MESSAGING_GUIDE,MESSAGING_SURFACE_INVENTORY,
+GITHUB_BRAND_METADATA_MANIFEST}.md`, a central `apps/web/src/config/brand.ts` module, and
+  `pnpm brand:validate` (wired into CI's `quality` job) — see
+  `docs/reports/PHASE_02_BRAND_POSITIONING_MESSAGING_COMPLETION_REPORT.md`.
+
+### Changed
+
+- Centralised previously-duplicated brand strings (product name, category, canonical
+  descriptions) into `apps/web/src/config/brand.ts` and wired it into `BaseLayout.astro`'s
+  JSON-LD/`og:site_name`, the homepage `<title>`/meta description, `SiteFooter.astro`, and
+  `SiteHeader.astro`.
+- Corrected `AuditForm.tsx`'s primary CTA button from "Audit domain" to "Audit a domain", matching
+  the wording already used consistently everywhere else in the product (`SiteHeader.astro`,
+  crawler/guide detail pages) — updated the four e2e tests that referenced the old button text.
+- Updated root `package.json`'s `description` field to match the new canonical public category.
+
+### Not fixed (deliberately deferred, see `docs/brand/MESSAGING_SURFACE_INVENTORY.md`)
+
+- SRS §2.3's Primary Tagline conflicts with the new canonical brand tagline — recorded as
+  RISK-028, routed to Phase 3 for an SRS update or ADR, not silently edited.
+- Raw scan-status enum display in the authenticated domain-detail scan-history list, and no
+  customer-facing `scan_diffs` change-timeline UI — both routed to Phase 8.
 
 ## Production deployment (2026-07-31)
 

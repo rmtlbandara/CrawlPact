@@ -2,6 +2,27 @@
 
 **Status: verification-blocked (by user decision, not access failure).**
 
+## Phase 2 update (2026-08-03)
+
+Phase 1 (PR #69) merged to `main`. Phase 2 (Brand Positioning and Messaging System) is complete —
+see `docs/reports/PHASE_02_BRAND_POSITIONING_MESSAGING_COMPLETION_REPORT.md`. Same manifest-only
+decision carried forward — no live milestones/labels/issues created this phase either. When this
+manifest is applied, additionally create these follow-up issues Phase 2 found but deliberately did
+not fix in place (each labelled with the phase that should own it):
+
+- **"Reconcile SRS §2.3 Primary Tagline with the Phase 2 canonical brand system"** — routed to
+  `phase-03`. See `docs/risks/ACTIVE_RISKS.md` RISK-028 and
+  `docs/brand/MESSAGING_SURFACE_INVENTORY.md` row E1.
+- **"Add `description` fields to the 10 `package.json` files that currently lack one"** — low
+  priority, routed to `phase-03`. See `docs/brand/MESSAGING_SURFACE_INVENTORY.md` row B8.
+- **"Reuse `AuditReportView.tsx`'s `STATUS_LABEL`/`STATUS_TONE` maps in the authenticated
+  domain-detail scan-history list instead of raw status-enum text"** — routed to `phase-08`. See
+  `docs/brand/MESSAGING_SURFACE_INVENTORY.md` row C3.
+- **"Add a customer-facing change-timeline UI surfacing `scan_diffs`/`diffType`"** — routed to
+  `phase-08`. See `docs/brand/MESSAGING_SURFACE_INVENTORY.md` row C5.
+- **"Apply the recommended GitHub repository description and topics"** — see
+  `docs/brand/GITHUB_BRAND_METADATA_MANIFEST.md` for the exact values and command.
+
 ## Phase 1 update (2026-08-03)
 
 Phase 0 (PR #68) merged to `main` as `1a39d29`. Phase 1 (Repository Documentation and

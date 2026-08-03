@@ -1,5 +1,6 @@
 ---
 import BrandMark from "./BrandMark.astro";
+import { BRAND } from "../config/brand";
 
 const year = new Date().getFullYear();
 
@@ -50,13 +51,13 @@ const columns = [
         >
           <BrandMark class="size-4" />
         </span>
-        <p class="text-h3 font-semibold text-neutral-950">CrawlPact</p>
+        <p class="text-h3 font-semibold text-neutral-950">{BRAND.productName}</p>
       </div>
       <p class="mt-2 max-w-xs text-supporting text-neutral-600">
-        AI Crawler Policy Auditor &amp; Monitor. Audit and monitor your website's declared AI
-        crawler policy — vendor neutral, evidence based, no AI model required.
+        {BRAND.publicCategory}. Audit and monitor your website's declared AI crawler policy — vendor
+        neutral, evidence based, no AI model required.
       </p>
-      <p class="mt-4 text-metadata text-neutral-500">© {year} CrawlPact</p>
+      <p class="mt-4 text-metadata text-neutral-500">© {year} {BRAND.productName}</p>
     </div>
     {
       columns.map((column) => (

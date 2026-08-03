@@ -121,7 +121,7 @@ export function AuditForm({
         )}
       </div>
       <Button type="submit" size="lg" isLoading={state.status === "submitting"}>
-        Audit domain
+        Audit a domain
       </Button>
     </form>
   );
