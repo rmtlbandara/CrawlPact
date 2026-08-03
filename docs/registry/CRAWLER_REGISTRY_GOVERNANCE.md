@@ -1,11 +1,16 @@
 # Crawler Registry Governance
 
-## Publication rule (SRS FR-REG-005) — enforced by schema, not yet by admin UI
+## Publication rule (SRS FR-REG-005) — enforced by schema and by the Super Admin registry UI
 
 A crawler must not be published without: a reliable source, a verified user-agent token, a
-purpose classification, a verification date, and administrator approval. Enforced by convention
-and by `registry-tools.mjs validate` (Part 2) — the Super Admin workflow that will enforce it
-interactively at publish time is Part 6.
+purpose classification, a verification date, and administrator approval. Enforced by convention,
+by `registry-tools.mjs validate`, and — as of Part 3 — by the interactive Super Admin registry
+UI (`apps/web/src/pages/admin/registry/{operators,crawlers,releases,rulesets}/index.astro`,
+`lib/admin/registry.ts`'s `createCrawlerDraft`/`verifyCrawler` enforcing the
+`unverified`→`active` transition), covered by `admin-registry.integration.test.ts` (10 real test
+cases). **Corrected 2026-08-03 (Phase 1)** — this section previously said the enforcement was
+"not yet by admin UI," which was stale relative to code already built and tested; see
+`docs/baseline/2026-08-03/DOCUMENTATION_CONFLICTS.md` DC-014.
 
 ## Immutability and the active release pointer
 
@@ -34,10 +39,13 @@ publication).
 - **changelog `<fromId>` `<toId>`** — added/removed/changed crawlers between two releases,
   the basis for the public `/changelog` registry section (Part 6+).
 
-## Current registry content (Part 2 seed, extended in Part 3 Step 13/14)
+## Current registry content (Part 2 seed, extended in Part 3 Step 13/14, corrected 2026-07-30)
 
-21 crawlers across 9 operators (OpenAI, Anthropic, Perplexity AI, Google, Common Crawl
-Foundation, Apple, Meta, Amazon, Microsoft) across three releases:
+**23 crawlers across 9 operators** (OpenAI, Anthropic, Perplexity AI, Google, Common Crawl
+Foundation, Apple, Meta, Amazon, Microsoft) — corrected 2026-08-03 (Phase 1) from this section's
+previous "21 crawlers" count, which contradicted this same document's own "Correction pending
+publication" paragraph below (already stating "23 crawlers total"); see
+`docs/baseline/2026-08-03/DOCUMENTATION_CONFLICTS.md` DC-013. Across three releases:
 
 - **2026.07.1** (superseded): the original 13-crawler Part 1 seed.
 - **2026.07.2** (superseded): adds Bingbot (new operator, Microsoft), Claude-SearchBot
@@ -83,6 +91,8 @@ if the active release changes between two scans of the same domain.
 
 ## What is still not implemented
 
-Registry release creation/publication UI and automatic re-evaluation of saved domains on a new
-release are Part 6 (Super Admin) work. The seed file plays the role of "an administrator
-publishing a release" for now — there is no interactive publish flow yet.
+**Corrected 2026-08-03 (Phase 1)**: registry release creation/publication UI and automatic
+re-evaluation of saved domains on a new release are now built — see the section above and
+`lib/admin/registry.ts`'s `publishRegistryVersion`/`getAffectedDomains`/`scheduleReEvaluation`.
+Nothing is currently known to be missing from this specific capability; if a genuine gap is
+found in a future phase, record it here with evidence rather than reinstating this stale claim.

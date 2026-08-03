@@ -1,5 +1,16 @@
 # Known Risks
 
+**Historical document (Phase 1, 2026-08-03):** this file is preserved as the detailed historical
+narrative and investigation record behind CrawlPact's risk history through 2026-07-31. It is
+**no longer the authoritative current risk register** — that is now split between
+`docs/risks/ACTIVE_RISKS.md` (currently open risks) and `docs/risks/RISK_ARCHIVE.md` (resolved
+risks, each with a closure reason/date/evidence pointer back into this file). Update this file's
+narrative going forward only when adding further historical detail behind an already-tracked
+risk; open a new risk in `ACTIVE_RISKS.md` directly instead of here. See
+`docs/status/CURRENT_STATE.md` for current product status.
+
+---
+
 Honest list of what could bite the project next, and gaps that are deferred rather than
 silently dropped. Update this whenever a risk is discovered, mitigated, or accepted.
 

@@ -129,7 +129,14 @@ failing the D1 write would leave a live D1 reference pointing at nothing.
 
 ## What's still open
 
-Billing records (`transactions`, `webhook_events`) have no purge job — SRS leaves their exact
-retention to "legally and operationally required," which needs a real decision (likely
-finance-adjacent) rather than an arbitrary cutoff invented here. This is now moot in the sense
-that these records are also never _accidentally_ deleted alongside an account (fixed above).
+- Billing records (`transactions`, `webhook_events`) have no purge job — SRS leaves their exact
+  retention to "legally and operationally required," which needs a real decision (likely
+  finance-adjacent) rather than an arbitrary cutoff invented here. This is now moot in the sense
+  that these records are also never _accidentally_ deleted alongside an account (fixed above).
+- **`product_events`, `security_events`, and `notifications` also have no purge job at all** —
+  unlike `scans`/`scan_resources`/`findings` (bounded by plan-tier `history_retention_days`),
+  these three tables grow indefinitely regardless of plan or domain lifetime. Low individual risk
+  at today's volumes but structurally unbounded — see `docs/risks/ACTIVE_RISKS.md`. This was
+  previously disclosed only in the risk ledger, not in this document's own "still open" section
+  (corrected here as part of Phase 1's documentation-conflict resolution,
+  `docs/baseline/2026-08-03/DOCUMENTATION_CONFLICTS.md` DC-009).

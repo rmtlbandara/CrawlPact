@@ -59,7 +59,13 @@ prefer a simple Paid upgrade over fragile architecture built solely to avoid it.
 account figure, is the one that actually matters operationally) crossing 75–80% of its 500MB cap,
 or retention/purge logic provably unable to keep growth under that ceiling given real usage.
 
-## R2 triggers (not currently applicable — R2 is not adopted, see `docs/data/D1_R2_DATA_PLACEMENT_POLICY.md`)
+## R2 triggers (adopted 2026-07-30 for agency-branding logo uploads only — thresholds below not yet activated for this narrow use case)
+
+**Note added 2026-08-03 (Phase 1)**: R2 (`AGENCY_LOGOS` binding) was adopted 2026-07-30, after
+this document was written — see `docs/data/D1_R2_DATA_PLACEMENT_POLICY.md`. Given the low
+expected volume of this specific feature (one small image per agency-branded share, capped at 1
+MiB), the triggers below have not yet been reviewed against it; routed to a future operations
+review.
 
 | Metric                                | Warning (60%)   | Critical/action (80%)                                                              |
 | ------------------------------------- | --------------- | ---------------------------------------------------------------------------------- |

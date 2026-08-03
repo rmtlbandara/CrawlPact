@@ -1,5 +1,15 @@
 # CrawlPact Production Content, Trust, SEO and SaaS Authority Upgrade — Completion Report
 
+> **Historical document.** This file records an earlier CrawlPact implementation state and is
+> not authoritative for the current product. See `docs/status/CURRENT_STATE.md` for current
+> status.
+>
+> - **Original date**: 2026-07-31
+> - **Archive date**: 2026-08-03 (governance Phase 1)
+> - **Superseded by**: `docs/status/CURRENT_STATE.md`
+> - **Reason archived**: executive synthesis of the content/trust/SEO audit above, same age and
+>   reason. Preserved in full below as an accurate historical record; not edited for currentness.
+
 **Date:** 2026-07-31
 **Full working log:** `docs/reports/CRAWLPACT_PRODUCTION_CONTENT_TRUST_SEO_AUDIT.md` (25 sections —
 this report is an executive synthesis; that document has the line-by-line detail, evidence, and

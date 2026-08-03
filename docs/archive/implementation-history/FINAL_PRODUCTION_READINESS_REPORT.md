@@ -1,5 +1,18 @@
 # Final Production Readiness Report
 
+> **Historical document.** This file records an earlier CrawlPact implementation state and is
+> not authoritative for the current product. See `docs/status/CURRENT_STATE.md` for current
+> status.
+>
+> - **Original date**: 2026-07-24 (Part 3 Step 25), with a Step 26 update appended
+> - **Archive date**: 2026-08-03 (Phase 1)
+> - **Superseded by**: `docs/status/CURRENT_STATE.md`, `docs/release/PRODUCTION_READINESS_CHECKLIST.md`
+> - **Reason archived**: despite its "Final" name, this report predates six days of subsequent
+>   real work (Google Analytics added, R2 adopted, incident-tracking system shipped) and its own
+>   summary count contradicts the linked checklist's corrected row 40 — see
+>   `docs/baseline/2026-08-03/DOCUMENTATION_CONFLICTS.md` DC-003 and DC-006. Preserved in full
+>   below as an accurate historical record of the 2026-07-24/25 audit; not edited for currentness.
+
 Part 3 Step 25 deliverable, run via the repository's own `/release-audit` process
 (`.claude/skills/release-audit/SKILL.md`): every one of SRS §36's 46 production-acceptance
 criteria was re-verified against actual code/tests this pass (not carried forward from the Part 1

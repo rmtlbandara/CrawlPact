@@ -31,7 +31,8 @@ not just typechecked.
   CPU-safe batch size is closer to 1 domain/tick, since an entire cron tick's domain loop must fit
   inside the same 10ms-per-invocation CPU budget as a single HTTP request. The batching mechanism
   itself remains correct; the number it defaults to does not match Free-plan reality.
-- `getActiveRegistry`'s crawler join is unbounded but currently returns 21 rows (admin-curated,
+- `getActiveRegistry`'s crawler join is unbounded but currently returns 23 rows (corrected from a
+  prior stale "21" count, Phase 1, 2026-08-03 — admin-curated,
   no self-publish feature exists) — not a real problem at today's scale; revisit if a
   self-publish/community-registry feature is ever added.
 - Only one D1 database is used for the whole product — well inside the free-tier 10-database

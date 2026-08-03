@@ -7,7 +7,8 @@ crawler's own operator (not a third-party aggregator). The seed data
 (`packages/database/seed/seed.sql`) and content collection
 (`apps/web/src/content/crawlers/*.md`) were re-verified by live-fetching each cited
 `official_source_url` on 2026-07-24, closing the gap between the registry and the content
-collection (20 of 21 registry crawlers now have a public page; see the Bingbot exception below).
+collection (22 of 23 registry crawlers now have a public page, corrected from a prior stale
+"20 of 21" count — Phase 1, 2026-08-03; see the Bingbot exception below).
 Two stale citations were found and corrected during this pass: OpenAI's crawler documentation
 moved from `platform.openai.com/docs/bots` to `developers.openai.com/api/docs/bots`, and
 Anthropic's moved from `support.anthropic.com/...` to `support.claude.com/...` (same article,

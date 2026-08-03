@@ -25,7 +25,10 @@ factoring into how quickly anomalies need to be noticed, not just how they'd be 
 
 ## R2 backup
 
-**Not applicable.** Per `docs/data/D1_R2_DATA_PLACEMENT_POLICY.md` (2026-07-26), R2 is not
+**Was not applicable as of 2026-07-26.** R2 was subsequently adopted 2026-07-30 for
+agency-branding logo uploads only (`AGENCY_LOGOS` binding) — a real backup/versioning policy for
+that bucket is not yet defined; routed to a future operations review (note added Phase 1,
+2026-08-03). Per `docs/data/D1_R2_DATA_PLACEMENT_POLICY.md` (2026-07-26), R2 was not
 currently adopted — there are no objects to back up, version, or reconcile against D1 references.
 If R2 is ever adopted (see that document's revisit triggers), this section must be updated with:
 an object-versioning decision, accidental-deletion protection, an orphan/missing-object detection

@@ -92,6 +92,9 @@ jobs:
       - name: Validate D1 migrations against Drizzle schema
         run: pnpm db:validate
 
+      - name: Validate documentation governance
+        run: pnpm docs:validate
+
       - name: Dependency vulnerability check
         run: pnpm audit --audit-level=critical
         # Reviewed 2026-07-29 (re-reviewed during the release-flow

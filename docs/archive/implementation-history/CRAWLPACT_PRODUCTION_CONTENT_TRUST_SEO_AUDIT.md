@@ -1,5 +1,18 @@
 # CrawlPact Production Content, Trust, SEO and SaaS Authority — Phase 1 Audit
 
+> **Historical document.** This file records an earlier CrawlPact implementation state and is
+> not authoritative for the current product. See `docs/status/CURRENT_STATE.md` for current
+> status. (Note: "Phase 1" in this document's own title refers to an internal workstream
+> numbering distinct from this repository's Phase 0–19 governance roadmap — do not conflate the
+> two.)
+>
+> - **Original date**: 2026-07-30, with log entries through 2026-07-31
+> - **Archive date**: 2026-08-03 (governance Phase 1)
+> - **Superseded by**: `docs/status/CURRENT_STATE.md`, `docs/risks/ACTIVE_RISKS.md`
+> - **Reason archived**: point-in-time content/trust/SEO audit and implementation log, now six
+>   days old relative to later fixes. Preserved in full below as an accurate historical record;
+>   not edited for currentness.
+
 **Scope of this report:** originally Phase 1 (baseline + fresh production audit + official-source
 research) only, per an explicit scoping decision made with the product owner on 2026-07-30. After
 this audit was written and reviewed, the product owner approved proceeding with the P0/P1 action

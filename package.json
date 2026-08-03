@@ -36,6 +36,7 @@
     "registry:checksum": "node scripts/registry-tools.mjs checksum",
     "registry:changelog": "node scripts/registry-tools.mjs changelog",
     "baseline:validate": "node scripts/baseline-validate.mjs",
+    "docs:validate": "node scripts/docs-validate.mjs",
     "quality": "pnpm run format:check && pnpm run lint && pnpm run typecheck && pnpm run test:unit && pnpm run test:integration && pnpm run db:validate && pnpm run build",
     "check:fast": "pnpm run format:check && pnpm run lint && pnpm run typecheck && pnpm run test:unit",
     "verify:push": "bash scripts/verify-push.sh",

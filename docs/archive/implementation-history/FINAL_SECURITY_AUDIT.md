@@ -1,5 +1,17 @@
 # Final Security Audit
 
+> **Historical document.** This file records an earlier CrawlPact implementation state and is
+> not authoritative for the current product. See `docs/security/SECURITY_CHECKLIST.md` for
+> current status.
+>
+> - **Original date**: 2026-07-24 (Part 3 Step 24)
+> - **Archive date**: 2026-08-03 (Phase 1)
+> - **Superseded by**: `docs/security/SECURITY_CHECKLIST.md`
+> - **Reason archived**: despite its "Final" name, this report predates six days of subsequent
+>   real work (Google Analytics added, R2 adopted, incident-tracking system shipped) — see
+>   `docs/baseline/2026-08-03/DOCUMENTATION_CONFLICTS.md` DC-006. Preserved in full below as an
+>   accurate historical record of the 2026-07-24 audit; not edited for currentness.
+
 Part 3 Step 24 deliverable, run via the repository's own `/security-review` checklist
 (`.claude/skills/security-review/SKILL.md`) — a focused review of the four areas SRS §33 treats
 as launch-blocking, checked directly against current code, not restated from prior notes.

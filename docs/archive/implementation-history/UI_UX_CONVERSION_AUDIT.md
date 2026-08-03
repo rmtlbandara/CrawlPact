@@ -1,5 +1,17 @@
 # UI/UX and Conversion Audit — Phase 1
 
+> **Historical document.** This file records an earlier CrawlPact implementation state and is
+> not authoritative for the current product. See `docs/status/CURRENT_STATE.md` for current
+> status. (Note: "Phase 1" in this document's own title refers to an internal workstream
+> numbering distinct from this repository's Phase 0–19 governance roadmap — do not conflate the
+> two.)
+>
+> - **Original date**: 2026-07-26
+> - **Archive date**: 2026-08-03 (governance Phase 1)
+> - **Superseded by**: `docs/status/CURRENT_STATE.md`, `CHANGELOG.md`
+> - **Reason archived**: all findings in this audit were fixed the same pass (see `CHANGELOG.md`'s
+>   matching entry); preserved as the historical audit record, not edited for currentness.
+
 **Date:** 2026-07-26 · **Branch:** `feat/trust-conversion-ui` · **Scope:** Research and
 documentation only — no application code was modified to produce this document.
 
