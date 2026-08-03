@@ -2,6 +2,7 @@
 import "../styles/global.css";
 import { getEnv } from "../lib/env";
 import { BRAND } from "../config/brand";
+import { TRUST_CONFIG } from "../lib/trust-config";
 
 export type Breadcrumb = { name: string; url: string };
 
@@ -68,6 +69,23 @@ const jsonLdGraph: Record<string, unknown>[] = [
     name: BRAND.productName,
     url: siteUrl.toString(),
     description: BRAND.descriptions.medium,
+    contactPoint: [
+      {
+        "@type": "ContactPoint",
+        email: TRUST_CONFIG.supportContact,
+        contactType: "customer support",
+      },
+      {
+        "@type": "ContactPoint",
+        email: TRUST_CONFIG.privacyContact,
+        contactType: "privacy",
+      },
+      {
+        "@type": "ContactPoint",
+        email: TRUST_CONFIG.securityContact,
+        contactType: "security",
+      },
+    ],
   },
   {
     "@type": "WebSite",

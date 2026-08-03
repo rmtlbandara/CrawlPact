@@ -167,6 +167,44 @@ const lastSubstantiveUpdate = new Date(
       </table>
     </div>
 
+    <h2 id="corrections" class="mt-10 text-h2 text-neutral-950">
+      Content and registry corrections
+    </h2>
+    <p class="mt-3 text-body text-neutral-700">
+      If you find an incorrect crawler token, operator, or purpose classification; an outdated
+      official source; a broken official link; incorrect guide or platform-instruction content; a
+      misleading report explanation; missing uncertainty; or a typographical or accessibility issue,
+      report it to{" "}
+      <a
+        href={`mailto:${TRUST_CONFIG.correctionsContact}`}
+        class="text-brand-700 underline underline-offset-2">{TRUST_CONFIG.correctionsContact}</a
+      >. Include the affected URL, a description, a supporting official source where possible, and
+      your suggested correction.
+    </p>
+    <p class="mt-3 text-body text-neutral-700">Each submission is reviewed:</p>
+    <ol class="mt-3 list-decimal pl-5 text-body text-neutral-700">
+      <li>The submission is received and logged.</li>
+      <li>
+        Supporting evidence is reviewed, with official sources prioritised over unverified claims.
+      </li>
+      <li>Classification uncertainty is recorded explicitly where it exists.</li>
+      <li>
+        The registry or content is updated through normal editorial review, where the correction is
+        confirmed.
+      </li>
+      <li>
+        Material registry changes are reflected in the <a
+          href="/changelog"
+          class="text-brand-700 underline underline-offset-2">changelog</a
+        > where supported.
+      </li>
+    </ol>
+    <p class="mt-3 text-body text-neutral-700">
+      Not every submission results in a change, and submissions are not accepted as automatic
+      registry truth — each is weighed against official operator documentation. CrawlPact does not
+      promise a fixed response time for corrections.
+    </p>
+
     <p class="mt-8 text-supporting text-neutral-500">
       Last substantive update: {lastSubstantiveUpdate}.
     </p>

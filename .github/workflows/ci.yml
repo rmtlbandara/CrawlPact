@@ -98,6 +98,9 @@ jobs:
       - name: Validate brand and messaging governance
         run: pnpm brand:validate
 
+      - name: Validate legal, trust, and contact governance
+        run: pnpm trust:validate
+
       - name: Dependency vulnerability check
         run: pnpm audit --audit-level=critical
         # Reviewed 2026-07-29 (re-reviewed during the release-flow

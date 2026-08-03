@@ -21,39 +21,214 @@ const effectiveDate = new Date(TRUST_CONFIG.policyEffectiveDate).toLocaleDateStr
       Effective and last updated: {effectiveDate}.
     </p>
 
-    <h2 class="mt-8 text-h2 text-neutral-950">The service</h2>
+    <h2 class="mt-8 text-h2 text-neutral-950">1. Agreement</h2>
+    <p class="mt-3 text-body text-neutral-700">Using CrawlPact means you agree to these terms.</p>
+
+    <h2 class="mt-8 text-h2 text-neutral-950">2. Operator and jurisdiction</h2>
     <p class="mt-3 text-body text-neutral-700">
-      CrawlPact audits and monitors the publicly declared AI crawler policy of a website you
-      specify. CrawlPact evaluates and reports on declared policy and observed responses; it does
-      not prove or guarantee that any crawler will obey that policy.
+      {TRUST_CONFIG.legalEntityName} operates the CrawlPact service. These terms are governed by the law
+      of {TRUST_CONFIG.governingJurisdiction}.
     </p>
 
-    <h2 class="mt-8 text-h2 text-neutral-950">Acceptable targets</h2>
+    <h2 class="mt-8 text-h2 text-neutral-950">3. Eligibility and authority</h2>
     <p class="mt-3 text-body text-neutral-700">
-      You may only submit domains you own, manage, or are otherwise authorised to audit. See{" "}
-      <a href="/acceptable-use" class="text-brand-700 underline underline-offset-2"
-        >acceptable use</a
+      You must be able to enter into this agreement, and must have authority to use any account
+      information you submit. CrawlPact does not verify legal ownership of a domain you submit for
+      audit — see "Acceptable use" below for the actual scope of permitted use.
+    </p>
+
+    <h2 class="mt-8 text-h2 text-neutral-950">4. Account responsibilities</h2>
+    <p class="mt-3 text-body text-neutral-700">You are responsible for:</p>
+    <ul class="mt-3 list-disc pl-5 text-body text-neutral-700">
+      <li>Providing accurate account information</li>
+      <li>The security of your passkey credentials and any recovery codes</li>
+      <li>Activity that occurs under your account</li>
+      <li>Notifying CrawlPact promptly if you suspect your account has been compromised</li>
+    </ul>
+
+    <h2 class="mt-8 text-h2 text-neutral-950">5. The service</h2>
+    <p class="mt-3 text-body text-neutral-700">
+      CrawlPact audits and monitors the publicly declared AI crawler policy of a website you
+      specify: saved domains, scheduled monitoring, findings, evidence-based recommendations,
+      crawler-registry versions, and reporting, with paid-plan limits as described on{" "}
+      <a href="/pricing" class="text-brand-700 underline underline-offset-2">pricing</a>. CrawlPact
+      evaluates and reports on declared policy and observed public responses; it does not prove or
+      guarantee that any crawler will obey that policy.
+    </p>
+
+    <h2 class="mt-8 text-h2 text-neutral-950">6. Product boundaries</h2>
+    <ul class="mt-3 list-disc pl-5 text-body text-neutral-700">
+      <li>CrawlPact audits public policy signals.</li>
+      <li>CrawlPact does not control external crawlers.</li>
+      <li>
+        CrawlPact does not guarantee crawler compliance, search inclusion, or training exclusion.
+      </li>
+      <li>CrawlPact is not legal advice and is not a legal compliance certification.</li>
+      <li>CrawlPact does not replace a WAF, CDN, or bot-management service.</li>
+      <li>Results may change when a website's declared policy or the crawler registry changes.</li>
+      <li>Public resources CrawlPact depends on may be unavailable or incomplete at scan time.</li>
+    </ul>
+
+    <h2 class="mt-8 text-h2 text-neutral-950">7. Acceptable use</h2>
+    <p class="mt-3 text-body text-neutral-700">You must not use CrawlPact to:</p>
+    <ul class="mt-3 list-disc pl-5 text-body text-neutral-700">
+      <li>Break the law, or use the service for an unlawful purpose</li>
+      <li>Interfere with or disrupt CrawlPact's infrastructure</li>
+      <li>Attempt to bypass rate limits or automate high-volume use without approval</li>
+      <li>
+        Attempt security testing of CrawlPact's own systems without authorisation — see <a
+          href="/security"
+          class="text-brand-700 underline underline-offset-2">security</a
+        >
+      </li>
+      <li>Submit a target for the purpose of probing or attacking internal infrastructure</li>
+      <li>Misrepresent an audit result as a guarantee of crawler compliance</li>
+      <li>Resell or white-label CrawlPact contrary to your plan's terms</li>
+      <li>Engage in fraudulent billing behaviour</li>
+    </ul>
+
+    <h2 class="mt-8 text-h2 text-neutral-950">8. User-submitted domains and public resources</h2>
+    <p class="mt-3 text-body text-neutral-700">
+      The free audit is designed to let you analyse any public domain, and CrawlPact does not verify
+      domain ownership before running one. You are responsible for using CrawlPact lawfully and
+      responsibly, and must not use it to harass, probe, or attack a website you do not operate.
+    </p>
+
+    <h2 class="mt-8 text-h2 text-neutral-950">9. Crawler registry and methodology</h2>
+    <ul class="mt-3 list-disc pl-5 text-body text-neutral-700">
+      <li>
+        Registry information is evidence-based but can change as operator documentation changes.
+      </li>
+      <li>
+        Crawler-purpose classifications may contain uncertainty, and are labelled honestly rather
+        than guessed.
+      </li>
+      <li>Reports identify the registry version they were evaluated against, where supported.</li>
+      <li>
+        Corrections may be submitted to <a
+          href={`mailto:${TRUST_CONFIG.correctionsContact}`}
+          class="text-brand-700 underline underline-offset-2">{TRUST_CONFIG.correctionsContact}</a
+        > — see <a
+          href="/methodology#corrections"
+          class="text-brand-700 underline underline-offset-2">how corrections are reviewed</a
+        >.
+      </li>
+    </ul>
+
+    <h2 class="mt-8 text-h2 text-neutral-950">10. Recommendations and decisions</h2>
+    <p class="mt-3 text-body text-neutral-700">
+      You remain responsible for your own policy objectives, website configuration, legal decisions,
+      business decisions, implementation, and monitoring responses. CrawlPact's recommendations are
+      not guaranteed outcomes.
+    </p>
+
+    <h2 class="mt-8 text-h2 text-neutral-950">11. Paid plans and billing</h2>
+    <p class="mt-3 text-body text-neutral-700">
+      Paid plans are billed annually through {TRUST_CONFIG.billingProvider}, acting as merchant of
+      record. {TRUST_CONFIG.merchantOfRecordDescription} Paddle handles payment collection, tax calculation,
+      receipts, renewal, and cancellation. CrawlPact does not store your payment-card details, though
+      it does retain billing metadata (a Paddle customer/subscription identifier, transaction status,
+      and amounts) necessary for entitlements, support, and accounting.
+    </p>
+    <p class="mt-3 text-body text-neutral-700">
+      Subscriptions are cancelled through Paddle's customer portal, linked from your account's
+      billing settings. When a subscription's Paddle status changes to cancelled, expired, or
+      paused, your account moves to the Free plan. Plan limits and upgrade/downgrade behaviour are
+      described on <a href="/pricing" class="text-brand-700 underline underline-offset-2">pricing</a
+      >. A failed payment does not immediately end access — Paddle retries payment during a grace
+      period, during which your plan remains active.
+    </p>
+
+    <h2 class="mt-8 text-h2 text-neutral-950">12. Refunds</h2>
+    <p class="mt-3 text-body text-neutral-700">
+      CrawlPact does not independently issue refunds; refund and chargeback decisions are handled by {
+        TRUST_CONFIG.billingProvider
+      } as merchant of record. For a refund enquiry, contact{" "}
+      <a
+        href={`mailto:${TRUST_CONFIG.billingContact}`}
+        class="text-brand-700 underline underline-offset-2">{TRUST_CONFIG.billingContact}</a
       >.
     </p>
 
-    <h2 class="mt-8 text-h2 text-neutral-950">Subscriptions and billing</h2>
+    <h2 class="mt-8 text-h2 text-neutral-950">13. Intellectual property</h2>
     <p class="mt-3 text-body text-neutral-700">
-      Paid plans are billed annually through Paddle, acting as merchant of record. Paddle handles
-      payment collection, tax calculation, receipts, and cancellation. CrawlPact does not store your
-      payment card details.
+      CrawlPact's software, brand, documentation, methodology, and crawler-registry compilation are
+      owned by {TRUST_CONFIG.legalEntityName}. CrawlPact does not claim ownership over third-party
+      crawler-operator documentation or the content of websites you audit.
     </p>
 
-    <h2 class="mt-8 text-h2 text-neutral-950">No guarantee of outcome</h2>
+    <h2 class="mt-8 text-h2 text-neutral-950">14. Feedback</h2>
+    <p class="mt-3 text-body text-neutral-700">
+      If you send CrawlPact feedback or suggestions, CrawlPact may use them to improve the service
+      without owing you compensation, but this does not affect any separate rights you have in your
+      own account data or audited website content.
+    </p>
+
+    <h2 class="mt-8 text-h2 text-neutral-950">15. Third-party services</h2>
+    <p class="mt-3 text-body text-neutral-700">
+      CrawlPact relies on {TRUST_CONFIG.infrastructureProviders.join(", ")} for infrastructure and{
+        " "
+      }
+      {TRUST_CONFIG.billingProvider} for billing. Their own terms apply to their respective services.
+    </p>
+
+    <h2 class="mt-8 text-h2 text-neutral-950">16. Availability and changes</h2>
+    <p class="mt-3 text-body text-neutral-700">
+      The service may change — features may be added, modified, or discontinued, and maintenance or
+      incidents may occur. Current operational status is available on the{" "}
+      <a href="/status" class="text-brand-700 underline underline-offset-2">status page</a>.
+      CrawlPact does not promise uninterrupted availability.
+    </p>
+
+    <h2 class="mt-8 text-h2 text-neutral-950">17. Suspension and termination</h2>
+    <p class="mt-3 text-body text-neutral-700">
+      CrawlPact may suspend or terminate access on reasonable grounds, including abuse, non-payment,
+      a security risk, a legal requirement, or a violation of these terms.
+    </p>
+
+    <h2 class="mt-8 text-h2 text-neutral-950">18. Disclaimers</h2>
+    <p class="mt-3 text-body text-neutral-700">
+      CrawlPact is provided on an "as is" and "as available" basis, to the extent permitted by
+      applicable law. Nothing in these terms excludes a right that cannot lawfully be excluded.
+    </p>
+
+    <h2 class="mt-8 text-h2 text-neutral-950">19. Limitation of liability</h2>
+    <p class="mt-3 text-body text-neutral-700">
+      To the maximum extent permitted by applicable law, CrawlPact's liability arising from your use
+      of the service is limited to the amount you paid CrawlPact in the twelve months before the
+      claim arose. This section does not limit liability that cannot lawfully be limited.
+    </p>
+
+    <h2 class="mt-8 text-h2 text-neutral-950">20. No guarantee of outcome</h2>
     <p class="mt-3 text-body text-neutral-700">
       CrawlPact does not guarantee that any AI crawler will honour a declared policy, that content
       will or will not appear in an AI system's output, or any specific search or AI visibility
       outcome.
     </p>
 
-    <h2 class="mt-8 text-h2 text-neutral-950">Changes</h2>
+    <h2 class="mt-8 text-h2 text-neutral-950">21. Governing law</h2>
+    <p class="mt-3 text-body text-neutral-700">
+      These terms are governed by the law of {TRUST_CONFIG.governingJurisdiction}, without regard to
+      conflict-of-law principles.
+    </p>
+
+    <h2 class="mt-8 text-h2 text-neutral-950">22. Changes to these terms</h2>
     <p class="mt-3 text-body text-neutral-700">
       These terms may be updated as the product develops. Material changes are reflected on this
-      page with a new "last updated" date above.
+      page with a new "effective and last updated" date above.
+    </p>
+
+    <h2 class="mt-8 text-h2 text-neutral-950">23. Contact</h2>
+    <p class="mt-3 text-body text-neutral-700">
+      For general terms and support matters, contact{" "}
+      <a
+        href={`mailto:${TRUST_CONFIG.supportContact}`}
+        class="text-brand-700 underline underline-offset-2">{TRUST_CONFIG.supportContact}</a
+      >. For privacy-related issues, contact{" "}
+      <a
+        href={`mailto:${TRUST_CONFIG.privacyContact}`}
+        class="text-brand-700 underline underline-offset-2">{TRUST_CONFIG.privacyContact}</a
+      >.
     </p>
   </article>
 </MarketingLayout>

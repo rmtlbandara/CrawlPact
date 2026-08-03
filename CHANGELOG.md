@@ -41,6 +41,50 @@ GITHUB_BRAND_METADATA_MANIFEST}.md`, a central `apps/web/src/config/brand.ts` mo
 - Raw scan-status enum display in the authenticated domain-detail scan-history list, and no
   customer-facing `scan_diffs` change-timeline UI — both routed to Phase 8.
 
+### Added (Phase 3 — Legal Identity, Contact, Security and Trust Foundation)
+
+- A `/contact` page, `/.well-known/security.txt` (RFC 9116), and a content/crawler-registry
+  correction process on `/methodology` — none of these existed before this phase.
+- `docs/trust/{LEGAL_AND_TRUST_SURFACE_INVENTORY,TRUST_AND_LEGAL_CONFIGURATION}.md`,
+  `docs/security/RESPONSIBLE_DISCLOSURE_PROCESS.md`,
+  `docs/privacy/{DATA_CATEGORY_AND_PURPOSE_INVENTORY,PRIVACY_REQUEST_PROCESS}.md`, and
+  `pnpm trust:validate` (wired into CI) — see
+  `docs/reports/PHASE_03_LEGAL_SECURITY_TRUST_COMPLETION_REPORT.md`.
+- `ContactPoint` structured-data entries on `BaseLayout.astro`'s JSON-LD `Organization` node.
+
+### Changed (Phase 3)
+
+- Filled in `apps/web/src/lib/trust-config.ts`'s previously-`null` legal-identity fields with
+  product-owner-approved values: operator name ("CrawlPact", no corporate suffix), governing
+  jurisdiction ("Sri Lanka"), and five contact addresses (privacy/security/support/
+  corrections/billing) — see `docs/trust/TRUST_AND_LEGAL_CONFIGURATION.md`. Registered address
+  and registration number remain deliberately `null`.
+- Rewrote `/privacy` and `/terms` to the full required structure (data-category distinctions,
+  cookies, retention, billing/Paddle, rights, governing law, contact, etc.), verified directly
+  against code (account deletion, data retention, Paddle cancellation/refund behaviour, analytics
+  scope, IP handling).
+- Corrected `/terms` and `/acceptable-use`'s "you may only submit domains you own, manage, or are
+  otherwise authorised to audit" claim — verified against code that the free audit has no
+  ownership-verification logic at all; reworded to require lawful and responsible use instead.
+- Added a full responsible-disclosure policy (scope, contact, reporter guidance, prohibited
+  testing, safe-harbour wording) to `/security`; updated the stale root `SECURITY.md` (previously
+  said "no live scanner, authentication, billing, or admin surface exists yet").
+- Added operator/jurisdiction wording and trust-route links to `/about`.
+- Added a "Contact" link to `SiteFooter.astro` and `/contact` to `sitemap.xml.ts`.
+- Updated `docs/release/LEGAL_INFORMATION_CHECKLIST.md` and RISK-011 (`docs/risks/ACTIVE_RISKS.md`)
+  to reflect what's now resolved vs. still genuinely blocked (address, registration number, tax
+  information). Re-routed RISK-004 to Phase 13 (Phase 3 is barred from changing analytics
+  behaviour).
+
+### Not fixed (deliberately deferred, see `docs/trust/LEGAL_AND_TRUST_SURFACE_INVENTORY.md`)
+
+- Registered business address, registration number, and tax information — still genuinely
+  unavailable, not invented (RISK-011, routed to Phase 18).
+- No cookie-consent mechanism for Google Analytics (RISK-021) and no purge job for
+  `product_events`/`security_events`/`notifications` (RISK-006) — both accurately disclosed in
+  the rewritten Privacy Policy, neither resolved; routed to Phase 13 and Phase 11 respectively,
+  per this phase's explicit scope boundary against changing analytics/retention behaviour.
+
 ## Production deployment (2026-07-31)
 
 PR #59 (this release's full change set, squash-merged as `e245793`) deployed to production via
