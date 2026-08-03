@@ -24,38 +24,147 @@ const effectiveDate = new Date(TRUST_CONFIG.policyEffectiveDate).toLocaleDateStr
       Effective and last updated: {effectiveDate}.
     </p>
 
-    <h2 class="mt-8 text-h2 text-neutral-950">What CrawlPact collects</h2>
-    <p class="mt-3 text-body text-neutral-700">CrawlPact stores only information required for:</p>
+    <h2 class="mt-8 text-h2 text-neutral-950">1. Who operates CrawlPact</h2>
+    <p class="mt-3 text-body text-neutral-700">
+      {TRUST_CONFIG.legalEntityName} operates the CrawlPact service from {
+        TRUST_CONFIG.governingJurisdiction
+      }. For privacy questions, personal-data requests, or objections, contact{" "}
+      <a
+        href={`mailto:${TRUST_CONFIG.privacyContact}`}
+        class="text-brand-700 underline underline-offset-2">{TRUST_CONFIG.privacyContact}</a
+      >.
+    </p>
+
+    <h2 class="mt-8 text-h2 text-neutral-950">2. Information collected</h2>
+    <p class="mt-3 text-body text-neutral-700">
+      CrawlPact distinguishes two kinds of information. Neither is "secret customer content" in the
+      same sense — the first is information about your account and use of the service; the second is
+      public information CrawlPact fetched from a website you asked it to audit.
+    </p>
+    <h3 class="mt-5 text-h3 text-neutral-950">Account and service data</h3>
     <ul class="mt-3 list-disc pl-5 text-body text-neutral-700">
       <li>Your account (a display name and passkey credentials — no password, no email address)</li>
       <li>
-        Billing, limited to identifiers needed to link your account to a Paddle customer and
-        subscription
+        Billing metadata, limited to identifiers needed to link your account to a Paddle customer
+        and subscription (never full payment-card details)
       </li>
+      <li>Saved domains, groups, monitoring preferences, and notification history</li>
+      <li>Support communications you send to CrawlPact</li>
       <li>
-        Domains you save, and bounded snapshots of the public policy resources CrawlPact scanned for
-        them
+        Security and operational logs, including a salted hash of your IP address (never the raw
+        address) used for rate-limiting and abuse detection
       </li>
-      <li>Security logs needed to detect abuse</li>
       <li>First-party product-usage events (see below)</li>
     </ul>
+    <h3 class="mt-5 text-h3 text-neutral-950">Public website audit data</h3>
+    <ul class="mt-3 list-disc pl-5 text-body text-neutral-700">
+      <li>The public domain or URL you submit for audit</li>
+      <li>
+        Bounded, publicly accessible policy resources CrawlPact fetched (e.g. <code>robots.txt</code
+        >, <code>llms.txt</code>, relevant HTTP headers) and their evidence snippets and timestamps
+      </li>
+      <li>The crawler registry version a scan was evaluated against</li>
+    </ul>
     <p class="mt-3 text-body text-neutral-700">
-      CrawlPact does not store copies of entire websites — only the specific, bounded resources
-      relevant to AI crawler policy (e.g. <code>robots.txt</code>, <code>llms.txt</code>, relevant
-      headers).
+      A domain or URL may sometimes identify a person or organisation — CrawlPact does not treat
+      public audit data as automatically non-personal. CrawlPact does not store copies of entire
+      websites, only the specific, bounded resources relevant to AI crawler policy.
     </p>
 
-    <h2 class="mt-8 text-h2 text-neutral-950">Third parties</h2>
+    <h2 class="mt-8 text-h2 text-neutral-950">3. How information is collected</h2>
+    <p class="mt-3 text-body text-neutral-700">Information reaches CrawlPact from:</p>
+    <ul class="mt-3 list-disc pl-5 text-body text-neutral-700">
+      <li>You directly, when you create an account, save a domain, or contact support</li>
+      <li>Automatically through your use of the service (usage events, security logs)</li>
+      <li>Public websites, during an audit you requested</li>
+      <li>{TRUST_CONFIG.billingProvider}, for billing and subscription status</li>
+      <li>{TRUST_CONFIG.analyticsProvider}, on public marketing pages only (see below)</li>
+    </ul>
+
+    <h2 class="mt-8 text-h2 text-neutral-950">4. Purposes</h2>
+    <p class="mt-3 text-body text-neutral-700">CrawlPact uses information to:</p>
+    <ul class="mt-3 list-disc pl-5 text-body text-neutral-700">
+      <li>Run audits and save baselines</li>
+      <li>Operate accounts and monitor saved domains for change</li>
+      <li>Process subscriptions and provide billing support</li>
+      <li>Provide product and account support</li>
+      <li>Maintain security and detect misuse</li>
+      <li>Improve reliability and measure product usage</li>
+      <li>Maintain crawler-registry evidence and meet legal obligations</li>
+    </ul>
+
+    <h2 class="mt-8 text-h2 text-neutral-950">5. Public website audit data</h2>
+    <ul class="mt-3 list-disc pl-5 text-body text-neutral-700">
+      <li>CrawlPact fetches publicly accessible website resources you ask it to audit.</li>
+      <li>Audits may include public policy signals and response metadata.</li>
+      <li>Results describe publicly published information at the time of the scan.</li>
+      <li>CrawlPact does not require access to private website content for a standard audit.</li>
+      <li>
+        CrawlPact does not prove actual crawler compliance — see <a
+          href="/limitations"
+          class="text-brand-700 underline underline-offset-2">limitations</a
+        >.
+      </li>
+    </ul>
+
+    <h2 class="mt-8 text-h2 text-neutral-950">6. Cookies and local storage</h2>
     <p class="mt-3 text-body text-neutral-700">
-      {TRUST_CONFIG.infrastructureProviders.join(", ")} provides hosting, storage (D1), and scheduled
-      execution. {TRUST_CONFIG.billingProvider} is CrawlPact's merchant of record for billing and independently
-      sends payment-related communications. {TRUST_CONFIG.analyticsProvider}{" "}
-      is used on public marketing pages (this page, the homepage, pricing, and similar pages) to measure
-      visits; it is not loaded on the authenticated app or admin areas. CrawlPact does not use any third-party
-      email, SMS, push-notification, AI API, or external authentication provider.
+      CrawlPact sets exactly one first-party cookie: an essential, <code>HttpOnly</code>, <code
+        >Secure</code
+      >, <code>SameSite=Lax</code> session cookie used for authentication. It is required for the service
+      to function and cannot be disabled while signed in. CrawlPact does not use local storage or session
+      storage.
+    </p>
+    <p class="mt-3 text-body text-neutral-700">
+      {TRUST_CONFIG.analyticsProvider} sets its own analytics cookies (e.g. <code>_ga</code>) on
+      public marketing pages only — never on the authenticated app or admin areas. These are not
+      essential to using CrawlPact. CrawlPact does not currently offer a cookie-consent or
+      preference-management control for these analytics cookies — this is a known, disclosed gap,
+      not an unstated omission.
     </p>
 
-    <h2 class="mt-8 text-h2 text-neutral-950">Retention</h2>
+    <h2 class="mt-8 text-h2 text-neutral-950">7. Analytics</h2>
+    <p class="mt-3 text-body text-neutral-700">
+      {TRUST_CONFIG.analyticsProvider} is active and is restricted to public marketing pages (this page,
+      the homepage, pricing, and similar pages) to measure visits; it is not loaded on the authenticated
+      app or admin areas, and not in local or preview environments. This is a disclosed, deliberate deviation
+      from a general no-external-analytics preference — see the project's public documentation for the
+      underlying decision record. CrawlPact does not change its analytics implementation as part of publishing
+      this policy.
+    </p>
+
+    <h2 class="mt-8 text-h2 text-neutral-950">8. Billing and Paddle</h2>
+    <p class="mt-3 text-body text-neutral-700">
+      {TRUST_CONFIG.merchantOfRecordDescription} Paddle processes your payment information directly —
+      CrawlPact never receives or stores full payment-card details. CrawlPact does receive and retain
+      billing-related metadata (a Paddle customer and subscription identifier, transaction status, and
+      amounts) necessary for account entitlements, support, refunds, and accounting. Paddle operates under
+      its own privacy and contractual terms.
+    </p>
+
+    <h2 class="mt-8 text-h2 text-neutral-950">9. Sharing and processors</h2>
+    <p class="mt-3 text-body text-neutral-700">CrawlPact shares information only with:</p>
+    <ul class="mt-3 list-disc pl-5 text-body text-neutral-700">
+      <li>
+        {TRUST_CONFIG.infrastructureProviders.join(", ")} — hosting, storage, and scheduled execution
+      </li>
+      <li>{TRUST_CONFIG.billingProvider} — billing and payment processing</li>
+      <li>{TRUST_CONFIG.analyticsProvider} — public-page visit analytics</li>
+      <li>Legal authorities, where required by law</li>
+    </ul>
+    <p class="mt-3 text-body text-neutral-700">
+      CrawlPact does not use any third-party email, SMS, push-notification, AI API, or external
+      authentication provider.
+    </p>
+
+    <h2 class="mt-8 text-h2 text-neutral-950">10. International processing</h2>
+    <p class="mt-3 text-body text-neutral-700">
+      CrawlPact may be used from any country. Infrastructure and service providers listed above may
+      process information outside your own country. CrawlPact does not currently maintain a
+      published list of specific data-centre locations.
+    </p>
+
+    <h2 class="mt-8 text-h2 text-neutral-950">11. Data retention</h2>
     <table class="mt-4 w-full border-collapse text-left text-body">
       <thead>
         <tr class="border-b border-neutral-200 text-supporting font-medium text-neutral-600">
@@ -96,12 +205,79 @@ const effectiveDate = new Date(TRUST_CONFIG.policyEffectiveDate).toLocaleDateStr
         >
       </tbody>
     </table>
-
-    <h2 class="mt-8 text-h2 text-neutral-950">Your rights</h2>
     <p class="mt-3 text-body text-neutral-700">
-      You can request account deletion at any time from account settings. Deletion begins a
-      cancellable grace period, after which private data is purged where permitted (billing records
-      required for legal/tax purposes are retained separately — see the retention table above).
+      Beyond this table, information is retained only as long as reasonably necessary for the
+      purposes described above, subject to operational, security, billing, legal, and accounting
+      requirements. Billing records required for accounting or legal purposes may be retained
+      separately from the rest of an account's data after deletion — see "Account deletion" below.
+    </p>
+
+    <h2 class="mt-8 text-h2 text-neutral-950">12. Security</h2>
+    <p class="mt-3 text-body text-neutral-700">
+      CrawlPact uses reasonable technical and organisational safeguards, including passkey-only
+      authentication, signature-verified billing webhooks, and an isolated scanner with SSRF
+      protections — see <a href="/security" class="text-brand-700 underline underline-offset-2"
+        >security</a
+      >. No method of storage or transmission is completely secure, and CrawlPact does not claim
+      absolute security.
+    </p>
+
+    <h2 class="mt-8 text-h2 text-neutral-950">13. Your choices and rights</h2>
+    <p class="mt-3 text-body text-neutral-700">
+      Depending on your location, you may have rights relating to your personal information, such as
+      access, correction, deletion, or objection. To exercise any of these, contact{" "}
+      <a
+        href={`mailto:${TRUST_CONFIG.privacyContact}`}
+        class="text-brand-700 underline underline-offset-2">{TRUST_CONFIG.privacyContact}</a
+      >. CrawlPact may need reasonable verification before fulfilling a sensitive request; this is a
+      manual process, not an automated self-service workflow, and CrawlPact does not guarantee that
+      a specific legal right applies to every user.
+    </p>
+    <h3 class="mt-5 text-h3 text-neutral-950">Account deletion</h3>
+    <p class="mt-3 text-body text-neutral-700">
+      You can request account deletion at any time from account settings. This begins a cancellable
+      30-day grace period, during which the request can be reversed; your account remains otherwise
+      usable during that window. After the grace period, private account data is purged. Billing
+      records required for accounting or legal purposes (e.g. transaction and subscription history)
+      are retained separately and are not deleted with the rest of the account, consistent with the
+      retention table above.
+    </p>
+    <h3 class="mt-5 text-h3 text-neutral-950">Subscription cancellation</h3>
+    <p class="mt-3 text-body text-neutral-700">
+      Paid subscriptions are cancelled through Paddle's customer portal, linked from your billing
+      settings. CrawlPact does not independently process refunds; refund and chargeback decisions
+      are Paddle's, and CrawlPact only records the outcome Paddle reports.
+    </p>
+
+    <h2 class="mt-8 text-h2 text-neutral-950">14. Children</h2>
+    <p class="mt-3 text-body text-neutral-700">
+      CrawlPact is not directed at, or intended for use by, children. CrawlPact does not knowingly
+      collect personal information from children and does not operate any age-verification
+      functionality.
+    </p>
+
+    <h2 class="mt-8 text-h2 text-neutral-950">15. Third-party websites</h2>
+    <p class="mt-3 text-body text-neutral-700">
+      Websites you audit with CrawlPact, and any external link from CrawlPact's own site, are
+      governed by their own separate privacy practices, not this policy.
+    </p>
+
+    <h2 class="mt-8 text-h2 text-neutral-950">16. Policy changes</h2>
+    <p class="mt-3 text-body text-neutral-700">
+      Material updates to this policy are reflected here with a new effective and last-updated date.
+      CrawlPact does not currently send email notice of changes, since account registration does not
+      collect an email address.
+    </p>
+
+    <h2 class="mt-8 text-h2 text-neutral-950">17. Contact</h2>
+    <p class="mt-3 text-body text-neutral-700">
+      For privacy questions or requests, contact{" "}
+      <a
+        href={`mailto:${TRUST_CONFIG.privacyContact}`}
+        class="text-brand-700 underline underline-offset-2">{TRUST_CONFIG.privacyContact}</a
+      >. See also the <a href="/contact" class="text-brand-700 underline underline-offset-2"
+        >contact page</a
+      > for other categories.
     </p>
   </article>
 </MarketingLayout>

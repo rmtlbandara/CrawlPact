@@ -1,0 +1,86 @@
+---
+export const prerender = true;
+import MarketingLayout from "../layouts/MarketingLayout.astro";
+import { TRUST_CONFIG } from "../lib/trust-config";
+---
+
+<MarketingLayout
+  title="Contact | CrawlPact"
+  description="How to reach CrawlPact for privacy, product support, billing, security reports, and content or crawler-registry corrections."
+>
+  <article class="mx-auto max-w-reading px-4 py-12 sm:px-6">
+    <h1 class="text-h1 text-neutral-950">Contact</h1>
+    <p class="mt-3 text-body text-neutral-700">
+      CrawlPact operates the CrawlPact service from Sri Lanka. There is no live chat, phone support,
+      or guaranteed response time — every category below is a monitored email address.
+    </p>
+
+    <h2 class="mt-8 text-h2 text-neutral-950">General and privacy enquiries</h2>
+    <p class="mt-3 text-body text-neutral-700">
+      <a
+        href={`mailto:${TRUST_CONFIG.privacyContact}`}
+        class="text-brand-700 underline underline-offset-2">{TRUST_CONFIG.privacyContact}</a
+      >
+    </p>
+    <p class="mt-2 text-body text-neutral-700">
+      Use for general enquiries, privacy questions, personal-data requests, and account-data
+      questions. See <a href="/privacy" class="text-brand-700 underline underline-offset-2"
+        >privacy policy</a
+      >.
+    </p>
+
+    <h2 class="mt-8 text-h2 text-neutral-950">Product support</h2>
+    <p class="mt-3 text-body text-neutral-700">
+      <a
+        href={`mailto:${TRUST_CONFIG.supportContact}`}
+        class="text-brand-700 underline underline-offset-2">{TRUST_CONFIG.supportContact}</a
+      >
+    </p>
+    <p class="mt-2 text-body text-neutral-700">
+      Use for product questions, audit assistance, account support, monitoring support, and
+      technical support.
+    </p>
+
+    <h2 class="mt-8 text-h2 text-neutral-950">Billing support</h2>
+    <p class="mt-3 text-body text-neutral-700">
+      <a
+        href={`mailto:${TRUST_CONFIG.billingContact}`}
+        class="text-brand-700 underline underline-offset-2">{TRUST_CONFIG.billingContact}</a
+      >
+    </p>
+    <p class="mt-2 text-body text-neutral-700">
+      Use for subscription questions, billing assistance, cancellation assistance, and refund
+      enquiries. {TRUST_CONFIG.billingProvider} may also provide transaction-specific assistance as merchant
+      of record, but product and account support remains with CrawlPact.
+    </p>
+
+    <h2 class="mt-8 text-h2 text-neutral-950">Security reporting</h2>
+    <p class="mt-3 text-body text-neutral-700">
+      <a
+        href={`mailto:${TRUST_CONFIG.securityContact}`}
+        class="text-brand-700 underline underline-offset-2">{TRUST_CONFIG.securityContact}</a
+      >
+    </p>
+    <p class="mt-2 text-body text-neutral-700">
+      See the <a href="/security" class="text-brand-700 underline underline-offset-2"
+        >responsible-disclosure policy</a
+      > before reporting. Do not email passwords, private keys, full payment-card numbers, or other unnecessary
+      sensitive data.
+    </p>
+
+    <h2 class="mt-8 text-h2 text-neutral-950">Content and crawler-registry corrections</h2>
+    <p class="mt-3 text-body text-neutral-700">
+      <a
+        href={`mailto:${TRUST_CONFIG.correctionsContact}`}
+        class="text-brand-700 underline underline-offset-2">{TRUST_CONFIG.correctionsContact}</a
+      >
+    </p>
+    <p class="mt-2 text-body text-neutral-700">
+      Use for an incorrect crawler classification, an outdated official source, a content
+      correction, a broken reference, a methodology concern, or a public guide correction. See{" "}
+      <a href="/methodology#corrections" class="text-brand-700 underline underline-offset-2"
+        >how corrections are reviewed</a
+      >.
+    </p>
+  </article>
+</MarketingLayout>

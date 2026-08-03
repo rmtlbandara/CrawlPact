@@ -55,7 +55,7 @@ items with the 13 new risks Phase 0's baseline audit found
 - **Evidence**: `docs/status/KNOWN_RISKS.md`, `docs/baseline/2026-08-03/PRODUCTION_INFRASTRUCTURE_INVENTORY.md`
 - **Current mitigation**: Disclosed, not silently accepted or silently fixed either direction.
 - **Owner**: Product owner · **Trigger**: Next homepage/trust-page review
-- **Review date**: Phase 3 · **Target phase**: Phase 3
+- **Review date**: Phase 13 · **Target phase**: Phase 13 (re-routed from Phase 3, 2026-08-03 — Phase 3's Legal Identity, Contact, Security and Trust Foundation scope explicitly excludes changing analytics behaviour; this is an analytics/consent architecture decision, which Phase 13 owns)
 - **Status**: open
 - **Acceptance criteria for closure**: A deliberate product decision is made and implemented (enable+allow-list, or leave disabled) for each.
 
@@ -125,16 +125,16 @@ items with the 13 new risks Phase 0's baseline audit found
 - **Status**: monitoring
 - **Acceptance criteria for closure**: An orphan-object sweep is added to the daily retention cron, or R2 cleanup is added to bulk revocation and account/domain purge.
 
-### RISK-011 — No legal entity, registered address, jurisdiction, or verified contact exists anywhere in the repository
+### RISK-011 — No registered business address, registration number, or tax information exists anywhere in the repository
 
 - **Category**: Legal · **Severity**: P2 · **Probability**: N/A (explicitly deferred)
-- **Impact**: Blocks a specific, scoped set of items only: jurisdiction-specific terms clauses, a named privacy data controller, `/.well-known/security.txt`, a public content-correction channel. Does **not** block the release as a whole.
-- **Evidence**: `docs/release/LEGAL_INFORMATION_CHECKLIST.md`, `docs/status/KNOWN_RISKS.md`. **Not an SRS requirement** — see `docs/baseline/2026-08-03/DOCUMENTATION_CONFLICTS.md` DC-010; this is a product-owner governance decision, not an SRS-derived blocker.
-- **Current mitigation**: Explicitly, deliberately deferred by the product owner 2026-07-31.
-- **Owner**: Legal/business owner · **Trigger**: Any decision to publish the specific gated items above
-- **Review date**: Phase 3 · **Target phase**: Phase 3
+- **Impact**: Blocks a specific, scoped set of items only: a registered address on any public page, a registration number, tax information, and a jurisdiction-specific consumer-protection-regime citation. Does **not** block the release as a whole.
+- **Evidence**: `docs/release/LEGAL_INFORMATION_CHECKLIST.md`, `docs/trust/TRUST_AND_LEGAL_CONFIGURATION.md`. **Not an SRS requirement** — see `docs/baseline/2026-08-03/DOCUMENTATION_CONFLICTS.md` DC-010; this is a product-owner governance decision, not an SRS-derived blocker.
+- **Current mitigation**: **Partially resolved (Phase 3, 2026-08-03)** — the product owner supplied and approved an operator name ("CrawlPact", no corporate suffix), governing jurisdiction ("Sri Lanka"), and five contact addresses (privacy/security/support/corrections/billing), all now live across `/privacy`, `/terms`, `/security`, `/contact`, `/about`, the footer, `apps/web/src/lib/trust-config.ts`, and `/.well-known/security.txt`. The registered address, registration number, and tax information remain explicitly, deliberately deferred — not invented.
+- **Owner**: Legal/business owner · **Trigger**: Any decision to publish the three remaining gated items above
+- **Review date**: Next release readiness review · **Target phase**: Phase 18 (Production Launch Readiness and Final Audit)
 - **Status**: accepted
-- **Acceptance criteria for closure**: Real, verified business details are published, or the deferral is re-confirmed at each review.
+- **Acceptance criteria for closure**: Real, verified registered address, registration number, and tax information are published, or the deferral is re-confirmed at each review.
 
 ### RISK-012 — `billing-webhook.integration.test.ts`'s concurrent-race test flakes under load
 

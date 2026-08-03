@@ -16,6 +16,7 @@ import { retryUntilSettled } from "../e2e/helpers/hydration";
 const ROUTES = [
   "/",
   "/about",
+  "/contact",
   "/audit",
   "/pricing",
   "/crawlers",

@@ -106,6 +106,14 @@ const ALLOWLIST = [
     reviewDate: "2026-09-01",
   },
   {
+    file: "apps/web/src/pages/terms.astro",
+    pattern: "prohibited-claims-list",
+    reason:
+      'Phase 3 product-boundaries section states these as honest negations ("is not a legal compliance certification", "does not replace a WAF, CDN, or bot-management service") — not a claim the product makes.',
+    owner: "Product owner",
+    reviewDate: "2026-09-01",
+  },
+  {
     file: "docs/product/CRAWLPACT_FINAL_SRS.md",
     pattern: "naming",
     reason:

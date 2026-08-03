@@ -2,6 +2,30 @@
 
 **Status: verification-blocked (by user decision, not access failure).**
 
+## Phase 3 update (2026-08-03)
+
+Phase 2 (PR #70) merged to `main`. Phase 3 (Legal Identity, Contact, Security and Trust
+Foundation) is complete — see
+`docs/reports/PHASE_03_LEGAL_SECURITY_TRUST_COMPLETION_REPORT.md`. Same manifest-only decision
+carried forward. When this manifest is applied, additionally create these follow-up issues Phase
+3 found but deliberately did not fix in place:
+
+- **"Publish a registered business address, registration number, and tax information"** —
+  blocked on product-owner input, routed to `phase-18`. See `docs/risks/ACTIVE_RISKS.md` RISK-011
+  and `docs/release/LEGAL_INFORMATION_CHECKLIST.md`.
+- **"Reconcile SRS §2.3 Primary Tagline with the Phase 2 canonical brand system"** — carried
+  forward unclaimed from Phase 2's routing; neither Phase 2 nor Phase 3 addressed it. Routed to
+  `phase-04`. See `docs/risks/ACTIVE_RISKS.md` RISK-028.
+- **"Add `description` fields to the 10 `package.json` files that currently lack one"** — same
+  carry-forward, routed to `phase-04`.
+- **"No purge job for `product_events`/`security_events`/`notifications`"** — routed to
+  `phase-11`. See `docs/risks/ACTIVE_RISKS.md` RISK-006.
+- **"No cookie-consent mechanism for Google Analytics"** — routed to `phase-13`. See
+  `docs/risks/ACTIVE_RISKS.md` RISK-021.
+- **"Cloudflare Web Analytics beacon / AI Crawl Control product decision"** — re-routed from
+  `phase-03` to `phase-13` (Phase 3's actual scope excludes changing analytics behaviour). See
+  `docs/risks/ACTIVE_RISKS.md` RISK-004.
+
 ## Phase 2 update (2026-08-03)
 
 Phase 1 (PR #69) merged to `main`. Phase 2 (Brand Positioning and Messaging System) is complete —

@@ -24,7 +24,7 @@ not itself implement anything.
 | 0   | Baseline, Audit Preservation and Implementation Governance | P0       | None         | **complete** (PR #68, merged `1a39d29`)                                                       |
 | 1   | Repository Documentation and Source-of-Truth Correction    | P0       | Phase 0      | **complete** (see `docs/reports/PHASE_01_DOCUMENTATION_SOURCE_OF_TRUTH_COMPLETION_REPORT.md`) |
 | 2   | Brand Positioning and Messaging System                     | P1       | Phase 1      | **complete** (see `docs/reports/PHASE_02_BRAND_POSITIONING_MESSAGING_COMPLETION_REPORT.md`)   |
-| 3   | Legal Identity, Contact, Security and Trust Foundation     | P1       | Phase 1      | not started                                                                                   |
+| 3   | Legal Identity, Contact, Security and Trust Foundation     | P1       | Phase 1      | **complete** (see `docs/reports/PHASE_03_LEGAL_SECURITY_TRUST_COMPLETION_REPORT.md`)          |
 | 4   | Homepage Information Architecture and Conversion Redesign  | P1       | Phases 1–3   | not started                                                                                   |
 | 5   | Anonymous Audit Result and Account-Conversion Flow         | P1       | Phase 4      | not started                                                                                   |
 | 6   | Pricing, Plan Architecture and Checkout Continuity         | P1       | Phase 4      | not started                                                                                   |
@@ -101,20 +101,34 @@ PRODUCT_TERMINOLOGY_GLOSSARY,CLAIMS_AND_MESSAGING_GUIDE,MESSAGING_SURFACE_INVENT
 
 - **Objective**: Resolve the legal-entity/address/jurisdiction/contact disclosure gap (see
   `BASELINE_RISKS_AND_UNKNOWNS.md` DC-010 context), add `security.txt` (missing per this baseline's
-  live check), and close other trust-surface gaps. Also owns reconciling SRS §2.3's Primary
-  Tagline with the Phase 2 brand system (via ADR or SRS update — see Phase 2's status above and
-  `docs/brand/MESSAGING_SURFACE_INVENTORY.md` row E1) and, as low-priority consistency work,
-  adding `"description"` fields to the 10 `package.json` files that currently lack one.
+  live check), and close other trust-surface gaps.
 - **Dependencies**: Phase 1.
 - **Completion gate**: `/.well-known/security.txt` returns 200; legal identity disclosure
   decision made and either implemented or explicitly, permanently deferred with a documented
-  reason (distinct from an SRS-mandated requirement, since the SRS does not impose one); SRS §2.3
-  reconciled with the Phase 2 brand system.
-- **Status**: not started.
+  reason (distinct from an SRS-mandated requirement, since the SRS does not impose one).
+- **Status**: **complete** — see
+  `docs/reports/PHASE_03_LEGAL_SECURITY_TRUST_COMPLETION_REPORT.md`. Approved operator name
+  ("CrawlPact"), governing jurisdiction ("Sri Lanka"), and five contact addresses filled into
+  `apps/web/src/lib/trust-config.ts` (previously all `null`); `/contact` and
+  `/.well-known/security.txt` created; `/privacy` and `/terms` rewritten to the full required
+  structure, verified directly against code; a real ownership-claim inaccuracy in `/terms` and
+  `/acceptable-use` corrected (the free audit has no ownership-verification logic, contrary to
+  what those pages previously stated); a full responsible-disclosure policy added to `/security`;
+  a content/registry-correction process added to `/methodology`; `pnpm trust:validate` added
+  (wired into CI). Registered address, registration number, and tax information remain
+  deliberately unresolved (RISK-011, re-scoped and routed to Phase 18) — not invented. **This
+  phase's actual scope, per its execution prompt, did not include reconciling SRS §2.3's tagline
+  with the Phase 2 brand system, nor adding `package.json` description fields** — both remain
+  open from Phase 2's routing and are carried forward to Phase 4 as unclaimed backlog items,
+  rather than silently assumed done.
 
 ### Phase 4 — Homepage Information Architecture and Conversion Redesign
 
 - **Objective**: Redesign homepage IA/conversion flow, informed by the route/capability baseline.
+  Also inherits two unclaimed backlog items neither Phase 2 nor Phase 3 addressed: reconciling
+  SRS §2.3's Primary Tagline with the Phase 2 brand system (via ADR or SRS update — see
+  `docs/brand/MESSAGING_SURFACE_INVENTORY.md` row E1 and RISK-028), and adding `"description"`
+  fields to the 10 `package.json` files that currently lack one.
 - **Dependencies**: Phases 1–3.
 - **Status**: not started.
 
@@ -242,14 +256,14 @@ PRODUCT_TERMINOLOGY_GLOSSARY,CLAIMS_AND_MESSAGING_GUIDE,MESSAGING_SURFACE_INVENT
 
 ## Release gates
 
-| Gate                    | Requires                                                  |
-| ----------------------- | --------------------------------------------------------- |
-| A — Trust-ready         | Phases 0, 1, 2, 3 (0 and 1 complete; 2 and 3 not started) |
-| B — Conversion-ready    | Phases 4, 5, 6                                            |
-| C — Agency-ready        | Phases 8, 9, 10                                           |
-| D — Scale-ready         | Phases 11, 12, 13, 14                                     |
-| E — Authority-ready     | Phases 15, 16, 17                                         |
-| F — Public-growth-ready | Phase 18                                                  |
+| Gate                    | Requires                                                            |
+| ----------------------- | ------------------------------------------------------------------- |
+| A — Trust-ready         | Phases 0, 1, 2, 3 — **complete** (all four phases done, 2026-08-03) |
+| B — Conversion-ready    | Phases 4, 5, 6                                                      |
+| C — Agency-ready        | Phases 8, 9, 10                                                     |
+| D — Scale-ready         | Phases 11, 12, 13, 14                                               |
+| E — Authority-ready     | Phases 15, 16, 17                                                   |
+| F — Public-growth-ready | Phase 18                                                            |
 
 Phase 19 is ongoing governance after launch readiness, not gated.
 

@@ -14,6 +14,7 @@ export const prerender = true;
 const STATIC_ROUTES = [
   "/",
   "/about",
+  "/contact",
   "/audit",
   "/pricing",
   "/crawlers",

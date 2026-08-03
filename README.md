@@ -112,23 +112,24 @@ values throughout. Full setup and troubleshooting:
 
 ## Quality commands
 
-| Command                                        | Does                                                                                                              |
-| ---------------------------------------------- | ----------------------------------------------------------------------------------------------------------------- |
-| `pnpm format` / `pnpm format:check`            | Prettier                                                                                                          |
-| `pnpm lint` / `pnpm lint:fix`                  | ESLint                                                                                                            |
-| `pnpm typecheck`                               | TypeScript across all workspace packages                                                                          |
-| `pnpm test:unit`                               | Unit tests (Vitest)                                                                                               |
-| `pnpm test:integration`                        | Integration tests against real local D1                                                                           |
-| `pnpm db:validate`                             | Migration/schema-drift check                                                                                      |
-| `pnpm registry:validate`                       | Crawler registry integrity checks (local D1 only)                                                                 |
-| `pnpm build`                                   | Type-check (`astro check`) and build                                                                              |
-| `pnpm quality`                                 | The full non-destructive local quality gate (format, lint, typecheck, unit+integration tests, db:validate, build) |
-| `pnpm test:e2e` / `pnpm test:e2e:chromium`     | End-to-end tests (Playwright)                                                                                     |
-| `pnpm test:a11y` / `pnpm test:a11y:chromium`   | Accessibility tests                                                                                               |
-| `pnpm docs:validate`                           | Read-only documentation-governance validation (required files, status vocabulary, stale-claim detection)          |
-| `pnpm brand:validate`                          | Read-only brand/messaging governance validation (prohibited claims, stale tagline, naming consistency)            |
-| `pnpm baseline:validate`                       | Read-only Phase 0 baseline validation                                                                             |
-| `pnpm smoke:preview` / `pnpm smoke:production` | Manual, human-triggered smoke test against a real deployed URL                                                    |
+| Command                                        | Does                                                                                                                                    |
+| ---------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------- |
+| `pnpm format` / `pnpm format:check`            | Prettier                                                                                                                                |
+| `pnpm lint` / `pnpm lint:fix`                  | ESLint                                                                                                                                  |
+| `pnpm typecheck`                               | TypeScript across all workspace packages                                                                                                |
+| `pnpm test:unit`                               | Unit tests (Vitest)                                                                                                                     |
+| `pnpm test:integration`                        | Integration tests against real local D1                                                                                                 |
+| `pnpm db:validate`                             | Migration/schema-drift check                                                                                                            |
+| `pnpm registry:validate`                       | Crawler registry integrity checks (local D1 only)                                                                                       |
+| `pnpm build`                                   | Type-check (`astro check`) and build                                                                                                    |
+| `pnpm quality`                                 | The full non-destructive local quality gate (format, lint, typecheck, unit+integration tests, db:validate, build)                       |
+| `pnpm test:e2e` / `pnpm test:e2e:chromium`     | End-to-end tests (Playwright)                                                                                                           |
+| `pnpm test:a11y` / `pnpm test:a11y:chromium`   | Accessibility tests                                                                                                                     |
+| `pnpm docs:validate`                           | Read-only documentation-governance validation (required files, status vocabulary, stale-claim detection)                                |
+| `pnpm brand:validate`                          | Read-only brand/messaging governance validation (prohibited claims, stale tagline, naming consistency)                                  |
+| `pnpm trust:validate`                          | Read-only legal/trust/contact governance validation (approved operator/jurisdiction/contacts, prohibited identity fields, placeholders) |
+| `pnpm baseline:validate`                       | Read-only Phase 0 baseline validation                                                                                                   |
+| `pnpm smoke:preview` / `pnpm smoke:production` | Manual, human-triggered smoke test against a real deployed URL                                                                          |
 
 ## Deployment overview
 
@@ -152,6 +153,7 @@ Start at [`docs/README.md`](docs/README.md) — the full documentation portal. D
 - [Product scope](docs/product/PRODUCT_SCOPE.md)
 - [SRS](docs/product/CRAWLPACT_FINAL_SRS.md)
 - [Brand positioning and messaging system](docs/brand/BRAND_POSITIONING_AND_MESSAGING_SYSTEM.md)
+- [Trust and legal configuration](docs/trust/TRUST_AND_LEGAL_CONFIGURATION.md)
 - [Architecture](docs/architecture/ARCHITECTURE.md)
 - [Active risks](docs/risks/ACTIVE_RISKS.md)
 - [Changelog](CHANGELOG.md)

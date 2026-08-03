@@ -1,6 +1,7 @@
 ---
 export const prerender = true;
 import MarketingLayout from "../layouts/MarketingLayout.astro";
+import { TRUST_CONFIG } from "../lib/trust-config";
 ---
 
 <MarketingLayout
@@ -40,9 +41,75 @@ import MarketingLayout from "../layouts/MarketingLayout.astro";
       target.
     </p>
 
-    <h2 class="mt-8 text-h2 text-neutral-950">Reporting a vulnerability</h2>
+    <h2 class="mt-8 text-h2 text-neutral-950">Responsible security disclosure</h2>
+    <p class="mt-3 text-supporting text-neutral-500">
+      Last reviewed: {TRUST_CONFIG.securityPolicyLastReviewed}.
+    </p>
+
+    <h3 class="mt-5 text-h3 text-neutral-950">Scope</h3>
     <p class="mt-3 text-body text-neutral-700">
-      See <code>SECURITY.md</code> in the project repository for how to report a security issue.
+      This policy covers CrawlPact-owned systems and services only. It does not authorise testing
+      of: third-party websites audited through CrawlPact, {TRUST_CONFIG.billingProvider}, {
+        TRUST_CONFIG.infrastructureProviders.join(", ")
+      } infrastructure outside CrawlPact's own configuration, other users' accounts or domains, or third-party
+      crawler operators.
+    </p>
+
+    <h3 class="mt-5 text-h3 text-neutral-950">Contact</h3>
+    <p class="mt-3 text-body text-neutral-700">
+      <a
+        href={`mailto:${TRUST_CONFIG.securityContact}`}
+        class="text-brand-700 underline underline-offset-2">{TRUST_CONFIG.securityContact}</a
+      >
+    </p>
+
+    <h3 class="mt-5 text-h3 text-neutral-950">What to include</h3>
+    <ul class="mt-3 list-disc pl-5 text-body text-neutral-700">
+      <li>A concise description of the issue</li>
+      <li>The affected URL or component</li>
+      <li>Reproduction steps</li>
+      <li>The security impact</li>
+      <li>Supporting evidence</li>
+      <li>Safe contact details for follow-up</li>
+    </ul>
+    <p class="mt-3 text-body text-neutral-700">Please do not send:</p>
+    <ul class="mt-3 list-disc pl-5 text-body text-neutral-700">
+      <li>Passwords or private keys</li>
+      <li>Full payment-card information</li>
+      <li>Unnecessary personal data</li>
+      <li>Destructive proof-of-concept material</li>
+      <li>Data belonging to other users</li>
+    </ul>
+
+    <h3 class="mt-5 text-h3 text-neutral-950">Prohibited testing</h3>
+    <p class="mt-3 text-body text-neutral-700">
+      Do not conduct, against CrawlPact's systems or any other party:
+    </p>
+    <ul class="mt-3 list-disc pl-5 text-body text-neutral-700">
+      <li>Denial of service or high-volume automated scanning</li>
+      <li>Spam or social engineering</li>
+      <li>Physical attacks</li>
+      <li>Destructive testing or data exfiltration</li>
+      <li>Accessing other users' data, or persistent unauthorised access</li>
+      <li>Public disclosure before a reasonable remediation process has completed</li>
+    </ul>
+
+    <h3 class="mt-5 text-h3 text-neutral-950">Response and disclosure</h3>
+    <p class="mt-3 text-body text-neutral-700">
+      CrawlPact will review good-faith reports and respond when reasonably possible; no fixed
+      response or resolution time is promised. Coordinated disclosure is preferred. CrawlPact does
+      not currently offer a paid bug-bounty program.
+    </p>
+    <p class="mt-3 text-body text-neutral-700">
+      Good-faith security research conducted within these published rules, against CrawlPact's own
+      systems only, will be reviewed responsibly. CrawlPact cannot authorise testing against
+      third-party systems, including audited websites, Paddle, or Cloudflare.
+    </p>
+    <p class="mt-3 text-body text-neutral-700">
+      Machine-readable contact details are also published at{" "}
+      <a href="/.well-known/security.txt" class="text-brand-700 underline underline-offset-2"
+        >/.well-known/security.txt</a
+      > per RFC 9116.
     </p>
   </article>
 </MarketingLayout>

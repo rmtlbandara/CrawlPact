@@ -28,4 +28,14 @@ describe("BaseLayout.astro brand/structured-data consistency", () => {
     expect(content).toMatch(/description:\s*BRAND\.descriptions\.medium/);
     expect(content).not.toContain("AI Crawler Policy Auditor & Monitor");
   });
+
+  it("imports TRUST_CONFIG and adds ContactPoint entries using approved addresses, not literals", () => {
+    expect(content).toContain('import { TRUST_CONFIG } from "../lib/trust-config"');
+    expect(content).toContain("contactPoint");
+    expect(content).toMatch(/email:\s*TRUST_CONFIG\.supportContact/);
+    expect(content).toMatch(/email:\s*TRUST_CONFIG\.privacyContact/);
+    expect(content).toMatch(/email:\s*TRUST_CONFIG\.securityContact/);
+    expect(content).not.toContain('"info@crawlpact.com"');
+    expect(content).not.toContain('"support@crawlpact.com"');
+  });
 });
