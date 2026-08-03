@@ -1,0 +1,289 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "https://crawlpact.com/schemas/phase-0-baseline.schema.json",
+  "title": "CrawlPact Phase 0 Baseline",
+  "description": "Machine-readable schema for a Phase 0 governance baseline snapshot. No field in a valid instance may contain a secret value.",
+  "type": "object",
+  "required": [
+    "metadata",
+    "gitState",
+    "productionDeployment",
+    "infrastructure",
+    "routesSummary",
+    "capabilitiesSummary",
+    "migrationState",
+    "billingPlans",
+    "registryState",
+    "analyticsState",
+    "testResults",
+    "documentationConflicts",
+    "risks",
+    "unknowns",
+    "evidenceFiles",
+    "runtimeImpact"
+  ],
+  "properties": {
+    "metadata": {
+      "type": "object",
+      "required": ["phase", "generatedAt", "phaseResult"],
+      "properties": {
+        "phase": { "type": "string" },
+        "generatedAt": { "type": "string", "format": "date-time" },
+        "generatedAtColombo": { "type": "string" },
+        "phaseResult": { "type": "string", "enum": ["complete", "partially-complete", "blocked"] },
+        "schemaVersion": { "type": "string" }
+      }
+    },
+    "gitState": {
+      "type": "object",
+      "required": ["repositoryUrl", "defaultBranch", "defaultBranchHead", "phaseBranch"],
+      "properties": {
+        "repositoryUrl": { "type": "string" },
+        "defaultBranch": { "type": "string" },
+        "defaultBranchHead": { "type": "string", "pattern": "^[0-9a-f]{40}$" },
+        "phaseBranch": { "type": "string" },
+        "phaseBranchStartingSha": { "type": "string" },
+        "workingTreeCleanBeforeWork": { "type": "boolean" },
+        "gitVersion": { "type": "string" },
+        "nodeVersion": { "type": "string" },
+        "pnpmVersion": { "type": "string" },
+        "wranglerVersion": { "type": "string" }
+      }
+    },
+    "productionDeployment": {
+      "type": "object",
+      "properties": {
+        "workerNames": { "type": "array", "items": { "type": "string" } },
+        "productionUrl": { "type": "string", "format": "uri" },
+        "productionDefaultBranchAligned": { "type": "boolean" },
+        "productionCommitVerification": {
+          "type": "string",
+          "enum": [
+            "verified-live",
+            "verified-disabled",
+            "verified-partial",
+            "code-present-not-production-verified",
+            "documented-only",
+            "historical-only",
+            "unknown",
+            "verification-blocked"
+          ]
+        },
+        "compatibilityDate": { "type": "string" },
+        "compatibilityFlags": { "type": "array", "items": { "type": "string" } },
+        "cronTriggers": { "type": "array", "items": { "type": "string" } }
+      }
+    },
+    "infrastructure": {
+      "type": "object",
+      "properties": {
+        "cloudflare": {
+          "type": "object",
+          "properties": {
+            "workers": { "type": "array", "items": { "type": "string" } },
+            "d1Databases": {
+              "type": "array",
+              "items": {
+                "type": "object",
+                "properties": {
+                  "name": { "type": "string" },
+                  "uuid": { "type": "string" },
+                  "tableCount": { "type": "integer" },
+                  "migrationCount": { "type": "integer" }
+                }
+              }
+            },
+            "kvNamespaces": { "type": "array", "items": { "type": "string" } },
+            "r2Buckets": { "type": "array", "items": { "type": "string" } }
+          }
+        },
+        "paddle": {
+          "type": "object",
+          "properties": {
+            "products": { "type": "array", "items": { "type": "string" } },
+            "billingCycle": { "type": "string" },
+            "webhookDestinationActive": { "type": "boolean" },
+            "webhookTrafficSource": { "type": "string", "enum": ["platform", "simulation", "all"] }
+          }
+        }
+      }
+    },
+    "routesSummary": {
+      "type": "object",
+      "properties": {
+        "totalAstroPages": { "type": "integer" },
+        "totalApiRoutes": { "type": "integer" },
+        "standaloneRouteHandlers": { "type": "integer" },
+        "buckets": { "type": "array", "items": { "type": "string" } }
+      }
+    },
+    "capabilitiesSummary": {
+      "type": "object",
+      "properties": {
+        "total": { "type": "integer" },
+        "verifiedLive": { "type": "integer" },
+        "verifiedPartial": { "type": "integer" },
+        "codePresentNotProductionVerified": { "type": "integer" },
+        "documentedOnly": { "type": "integer" },
+        "unknown": { "type": "integer" }
+      }
+    },
+    "migrationState": {
+      "type": "object",
+      "properties": {
+        "localMigrationCount": { "type": "integer" },
+        "productionMigrationCount": { "type": "integer" },
+        "previewMigrationCount": { "type": "integer" },
+        "drift": { "type": "boolean" },
+        "latestMigration": { "type": "string" },
+        "localTableCount": { "type": "integer" },
+        "productionTableCount": { "type": "integer" },
+        "tableCountDiscrepancyLogged": { "type": "boolean" }
+      }
+    },
+    "billingPlans": {
+      "type": "object",
+      "properties": {
+        "currency": { "type": "string" },
+        "billingCycle": { "type": "string" },
+        "plans": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "id": { "type": "string" },
+              "annualPriceUsdCents": { "type": "integer" }
+            }
+          }
+        }
+      }
+    },
+    "registryState": {
+      "type": "object",
+      "properties": {
+        "crawlerCount": { "type": "integer" },
+        "operatorCount": { "type": "integer" },
+        "publicDirectoryPageCount": { "type": "integer" },
+        "missingDirectoryPage": { "type": "array", "items": { "type": "string" } },
+        "purposeCategories": { "type": "array", "items": { "type": "string" } },
+        "lifecycleStatuses": { "type": "array", "items": { "type": "string" } }
+      }
+    },
+    "analyticsState": {
+      "type": "object",
+      "properties": {
+        "providers": { "type": "array", "items": { "type": "string" } },
+        "gaScope": { "type": "string" },
+        "srsDeviation": { "type": "boolean" },
+        "srsDeviationDisclosed": { "type": "boolean" },
+        "consentMechanism": { "type": "string" }
+      }
+    },
+    "testResults": {
+      "type": "object",
+      "properties": {
+        "qualityGate": {
+          "type": "object",
+          "properties": {
+            "command": { "type": "string" },
+            "exitCode": { "type": "integer" },
+            "result": { "type": "string", "enum": ["pass", "fail"] },
+            "formatCheck": { "type": "string" },
+            "lint": { "type": "string" },
+            "typecheck": {
+              "type": "object",
+              "properties": {
+                "result": { "type": "string" },
+                "files": { "type": "integer" },
+                "errors": { "type": "integer" },
+                "warnings": { "type": "integer" },
+                "hints": { "type": "integer" }
+              }
+            },
+            "unitTests": {
+              "type": "object",
+              "properties": {
+                "result": { "type": "string" },
+                "passed": { "type": "integer" },
+                "total": { "type": "integer" },
+                "files": { "type": "integer" }
+              }
+            },
+            "integrationTests": {
+              "type": "object",
+              "properties": {
+                "result": { "type": "string" },
+                "passed": { "type": "integer" },
+                "total": { "type": "integer" },
+                "files": { "type": "integer" }
+              }
+            },
+            "dbValidate": {
+              "type": "object",
+              "properties": {
+                "result": { "type": "string" },
+                "tablesVerified": { "type": "integer" }
+              }
+            },
+            "build": { "type": "string" }
+          }
+        },
+        "e2eNotRunThisSession": { "type": "boolean" },
+        "a11yNotRunThisSession": { "type": "boolean" },
+        "lighthouseNotRunThisSession": { "type": "boolean" },
+        "ciLatestMainRun": {
+          "type": "object",
+          "properties": {
+            "workflow": { "type": "string" },
+            "conclusion": { "type": "string" },
+            "commit": { "type": "string" }
+          }
+        },
+        "branchProtectionConfigured": { "type": "boolean" }
+      }
+    },
+    "documentationConflicts": {
+      "type": "object",
+      "properties": {
+        "totalFound": { "type": "integer" },
+        "ids": { "type": "array", "items": { "type": "string" } },
+        "p1Count": { "type": "integer" },
+        "p2Count": { "type": "integer" }
+      }
+    },
+    "risks": {
+      "type": "object",
+      "properties": {
+        "newRisksFound": { "type": "integer" },
+        "ids": { "type": "array", "items": { "type": "string" } },
+        "p0Count": { "type": "integer" },
+        "p1Count": { "type": "integer" },
+        "p2Count": { "type": "integer" }
+      }
+    },
+    "unknowns": { "type": "array", "items": { "type": "string" } },
+    "evidenceFiles": { "type": "array", "items": { "type": "string" } },
+    "runtimeImpact": {
+      "type": "object",
+      "required": [
+        "productionChanged",
+        "databaseMigrationApplied",
+        "billingConfigChanged",
+        "cloudflareConfigChanged",
+        "pricingChanged",
+        "productBehaviorChanged",
+        "productionDeploymentPerformed"
+      ],
+      "properties": {
+        "productionChanged": { "type": "boolean", "const": false },
+        "databaseMigrationApplied": { "type": "boolean", "const": false },
+        "billingConfigChanged": { "type": "boolean", "const": false },
+        "cloudflareConfigChanged": { "type": "boolean", "const": false },
+        "pricingChanged": { "type": "boolean", "const": false },
+        "productBehaviorChanged": { "type": "boolean", "const": false },
+        "productionDeploymentPerformed": { "type": "boolean", "const": false }
+      }
+    }
+  },
+  "additionalProperties": true
+}

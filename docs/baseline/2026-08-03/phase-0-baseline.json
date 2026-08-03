@@ -1,0 +1,228 @@
+{
+  "metadata": {
+    "phase": "phase-0",
+    "generatedAt": "2026-08-03T10:09:42Z",
+    "generatedAtColombo": "2026-08-03T15:39:42+05:30",
+    "phaseResult": "complete",
+    "schemaVersion": "1.0.0"
+  },
+  "gitState": {
+    "repositoryUrl": "https://github.com/rmtlbandara/CrawlPact.git",
+    "defaultBranch": "main",
+    "defaultBranchHead": "0d23f5a4b589ade5e14e7070aadb8607357c7d46",
+    "phaseBranch": "phase-00-baseline-governance",
+    "phaseBranchStartingSha": "0d23f5a4b589ade5e14e7070aadb8607357c7d46",
+    "workingTreeCleanBeforeWork": true,
+    "gitVersion": "2.50.1",
+    "nodeVersion": "v22.23.1",
+    "pnpmVersion": "9.15.0",
+    "wranglerVersion": "4.114.0"
+  },
+  "productionDeployment": {
+    "workerNames": ["crawlpact-web", "crawlpact-web-preview", "crawlpact-e2e-fixture"],
+    "productionUrl": "https://crawlpact.com",
+    "productionDefaultBranchAligned": true,
+    "productionCommitVerification": "code-present-not-production-verified",
+    "compatibilityDate": "2026-07-01",
+    "compatibilityFlags": ["nodejs_compat"],
+    "cronTriggers": ["0 3 * * *"]
+  },
+  "infrastructure": {
+    "cloudflare": {
+      "workers": ["crawlpact-web", "crawlpact-web-preview", "crawlpact-e2e-fixture"],
+      "d1Databases": [
+        {
+          "name": "crawlpact-db",
+          "uuid": "dd295b75-7376-4f05-8c50-fb0a63cc3cee",
+          "tableCount": 39,
+          "migrationCount": 18
+        },
+        {
+          "name": "crawlpact-db-preview",
+          "uuid": "e9c9f730-1f0d-4f4e-8775-db94126b12f0",
+          "migrationCount": 18
+        }
+      ],
+      "kvNamespaces": ["crawlpact-web-session", "crawlpact-web-preview-session"],
+      "r2Buckets": ["crawlpact", "crawlpact-preview"]
+    },
+    "paddle": {
+      "products": ["CrawlPact Solo", "CrawlPact Pro", "CrawlPact Agency"],
+      "billingCycle": "annual-only",
+      "webhookDestinationActive": true,
+      "webhookTrafficSource": "platform"
+    }
+  },
+  "routesSummary": {
+    "totalAstroPages": 61,
+    "totalApiRoutes": 93,
+    "standaloneRouteHandlers": 2,
+    "buckets": [
+      "marketing",
+      "free-tool",
+      "audit",
+      "authentication",
+      "account",
+      "domain-management",
+      "monitoring",
+      "notifications",
+      "billing",
+      "agency",
+      "admin",
+      "api",
+      "status-trust-legal",
+      "static-asset-error-redirect"
+    ]
+  },
+  "capabilitiesSummary": {
+    "total": 24,
+    "verifiedLive": 8,
+    "verifiedPartial": 5,
+    "codePresentNotProductionVerified": 11,
+    "documentedOnly": 0,
+    "unknown": 0
+  },
+  "migrationState": {
+    "localMigrationCount": 18,
+    "productionMigrationCount": 18,
+    "previewMigrationCount": 18,
+    "drift": false,
+    "latestMigration": "0018_incidents.sql",
+    "localTableCount": 40,
+    "productionTableCount": 39,
+    "tableCountDiscrepancyLogged": true
+  },
+  "billingPlans": {
+    "currency": "USD",
+    "billingCycle": "annual-only",
+    "plans": [
+      { "id": "free", "annualPriceUsdCents": 0 },
+      { "id": "solo", "annualPriceUsdCents": 7900 },
+      { "id": "pro", "annualPriceUsdCents": 17900 },
+      { "id": "agency", "annualPriceUsdCents": 39900 }
+    ]
+  },
+  "registryState": {
+    "crawlerCount": 23,
+    "operatorCount": 9,
+    "publicDirectoryPageCount": 22,
+    "missingDirectoryPage": ["crw_bingbot"],
+    "purposeCategories": [
+      "search",
+      "training",
+      "user_triggered",
+      "agent",
+      "advertising_validation",
+      "research",
+      "mixed",
+      "unknown"
+    ],
+    "lifecycleStatuses": ["active", "deprecated", "replaced", "unverified", "retired"]
+  },
+  "analyticsState": {
+    "providers": ["Google Analytics 4", "first-party product_events"],
+    "gaScope": "MarketingLayout-only, production-environment-only",
+    "srsDeviation": true,
+    "srsDeviationDisclosed": true,
+    "consentMechanism": "none"
+  },
+  "testResults": {
+    "qualityGate": {
+      "command": "pnpm run quality",
+      "exitCode": 0,
+      "result": "pass",
+      "formatCheck": "pass",
+      "lint": "pass",
+      "typecheck": { "result": "pass", "files": 330, "errors": 0, "warnings": 0, "hints": 37 },
+      "unitTests": { "result": "pass", "passed": 230, "total": 230, "files": 23 },
+      "integrationTests": { "result": "pass", "passed": 149, "total": 149, "files": 24 },
+      "dbValidate": { "result": "pass", "tablesVerified": 40 },
+      "build": "pass"
+    },
+    "e2eNotRunThisSession": true,
+    "a11yNotRunThisSession": true,
+    "lighthouseNotRunThisSession": true,
+    "ciLatestMainRun": {
+      "workflow": "Merge when green",
+      "conclusion": "success",
+      "commit": "0d23f5a4b589ade5e14e7070aadb8607357c7d46"
+    },
+    "branchProtectionConfigured": false
+  },
+  "documentationConflicts": {
+    "totalFound": 15,
+    "ids": [
+      "DC-001",
+      "DC-002",
+      "DC-003",
+      "DC-004",
+      "DC-005",
+      "DC-006",
+      "DC-007",
+      "DC-008",
+      "DC-009",
+      "DC-010",
+      "DC-011",
+      "DC-012",
+      "DC-013",
+      "DC-014",
+      "DC-015"
+    ],
+    "p1Count": 3,
+    "p2Count": 12
+  },
+  "risks": {
+    "newRisksFound": 13,
+    "ids": [
+      "R-001",
+      "R-002",
+      "R-003",
+      "R-004",
+      "R-005",
+      "R-006",
+      "R-007",
+      "R-008",
+      "R-009",
+      "R-010",
+      "R-011",
+      "R-012",
+      "R-013"
+    ],
+    "p0Count": 0,
+    "p1Count": 3,
+    "p2Count": 10
+  },
+  "unknowns": [
+    "Cron trigger execution history not queried",
+    "Zone-level DNS/SSL/WAF/cache-rule config not re-queried (zone-read-only API token)",
+    "Production Worker secret presence (SESSION_SIGNING_SECRET/PADDLE_API_KEY/PADDLE_WEBHOOK_SECRET) not re-verified this session",
+    "E2E/a11y/Lighthouse suites not re-run this session",
+    "Dedicated chargeback-specific billing integration test existence not confirmed",
+    "Screenshot evidence not captured (no browser-automation tool available)"
+  ],
+  "evidenceFiles": [
+    "PHASE_0_BASELINE_REPORT.md",
+    "ROUTE_INVENTORY.md",
+    "CAPABILITY_MATRIX.md",
+    "PRODUCTION_INFRASTRUCTURE_INVENTORY.md",
+    "ENVIRONMENT_AND_BINDING_INVENTORY.md",
+    "DATABASE_AND_MIGRATION_BASELINE.md",
+    "BILLING_AND_PLAN_BASELINE.md",
+    "CRAWLER_REGISTRY_BASELINE.md",
+    "ANALYTICS_AND_CONSENT_BASELINE.md",
+    "TEST_AND_CI_EVIDENCE.md",
+    "SCREENSHOT_MANIFEST.md",
+    "DOCUMENTATION_CONFLICTS.md",
+    "BASELINE_RISKS_AND_UNKNOWNS.md",
+    "file-hashes.sha256"
+  ],
+  "runtimeImpact": {
+    "productionChanged": false,
+    "databaseMigrationApplied": false,
+    "billingConfigChanged": false,
+    "cloudflareConfigChanged": false,
+    "pricingChanged": false,
+    "productBehaviorChanged": false,
+    "productionDeploymentPerformed": false
+  }
+}
