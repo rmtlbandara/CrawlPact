@@ -7,7 +7,7 @@ test.describe("Landing page", () => {
   }) => {
     await page.goto("/");
     await expect(page.getByRole("heading", { level: 1 })).toContainText("Audit and monitor");
-    await expect(page.getByRole("button", { name: "Audit domain" }).first()).toBeVisible();
+    await expect(page.getByRole("button", { name: "Audit a domain" }).first()).toBeVisible();
   });
 
   // The honest "AUDIT_ENGINE_DISABLED" response (never a fabricated result)
@@ -24,7 +24,7 @@ test.describe("Landing page", () => {
     // alert appearing) instead of an indirect `networkidle` wait.
     await retryUntilSettled(async () => {
       await input.fill("javascript:alert(1)");
-      await page.getByRole("button", { name: "Audit domain" }).first().click();
+      await page.getByRole("button", { name: "Audit a domain" }).first().click();
       await expect(page.getByRole("alert").first()).toBeVisible({ timeout: 1_000 });
     });
   });

@@ -35,7 +35,7 @@ test.describe("Responsive layout smoke", () => {
       test("home page renders the audit form without horizontal overflow", async ({ page }) => {
         await page.goto("/");
         await expect(page.getByRole("heading", { level: 1 })).toBeVisible();
-        await expect(page.getByRole("button", { name: "Audit domain" }).first()).toBeVisible();
+        await expect(page.getByRole("button", { name: "Audit a domain" }).first()).toBeVisible();
         await assertNoHorizontalOverflow(page);
       });
 

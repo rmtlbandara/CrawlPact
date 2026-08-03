@@ -312,6 +312,27 @@ items with the 13 new risks Phase 0's baseline audit found
 - **Status**: accepted
 - **Acceptance criteria for closure**: GitHub plan upgraded and native branch protection configured, or this acceptance is re-confirmed.
 
+### RISK-028 — SRS §2.3's Primary Tagline conflicts with the Phase 2 canonical brand system
+
+- **Category**: Documentation, Product · **Severity**: P2 · **Probability**: Certain (confirmed live)
+- **Impact**: `docs/product/CRAWLPACT_FINAL_SRS.md:150` (§2.3) states the Primary Tagline as "Know
+  what AI crawlers can access." — a claim of certainty about actual crawler access the product
+  cannot support. This conflicts with both the SRS's own §2.2 Primary Product Promise (which the
+  live homepage actually uses: "Audit and monitor your website's AI crawler policy.") and the new
+  canonical tagline established by Phase 2, "AI crawler policy, verified." Per `CLAUDE.md`, the SRS
+  outranks other documents unless an approved ADR records a deviation — this conflict was
+  deliberately recorded, not silently resolved by editing the SRS during Phase 2.
+- **Evidence**: `docs/brand/MESSAGING_SURFACE_INVENTORY.md` row E1,
+  `docs/brand/BRAND_POSITIONING_AND_MESSAGING_SYSTEM.md` ("Brand promise" section)
+- **Current mitigation**: No live surface uses the stale §2.3 wording (confirmed by three
+  independent Phase 2 research passes and `pnpm brand:validate`) — the exposure is a documentation
+  conflict, not a live customer-facing claim.
+- **Owner**: Product owner · **Trigger**: Any future SRS revision or brand-copy audit
+- **Review date**: Phase 3 · **Target phase**: Phase 3
+- **Status**: open
+- **Acceptance criteria for closure**: SRS §2.3 updated to match the canonical tagline, or an ADR
+  is recorded explicitly authorising the deviation and reconciling the two documents.
+
 ---
 
 ## How to update this document

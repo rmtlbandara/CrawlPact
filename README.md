@@ -126,6 +126,7 @@ values throughout. Full setup and troubleshooting:
 | `pnpm test:e2e` / `pnpm test:e2e:chromium`     | End-to-end tests (Playwright)                                                                                     |
 | `pnpm test:a11y` / `pnpm test:a11y:chromium`   | Accessibility tests                                                                                               |
 | `pnpm docs:validate`                           | Read-only documentation-governance validation (required files, status vocabulary, stale-claim detection)          |
+| `pnpm brand:validate`                          | Read-only brand/messaging governance validation (prohibited claims, stale tagline, naming consistency)            |
 | `pnpm baseline:validate`                       | Read-only Phase 0 baseline validation                                                                             |
 | `pnpm smoke:preview` / `pnpm smoke:production` | Manual, human-triggered smoke test against a real deployed URL                                                    |
 
@@ -150,6 +151,7 @@ Start at [`docs/README.md`](docs/README.md) — the full documentation portal. D
 - [Current state](docs/status/CURRENT_STATE.md)
 - [Product scope](docs/product/PRODUCT_SCOPE.md)
 - [SRS](docs/product/CRAWLPACT_FINAL_SRS.md)
+- [Brand positioning and messaging system](docs/brand/BRAND_POSITIONING_AND_MESSAGING_SYSTEM.md)
 - [Architecture](docs/architecture/ARCHITECTURE.md)
 - [Active risks](docs/risks/ACTIVE_RISKS.md)
 - [Changelog](CHANGELOG.md)

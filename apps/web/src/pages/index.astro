@@ -8,6 +8,7 @@ import { AnalyticsBeacon } from "../components/AnalyticsBeacon";
 import WebsiteAuditMark from "../components/WebsiteAuditMark.astro";
 import { Accordion } from "@crawlpact/ui";
 import { CRAWLER_PURPOSE_LABELS } from "@crawlpact/registry";
+import { BRAND } from "../config/brand";
 
 const crawlerPreview = (await getCollection("crawlers")).slice(0, 4);
 
@@ -76,8 +77,8 @@ const faqItems = [
 ---
 
 <MarketingLayout
-  title="AI Crawler Policy Auditor & Robots.txt Checker | CrawlPact"
-  description="Audit how AI search, training, user-triggered and agent crawlers are addressed by your website. Detect policy conflicts, generate recommendations and monitor changes."
+  title={`AI Crawler Policy Auditor & Robots.txt Checker | ${BRAND.productName}`}
+  description={BRAND.descriptions.short}
 >
   <!-- Hero -->
   <section class="mx-auto max-w-[1240px] px-4 py-14 sm:px-6 sm:py-20">

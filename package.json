@@ -3,7 +3,7 @@
   "private": true,
   "version": "0.1.0",
   "type": "module",
-  "description": "CrawlPact - AI Crawler Policy Auditor & Monitor",
+  "description": "CrawlPact - AI crawler policy audit and monitoring platform",
   "license": "UNLICENSED",
   "engines": {
     "node": ">=22.12.0 <23.0.0",
@@ -37,6 +37,7 @@
     "registry:changelog": "node scripts/registry-tools.mjs changelog",
     "baseline:validate": "node scripts/baseline-validate.mjs",
     "docs:validate": "node scripts/docs-validate.mjs",
+    "brand:validate": "node scripts/brand-validate.mjs",
     "quality": "pnpm run format:check && pnpm run lint && pnpm run typecheck && pnpm run test:unit && pnpm run test:integration && pnpm run db:validate && pnpm run build",
     "check:fast": "pnpm run format:check && pnpm run lint && pnpm run typecheck && pnpm run test:unit",
     "verify:push": "bash scripts/verify-push.sh",

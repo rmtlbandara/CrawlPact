@@ -95,6 +95,9 @@ jobs:
       - name: Validate documentation governance
         run: pnpm docs:validate
 
+      - name: Validate brand and messaging governance
+        run: pnpm brand:validate
+
       - name: Dependency vulnerability check
         run: pnpm audit --audit-level=critical
         # Reviewed 2026-07-29 (re-reviewed during the release-flow

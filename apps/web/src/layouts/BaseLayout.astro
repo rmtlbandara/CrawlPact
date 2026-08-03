@@ -1,6 +1,7 @@
 ---
 import "../styles/global.css";
 import { getEnv } from "../lib/env";
+import { BRAND } from "../config/brand";
 
 export type Breadcrumb = { name: string; url: string };
 
@@ -64,13 +65,13 @@ const ogImageUrl = new URL(ogImage, siteUrl).toString();
 const jsonLdGraph: Record<string, unknown>[] = [
   {
     "@type": "Organization",
-    name: "CrawlPact",
+    name: BRAND.productName,
     url: siteUrl.toString(),
-    description: "AI Crawler Policy Auditor & Monitor",
+    description: BRAND.descriptions.medium,
   },
   {
     "@type": "WebSite",
-    name: "CrawlPact",
+    name: BRAND.productName,
     url: siteUrl.toString(),
   },
 ];
@@ -83,7 +84,7 @@ if (ogType === "article" && publishedDate) {
     url: canonicalUrl,
     datePublished: publishedDate,
     dateModified: updatedDate ?? publishedDate,
-    author: { "@type": "Organization", name: "CrawlPact" },
+    author: { "@type": "Organization", name: BRAND.productName },
   });
 }
 
@@ -117,7 +118,7 @@ if (extraJsonLd && extraJsonLd.length > 0) {
     <meta property="og:description" content={description} />
     <meta property="og:type" content={ogType} />
     <meta property="og:url" content={canonicalUrl} />
-    <meta property="og:site_name" content="CrawlPact" />
+    <meta property="og:site_name" content={BRAND.productName} />
     <meta property="og:image" content={ogImageUrl} />
     <meta property="og:image:type" content="image/png" />
     <meta property="og:image:width" content="1200" />

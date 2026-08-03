@@ -23,7 +23,7 @@ not itself implement anything.
 | --- | ---------------------------------------------------------- | -------- | ------------ | --------------------------------------------------------------------------------------------- |
 | 0   | Baseline, Audit Preservation and Implementation Governance | P0       | None         | **complete** (PR #68, merged `1a39d29`)                                                       |
 | 1   | Repository Documentation and Source-of-Truth Correction    | P0       | Phase 0      | **complete** (see `docs/reports/PHASE_01_DOCUMENTATION_SOURCE_OF_TRUTH_COMPLETION_REPORT.md`) |
-| 2   | Brand Positioning and Messaging System                     | P1       | Phase 1      | not started                                                                                   |
+| 2   | Brand Positioning and Messaging System                     | P1       | Phase 1      | **complete** (see `docs/reports/PHASE_02_BRAND_POSITIONING_MESSAGING_COMPLETION_REPORT.md`)   |
 | 3   | Legal Identity, Contact, Security and Trust Foundation     | P1       | Phase 1      | not started                                                                                   |
 | 4   | Homepage Information Architecture and Conversion Redesign  | P1       | Phases 1–3   | not started                                                                                   |
 | 5   | Anonymous Audit Result and Account-Conversion Flow         | P1       | Phase 4      | not started                                                                                   |
@@ -80,17 +80,36 @@ not itself implement anything.
   the product is already faithful to the SRS with no fake trust signals.
 - **Dependencies**: Phase 1.
 - **Completion gate**: brand guide exists and is applied consistently across marketing surfaces.
-- **Status**: not started.
+- **Status**: **complete** — see
+  `docs/reports/PHASE_02_BRAND_POSITIONING_MESSAGING_COMPLETION_REPORT.md`. Established
+  `docs/brand/{BRAND_POSITIONING_AND_MESSAGING_SYSTEM,VOICE_AND_STYLE_GUIDE,
+PRODUCT_TERMINOLOGY_GLOSSARY,CLAIMS_AND_MESSAGING_GUIDE,MESSAGING_SURFACE_INVENTORY}.md`,
+  `apps/web/src/config/brand.ts`, and `pnpm brand:validate` (wired into CI). Three parallel
+  research passes across every public/authenticated/admin/technical surface found **zero
+  prohibited claims or fabricated proof already live** — Phase 2's corrective work was narrow
+  (centralising duplicated brand strings, a handful of `minor-correction` wording fixes). One real
+  documentation conflict was found and recorded rather than silently fixed: the SRS's own §2.3
+  Primary Tagline ("Know what AI crawlers can access.") conflicts with the new canonical brand
+  promise/tagline and with the live homepage's own promise sentence (SRS §2.2) — routed to Phase 3
+  for an SRS update or ADR, tracked in `docs/risks/ACTIVE_RISKS.md`. Two completeness gaps (raw
+  status-enum display in the authenticated scan-history list instead of `AuditReportView.tsx`'s
+  existing `STATUS_LABEL` map; no customer-facing `scan_diffs` change-timeline UI) were found and
+  deferred to Phase 8 (which already owns "Saved-Domain Experience and Change Timeline"), not
+  fixed here.
 
 ### Phase 3 — Legal Identity, Contact, Security and Trust Foundation
 
 - **Objective**: Resolve the legal-entity/address/jurisdiction/contact disclosure gap (see
   `BASELINE_RISKS_AND_UNKNOWNS.md` DC-010 context), add `security.txt` (missing per this baseline's
-  live check), and close other trust-surface gaps.
+  live check), and close other trust-surface gaps. Also owns reconciling SRS §2.3's Primary
+  Tagline with the Phase 2 brand system (via ADR or SRS update — see Phase 2's status above and
+  `docs/brand/MESSAGING_SURFACE_INVENTORY.md` row E1) and, as low-priority consistency work,
+  adding `"description"` fields to the 10 `package.json` files that currently lack one.
 - **Dependencies**: Phase 1.
 - **Completion gate**: `/.well-known/security.txt` returns 200; legal identity disclosure
   decision made and either implemented or explicitly, permanently deferred with a documented
-  reason (distinct from an SRS-mandated requirement, since the SRS does not impose one).
+  reason (distinct from an SRS-mandated requirement, since the SRS does not impose one); SRS §2.3
+  reconciled with the Phase 2 brand system.
 - **Status**: not started.
 
 ### Phase 4 — Homepage Information Architecture and Conversion Redesign
@@ -128,7 +147,12 @@ not itself implement anything.
 ### Phase 8 — Saved-Domain Experience and Change Timeline
 
 - **Objective**: Improve the saved-domain dashboard and add a change-timeline view; close the
-  export/report-export test-coverage gap identified in `CAPABILITY_MATRIX.md`.
+  export/report-export test-coverage gap identified in `CAPABILITY_MATRIX.md`. Also owns two
+  gaps Phase 2 found and deferred (see `docs/brand/MESSAGING_SURFACE_INVENTORY.md` rows C3, C5):
+  reusing `AuditReportView.tsx`'s existing `STATUS_LABEL`/`STATUS_TONE` maps in the authenticated
+  domain-detail scan-history list instead of raw status-enum text, and a customer-facing UI
+  surfacing `scan_diffs`/`diffType` (currently reachable only through the notification stream for
+  high/critical-severity events).
 - **Dependencies**: Phase 5.
 - **Status**: not started.
 

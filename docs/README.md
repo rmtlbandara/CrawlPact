@@ -28,6 +28,17 @@ purpose, audience, and whether it's authoritative for the current product or his
 | [`docs/product/PRODUCT_SCOPE.md`](product/PRODUCT_SCOPE.md)                       | Quick-reference scope summary                   | Product     | current-supporting           |
 | [`docs/status/REQUIREMENTS_TRACEABILITY.md`](status/REQUIREMENTS_TRACEABILITY.md) | SRS requirement → code/test/production evidence | Engineering | current-authoritative        |
 
+## Brand and messaging
+
+| Document                                                                                                  | Purpose                                                   | Audience      | Status                |
+| --------------------------------------------------------------------------------------------------------- | --------------------------------------------------------- | ------------- | --------------------- |
+| [`docs/brand/BRAND_POSITIONING_AND_MESSAGING_SYSTEM.md`](brand/BRAND_POSITIONING_AND_MESSAGING_SYSTEM.md) | Product/category definitions, audience hierarchy, tagline | Everyone      | current-authoritative |
+| [`docs/brand/VOICE_AND_STYLE_GUIDE.md`](brand/VOICE_AND_STYLE_GUIDE.md)                                   | Voice traits, writing rules, evidence wording             | Everyone      | current-authoritative |
+| [`docs/brand/PRODUCT_TERMINOLOGY_GLOSSARY.md`](brand/PRODUCT_TERMINOLOGY_GLOSSARY.md)                     | Canonical product-term definitions                        | Everyone      | current-authoritative |
+| [`docs/brand/CLAIMS_AND_MESSAGING_GUIDE.md`](brand/CLAIMS_AND_MESSAGING_GUIDE.md)                         | Claim classification, prohibited claims, disclaimers      | Everyone      | current-authoritative |
+| [`docs/brand/MESSAGING_SURFACE_INVENTORY.md`](brand/MESSAGING_SURFACE_INVENTORY.md)                       | Every public/authenticated/admin/technical copy surface   | Everyone      | current-authoritative |
+| [`docs/brand/GITHUB_BRAND_METADATA_MANIFEST.md`](brand/GITHUB_BRAND_METADATA_MANIFEST.md)                 | GitHub repo description/topics to apply                   | Product owner | current-supporting    |
+
 ## Architecture
 
 | Document                                                                                                                                                                                                                                                 | Purpose                             | Audience    | Status                |
