@@ -23,9 +23,12 @@ test.describe("Trust routes resolve without authentication", () => {
     expect(response.ok()).toBe(true);
     expect(response.headers()["content-type"] ?? "").toContain("text/plain");
     const body = await response.text();
+    // Canonical/Policy reflect Astro.site (PUBLIC_SITE_URL), which is
+    // https://crawlpact.com in production but the local/CI base URL
+    // otherwise — assert the path, not a hardcoded production domain.
     expect(body).toContain("Contact: mailto:info@crawlpact.com");
-    expect(body).toContain("Canonical: https://crawlpact.com/.well-known/security.txt");
-    expect(body).toContain("Policy: https://crawlpact.com/security");
+    expect(body).toMatch(/Canonical: https?:\/\/[^\s]+\/\.well-known\/security\.txt/);
+    expect(body).toMatch(/Policy: https?:\/\/[^\s]+\/security/);
     expect(body).toContain("Preferred-Languages: en");
     expect(body).toMatch(/Expires: \d{4}-\d{2}-\d{2}/);
   });
