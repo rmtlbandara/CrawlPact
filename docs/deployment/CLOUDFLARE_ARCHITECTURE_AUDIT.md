@@ -37,7 +37,12 @@ today: `scan_resources.resource_hash` exists as a column
 `persist-scan.ts` — every scan (including a monitoring re-scan of an unchanged site) writes fresh
 full-text rows rather than a hash pointer to unchanged content.
 
-## R2 usage today: **No**
+## R2 usage today: **No, as of this 2026-07-26 audit — since revised**
+
+**Note added 2026-08-03 (Phase 1)**: R2 was adopted 2026-07-30 for agency-branding logo uploads
+only (`AGENCY_LOGOS` binding) — see `docs/data/D1_R2_DATA_PLACEMENT_POLICY.md`'s revisit-trigger
+entry and `docs/status/CURRENT_STATE.md`. This section is preserved as an accurate historical
+record of the 2026-07-26 audit's findings, not edited to match current state.
 
 Verified by:
 

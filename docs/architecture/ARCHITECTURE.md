@@ -40,7 +40,10 @@ packages/
 
 ## Storage
 
-D1 is the only datastore (ADR-0002). **No R2 (object storage) is used** —
+D1 is the primary datastore (ADR-0002). **R2 was adopted 2026-07-30 for one narrow use case only
+— agency-branding logo uploads** (binding `AGENCY_LOGOS`), per
+`docs/data/D1_R2_DATA_PLACEMENT_POLICY.md`'s revisit-trigger entry; this corrects this
+document's prior "no R2 is used" claim (Phase 1, 2026-08-03). Nothing else uses object storage —
 `docs/data/D1_R2_DATA_PLACEMENT_POLICY.md` (2026-07-26) records the evidence-based decision not
 to adopt it yet, and the concrete triggers that would reopen that decision. Static delivery
 (Workers Static Assets vs. Cloudflare Pages) is formalised in

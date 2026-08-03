@@ -1,5 +1,17 @@
 # Final SRS Compliance Report
 
+> **Historical document.** This file records an earlier CrawlPact implementation state and is
+> not authoritative for the current product. See `docs/status/REQUIREMENTS_TRACEABILITY.md` for
+> current status.
+>
+> - **Original date**: 2026-07-24 (Part 3 Step 23)
+> - **Archive date**: 2026-08-03 (Phase 1)
+> - **Superseded by**: `docs/status/REQUIREMENTS_TRACEABILITY.md`
+> - **Reason archived**: despite its "Final" name, this report predates six days of subsequent
+>   real work (Google Analytics added, R2 adopted, incident-tracking system shipped) — see
+>   `docs/baseline/2026-08-03/DOCUMENTATION_CONFLICTS.md` DC-006. Preserved in full below as an
+>   accurate historical record of the 2026-07-24 audit; not edited for currentness.
+
 Part 3 Step 23 deliverable. A real, evidence-based audit of every SRS requirement against actual
 code and tests — not a restatement of what was planned. Full section-by-section detail lives in
 `docs/status/REQUIREMENTS_TRACEABILITY.md` (updated in the same pass as this report); this

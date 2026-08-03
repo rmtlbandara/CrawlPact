@@ -3,6 +3,20 @@
 This file tracks engineering-level changes to the CrawlPact repository. For the customer-facing
 changelog, see the `/changelog` page on the public website.
 
+Format: dated entries, newest first, inspired by [Keep a Changelog](https://keepachangelog.com/),
+adapted for this repository's pass/phase-based workflow. Most entries already carry `### Added` /
+`### Changed` / `### Fixed` / `### Security` / `### Removed` subsections where more than one kind
+of change occurred in the same pass — kept as originally written rather than retrofitted, per
+Phase 1's rule against fabricating or restructuring verifiable history. Add new entries under
+**Unreleased** below and give them a dated section heading once actually deployed to production —
+this distinguishes a code merge from a production deployment, which are not the same event (see
+the "Production deployment" entries below for the established pattern).
+
+## Unreleased
+
+_(No unreleased engineering-level changes at this time — see `docs/status/CURRENT_STATE.md` for
+current production status.)_
+
 ## Production deployment (2026-07-31)
 
 PR #59 (this release's full change set, squash-merged as `e245793`) deployed to production via

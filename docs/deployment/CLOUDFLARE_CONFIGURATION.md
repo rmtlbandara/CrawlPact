@@ -67,7 +67,9 @@ wrangler d1 migrations apply crawlpact-db-preview --remote --config apps/web/wra
 ```
 
 Both were applied for real on 2026-07-26 — all 16 migrations succeeded on each database (38 tables,
-matching `pnpm db:validate`'s schema-drift check).
+matching `pnpm db:validate`'s schema-drift check at the time). More migrations have been applied
+since 2026-07-26; see `docs/status/CURRENT_STATE.md` for the current migration/table count rather
+than treating this dated record as still current.
 
 ## Non-secret environment vars that must be set correctly per environment
 

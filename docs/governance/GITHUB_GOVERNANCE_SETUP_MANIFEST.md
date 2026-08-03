@@ -2,6 +2,32 @@
 
 **Status: verification-blocked (by user decision, not access failure).**
 
+## Phase 1 update (2026-08-03)
+
+Phase 0 (PR #68) merged to `main` as `1a39d29`. Phase 1 (Repository Documentation and
+Source-of-Truth Correction) is complete — see
+`docs/reports/PHASE_01_DOCUMENTATION_SOURCE_OF_TRUTH_COMPLETION_REPORT.md`. Still no live
+milestones/labels/issues created (same manifest-only decision carried forward). When this manifest
+is applied, additionally create these follow-up issues Phase 1 found but did not fix in place
+(each labelled `documentation`, `priority-p2`, and the phase that should own it):
+
+- **"Stale contract-vs-endpoint table in docs/api/API_CONTRACTS.md"** — `phase-01` follow-up,
+  routed to whichever future pass owns `packages/core` contract cleanup.
+- **"docs/deployment/ENVIRONMENTS.md's deploy-mechanism column says 'manual', stale vs. GitHub
+  Actions (ADR-0007)"** — routed to `phase-12`.
+- **"docs/operations/INCIDENT_RESPONSE.md's 'no incidents recorded, nothing deployed' claim is
+  stale since production went live 2026-07-26"** — routed to `phase-14`.
+- **"docs/seo/ROUTE_REGISTRY.md's canonical-redirects section says 'not yet implemented, no
+  Cloudflare account connected' — confirmed live and working since 2026-07-27"** — routed to
+  `phase-07`.
+- **"docs/seo/EDITORIAL_SOURCE_AND_CONTENT_POLICY.md cites the legal-information checklist at the
+  wrong path (docs/status/ instead of docs/release/)"** — routed to `phase-03`.
+
+These five items are recorded in `docs/governance/DOCUMENTATION_INVENTORY.md` with `NEW:` findings
+and were deliberately not fixed in the same Phase 1 pass that fixed the 15 Phase-0-tracked
+conflicts plus the higher-severity R2/crawler-count/failure-condition-triggering findings, to keep
+Phase 1's scope bounded and each fix independently verifiable.
+
 GitHub write access (milestones, labels, issues) was available this session via the `gh` CLI and
 GitHub MCP tools (confirmed working — used read-only for `gh run list`/`gh api` checks during this
 audit). Per the user's explicit instruction at the start of this Phase 0 run, no live milestones,

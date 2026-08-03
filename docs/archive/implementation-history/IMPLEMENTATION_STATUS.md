@@ -1,5 +1,19 @@
 # Implementation Status
 
+> **Historical document.** This file records an earlier CrawlPact implementation state and is
+> not authoritative for the current product. See `docs/status/CURRENT_STATE.md` for current
+> status.
+>
+> - **Original date range**: 2026-07-22 through 2026-07-28 (header date; later narrative entries
+>   within the file go past that)
+> - **Archive date**: 2026-08-03 (Phase 1)
+> - **Superseded by**: `docs/status/CURRENT_STATE.md` (current facts),
+>   `docs/risks/ACTIVE_RISKS.md`/`docs/risks/RISK_ARCHIVE.md` (risk content)
+> - **Reason archived**: restructured per Phase 1 (Repository Documentation and Source-of-Truth
+>   Correction) to separate current-state facts from historical implementation narrative — this
+>   file mixed both, per `docs/baseline/2026-08-03/DOCUMENTATION_CONFLICTS.md` DC-001/DC-005/DC-011.
+>   Preserved in full below as an accurate historical record; not edited for currentness.
+
 **Last updated:** 2026-07-28 · **Current as of commit:** `6320032` (`main`) ·
 **Current phase:** Part 3 complete; eight follow-on passes (not numbered SRS Parts) have since been
 completed — a UI/UX conversion audit and fix pass, a Cloudflare infrastructure-alignment pass, a

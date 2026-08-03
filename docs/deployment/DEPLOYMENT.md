@@ -81,7 +81,8 @@ once, at the build step, not at deploy time. See ADR-0007.
   requirement" for why.
 - **D1**: `crawlpact-db` (`dd295b75-7376-4f05-8c50-fb0a63cc3cee`) and `crawlpact-db-preview`
   (`e9c9f730-1f0d-4f4e-8775-db94126b12f0`) created; all 16 migrations applied to both (38 tables
-  each, matching `pnpm db:validate`).
+  each, matching `pnpm db:validate`, as of this 2026-07-26 deployment — more migrations have been
+  applied since; see `docs/status/CURRENT_STATE.md` for the current count, not repeated here).
 - **Secrets**: `SESSION_SIGNING_SECRET` set (distinct random value per environment).
   `PADDLE_API_KEY`/`PADDLE_WEBHOOK_SECRET` intentionally left unset — no real Paddle account exists
   yet; billing routes will error if invoked until these are set.

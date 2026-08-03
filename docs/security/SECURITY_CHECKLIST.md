@@ -39,9 +39,13 @@ integration test — see `apps/web/tests/integration/*.integration.test.ts`.
 
 ## What's still genuinely open (not launch-blocking for the customer product, but real gaps)
 
-- Paddle webhook/portal payload shapes are unverified against a live Paddle account (see
-  `docs/security/BILLING_SECURITY.md`) — the single most consequential open item; see
-  `docs/status/FINAL_PRODUCTION_READINESS_REPORT.md`.
+- ~~Paddle webhook/portal payload shapes are unverified against a live Paddle account~~
+  **Resolved 2026-07-28**: 8 real Paddle-Signature-signed webhook events were delivered to
+  production and correctly verified/parsed/dispatched (see `docs/security/BILLING_SECURITY.md`
+  and `docs/status/PADDLE_WEBHOOK_LIVE_DELIVERY_VERIFICATION.md`). What remains genuinely open: a
+  real **paid** checkout lifecycle (actual payment, plan grant) has still never been run —
+  deliberately, requires separate explicit authorization before any real charge. See
+  `docs/status/CURRENT_STATE.md` and `docs/risks/ACTIVE_RISKS.md`.
 - CSP still allows `'unsafe-inline'` for scripts/styles (no per-request nonce plumbing yet).
 - No cross-request _target_-frequency abuse monitoring (only per-caller rate limits).
 - `apps/web/wrangler.jsonc`'s preview `PUBLIC_SITE_URL`/`WEBAUTHN_RP_ID`/`WEBAUTHN_RP_ORIGIN`

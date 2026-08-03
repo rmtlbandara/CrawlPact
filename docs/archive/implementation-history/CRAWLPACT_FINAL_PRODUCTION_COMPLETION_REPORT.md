@@ -1,5 +1,16 @@
 # CrawlPact — Final Production Completion Report
 
+> **Historical document.** This file records an earlier CrawlPact implementation state and is
+> not authoritative for the current product. See `docs/status/CURRENT_STATE.md` for current
+> status.
+>
+> - **Original date**: 2026-07-28
+> - **Archive date**: 2026-08-03 (Phase 1)
+> - **Superseded by**: `docs/status/CURRENT_STATE.md`
+> - **Reason archived**: narrative report of three remediation passes, predates Google Analytics,
+>   R2 adoption, and the incident-tracking system. Preserved in full below as an accurate
+>   historical record; not edited for currentness.
+
 **Date:** 2026-07-28. Covers three consecutive remediation passes run back-to-back in the same
 session: an E2E-stability-focused pass, a full-scope pass triggered by two reported live-production
 failures, and a closing pass covering runtime-configuration seeding, super-admin bootstrap

@@ -57,7 +57,9 @@ domains/billing (FK). See each file's header comment for the specific dependency
   already fixed for 14 other columns in migrations 0013–0015. Not yet fixed; tracked in
   `docs/status/KNOWN_RISKS.md`.
 
-All application data lives in D1 — no R2/object storage is used
+Almost all application data lives in D1; R2 was adopted 2026-07-30 for agency-branding logo
+uploads only (`AGENCY_LOGOS` binding) — see `docs/data/D1_R2_DATA_PLACEMENT_POLICY.md` (corrects
+this document's prior "no R2/object storage is used" claim, Phase 1, 2026-08-03)
 (`docs/data/D1_R2_DATA_PLACEMENT_POLICY.md`, 2026-07-26).
 
 See `docs/data/DATA_RETENTION.md` for retention periods and `docs/data/MIGRATION_POLICY.md` for

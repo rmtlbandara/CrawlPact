@@ -2,16 +2,16 @@
 
 ## Content minimum (SRS §30.4) — status
 
-| Requirement                | Minimum |                                                                                          Current (Part 3) |
-| -------------------------- | ------: | --------------------------------------------------------------------------------------------------------: |
-| Crawler-reference pages    |      20 | 20 ✅ (21 registry entries; one deliberate exception — see `docs/registry/SOURCE_VERIFICATION_POLICY.md`) |
-| Decision/comparison guides |      10 |                                                                                                     10 ✅ |
-| Implementation guides      |       5 |                                                                                                      5 ✅ |
-| Troubleshooting guides     |       5 |                                                                                                      5 ✅ |
-| Free validator pages       |       4 |                                                               5 ✅ (all real, genuinely scoped — Step 14) |
-| Methodology page           |       1 |                                                                                                      1 ✅ |
-| Scoring page               |       1 |                                                                                                      1 ✅ |
-| Registry changelog         |       1 |                                                        1 ✅ (`/changelog`, live from `registry_versions`) |
+| Requirement                | Minimum |                                                                                                                                                                         Current (Part 3) |
+| -------------------------- | ------: | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------: |
+| Crawler-reference pages    |      20 | 22 ✅ (23 registry entries as of 2026-07-30 — corrected from a prior stale "21" count, Phase 1 2026-08-03; one deliberate exception — see `docs/registry/SOURCE_VERIFICATION_POLICY.md`) |
+| Decision/comparison guides |      10 |                                                                                                                                                                                    10 ✅ |
+| Implementation guides      |       5 |                                                                                                                                                                                     5 ✅ |
+| Troubleshooting guides     |       5 |                                                                                                                                                                                     5 ✅ |
+| Free validator pages       |       4 |                                                                                                                                              5 ✅ (all real, genuinely scoped — Step 14) |
+| Methodology page           |       1 |                                                                                                                                                                                     1 ✅ |
+| Scoring page               |       1 |                                                                                                                                                                                     1 ✅ |
+| Registry changelog         |       1 |                                                                                                                                       1 ✅ (`/changelog`, live from `registry_versions`) |
 
 Met as of Part 3 Steps 13–16. Every crawler and guide page cites a real, checkable source or
 technical fact — nothing here was generated to hit the count; see "Rules for adding content"

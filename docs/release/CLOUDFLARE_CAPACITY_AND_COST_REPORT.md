@@ -10,8 +10,10 @@ One Cloudflare Worker (`crawlpact-web`, `apps/web/wrangler.jsonc`), Astro's `@as
 adapter (SSR mode), Workers Static Assets for built static output, one D1 database per environment
 (production `crawlpact-db`, preview `crawlpact-db-preview`, structurally separate but both still
 holding placeholder IDs pending a real Cloudflare account), one daily Cron Trigger driving both the
-monitoring sweep and the data-retention purge. **No R2 usage** — see
-`docs/data/D1_R2_DATA_PLACEMENT_POLICY.md` for the evidence-based decision not to adopt it yet.
+monitoring sweep and the data-retention purge. **No R2 usage as of this 2026-07-26 report** — see
+`docs/data/D1_R2_DATA_PLACEMENT_POLICY.md` for the evidence-based decision not to adopt it at the
+time; R2 was subsequently adopted 2026-07-30 for agency-branding logo uploads only — see
+`docs/status/CURRENT_STATE.md` for the current state (note added Phase 1, 2026-08-03).
 Full detail: `docs/deployment/CLOUDFLARE_ARCHITECTURE_AUDIT.md` (Phase 1).
 
 ## Latest verified Cloudflare limits
