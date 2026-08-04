@@ -2,6 +2,55 @@
 export const prerender = false;
 import MarketingLayout from "../layouts/MarketingLayout.astro";
 import { PasskeyAuth } from "../components/auth/PasskeyAuth";
+import { createDb, schema } from "@crawlpact/database";
+import { eq } from "drizzle-orm";
+import { getEnv } from "../lib/env";
+import { getPageSession } from "../lib/auth/page-session";
+import { isSafeRelativeRedirect } from "../lib/auth/safe-redirect";
+
+const db = createDb(getEnv().DB);
+
+// Phase 5 (Anonymous Audit Result and Account-Conversion Flow): a "Save and monitor this
+// domain" click carries an opaque continuation ID here as a query parameter, not report
+// content — see docs/security/PHASE_05_AUDIT_CONVERSION_THREAT_REVIEW.md. This is a read-only
+// lookup for display copy only; the continuation is not consumed here, only at the handoff
+// route, which independently revalidates everything server-side regardless of what this page
+// shows.
+const continuationId = Astro.url.searchParams.get("continuation");
+let continuationDomain: string | null = null;
+let redirectTo = "/app";
+
+if (continuationId && continuationId.length > 0 && continuationId.length <= 128) {
+  const [continuation] = await db
+    .select()
+    .from(schema.auditContinuations)
+    .where(eq(schema.auditContinuations.id, continuationId))
+    .limit(1);
+  // Only trust it for display copy if it's still genuinely usable — an expired/consumed
+  // continuation shown here would be misleading; the handoff route shows the real expired
+  // state regardless of what copy appears on this page.
+  if (
+    continuation &&
+    !continuation.consumedAt &&
+    continuation.expiresAt > new Date().toISOString()
+  ) {
+    continuationDomain = continuation.canonicalOrigin;
+  }
+  const target = `/app/continue?continuation=${encodeURIComponent(continuationId)}`;
+  if (isSafeRelativeRedirect(target)) redirectTo = target;
+}
+
+// Already-authenticated users should never see the sign-in form again (SRS-adjacent Phase 5
+// requirement: "already authenticated users skip unnecessary authentication").
+const session = await getPageSession(db, Astro.request);
+if (session) {
+  return Astro.redirect(redirectTo);
+}
+
+const heading = continuationDomain
+  ? `Continue to save and monitor ${continuationDomain}`
+  : "Sign in";
+const initialMode = continuationDomain ? "signup" : "signin";
 ---
 
 <MarketingLayout
@@ -10,17 +59,26 @@ import { PasskeyAuth } from "../components/auth/PasskeyAuth";
   noindex={true}
 >
   <div class="mx-auto max-w-[480px] px-4 py-20 sm:px-6">
-    <h1 class="text-h1 text-neutral-950">Sign in</h1>
-    <p class="mt-4 text-body-lg text-neutral-700">
-      CrawlPact signs you in with a passkey — no password, no email, nothing to remember.
-    </p>
+    <h1 class="text-h1 text-neutral-950">{heading}</h1>
+    {
+      continuationDomain ? (
+        <p class="mt-4 text-body-lg text-neutral-700">
+          Your completed public audit remains available either way. Create an account or sign in to
+          save this domain and set up monitoring.
+        </p>
+      ) : (
+        <p class="mt-4 text-body-lg text-neutral-700">
+          CrawlPact signs you in with a passkey — no password, no email, nothing to remember.
+        </p>
+      )
+    }
     <p class="mt-3 text-body text-neutral-600">
       A passkey uses your device's built-in security — Face ID, Touch ID, Windows Hello, or a
       security key — instead of a password. Your browser will prompt you directly; CrawlPact never
       sees or stores the passkey itself. No passkey on this device? Use a recovery code instead.
     </p>
     <div class="mt-8">
-      <PasskeyAuth client:load />
+      <PasskeyAuth client:load redirectTo={redirectTo} initialMode={initialMode} />
     </div>
   </div>
 </MarketingLayout>

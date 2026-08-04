@@ -172,6 +172,20 @@ export const findings = sqliteTable("findings", {
   createdAt: text("created_at").notNull(),
 });
 
+// Phase 5 (Anonymous Audit Result and Account-Conversion Flow). See migration 0020 and
+// docs/security/PHASE_05_AUDIT_CONVERSION_THREAT_REVIEW.md for the full rationale.
+export const auditContinuations = sqliteTable("audit_continuations", {
+  id: text("id").primaryKey(),
+  scanId: text("scan_id")
+    .notNull()
+    .references(() => scans.id),
+  canonicalOrigin: text("canonical_origin").notNull(),
+  intendedAction: text("intended_action").notNull().$type<"save_and_monitor" | "save_only">(),
+  createdAt: text("created_at").notNull(),
+  expiresAt: text("expires_at").notNull(),
+  consumedAt: text("consumed_at"),
+});
+
 export const scanDiffs = sqliteTable("scan_diffs", {
   id: text("id").primaryKey(),
   domainId: text("domain_id")

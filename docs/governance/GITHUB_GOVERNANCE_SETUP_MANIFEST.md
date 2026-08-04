@@ -2,6 +2,23 @@
 
 **Status: verification-blocked (by user decision, not access failure).**
 
+## Phase 5 update (2026-08-04)
+
+Phase 4 (PR #72/#73) merged to `main`. Phase 5 (Anonymous Audit Result and Account-Conversion
+Flow) is complete — see
+`docs/reports/PHASE_05_ANONYMOUS_AUDIT_CONVERSION_COMPLETION_REPORT.md`. Same manifest-only
+decision carried forward. This closes the two Phase-4-routed follow-up issues below
+("Contextual anonymous-report conversion CTA" and "audit-to-account continuity" — both delivered).
+When this manifest is applied, additionally create these follow-up issues Phase 5 found but
+deliberately did not fix in place:
+
+- **"Reconcile SRS §2.3 Primary Tagline with the Phase 2 canonical brand system"** — carried
+  forward unclaimed from Phases 2, 3, and 4 (Phase 5's execution prompt scoped it to the
+  conversion flow specifically, not this backlog item), routed to `phase-06`. See
+  `docs/risks/ACTIVE_RISKS.md` RISK-028.
+- **"Add `description` fields to the 10 `package.json` files that currently lack one"** — same
+  carry-forward, routed to `phase-06`.
+
 ## Phase 4 update (2026-08-04)
 
 Phase 3 (PR #71) merged to `main`. Phase 4 (Homepage Information Architecture and Conversion

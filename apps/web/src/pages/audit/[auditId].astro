@@ -11,6 +11,7 @@ import { loadReportViewData } from "../../lib/report-view-data";
 import { trackEvent } from "../../lib/analytics";
 import { getPageSession } from "../../lib/auth/page-session";
 import { getPlan } from "../../lib/plan";
+import { findOwnedDomainByOrigin } from "../../lib/domains";
 
 const { auditId } = Astro.params;
 
@@ -34,6 +35,22 @@ const session = report ? await getPageSession(db, Astro.request) : null;
 const agencyBrandingAllowed = session
   ? (await getPlan(db, session.user.planId)).agencyBrandingEnabled
   : false;
+
+// Phase 5: the "Save and monitor this domain" CTA only makes sense for a report that actually
+// completed — a blocked/unavailable/failed scan has nothing eligible to save (the continuation
+// endpoint would reject it anyway; this just avoids showing a CTA doomed to fail).
+const reportIsSaveable =
+  report && (report.status === "completed" || report.status === "completed_with_warnings");
+const ownedDomain =
+  reportIsSaveable && session
+    ? await findOwnedDomainByOrigin(db, session.user.id, report.domain)
+    : null;
+const conversionCta = reportIsSaveable
+  ? {
+      isAuthenticated: session !== null,
+      ownedDomain: ownedDomain ? { domainId: ownedDomain.id } : null,
+    }
+  : undefined;
 ---
 
 <MarketingLayout
@@ -62,6 +79,7 @@ const agencyBrandingAllowed = session
             proposedRobotsText={proposedRobotsText}
             diffLines={diffLines}
             focus={focus}
+            conversionCta={conversionCta}
           />
         </div>
       ) : (

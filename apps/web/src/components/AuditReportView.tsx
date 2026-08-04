@@ -7,6 +7,9 @@ import type {
 } from "@crawlpact/core";
 import { Alert, DiffViewer, ProvenanceHeader, ScoreComponent, StatusChip } from "@crawlpact/ui";
 import type { StatusTone } from "@crawlpact/ui";
+import { computePolicySummary, deriveConversionCtaCopy } from "../lib/policy-summary";
+import type { PolicySummaryLabel } from "../lib/policy-summary";
+import { AuditConversionCta } from "./AuditConversionCta";
 
 const STATUS_TONE: Record<AuditStatus, StatusTone> = {
   queued: "info",
@@ -52,6 +55,21 @@ const RESULT_LABEL: Record<string, string> = {
   unknown: "Unknown",
   resource_unavailable: "Resource unavailable",
   not_evaluated: "Not evaluated",
+};
+
+const SUMMARY_TONE: Record<PolicySummaryLabel, StatusTone> = {
+  "No explicit issue detected": "success",
+  "Attention recommended": "warning",
+  "At risk": "error",
+  "Explicitly allowed": "info",
+  "Explicitly restricted": "info",
+  Mixed: "warning",
+  Unspecified: "warning",
+  "Unable to determine": "unknown",
+  "No conflict detected": "success",
+  "Conflict detected": "error",
+  "Incomplete evidence": "warning",
+  "Not enabled": "unknown",
 };
 
 const SEVERITY_TONE: Record<string, StatusTone> = {
@@ -127,18 +145,24 @@ export function AuditReportView({
   diffLines,
   agencyBranding,
   focus,
+  conversionCta,
 }: {
   report: AuditReportResponse;
   proposedRobotsText: string | null;
   diffLines: Array<{ type: "added" | "removed" | "unchanged"; text: string }> | null;
   agencyBranding?: AgencyBranding | null;
   focus?: ReportFocus;
+  /** Phase 5: only the direct `/audit/[auditId]` report page passes this — never the shared-link
+   * or sample-report pages, where "save this domain" either doesn't apply or isn't real. Omitting
+   * it (the default) renders no CTA at all, matching every existing caller unchanged. */
+  conversionCta?: { isAuthenticated: boolean; ownedDomain: { domainId: string } | null };
 }) {
   const [copied, setCopied] = useState(false);
+  const policySummary = computePolicySummary(report);
 
   const sections: Record<string, React.ReactNode> = {
     crawlers: (
-      <section key="crawlers">
+      <section key="crawlers" id="crawlers">
         <h2 className="text-h3 text-neutral-950">Crawler access matrix</h2>
         {/* A scrollable region must itself be keyboard-focusable (WCAG 2.1.1;
             axe-core's "scrollable-region-focusable" rule) even though `role="region"`
@@ -439,6 +463,51 @@ export function AuditReportView({
           />
         </div>
       </section>
+
+      <section aria-labelledby="policy-impact-summary-heading">
+        <h2 id="policy-impact-summary-heading" className="text-h3 text-neutral-950">
+          Policy impact summary
+        </h2>
+        <p className="mt-2 text-supporting text-neutral-500">
+          Derived from the crawler results and findings below — describes the published policy
+          signals, not actual crawler behaviour.{" "}
+          <a href="#crawlers" className="text-brand-700 underline underline-offset-2">
+            See detailed evidence
+          </a>
+          .
+        </p>
+        <dl className="mt-4 grid gap-3 sm:grid-cols-2">
+          {(
+            [
+              ["AI-search discoverability", policySummary.aiSearchDiscoverability],
+              ["Training-policy declaration", policySummary.trainingPolicyDeclaration],
+              ["User-triggered retrieval", policySummary.userTriggeredRetrieval],
+              ["Agent access", policySummary.agentAccess],
+              ["Cross-signal consistency", policySummary.crossSignalConsistency],
+              ["Monitoring", policySummary.monitoring],
+            ] as const
+          ).map(([label, value]) => (
+            <div
+              key={label}
+              className="flex items-center justify-between gap-3 rounded-card border border-neutral-200 p-3"
+            >
+              <dt className="text-body text-neutral-700">{label}</dt>
+              <dd>
+                <StatusChip tone={SUMMARY_TONE[value]} label={value} />
+              </dd>
+            </div>
+          ))}
+        </dl>
+      </section>
+
+      {conversionCta && (
+        <AuditConversionCta
+          auditId={report.auditId}
+          isAuthenticated={conversionCta.isAuthenticated}
+          ownedDomain={conversionCta.ownedDomain}
+          copy={deriveConversionCtaCopy(report, policySummary)}
+        />
+      )}
 
       {order.map((key) => sections[key])}
 

@@ -14,7 +14,30 @@ the "Production deployment" entries below for the established pattern).
 
 ## Unreleased
 
-Nothing pending — see "Production deployment (2026-08-04)" below for the most recent release.
+### Added
+
+- Phase 5 (Anonymous Audit Result and Account-Conversion Flow): a contextual "Save and monitor
+  this domain" / "Save without monitoring" CTA on the anonymous audit report, driven by a new
+  six-dimension policy-impact summary (`packages/core`'s report contract unchanged; the summary is
+  a pure derivation, not a second evaluation engine); a DB-backed, single-use, 60-minute
+  continuation record (migration `0020_audit_continuations.sql`) that carries the visitor's intent
+  through sign-up/sign-in without ever including report content; a new authenticated handoff route
+  (`/app/continue`) that adopts the original anonymous scan as the domain's starting result when
+  eligible, or reruns it under the new account otherwise, and leaves monitoring paused until an
+  explicit, separate "Enable monitoring" step. See
+  `docs/product/AUDIT_CONVERSION_FLOW.md`, `docs/product/AUDIT_CONVERSION_STATE_MODEL.md`, and
+  `docs/security/PHASE_05_AUDIT_CONVERSION_THREAT_REVIEW.md`.
+- `isSafeRelativeRedirect()` (`apps/web/src/lib/auth/safe-redirect.ts`) — the first
+  client-influenced post-authentication redirect this codebase has ever accepted; rejects absolute
+  URLs, protocol-relative URLs, and backslash-normalisation tricks.
+
+### Fixed
+
+- `establishBaseline()` previously had a `"scan_missing"` failure reason in its type that could
+  never actually be returned (the function fell through to a pointless rerun instead); it now
+  returns that reason explicitly when the referenced scan doesn't exist.
+
+Not yet deployed — see "Production deployment" entries below for the most recently released work.
 
 ## Production deployment (2026-08-04)
 

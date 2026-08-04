@@ -2,8 +2,16 @@ import { expect, test } from "@playwright/test";
 import AxeBuilder from "@axe-core/playwright";
 import { addVirtualAuthenticator } from "../e2e/helpers/webauthn";
 import { registerNewAccount, signInWithPasskey } from "../e2e/helpers/auth";
-import { grantSuperAdminToCurrentUser } from "../e2e/helpers/admin-db";
+import {
+  clearAnonymousAuditRateLimit,
+  grantSuperAdminToCurrentUser,
+} from "../e2e/helpers/admin-db";
 import { retryUntilSettled } from "../e2e/helpers/hydration";
+import { ensureRealPage } from "../e2e/helpers/navigation";
+
+// Same CrawlPact-controlled fixture site tests/e2e/auth-and-account.spec.ts and
+// tests/e2e/audit-conversion.spec.ts use for their real-scan tests.
+const SCAN_FIXTURE_DOMAIN = "e2e-fixture.crawlpact.com";
 
 /**
  * Accessibility smoke tests (SRS §35.5, Step 14; expanded Part 3 Step 17).
@@ -51,6 +59,27 @@ for (const route of ROUTES) {
   });
 }
 
+test("a real anonymous audit report, including the Phase 5 conversion CTA, has no automatically detectable WCAG 2.2 AA violations", async ({
+  page,
+}) => {
+  test.setTimeout(60_000);
+  await clearAnonymousAuditRateLimit(page);
+  await page.goto("/");
+  const auditButton = page.getByRole("button", { name: "Audit a domain" }).first();
+  await retryUntilSettled(async () => {
+    await page.getByLabel("Domain or URL to audit").first().fill(SCAN_FIXTURE_DOMAIN);
+    await auditButton.click();
+    await expect(auditButton).toBeDisabled({ timeout: 1_000 });
+  });
+  await page.waitForURL("**/audit/*", { timeout: 45_000 });
+  await ensureRealPage(page);
+  await expect(page.getByRole("button", { name: "Save and monitor this domain" })).toBeVisible();
+  const results = await new AxeBuilder({ page })
+    .withTags(["wcag2a", "wcag2aa", "wcag22aa"])
+    .analyze();
+  expect(results.violations, JSON.stringify(results.violations, null, 2)).toEqual([]);
+});
+
 /**
  * The routes above cover the public site only — the customer dashboard and
  * Super Admin surface (the bulk of the platform's actual UI) previously had
@@ -70,6 +99,23 @@ test.describe("authenticated routes", () => {
     const displayName = `A11y Customer ${Date.now()}-${crypto.randomUUID().slice(0, 8)}`;
     await registerNewAccount(page, displayName);
     await page.goto("/app");
+    const results = await new AxeBuilder({ page })
+      .withTags(["wcag2a", "wcag2aa", "wcag22aa"])
+      .analyze();
+    expect(results.violations, JSON.stringify(results.violations, null, 2)).toEqual([]);
+  });
+
+  test("the invalid/expired continuation error state on /app/continue has no automatically detectable WCAG 2.2 AA violations", async ({
+    page,
+  }) => {
+    // Phase 5: an authenticated visitor reaching /app/continue with no (or a stale) continuation
+    // sees this real error state — the "ready to confirm" state needs a live continuation record
+    // seeded from a real scan, which is exercised end to end by
+    // tests/e2e/audit-conversion.spec.ts instead; this covers the always-reachable error state.
+    await addVirtualAuthenticator(page);
+    const displayName = `A11y Continue ${Date.now()}-${crypto.randomUUID().slice(0, 8)}`;
+    await registerNewAccount(page, displayName);
+    await page.goto("/app/continue");
     const results = await new AxeBuilder({ page })
       .withTags(["wcag2a", "wcag2aa", "wcag22aa"])
       .analyze();
