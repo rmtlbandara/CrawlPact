@@ -38,10 +38,24 @@ test.describe("Checkout continuity (pricing -> sign-up -> billing)", () => {
     ).toBeVisible();
 
     // sign-in.astro's initialMode is already "signup" when a plan is present — the signup form
-    // renders directly, no toggle click needed.
+    // renders directly, no toggle click needed. Unlike the standard registerNewAccount helper
+    // (helpers/auth.ts), there's no prior interaction here (e.g. a mode-toggle click) to already
+    // prove the PasskeyAuth island has hydrated, so retry the fill itself against the concrete
+    // effect of the submit button becoming enabled — a `client:load` island's handlers attach
+    // asynchronously, and a `.fill()` landing before that happens sets the DOM value without
+    // React's controlled-input state ever seeing the change, leaving the button permanently
+    // disabled.
     const displayName = `E2E Checkout Continuity ${Date.now()}`;
-    await page.getByLabel("Display name").fill(displayName);
-    await page.getByRole("button", { name: "Create account with a passkey" }).click();
+    const displayNameInput = page.getByLabel("Display name");
+    const submitButton = page.getByRole("button", { name: "Create account with a passkey" });
+    await retryUntilSettled(async () => {
+      await displayNameInput.fill(displayName);
+      await expect(submitButton).toBeEnabled({ timeout: 1_000 });
+    });
+    await Promise.all([
+      page.waitForResponse((res) => res.url().includes("/api/auth/register/finish")),
+      submitButton.click(),
+    ]);
     await page.getByText("Save your recovery codes now").waitFor();
     await page.getByLabel("I have saved these recovery codes somewhere safe.").check();
 
