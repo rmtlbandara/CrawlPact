@@ -1,0 +1,65 @@
+---
+export const prerender = false;
+import AppLayout from "../../layouts/AppLayout.astro";
+import { ErrorState } from "@crawlpact/ui";
+import { AuditConversionHandoff } from "../../components/app/AuditConversionHandoff";
+import { createDb, schema } from "@crawlpact/database";
+import { eq } from "drizzle-orm";
+import { getEnv } from "../../lib/env";
+import { getPageSession } from "../../lib/auth/page-session";
+import { trackEvent } from "../../lib/analytics";
+
+const db = createDb(getEnv().DB);
+const continuationId = Astro.url.searchParams.get("continuation");
+
+const session = await getPageSession(db, Astro.request);
+if (!session) {
+  return Astro.redirect(
+    continuationId ? `/sign-in?continuation=${encodeURIComponent(continuationId)}` : "/sign-in",
+  );
+}
+
+// Read-only peek for display purposes only — matches sign-in.astro's own read-only lookup.
+// Consumption happens exactly once, server-side, only when the visitor clicks "Confirm and save"
+// on the client component below (POST /api/audit/continuation/:id) — never here on page load. See
+// docs/security/PHASE_05_AUDIT_CONVERSION_THREAT_REVIEW.md.
+let continuation: {
+  canonicalOrigin: string;
+  intendedAction: "save_and_monitor" | "save_only";
+} | null = null;
+
+if (continuationId && continuationId.length > 0 && continuationId.length <= 128) {
+  const [row] = await db
+    .select()
+    .from(schema.auditContinuations)
+    .where(eq(schema.auditContinuations.id, continuationId))
+    .limit(1);
+  const now = new Date().toISOString();
+  if (row && !row.consumedAt && row.expiresAt > now) {
+    continuation = { canonicalOrigin: row.canonicalOrigin, intendedAction: row.intendedAction };
+  } else if (row && !row.consumedAt && row.expiresAt <= now) {
+    // Distinguishes "the visitor came back too late" from "not found"/"already consumed" for
+    // funnel analysis — see docs/analytics/PHASE_05_AUDIT_CONVERSION_EVENT_MODEL.md.
+    await trackEvent(db, "audit_continuation_expired");
+  }
+}
+---
+
+<AppLayout title="Save this domain" displayName={session.user.displayName}>
+  {
+    continuation && continuationId ? (
+      <AuditConversionHandoff
+        client:load
+        continuationId={continuationId}
+        canonicalOrigin={continuation.canonicalOrigin}
+        intendedAction={continuation.intendedAction}
+      />
+    ) : (
+      <ErrorState
+        client:load
+        title="This save link is not available"
+        description="This link may have expired or already been used. Run a new audit and use its 'Save and monitor this domain' button to get a fresh one."
+      />
+    )
+  }
+</AppLayout>

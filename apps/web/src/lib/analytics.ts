@@ -34,6 +34,23 @@ export const PRODUCT_EVENT_NAMES = [
   "homepage_agency_cta_clicked",
   "homepage_methodology_clicked",
   "homepage_crawler_directory_clicked",
+  // Anonymous audit → account-conversion funnel (Phase 5, Anonymous Audit
+  // Result and Account-Conversion Flow). No domain, email, continuation
+  // token, or scan ID is ever sent as a property — see
+  // docs/analytics/PHASE_05_AUDIT_CONVERSION_EVENT_MODEL.md.
+  "anonymous_conversion_cta_viewed",
+  "anonymous_conversion_cta_clicked",
+  "audit_continuation_expired",
+  "audit_domain_save_started",
+  "audit_baseline_adopted",
+  "audit_baseline_rerun_started",
+  "audit_baseline_rerun_completed",
+  "monitoring_setup_viewed",
+  "monitoring_enabled",
+  "monitoring_skipped",
+  "audit_conversion_plan_limit_reached",
+  "audit_conversion_completed",
+  "audit_conversion_failed",
 ] as const;
 
 export type ProductEventName = (typeof PRODUCT_EVENT_NAMES)[number];

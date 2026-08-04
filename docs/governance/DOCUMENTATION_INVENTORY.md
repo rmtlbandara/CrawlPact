@@ -181,3 +181,16 @@ One new file: `docs/reports/PUBLIC_COUNTRY_AND_CONTACT_MESSAGING_CORRECTION_REPO
 removed, historical record preserved, not archived) rather than superseded — this is a focused
 correction to already-current documents, not a new phase. Total documentation-file count is now
 ~118 (117 post-Phase-4 + 1 new).
+
+## Phase 5 update (2026-08-04)
+
+Eight new files, all `retain-current`/`current-authoritative` at creation:
+`docs/product/{PHASE_05_EXISTING_CONVERSION_FLOW_BASELINE,ANONYMOUS_REPORT_POLICY_SUMMARY_MAPPING,
+ANONYMOUS_TO_AUTHENTICATED_BASELINE_POLICY,AUDIT_CONVERSION_FLOW,AUDIT_CONVERSION_STATE_MODEL}.md`,
+`docs/security/PHASE_05_AUDIT_CONVERSION_THREAT_REVIEW.md`,
+`docs/analytics/PHASE_05_AUDIT_CONVERSION_EVENT_MODEL.md` (first file under a new `docs/analytics/`
+directory), and `docs/reports/PHASE_05_ANONYMOUS_AUDIT_CONVERSION_COMPLETION_REPORT.md` (`evidence`).
+`PHASE_05_EXISTING_CONVERSION_FLOW_BASELINE.md` is the required-baseline snapshot taken before any
+Phase 5 code changed, matching the convention already used for `PHASE_04_HOMEPAGE_BASELINE.md`. See
+the completion report for the full change list. Total documentation-file count is now ~126
+(118 post-Phase-4-correction + 8 new).

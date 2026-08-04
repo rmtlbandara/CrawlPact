@@ -26,7 +26,7 @@ not itself implement anything.
 | 2   | Brand Positioning and Messaging System                     | P1       | Phase 1      | **complete** (see `docs/reports/PHASE_02_BRAND_POSITIONING_MESSAGING_COMPLETION_REPORT.md`)   |
 | 3   | Legal Identity, Contact, Security and Trust Foundation     | P1       | Phase 1      | **complete** (see `docs/reports/PHASE_03_LEGAL_SECURITY_TRUST_COMPLETION_REPORT.md`)          |
 | 4   | Homepage Information Architecture and Conversion Redesign  | P1       | Phases 1–3   | **complete** (see `docs/reports/PHASE_04_HOMEPAGE_CONVERSION_REDESIGN_COMPLETION_REPORT.md`)  |
-| 5   | Anonymous Audit Result and Account-Conversion Flow         | P1       | Phase 4      | not started                                                                                   |
+| 5   | Anonymous Audit Result and Account-Conversion Flow         | P1       | Phase 4      | **complete** (see `docs/reports/PHASE_05_ANONYMOUS_AUDIT_CONVERSION_COMPLETION_REPORT.md`)    |
 | 6   | Pricing, Plan Architecture and Checkout Continuity         | P1       | Phase 4      | not started                                                                                   |
 | 7   | Vertical Landing Pages and Platform SEO Architecture       | P2       | Phases 2–4   | not started                                                                                   |
 | 8   | Saved-Domain Experience and Change Timeline                | P1       | Phase 5      | not started                                                                                   |
@@ -140,13 +140,20 @@ PRODUCT_TERMINOLOGY_GLOSSARY,CLAIMS_AND_MESSAGING_GUIDE,MESSAGING_SURFACE_INVENT
 
 ### Phase 5 — Anonymous Audit Result and Account-Conversion Flow
 
-- **Objective**: Improve the anonymous-audit → account-creation conversion path. Also inherits two
-  unclaimed backlog items neither Phase 2, 3, nor 4 addressed: reconciling SRS §2.3's Primary
-  Tagline with the Phase 2 brand system (via ADR or SRS update — see
-  `docs/brand/MESSAGING_SURFACE_INVENTORY.md` row E1 and RISK-028), and adding `"description"`
-  fields to the 10 `package.json` files that currently lack one.
+- **Objective**: Improve the anonymous-audit → account-creation conversion path.
 - **Dependencies**: Phase 4.
-- **Status**: not started.
+- **Status**: **complete** — see
+  `docs/reports/PHASE_05_ANONYMOUS_AUDIT_CONVERSION_COMPLETION_REPORT.md`. Adds a contextual
+  conversion CTA to the anonymous report (`docs/product/ANONYMOUS_REPORT_POLICY_SUMMARY_MAPPING.md`),
+  a DB-backed, single-use, 60-minute continuation record (migration `0020_audit_continuations.sql`)
+  carrying intent through sign-up/sign-in, and an authenticated handoff
+  (`docs/product/AUDIT_CONVERSION_FLOW.md`) that adopts or reruns the original scan
+  (`docs/product/ANONYMOUS_TO_AUTHENTICATED_BASELINE_POLICY.md`) and leaves monitoring paused until
+  an explicit later opt-in. **This phase's execution prompt scoped it specifically to the
+  conversion flow — it did not include the two backlog items the Phase 4 entry above provisionally
+  assigned to Phase 5 (SRS §2.3 tagline reconciliation / RISK-028, and the 10 missing
+  `package.json` `"description"` fields). Both remain open and are carried forward to Phase 6**,
+  rather than assumed done or silently dropped.
 
 ### Phase 6 — Pricing, Plan Architecture and Checkout Continuity
 
@@ -154,7 +161,10 @@ PRODUCT_TERMINOLOGY_GLOSSARY,CLAIMS_AND_MESSAGING_GUIDE,MESSAGING_SURFACE_INVENT
   notably `pricing.astro`'s hard-coded plan array (SRS §8 violation), the dead
   `packages/core/src/api/contracts/billing.ts` module, and the downgrade-labelling UI defect
   ("Upgrade to X" shown for genuine downgrades). Run the first real paid checkout lifecycle under
-  separate, explicit authorization.
+  separate, explicit authorization. Also inherits two unclaimed backlog items neither Phase 2, 3,
+  4, nor 5 addressed: reconciling SRS §2.3's Primary Tagline with the Phase 2 brand system (via ADR
+  or SRS update — see `docs/brand/MESSAGING_SURFACE_INVENTORY.md` row E1 and RISK-028), and adding
+  `"description"` fields to the 10 `package.json` files that currently lack one.
 - **Dependencies**: Phase 4.
 - **Completion gate**: pricing page reads from the `plans` table (or an equally single-sourced
   mechanism); downgrade UI is accurate; a real paid checkout has been run and verified at least

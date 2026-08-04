@@ -214,3 +214,43 @@ export const auditReportResponseSchema = z.object({
   robotsMeta: robotsMetaSignalSchema,
 });
 export type AuditReportResponse = z.infer<typeof auditReportResponseSchema>;
+
+/**
+ * POST /api/audit/:auditId/continuation — Phase 5 (Anonymous Audit Result and
+ * Account-Conversion Flow). Created when a viewer clicks a "Save and monitor"
+ * / "Save without monitoring" CTA on an anonymous report, before they've
+ * signed in. Carries only an opaque id and the account's stated intent — no
+ * report content — see docs/security/PHASE_05_AUDIT_CONVERSION_THREAT_REVIEW.md.
+ */
+export const auditContinuationIntentSchema = z.enum(["save_and_monitor", "save_only"]);
+export type AuditContinuationIntent = z.infer<typeof auditContinuationIntentSchema>;
+
+export const createAuditContinuationRequestSchema = z.object({
+  intendedAction: auditContinuationIntentSchema,
+});
+export type CreateAuditContinuationRequest = z.infer<typeof createAuditContinuationRequestSchema>;
+
+export const createAuditContinuationResponseSchema = z.object({
+  continuationId: z.string(),
+  expiresAt: z.string().datetime(),
+});
+export type CreateAuditContinuationResponse = z.infer<typeof createAuditContinuationResponseSchema>;
+
+/**
+ * POST /api/audit/continuation/:continuationId — the authenticated handoff step. Consumes the
+ * continuation exactly once and either adopts the anonymous scan or reruns it under the new
+ * owner, then saves the domain (with monitoring left paused — enabling it is always a separate,
+ * explicit PATCH /api/domains/:domainId step, never implied here).
+ */
+export const completeAuditContinuationResponseSchema = z.object({
+  domainId: z.string(),
+  canonicalOrigin: z.string(),
+  baselineEstablished: z.boolean(),
+  baselineStrategy: z.enum(["adopted", "rerun"]).nullable(),
+  scoreValue: z.number().min(0).max(100).nullable(),
+  monitoringEligible: z.boolean(),
+  warning: z.string().nullable(),
+});
+export type CompleteAuditContinuationResponse = z.infer<
+  typeof completeAuditContinuationResponseSchema
+>;

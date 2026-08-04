@@ -84,6 +84,17 @@ export async function countActiveDomains(db: Database, userId: string): Promise<
   return row?.value ?? 0;
 }
 
+/** Exposed (not just used internally by createDomain) so callers like the Phase 5 anonymous
+ * report page can decide whether the signed-in viewer already owns the audited domain, to show
+ * "Manage this domain" instead of a save/convert CTA. */
+export async function findOwnedDomainByOrigin(
+  db: Database,
+  userId: string,
+  canonicalOrigin: string,
+): Promise<DomainRow | null> {
+  return findExistingByOrigin(db, userId, canonicalOrigin);
+}
+
 async function findExistingByOrigin(
   db: Database,
   userId: string,

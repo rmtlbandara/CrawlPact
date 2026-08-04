@@ -17,8 +17,17 @@ type Screen =
  * through /api/auth/{register,login}/{begin,finish}. Recovery-code
  * redemption is the only other path in, for when no passkey is available.
  */
-export function PasskeyAuth({ redirectTo = "/app" }: { redirectTo?: string }) {
-  const [mode, setMode] = useState<Mode>("signin");
+export function PasskeyAuth({
+  redirectTo = "/app",
+  initialMode = "signin",
+}: {
+  redirectTo?: string;
+  /** Phase 5: defaults the visible tab to "signup" when arriving from a
+   * "Save and monitor" CTA (the common case — most clickers are new users),
+   * without changing default behaviour for every other existing caller. */
+  initialMode?: Mode;
+}) {
+  const [mode, setMode] = useState<Mode>(initialMode);
   const [displayName, setDisplayName] = useState("");
   const [recoveryCode, setRecoveryCode] = useState("");
   const [confirmedSaved, setConfirmedSaved] = useState(false);

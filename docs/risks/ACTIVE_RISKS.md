@@ -356,6 +356,31 @@ items with the 13 new risks Phase 0's baseline audit found
   explicit product-owner decision recorded in `docs/trust/TRUST_AND_LEGAL_CONFIGURATION.md`,
   ideally after professional legal review of the resulting Terms of Service clause.
 
+### RISK-030 — A save-flow continuation is consumed even when the save itself fails (plan limit reached)
+
+- **Category**: Product/UX · **Severity**: P3 · **Probability**: Low
+- **Impact**: `POST /api/audit/continuation/:continuationId` (Phase 5 conversion flow) consumes the
+  continuation atomically before checking the account's saved-domain plan limit, because the
+  atomic-consume step exists specifically to prevent a double-save race and making it reversible on
+  a later, unrelated failure would reopen that exact race window. A visitor who hits their plan's
+  domain limit at this exact step loses that specific continuation and must re-trigger the save
+  from the still-visible report page (a fresh continuation is created in one click) rather than
+  retry the same link. This is a deliberate, documented trade-off, not an oversight — see
+  `docs/product/AUDIT_CONVERSION_STATE_MODEL.md` §1's "no path back from consumed to active" note.
+- **Evidence**: `apps/web/src/pages/api/audit/continuation/[continuationId].ts`,
+  `apps/web/tests/integration/audit-conversion.integration.test.ts` ("returns DOMAIN_LIMIT_REACHED..."),
+  `docs/security/PHASE_05_AUDIT_CONVERSION_THREAT_REVIEW.md`
+- **Current mitigation**: The error response is specific (`DOMAIN_LIMIT_REACHED`, not a generic
+  failure) and the retry path (re-click the CTA on the report page) is one click, not a dead end.
+- **Owner**: Product · **Trigger**: User complaints about needing to re-click "Save" after managing
+  their domain limit
+- **Review date**: Next release readiness review · **Target phase**: Unscheduled — revisit only if
+  real usage shows this is a meaningful friction point, not preemptively
+- **Status**: accepted
+- **Acceptance criteria for closure**: Either accepted permanently as documented UX, or a
+  reversible-consumption design is adopted that provably preserves the single-save-per-continuation
+  guarantee under concurrent requests.
+
 ---
 
 ## How to update this document
