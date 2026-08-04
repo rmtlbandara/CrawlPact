@@ -14,25 +14,7 @@ the "Production deployment" entries below for the established pattern).
 
 ## Unreleased
 
-### Changed
-
-- Public Country Reference and Contact Messaging Correction: removed every public reference to
-  CrawlPact's operating country/jurisdiction (previously "Sri Lanka", approved Phase 3) from
-  `/about`, `/contact`, `/privacy`, and `/terms` — not replaced with another location, city,
-  region, or "international"/"global" wording, per explicit product-owner instruction.
-  `apps/web/src/lib/trust-config.ts` no longer exports a `governingJurisdiction` field.
-  `/terms` §21 "Governing law" was removed entirely (sections renumbered §1–§22); tracked as
-  **RISK-029** (`docs/risks/ACTIVE_RISKS.md`) pending professional legal review before a
-  jurisdiction can be republished.
-- Rewrote `/contact`'s introduction: removed "There is no live chat, phone support, or guaranteed
-  response time" and replaced it with a positive commitment ("we respond to enquiries within 24
-  hours"), plus a clarifying note that this is the initial-response time, not a resolution
-  guarantee. Approved contact addresses and categories are unchanged. Added a "Related" links
-  section (privacy/terms/security/status/methodology).
-- Extended `pnpm trust:validate` with prohibited-pattern checks (country/jurisdiction references,
-  negative support wording) and a required positive check (the contact page's 24-hour response
-  commitment), so the removed wording cannot silently return. See
-  `docs/reports/PUBLIC_COUNTRY_AND_CONTACT_MESSAGING_CORRECTION_REPORT.md`.
+Nothing pending — see "Production deployment (2026-08-04)" below for the most recent release.
 
 ## Production deployment (2026-08-04)
 
@@ -59,6 +41,28 @@ new `subscriptions.last_applied_occurred_at` column (migration `0019`). Deployed
 applied cleanly to live D1, Worker deployed, bindings verified. In-workflow smoke test passed
 32/32; independently re-verified afterward against the live site: **32/32 checks passed**.
 Deployed Worker version ID: `892561e5-2f27-4223-9fa2-e7f2db21ae03`.
+
+**Third deployment the same day**: Public Country Reference and Contact Messaging Correction, at
+explicit product-owner instruction. Removed every public reference to CrawlPact's operating
+country/jurisdiction (previously "Sri Lanka", approved Phase 3) from `/about`, `/contact`,
+`/privacy`, and `/terms` — not replaced with another location, city, region, or
+"international"/"global" wording. `apps/web/src/lib/trust-config.ts` no longer exports a
+`governingJurisdiction` field. `/terms` §21 "Governing law" was removed entirely (sections
+renumbered §1–§22); tracked as **RISK-029** (`docs/risks/ACTIVE_RISKS.md`) pending professional
+legal review before a jurisdiction can be republished. Rewrote `/contact`'s introduction: removed
+"There is no live chat, phone support, or guaranteed response time" and replaced it with a
+positive commitment ("we respond to enquiries within 24 hours"), plus a clarifying note that this
+is the initial-response time, not a resolution guarantee. Approved contact addresses and
+categories are unchanged. Extended `pnpm trust:validate` with prohibited-pattern checks
+(country/jurisdiction references, negative support wording) and a required positive check (the
+contact page's 24-hour response commitment), so the removed wording cannot silently return — see
+`docs/reports/PUBLIC_COUNTRY_AND_CONTACT_MESSAGING_CORRECTION_REPORT.md`. Deployed in PR #76
+(squash-merged as `6d2f91d`) via `deploy-production.yml` against
+`6d2f91d1b7598b8b8aeea825a433ed742645de48` — no D1 migrations pending, Worker-only release.
+In-workflow smoke test passed 32/32; independently re-verified afterward against the live site:
+**32/32 checks passed**, including live confirmation that no page contains "Sri Lanka" and
+`/contact` shows the 24-hour response commitment. Deployed Worker version ID:
+`3363cee3-735a-4426-bf4b-35a79ebc071d`.
 
 ### Added
 
