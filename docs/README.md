@@ -52,12 +52,13 @@ purpose, audience, and whether it's authoritative for the current product or his
 
 ## Development
 
-| Document                                                                                                             | Purpose                                         | Audience            | Status                |
-| -------------------------------------------------------------------------------------------------------------------- | ----------------------------------------------- | ------------------- | --------------------- |
-| [`docs/deployment/LOCAL_DEVELOPMENT.md`](deployment/LOCAL_DEVELOPMENT.md)                                            | Local setup                                     | Engineering         | current-supporting    |
-| [`docs/design/DESIGN_SYSTEM.md`](design/DESIGN_SYSTEM.md), [`docs/design/UI_COMPONENTS.md`](design/UI_COMPONENTS.md) | Design tokens/components                        | Engineering, Design | current-authoritative |
-| [`docs/agents/`](agents/)                                                                                            | AI-agent workflow, Claude Code / Codex guidance | AI agents           | current-supporting    |
-| [`docs/api/API_CONTRACTS.md`](api/API_CONTRACTS.md), [`docs/api/ERROR_CATALOGUE.md`](api/ERROR_CATALOGUE.md)         | API conventions and error codes                 | Engineering         | current-authoritative |
+| Document                                                                                                                                                                                                                                                    | Purpose                                         | Audience             | Status                |
+| ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ----------------------------------------------- | -------------------- | --------------------- |
+| [`docs/deployment/LOCAL_DEVELOPMENT.md`](deployment/LOCAL_DEVELOPMENT.md)                                                                                                                                                                                   | Local setup                                     | Engineering          | current-supporting    |
+| [`docs/design/DESIGN_SYSTEM.md`](design/DESIGN_SYSTEM.md), [`docs/design/UI_COMPONENTS.md`](design/UI_COMPONENTS.md)                                                                                                                                        | Design tokens/components                        | Engineering, Design  | current-authoritative |
+| [`docs/design/HOMEPAGE_INFORMATION_ARCHITECTURE.md`](design/HOMEPAGE_INFORMATION_ARCHITECTURE.md), [`docs/design/HOMEPAGE_CONTENT_MODEL.md`](design/HOMEPAGE_CONTENT_MODEL.md), [`docs/design/HOMEPAGE_COMPONENT_MAP.md`](design/HOMEPAGE_COMPONENT_MAP.md) | Homepage IA, copy, and component inventory      | Product, Engineering | current-authoritative |
+| [`docs/agents/`](agents/)                                                                                                                                                                                                                                   | AI-agent workflow, Claude Code / Codex guidance | AI agents            | current-supporting    |
+| [`docs/api/API_CONTRACTS.md`](api/API_CONTRACTS.md), [`docs/api/ERROR_CATALOGUE.md`](api/ERROR_CATALOGUE.md)                                                                                                                                                | API conventions and error codes                 | Engineering          | current-authoritative |
 
 ## Testing
 

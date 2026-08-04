@@ -2,77 +2,7 @@
 export const prerender = true;
 import MarketingLayout from "../layouts/MarketingLayout.astro";
 import { AnalyticsBeacon } from "../components/AnalyticsBeacon";
-
-const plans = [
-  {
-    id: "free",
-    name: "Free",
-    audience: "For a one-time check on a single site.",
-    price: "USD 0",
-    domains: 1,
-    monitoring: "None",
-    history: "30 days",
-    rescans: 2,
-    groups: false,
-    csv: false,
-    feed: false,
-    batch: 0,
-    branding: false,
-    cta: "Start free",
-    recommended: false,
-  },
-  {
-    id: "solo",
-    name: "Solo",
-    audience: "For individual site owners tracking one project.",
-    price: "USD 79",
-    domains: 5,
-    monitoring: "Monthly",
-    history: "12 months",
-    rescans: 5,
-    groups: false,
-    csv: false,
-    feed: true,
-    batch: 0,
-    branding: false,
-    cta: "Choose Solo",
-    recommended: false,
-  },
-  {
-    id: "pro",
-    name: "Pro",
-    audience: "For growing portfolios that need weekly monitoring.",
-    price: "USD 179",
-    domains: 25,
-    monitoring: "Weekly",
-    history: "24 months",
-    rescans: 10,
-    groups: true,
-    csv: true,
-    feed: true,
-    batch: 10,
-    branding: false,
-    cta: "Choose Pro",
-    recommended: true,
-  },
-  {
-    id: "agency",
-    name: "Agency",
-    audience: "For agencies managing many client domains.",
-    price: "USD 399",
-    domains: 100,
-    monitoring: "Weekly",
-    history: "36 months",
-    rescans: 20,
-    groups: true,
-    csv: true,
-    feed: true,
-    batch: 100,
-    branding: true,
-    cta: "Choose Agency",
-    recommended: false,
-  },
-];
+import { PLANS as plans } from "../lib/plans";
 
 const webApplicationJsonLd = {
   "@type": "WebApplication",
@@ -115,7 +45,8 @@ const webApplicationJsonLd = {
       {
         plans.map((plan) => (
           <div
-            class={`rounded-card border p-5 ${plan.recommended ? "border-brand-600 ring-1 ring-brand-600" : "border-neutral-200"}`}
+            id={plan.id}
+            class={`scroll-mt-20 rounded-card border p-5 ${plan.recommended ? "border-brand-600 ring-1 ring-brand-600" : "border-neutral-200"}`}
           >
             {plan.recommended && (
               <p class="mb-2 text-metadata font-medium uppercase tracking-wide text-brand-700">

@@ -1,0 +1,56 @@
+---
+import { ReportPreview } from "../ReportPreview";
+import { SAMPLE_REPORT } from "../../lib/sample-report.fixture";
+
+/**
+ * Homepage Section 3 — sample report preview (Phase 4 IA §10). Compact, homepage-embedded
+ * teaser — the full report lives at `/sample-report`. The conflict/evidence/recommendation
+ * blurb below is pulled from the same `SAMPLE_REPORT` fixture the full page renders, so the two
+ * surfaces never drift apart.
+ */
+const featuredFinding = SAMPLE_REPORT.findings[0]!;
+---
+
+<section class="mx-auto max-w-[1240px] px-4 py-16 sm:px-6">
+  <h2 class="text-h2 text-neutral-950">See what a report looks like</h2>
+  <p class="mt-2 max-w-2xl text-body text-neutral-700">
+    Illustrative example using a synthetic demonstration domain — not a real scan result.
+  </p>
+  <div class="mt-6 rounded-panel border border-neutral-200 bg-white p-6 shadow-elevated">
+    <div class="flex flex-wrap items-center justify-between gap-4 border-b border-neutral-200 pb-4">
+      <div>
+        <p class="font-mono text-supporting text-neutral-500">
+          {SAMPLE_REPORT.domain} (demonstration data)
+        </p>
+        <p class="text-h3 text-neutral-950">AI crawler policy report</p>
+      </div>
+      <p class="text-supporting text-neutral-500">
+        Scanned {new Date(SAMPLE_REPORT.scanDate).toLocaleDateString("en-GB")} &middot; Registry v{
+          SAMPLE_REPORT.registryVersion
+        }
+      </p>
+    </div>
+    <div class="mt-5">
+      <ReportPreview client:visible />
+    </div>
+    <div class="mt-5 rounded-card border border-neutral-200 bg-neutral-50 p-4">
+      <p class="text-supporting font-medium uppercase tracking-wide text-neutral-500">
+        Example finding
+      </p>
+      <p class="mt-1 text-body font-medium text-neutral-900">{featuredFinding.title}</p>
+      <p class="mt-1 text-body text-neutral-700">{featuredFinding.evidenceSummary}</p>
+      <p class="mt-1 text-body text-neutral-700">
+        Recommended action: {featuredFinding.recommendedAction}
+      </p>
+    </div>
+    <div class="mt-5">
+      <a
+        href="/sample-report"
+        data-analytics-event="sample_report_clicked"
+        class="text-body font-medium text-brand-700 underline underline-offset-2"
+      >
+        View the full sample report &rarr;
+      </a>
+    </div>
+  </div>
+</section>

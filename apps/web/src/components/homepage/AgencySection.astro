@@ -1,0 +1,72 @@
+---
+/**
+ * Homepage Section 6 — "Agency and multi-domain workflow" (Phase 4 IA §13). Makes the primary
+ * commercial audience (agencies and multi-site teams) visible. Every capability listed below is
+ * live in the current product (domain groups, batch import, monitoring, agency-branded shares —
+ * see docs/brand/CLAIMS_AND_MESSAGING_GUIDE.md's approved-claims table and
+ * `apps/web/src/components/app/DomainsManager.tsx`/`ShareReportDialog.tsx`). No client portal,
+ * team-role, or ownership-verification functionality is implied, since none exists.
+ */
+const WORKFLOW_STEPS = [
+  "Audit client domains",
+  "Establish policy baselines",
+  "Identify conflicts and unspecified rules",
+  "Apply client-approved recommendations",
+  "Monitor website and registry changes",
+  "Share or export evidence",
+];
+---
+
+<section class="mx-auto max-w-[1240px] px-4 py-16 sm:px-6">
+  <h2 class="text-h2 text-neutral-950">Govern crawler policy across every client website.</h2>
+  <p class="mt-3 max-w-2xl text-body-lg text-neutral-700">
+    CrawlPact is built primarily for agencies and multi-site teams — save every client domain in one
+    place, apply objective-based recommendations, and monitor for website or registry changes
+    without exposing internal tooling to clients.
+  </p>
+  <ol class="mt-8 grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+    {
+      WORKFLOW_STEPS.map((step, index) => (
+        <li class="flex items-start gap-3 rounded-card border border-neutral-200 bg-white p-4">
+          <span class="flex size-6 shrink-0 items-center justify-center rounded-full bg-brand-600 text-supporting font-semibold text-white">
+            {index + 1}
+          </span>
+          <span class="text-body text-neutral-800">{step}</span>
+        </li>
+      ))
+    }
+  </ol>
+  <div class="mt-8 grid gap-4 sm:grid-cols-2">
+    <div class="rounded-card border border-neutral-200 bg-white p-5">
+      <h3 class="text-card-heading text-neutral-950">Portfolio monitoring</h3>
+      <p class="mt-1.5 text-body text-neutral-700">
+        Group domains, batch-import a client list, and schedule recurring rechecks — plan limits
+        apply, see <a href="/pricing" class="text-brand-700 underline underline-offset-2">pricing</a
+        >.
+      </p>
+    </div>
+    <div class="rounded-card border border-neutral-200 bg-white p-5">
+      <h3 class="text-card-heading text-neutral-950">Client-ready sharing</h3>
+      <p class="mt-1.5 text-body text-neutral-700">
+        Share a report with your own agency name and logo attached — CrawlPact's methodology and
+        limitations always remain visible on a shared report, and branding never replaces them.
+      </p>
+    </div>
+  </div>
+  <div class="mt-8 flex flex-wrap gap-4">
+    <a
+      href="/pricing#agency"
+      data-analytics-event="homepage_agency_cta_clicked"
+      class="rounded-control bg-brand-600 px-5 py-2.5 text-body font-medium text-white hover:bg-brand-700"
+    >
+      Review Agency pricing
+    </a>
+    <a
+      href="/sample-report"
+      data-analytics-event="sample_report_clicked"
+      class="rounded-control border border-neutral-300 px-5 py-2.5 text-body font-medium text-neutral-800 hover:bg-neutral-50"
+    >
+      View a sample report
+    </a>
+  </div>
+</section>

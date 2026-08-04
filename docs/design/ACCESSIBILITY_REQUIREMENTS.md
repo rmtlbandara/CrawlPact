@@ -39,3 +39,10 @@ where each is enforced.
 - High-contrast mode (Windows forced-colours) has not been manually verified.
 - 200% browser zoom has not been manually verified on every page (tracked for Part 3 Step 18's
   visual/responsive pass, which covers breakpoints and zoom together).
+- The `test:a11y` skip-link-focus check fails under Playwright's `mobile-safari` (WebKit) project
+  only: WebKit does not include plain `<a>` links in the Tab order unless "Full Keyboard Access"
+  is enabled, matching real Safari's own default keyboard behaviour — this is a test-environment
+  limitation, not an application defect (reconfirmed Phase 4, 2026-08-04, by reproducing the
+  identical failure against the pre-Phase-4 baseline commit `abab3d4` with no homepage code
+  changed). The skip link itself is real, visible-on-focus, and functions correctly in Chromium
+  and in real-world keyboard-only browsers; no code change is warranted here.

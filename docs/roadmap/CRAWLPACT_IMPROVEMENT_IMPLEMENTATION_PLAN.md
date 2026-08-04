@@ -25,7 +25,7 @@ not itself implement anything.
 | 1   | Repository Documentation and Source-of-Truth Correction    | P0       | Phase 0      | **complete** (see `docs/reports/PHASE_01_DOCUMENTATION_SOURCE_OF_TRUTH_COMPLETION_REPORT.md`) |
 | 2   | Brand Positioning and Messaging System                     | P1       | Phase 1      | **complete** (see `docs/reports/PHASE_02_BRAND_POSITIONING_MESSAGING_COMPLETION_REPORT.md`)   |
 | 3   | Legal Identity, Contact, Security and Trust Foundation     | P1       | Phase 1      | **complete** (see `docs/reports/PHASE_03_LEGAL_SECURITY_TRUST_COMPLETION_REPORT.md`)          |
-| 4   | Homepage Information Architecture and Conversion Redesign  | P1       | Phases 1–3   | not started                                                                                   |
+| 4   | Homepage Information Architecture and Conversion Redesign  | P1       | Phases 1–3   | **complete** (see `docs/reports/PHASE_04_HOMEPAGE_CONVERSION_REDESIGN_COMPLETION_REPORT.md`)  |
 | 5   | Anonymous Audit Result and Account-Conversion Flow         | P1       | Phase 4      | not started                                                                                   |
 | 6   | Pricing, Plan Architecture and Checkout Continuity         | P1       | Phase 4      | not started                                                                                   |
 | 7   | Vertical Landing Pages and Platform SEO Architecture       | P2       | Phases 2–4   | not started                                                                                   |
@@ -125,16 +125,26 @@ PRODUCT_TERMINOLOGY_GLOSSARY,CLAIMS_AND_MESSAGING_GUIDE,MESSAGING_SURFACE_INVENT
 ### Phase 4 — Homepage Information Architecture and Conversion Redesign
 
 - **Objective**: Redesign homepage IA/conversion flow, informed by the route/capability baseline.
-  Also inherits two unclaimed backlog items neither Phase 2 nor Phase 3 addressed: reconciling
-  SRS §2.3's Primary Tagline with the Phase 2 brand system (via ADR or SRS update — see
-  `docs/brand/MESSAGING_SURFACE_INVENTORY.md` row E1 and RISK-028), and adding `"description"`
-  fields to the 10 `package.json` files that currently lack one.
 - **Dependencies**: Phases 1–3.
-- **Status**: not started.
+- **Status**: **complete** — see
+  `docs/reports/PHASE_04_HOMEPAGE_CONVERSION_REDESIGN_COMPLETION_REPORT.md`. Homepage rebuilt to
+  the required 12-section information architecture (`docs/design/HOMEPAGE_INFORMATION_ARCHITECTURE.md`);
+  a new `/sample-report` route reuses the real `AuditReportView` component with a typed,
+  schema-validated fixture (no duplicated report-rendering logic); a duplicated pricing array
+  (`index.astro` vs. `pricing.astro`) was consolidated into one shared `apps/web/src/lib/plans.ts`
+  module, with no price/limit/entitlement change. Production-build Lighthouse comparison (see
+  `docs/design/PHASE_04_HOMEPAGE_BASELINE.md`) showed no measurable performance regression.
+  **This phase's actual scope, per its execution prompt, again did not include reconciling SRS
+  §2.3's tagline (RISK-028) or the `package.json` description-field gap** — both remain open,
+  unclaimed by Phases 2, 3, or 4, and are carried forward to Phase 5.
 
 ### Phase 5 — Anonymous Audit Result and Account-Conversion Flow
 
-- **Objective**: Improve the anonymous-audit → account-creation conversion path.
+- **Objective**: Improve the anonymous-audit → account-creation conversion path. Also inherits two
+  unclaimed backlog items neither Phase 2, 3, nor 4 addressed: reconciling SRS §2.3's Primary
+  Tagline with the Phase 2 brand system (via ADR or SRS update — see
+  `docs/brand/MESSAGING_SURFACE_INVENTORY.md` row E1 and RISK-028), and adding `"description"`
+  fields to the 10 `package.json` files that currently lack one.
 - **Dependencies**: Phase 4.
 - **Status**: not started.
 
@@ -259,7 +269,7 @@ PRODUCT_TERMINOLOGY_GLOSSARY,CLAIMS_AND_MESSAGING_GUIDE,MESSAGING_SURFACE_INVENT
 | Gate                    | Requires                                                            |
 | ----------------------- | ------------------------------------------------------------------- |
 | A — Trust-ready         | Phases 0, 1, 2, 3 — **complete** (all four phases done, 2026-08-03) |
-| B — Conversion-ready    | Phases 4, 5, 6                                                      |
+| B — Conversion-ready    | Phases 4, 5, 6 (4 complete; 5 and 6 not started)                    |
 | C — Agency-ready        | Phases 8, 9, 10                                                     |
 | D — Scale-ready         | Phases 11, 12, 13, 14                                               |
 | E — Authority-ready     | Phases 15, 16, 17                                                   |
