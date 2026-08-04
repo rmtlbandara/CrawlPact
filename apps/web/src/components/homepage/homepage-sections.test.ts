@@ -62,13 +62,16 @@ describe("AgencySection.astro", () => {
 describe("PricingPreviewSection.astro", () => {
   const content = read("./PricingPreviewSection.astro");
 
-  it("takes plans as a prop rather than hardcoding pricing", () => {
-    expect(content).toContain("export type Props = { plans: Plan[] }");
+  it("reads plan copy from the shared, DB-adjacent catalog constant rather than hardcoding pricing", () => {
+    expect(content).toContain('import { PLAN_COPY } from "../../lib/billing/plan-catalog"');
+    // No price figure is ever baked into this statically-prerendered section — see the file's
+    // own doc comment for why (no live D1 binding at astro build time).
+    expect(content).not.toMatch(/\$\d/);
     expect(content).not.toMatch(/USD \d/);
   });
 
-  it("links each plan CTA to the full pricing page", () => {
-    expect(content).toContain("href={`/pricing#${plan.id}`}");
+  it("links each plan CTA to the full, always-live pricing page", () => {
+    expect(content).toContain("href={`/pricing#${id}`}");
   });
 });
 

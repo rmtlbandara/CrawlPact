@@ -105,6 +105,20 @@ test.describe("authenticated routes", () => {
     expect(results.violations, JSON.stringify(results.violations, null, 2)).toEqual([]);
   });
 
+  test("the billing page (Phase 6 plan cards, Free user) has no automatically detectable WCAG 2.2 AA violations", async ({
+    page,
+  }) => {
+    await addVirtualAuthenticator(page);
+    const displayName = `A11y Billing ${Date.now()}-${crypto.randomUUID().slice(0, 8)}`;
+    await registerNewAccount(page, displayName);
+    await page.goto("/app/billing");
+    await expect(page.getByRole("heading", { name: "Plans" })).toBeVisible();
+    const results = await new AxeBuilder({ page })
+      .withTags(["wcag2a", "wcag2aa", "wcag22aa"])
+      .analyze();
+    expect(results.violations, JSON.stringify(results.violations, null, 2)).toEqual([]);
+  });
+
   test("the invalid/expired continuation error state on /app/continue has no automatically detectable WCAG 2.2 AA violations", async ({
     page,
   }) => {

@@ -109,7 +109,7 @@ function subscriptionPayload(fields: {
       id: "sub_test_1",
       customer_id: "ctm_test_1",
       status: fields.status,
-      items: [{ price: { id: "pri_pro_test" } }],
+      items: [{ price: { id: "pri_test_pro_month" } }],
       current_billing_period: fields.periodEndsAt
         ? { starts_at: fields.occurredAt, ends_at: fields.periodEndsAt }
         : null,
@@ -202,6 +202,10 @@ describe("Paddle billing webhook (real D1, self-generated HMAC signatures)", () 
       .where(eq(schema.subscriptions.paddleSubscriptionId, "sub_test_1"))
       .limit(1);
     expect(sub!.status).toBe("trialing");
+    // Phase 6: the resolved price/interval are persisted on the subscription row itself now,
+    // not re-derived from a flat env var at read time.
+    expect(sub!.paddlePriceId).toBe("pri_test_pro_month");
+    expect(sub!.billingInterval).toBe("month");
   });
 
   it("updates the subscription to active on payment (renewal-style period extension)", async () => {
@@ -423,6 +427,64 @@ describe("Paddle billing webhook (real D1, self-generated HMAC signatures)", () 
       .where(eq(schema.transactions.paddleTransactionId, "txn_draft_1"))
       .limit(1);
     expect(txn).toBeUndefined();
+  });
+
+  it("resolves a legacy (retired-from-new-checkout) price to its plan, so an existing subscriber's events keep working", async () => {
+    // pri_test_solo_year_legacy is seeded with active_for_new_checkout=0, legacy=1 — never
+    // returned by resolveCheckoutPrice, but resolvePriceToPlan (used here, by the webhook) must
+    // still resolve it, since a real subscriber may be on it for the life of their subscription.
+    // See docs/billing/LEGACY_PRICE_AND_SUBSCRIBER_POLICY.md.
+    const p = subscriptionPayload({
+      eventId: "evt_legacy_price",
+      eventType: "subscription.created",
+      occurredAt: "2026-01-10T00:00:00.000000Z",
+      status: "trialing",
+    });
+    p.data.id = "sub_legacy_price";
+    p.data.items = [{ price: { id: "pri_test_solo_year_legacy" } }];
+    (p.data.custom_data as { userId: string }).userId = userId;
+
+    const response = await postWebhook(p);
+    expect(response.status).toBe(200);
+    const body = await readJson<{ outcome: string }>(response);
+    if (body.ok) expect(body.data.outcome).toBe("processed");
+
+    const [sub] = await db
+      .select()
+      .from(schema.subscriptions)
+      .where(eq(schema.subscriptions.paddleSubscriptionId, "sub_legacy_price"))
+      .limit(1);
+    expect(sub!.planId).toBe("solo");
+    expect(sub!.billingInterval).toBe("year");
+    expect(sub!.paddlePriceId).toBe("pri_test_solo_year_legacy");
+  });
+
+  it("records an unresolvable price ID honestly (grants no paid plan) rather than crashing or guessing", async () => {
+    const p = subscriptionPayload({
+      eventId: "evt_unknown_price",
+      eventType: "subscription.created",
+      occurredAt: "2026-01-11T00:00:00.000000Z",
+      status: "active",
+    });
+    p.data.id = "sub_unknown_price";
+    p.data.items = [{ price: { id: "pri_totally_unknown_to_this_app" } }];
+    (p.data.custom_data as { userId: string }).userId = userId;
+
+    const response = await postWebhook(p);
+    expect(response.status).toBe(200);
+    const body = await readJson<{ outcome: string }>(response);
+    if (body.ok) expect(body.data.outcome).toBe("processed");
+
+    const [sub] = await db
+      .select()
+      .from(schema.subscriptions)
+      .where(eq(schema.subscriptions.paddleSubscriptionId, "sub_unknown_price"))
+      .limit(1);
+    // The raw price ID is still recorded (useful for later manual investigation), but it never
+    // resolves to a paid plan — no plan is fabricated for an unrecognised price.
+    expect(sub!.paddlePriceId).toBe("pri_totally_unknown_to_this_app");
+    expect(sub!.planId).toBe("free");
+    expect(sub!.billingInterval).toBeNull();
   });
 
   it("processes both events when two related deliveries for a brand-new subscription race concurrently", async () => {

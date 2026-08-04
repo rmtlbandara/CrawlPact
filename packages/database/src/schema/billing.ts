@@ -35,6 +35,16 @@ export const subscriptions = sqliteTable("subscriptions", {
   // migration 0019 and docs/status/BILLING_WEBHOOK_RACE_TEST_FLAKE.md.
   lastAppliedOccurredAt: text("last_applied_occurred_at"),
   syncError: text("sync_error"),
+  // Additive Phase 6 columns (migration 0021) — the exact price/interval this subscription is
+  // actually on, and an optional scheduled downgrade. A scheduled downgrade is never applied to
+  // Paddle until `scheduledChangeEffectiveAt` arrives — see
+  // docs/billing/PLAN_CHANGE_AND_PRORATION_POLICY.md — so current entitlements are preserved
+  // automatically until then, with no extra gating logic needed.
+  paddlePriceId: text("paddle_price_id"),
+  billingInterval: text("billing_interval").$type<"month" | "year">(),
+  scheduledPlanId: text("scheduled_plan_id").$type<"free" | "solo" | "pro" | "agency">(),
+  scheduledPaddlePriceId: text("scheduled_paddle_price_id"),
+  scheduledChangeEffectiveAt: text("scheduled_change_effective_at"),
   createdAt: text("created_at").notNull(),
   updatedAt: text("updated_at").notNull(),
 });

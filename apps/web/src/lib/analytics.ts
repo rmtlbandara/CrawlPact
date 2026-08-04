@@ -51,6 +51,17 @@ export const PRODUCT_EVENT_NAMES = [
   "audit_conversion_plan_limit_reached",
   "audit_conversion_completed",
   "audit_conversion_failed",
+  // Pricing, Plan Architecture and Checkout Continuity (Phase 6). No Paddle customer/subscription/
+  // transaction ID, email, full domain, price ID, checkout token, or payment detail is ever sent
+  // as a property — see docs/billing/PHASE_06_BILLING_EVENT_MODEL.md.
+  "billing_interval_selected",
+  "plan_selected",
+  "checkout_opened",
+  "checkout_failed",
+  "plan_change_previewed",
+  "plan_change_confirmed",
+  "plan_change_failed",
+  "customer_portal_opened",
 ] as const;
 
 export type ProductEventName = (typeof PRODUCT_EVENT_NAMES)[number];

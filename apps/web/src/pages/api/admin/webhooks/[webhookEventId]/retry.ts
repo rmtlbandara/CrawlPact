@@ -27,16 +27,7 @@ export const POST: APIRoute = async ({ request, params }) => {
       requestId,
     });
 
-    const env = getEnv();
-    const result = await retryWebhookEvent(
-      db,
-      {
-        PADDLE_PRICE_ID_SOLO: env.PADDLE_PRICE_ID_SOLO,
-        PADDLE_PRICE_ID_PRO: env.PADDLE_PRICE_ID_PRO,
-        PADDLE_PRICE_ID_AGENCY: env.PADDLE_PRICE_ID_AGENCY,
-      },
-      webhookEventId,
-    );
+    const result = await retryWebhookEvent(db, webhookEventId);
     if (!result.ok) throw new ApiError("VALIDATION_FAILED", result.reason);
 
     return jsonResponse(ok({ webhookEventId, outcome: result.outcome }, requestId), 200);

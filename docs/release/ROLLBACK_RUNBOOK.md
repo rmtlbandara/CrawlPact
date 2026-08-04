@@ -29,9 +29,14 @@
 ## Paddle recovery
 
 - Never delete a product, price, or notification destination as a way to "undo" a mistake —
-  archive instead, and only after confirming no active customer depends on it.
-- A wrong price mapping is fixed by correcting `PADDLE_PRICE_ID_*`/`plan-mapping.ts` and shipping a
-  corrective release, not by mutating the price in Paddle.
+  archive instead, and only after confirming no active customer depends on it (zero live
+  subscribers on that price — see `docs/billing/LEGACY_PRICE_AND_SUBSCRIBER_POLICY.md`).
+- A wrong price mapping (Phase 6 onward) is fixed by correcting the affected `plan_prices` row(s)
+  — via a corrective migration/seed change, never a direct production DB edit — and shipping a
+  normal release; never by mutating the price in Paddle itself. See
+  `docs/billing/PADDLE_CATALOG_RECONCILIATION_RUNBOOK.md` for detecting drift and
+  `docs/billing/BILLING_DEPLOYMENT_AND_ROLLBACK_RUNBOOK.md` for billing-specific deployment/
+  rollback guidance.
 - Transaction, subscription, and webhook history are never deleted.
 
 ## Cloudflare recovery

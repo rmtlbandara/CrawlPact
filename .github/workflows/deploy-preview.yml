@@ -55,6 +55,14 @@ jobs:
           pnpm exec wrangler d1 migrations apply crawlpact-db-preview --remote
           --config apps/web/wrangler.jsonc --env preview
 
+      # Idempotent (INSERT OR IGNORE) — safe to run on every deploy. Without this, a migration
+      # that adds a new reference-data table (e.g. Phase 6's plan_prices) ships as an empty table
+      # until this runs, breaking any route that reads it (e.g. /pricing throwing on a missing
+      # active price row) even though the migration itself succeeded. See
+      # docs/billing/BILLING_DEPLOYMENT_AND_ROLLBACK_RUNBOOK.md.
+      - name: Seed reference data into preview D1
+        run: pnpm run db:seed:reference-data:remote:preview
+
       - name: Deploy preview Worker
         run: pnpm run deploy:preview
 

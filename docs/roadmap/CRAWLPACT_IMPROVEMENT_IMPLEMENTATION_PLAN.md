@@ -169,7 +169,19 @@ PRODUCT_TERMINOLOGY_GLOSSARY,CLAIMS_AND_MESSAGING_GUIDE,MESSAGING_SURFACE_INVENT
 - **Completion gate**: pricing page reads from the `plans` table (or an equally single-sourced
   mechanism); downgrade UI is accurate; a real paid checkout has been run and verified at least
   once.
-- **Status**: not started.
+- **Status**: **substantially complete** — see
+  `docs/reports/PHASE_06_PRICING_PADDLE_CHECKOUT_COMPLETION_REPORT.md`. Replaced the flat
+  annual-only env-var price mapping with a DB-backed, multi-interval, multi-environment catalog
+  (`plan_prices`, migration `0021`) driving `/pricing`, checkout, plan-change, the webhook
+  processor, and Super Admin — closing the SRS §8 single-source-of-pricing violation. Fixed
+  RISK-017 (upgrade/downgrade labelling) and closed RISK-016 (dead contract file deleted — see
+  `docs/risks/RISK_ARCHIVE.md` ARC-024). **This phase's own completion gate is not fully met**: a
+  real paid checkout was deliberately not run, consistent with the standing prohibition on
+  triggering a real charge without separate, explicit authorization — RISK-001 remains open and is
+  carried forward. The SRS §2.3 tagline reconciliation (RISK-028) and the `package.json`
+  description-field gap were, per this phase's own execution prompt (scoped specifically to
+  pricing/checkout), again not addressed and are carried forward to Phase 7, same as every prior
+  phase this backlog has passed through.
 
 ### Phase 7 — Vertical Landing Pages and Platform SEO Architecture
 

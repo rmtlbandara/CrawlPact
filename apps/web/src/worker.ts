@@ -2,18 +2,24 @@ import { handle } from "@astrojs/cloudflare/handler";
 import { createDb } from "@crawlpact/database";
 import { runMonitoringSweep } from "./lib/monitoring";
 import { runDataRetentionPurge } from "./lib/data-retention";
+import { applyDueScheduledDowngrades } from "./lib/billing/scheduled-downgrades";
 
 /**
  * Custom Worker entry point (ADR-0001). Delegates ordinary requests to
  * Astro's SSR handler and additionally exports `scheduled`, so the same
  * deployable Worker serves the public site, the same-origin API, and the
- * monitoring/retention cron trigger declared in wrangler.jsonc.
+ * monitoring/retention/scheduled-plan-change cron trigger declared in
+ * wrangler.jsonc.
  *
- * Monitoring (SRS §25, Step 15) and data retention (SRS §34, Step 19) are
- * separate jobs recorded as separate `scheduled_job_runs` rows, so a
- * failure in one is never hidden by the other's success. Retention runs
- * unconditionally — it's a privacy/compliance job, not a scanning one, so
- * it isn't gated behind `AUDIT_ENGINE_ENABLED` the way monitoring is.
+ * Monitoring (SRS §25, Step 15), data retention (SRS §34, Step 19), and
+ * scheduled plan changes (Phase 6) are separate jobs recorded as separate
+ * `scheduled_job_runs` rows, so a failure in one is never hidden by
+ * another's success. Retention runs unconditionally — it's a
+ * privacy/compliance job, not a scanning one, so it isn't gated behind
+ * `AUDIT_ENGINE_ENABLED` the way monitoring is. Scheduled plan changes are
+ * gated behind `BILLING_ENABLED` for the same reason monitoring is gated
+ * behind `AUDIT_ENGINE_ENABLED` — no real Paddle call in an environment
+ * that isn't wired for real billing.
  */
 export default {
   fetch: handle,
@@ -22,6 +28,10 @@ export default {
     const db = createDb(env.DB);
 
     ctx.waitUntil(runRetentionJob(env, controller.cron, db));
+
+    if (env.BILLING_ENABLED === "true") {
+      ctx.waitUntil(runScheduledDowngradesJob(env, controller.cron, db));
+    }
 
     if (env.AUDIT_ENGINE_ENABLED === "true") {
       const schedulerPaused = await isSchedulerPaused(env.DB);
@@ -74,6 +84,33 @@ async function runMonitoringJob(
       .run();
   } catch (error) {
     await recordFailedJob(env, "monitoring_sweep", cronExpression, startedAt, error);
+  }
+}
+
+async function runScheduledDowngradesJob(
+  env: Env,
+  cronExpression: string,
+  db: ReturnType<typeof createDb>,
+): Promise<void> {
+  const startedAt = new Date().toISOString();
+  try {
+    const result = await applyDueScheduledDowngrades(db, {
+      PADDLE_API_KEY: env.PADDLE_API_KEY,
+      PADDLE_ENVIRONMENT: env.PADDLE_ENVIRONMENT,
+    });
+    await env.DB.prepare(
+      "INSERT INTO scheduled_job_runs (job_name, cron_expression, status, error_summary, started_at, completed_at) VALUES (?, ?, 'completed', ?, ?, ?)",
+    )
+      .bind(
+        "scheduled_plan_changes",
+        cronExpression,
+        `applied=${result.applied} failed=${result.failed}`,
+        startedAt,
+        new Date().toISOString(),
+      )
+      .run();
+  } catch (error) {
+    await recordFailedJob(env, "scheduled_plan_changes", cronExpression, startedAt, error);
   }
 }
 
@@ -138,4 +175,7 @@ async function isMaintenanceMode(db: D1Database): Promise<boolean> {
 type Env = {
   DB: D1Database;
   AUDIT_ENGINE_ENABLED: string;
+  BILLING_ENABLED: string;
+  PADDLE_API_KEY: string;
+  PADDLE_ENVIRONMENT: "sandbox" | "production";
 };

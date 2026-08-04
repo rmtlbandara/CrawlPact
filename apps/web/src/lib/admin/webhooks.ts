@@ -3,7 +3,6 @@ import { schema } from "@crawlpact/database";
 import type { Database } from "@crawlpact/database";
 import { processPaddleWebhookEvent } from "../billing/webhook-processor";
 import type { ParsedPaddleEvent, ProcessOutcome } from "../billing/webhook-processor";
-import type { PriceIdMap } from "../billing/plan-mapping";
 
 export type WebhookEventFilters = { status?: string };
 
@@ -38,7 +37,6 @@ export type RetryResult = { ok: true; outcome: ProcessOutcome } | { ok: false; r
  */
 export async function retryWebhookEvent(
   db: Database,
-  priceIdMap: PriceIdMap,
   webhookEventId: string,
 ): Promise<RetryResult> {
   const [row] = await db
@@ -61,6 +59,6 @@ export async function retryWebhookEvent(
     data: JSON.parse(row.payloadRedacted) as Record<string, unknown>,
   };
 
-  const outcome = await processPaddleWebhookEvent(db, priceIdMap, event);
+  const outcome = await processPaddleWebhookEvent(db, event);
   return { ok: true, outcome };
 }

@@ -12,10 +12,20 @@ type SubscriptionRow = {
     currentPeriodEnd: string | null;
     cancelAtPeriodEnd: boolean;
     syncError: string | null;
+    paddlePriceId: string | null;
+    billingInterval: "month" | "year" | null;
+    scheduledPlanId: string | null;
+    scheduledChangeEffectiveAt: string | null;
   };
   billingCustomer: { paddleCustomerId: string };
   user: { id: string; displayName: string; planId: string };
+  price: {
+    legacy: boolean | null;
+    environment: string | null;
+    activeForNewCheckout: boolean | null;
+  } | null;
   entitlementMismatch: boolean;
+  environmentMismatch: boolean;
 };
 
 const STATUS_TONE: Record<string, "success" | "warning" | "error" | "info"> = {
@@ -99,7 +109,24 @@ export function SubscriptionsManager() {
         </a>
       ),
     },
-    { key: "plan", header: "Plan", render: (row) => row.subscription.planId },
+    {
+      key: "plan",
+      header: "Plan / interval",
+      render: (row) => (
+        <span>
+          {row.subscription.planId}
+          {row.subscription.billingInterval ? ` (${row.subscription.billingInterval}ly)` : ""}
+          {row.subscription.scheduledPlanId && (
+            <span className="block text-metadata text-neutral-500">
+              → {row.subscription.scheduledPlanId}
+              {row.subscription.scheduledChangeEffectiveAt
+                ? ` on ${new Date(row.subscription.scheduledChangeEffectiveAt).toLocaleDateString()}`
+                : ""}
+            </span>
+          )}
+        </span>
+      ),
+    },
     {
       key: "status",
       header: "Status",
@@ -129,9 +156,13 @@ export function SubscriptionsManager() {
       key: "flags",
       header: "Flags",
       render: (row) => (
-        <div className="flex gap-1.5">
+        <div className="flex flex-wrap gap-1.5">
           {row.entitlementMismatch && <StatusChip tone="error" label="Entitlement mismatch" />}
+          {row.environmentMismatch && (
+            <StatusChip tone="error" label={`Price is ${row.price?.environment}`} />
+          )}
           {row.subscription.syncError && <StatusChip tone="warning" label="Sync error" />}
+          {row.price?.legacy && <StatusChip tone="unknown" label="Legacy price" />}
         </div>
       ),
     },

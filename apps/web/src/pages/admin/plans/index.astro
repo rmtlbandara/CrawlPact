@@ -2,23 +2,63 @@
 export const prerender = false;
 import AdminLayout from "../../../layouts/AdminLayout.astro";
 import AdminPageHeader from "../../../components/admin/AdminPageHeader.astro";
-import { StatusChip } from "@crawlpact/ui";
+import { StatusChip, Alert } from "@crawlpact/ui";
 import { createDb, schema } from "@crawlpact/database";
 import { getEnv } from "../../../lib/env";
 import { getAdminPageSession } from "../../../lib/auth/require-admin";
+import {
+  getPlanPriceCatalog,
+  computeCatalogStatusFlags,
+} from "../../../lib/admin/plan-catalog-status";
 
 const db = createDb(getEnv().DB);
 const admin = await getAdminPageSession(Astro.request, db);
 if (!admin) return Astro.redirect("/sign-in");
 
+const env = getEnv();
 const plans = await db.select().from(schema.plans).orderBy(schema.plans.annualPriceUsdCents);
+const priceCatalog = await getPlanPriceCatalog(db);
+const statusFlags = computeCatalogStatusFlags(priceCatalog, env.PADDLE_ENVIRONMENT);
+
+function formatUsd(cents: number): string {
+  return (cents / 100).toFixed(2);
+}
+function formatDate(value: string | null): string {
+  return value ? new Date(value).toLocaleDateString() : "—";
+}
 ---
 
 <AdminLayout title="Plans" displayName={admin.user.displayName}>
   <AdminPageHeader
     title="Plans"
-    description="Read-only view of subscription plan entitlements. Pricing/entitlement changes are a product decision made in a migration, not an ad-hoc admin edit."
+    description={`Read-only view of subscription plan entitlements and Paddle price mappings. Running environment: ${env.PADDLE_ENVIRONMENT}. Pricing/entitlement changes are a product decision made in a migration, not an ad-hoc admin edit — see docs/billing/PADDLE_CATALOG_RECONCILIATION_RUNBOOK.md.`}
   />
+
+  {
+    statusFlags.length > 0 && (
+      <div class="mt-6 flex flex-col gap-2">
+        {statusFlags.map((flag) => (
+          <Alert
+            tone={flag.level === "error" ? "error" : "warning"}
+            title={flag.level === "error" ? "Catalog error" : "Catalog warning"}
+          >
+            {flag.message}
+          </Alert>
+        ))}
+      </div>
+    )
+  }
+  {
+    statusFlags.length === 0 && (
+      <div class="mt-6">
+        <Alert tone="success" title="Catalog reconciled">
+          No mapping gaps, duplicates, or orphaned archived prices detected for the{" "}
+          {env.PADDLE_ENVIRONMENT} environment.
+        </Alert>
+      </div>
+    )
+  }
+
   <div class="mt-6 grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
     {
       plans.map((plan) => (
@@ -27,9 +67,6 @@ const plans = await db.select().from(schema.plans).orderBy(schema.plans.annualPr
             <h2 class="text-h3 text-neutral-950">{plan.name}</h2>
             {!plan.isActive && <StatusChip tone="warning" label="Inactive" />}
           </div>
-          <p class="mt-1 text-h2 text-neutral-950">
-            ${(plan.annualPriceUsdCents / 100).toFixed(0)}/yr
-          </p>
           <ul class="mt-4 flex flex-col gap-1.5 text-supporting text-neutral-700">
             <li>{plan.savedDomainLimit} saved domains</li>
             <li>Monitoring: {plan.monitoringFrequency}</li>
@@ -46,4 +83,64 @@ const plans = await db.select().from(schema.plans).orderBy(schema.plans.annualPr
       ))
     }
   </div>
+
+  <section class="mt-10">
+    <h2 class="text-h2 text-neutral-950">Paddle price catalog</h2>
+    <p class="mt-2 text-body text-neutral-700">
+      Every row in `plan_prices`, both environments. "Active" prices are what checkout currently
+      offers; legacy prices stay mapped forever so existing subscribers' webhook events keep
+      resolving (see docs/billing/LEGACY_PRICE_AND_SUBSCRIBER_POLICY.md) but are never offered to
+      new checkouts.
+    </p>
+    <div class="mt-4 overflow-x-auto rounded-card border border-neutral-200">
+      <table class="w-full min-w-[900px] border-collapse text-left text-supporting">
+        <thead>
+          <tr class="border-b border-neutral-200 bg-neutral-50 font-medium text-neutral-600">
+            <th scope="col" class="px-3 py-2">Plan</th>
+            <th scope="col" class="px-3 py-2">Env</th>
+            <th scope="col" class="px-3 py-2">Interval</th>
+            <th scope="col" class="px-3 py-2">Amount</th>
+            <th scope="col" class="px-3 py-2">Paddle price ID</th>
+            <th scope="col" class="px-3 py-2">Status</th>
+            <th scope="col" class="px-3 py-2">Subscribers</th>
+            <th scope="col" class="px-3 py-2">Last verified</th>
+          </tr>
+        </thead>
+        <tbody class="divide-y divide-neutral-100">
+          {
+            priceCatalog.map((row) => (
+              <tr class={row.environment !== env.PADDLE_ENVIRONMENT ? "opacity-60" : undefined}>
+                <td class="px-3 py-2 font-medium text-neutral-900">{row.planId}</td>
+                <td class="px-3 py-2">
+                  <StatusChip
+                    tone={row.environment === "production" ? "success" : "info"}
+                    label={row.environment}
+                  />
+                </td>
+                <td class="px-3 py-2">{row.interval}</td>
+                <td class="px-3 py-2">${formatUsd(row.amountUsdCents)}</td>
+                <td class="px-3 py-2 font-mono text-metadata text-neutral-700">
+                  {row.paddlePriceId}
+                </td>
+                <td class="px-3 py-2">
+                  <div class="flex flex-wrap gap-1">
+                    {row.archivedAt ? (
+                      <StatusChip tone="error" label="Archived" />
+                    ) : row.activeForNewCheckout ? (
+                      <StatusChip tone="success" label="Active for checkout" />
+                    ) : (
+                      <StatusChip tone="unknown" label="Not offered" />
+                    )}
+                    {row.legacy && <StatusChip tone="warning" label="Legacy" />}
+                  </div>
+                </td>
+                <td class="px-3 py-2">{row.subscriberCount}</td>
+                <td class="px-3 py-2">{formatDate(row.lastVerifiedAt)}</td>
+              </tr>
+            ))
+          }
+        </tbody>
+      </table>
+    </div>
+  </section>
 </AdminLayout>

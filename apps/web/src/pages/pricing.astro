@@ -1,164 +1,109 @@
 ---
-export const prerender = true;
+export const prerender = false;
 import MarketingLayout from "../layouts/MarketingLayout.astro";
 import { AnalyticsBeacon } from "../components/AnalyticsBeacon";
-import { PLANS as plans } from "../lib/plans";
+import { PricingPlans } from "../components/PricingPlans";
+import type { PricingPlanEntry } from "../components/PricingPlans";
+import { createDb } from "@crawlpact/database";
+import { getEnv } from "../lib/env";
+import { getPageSession } from "../lib/auth/page-session";
+import { getPlanCatalog } from "../lib/billing/plan-catalog";
+
+const db = createDb(getEnv().DB);
+const env = getEnv();
+const session = await getPageSession(db, Astro.request);
+const catalog = await getPlanCatalog(db, env.PADDLE_ENVIRONMENT);
+
+const plans: PricingPlanEntry[] = catalog.map((entry) => ({
+  id: entry.id,
+  name: entry.name,
+  audience: entry.audience,
+  cta: entry.cta,
+  recommended: entry.recommended,
+  savedDomainLimit: entry.savedDomainLimit,
+  monitoringFrequency: entry.monitoringFrequency,
+  historyRetentionMonths: Math.round(entry.historyRetentionDays / 30),
+  manualRescansPerDomainPerMonth: entry.manualRescansPerDomainPerMonth,
+  domainGroupsEnabled: entry.domainGroupsEnabled,
+  csvExportEnabled: entry.csvExportEnabled,
+  privateAtomFeedEnabled: entry.privateAtomFeedEnabled,
+  batchImportLimit: entry.batchImportLimit,
+  agencyBrandingEnabled: entry.agencyBrandingEnabled,
+  monthlyCents: entry.pricing?.month.amountUsdCents ?? null,
+  yearlyCents: entry.pricing?.year.amountUsdCents ?? null,
+}));
+
+// Structured data lists every real offer (monthly and yearly for each paid plan) regardless of
+// which interval the client-side toggle currently shows — see docs/billing/APPROVED_PRICING_AND_ENTITLEMENT_MATRIX.md.
+const offers = plans.flatMap((plan) => {
+  if (plan.id === "free") {
+    return [
+      {
+        "@type": "Offer",
+        name: "Free plan",
+        price: "0",
+        priceCurrency: "USD",
+      },
+    ];
+  }
+  return [
+    {
+      "@type": "Offer",
+      name: `${plan.name} plan (monthly)`,
+      price: (plan.monthlyCents! / 100).toFixed(2),
+      priceCurrency: "USD",
+      priceSpecification: { "@type": "UnitPriceSpecification", billingDuration: "P1M" },
+    },
+    {
+      "@type": "Offer",
+      name: `${plan.name} plan (yearly)`,
+      price: (plan.yearlyCents! / 100).toFixed(2),
+      priceCurrency: "USD",
+      priceSpecification: { "@type": "UnitPriceSpecification", billingDuration: "P1Y" },
+    },
+  ];
+});
 
 const webApplicationJsonLd = {
   "@type": "WebApplication",
   name: "CrawlPact",
   applicationCategory: "BusinessApplication",
   operatingSystem: "Any (web-based)",
-  offers: plans.map((plan) => {
-    const [, priceAmount] = plan.price.split(" ");
-    return {
-      "@type": "Offer",
-      name: `${plan.name} plan`,
-      price: priceAmount,
-      priceCurrency: "USD",
-      priceSpecification: {
-        "@type": "UnitPriceSpecification",
-        billingDuration: "P1Y",
-      },
-    };
-  }),
+  offers,
 };
 ---
 
 <MarketingLayout
   title="Pricing | CrawlPact"
-  description="Annual pricing for CrawlPact's AI crawler policy auditing and monitoring plans, from a free single-domain audit to agency-scale portfolio monitoring."
+  description="Monthly and yearly pricing for CrawlPact's AI crawler policy auditing and monitoring plans, from a free single-domain audit to agency-scale portfolio monitoring."
   extraJsonLd={[webApplicationJsonLd]}
 >
   <div class="mx-auto max-w-[1240px] px-4 py-12 sm:px-6">
     <h1 class="text-h1 text-neutral-950">Pricing</h1>
     <p class="mt-3 max-w-2xl text-body-lg text-neutral-700">
-      Annual billing, handled by Paddle as merchant of record. Applicable taxes may be calculated
-      during checkout. Plan definitions are stored as product data, not hard-coded — see <a
-        href="/status"
-        class="text-brand-700 underline underline-offset-2">status</a
-      >{" "}
-      for current plan availability.
+      Choose a plan based on the number of domains you need to audit and monitor. Upgrade or cancel
+      through your account at any time. All prices are in USD. Applicable taxes may be calculated
+      during Paddle checkout.
     </p>
 
-    <div class="mt-8 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-      {
-        plans.map((plan) => (
-          <div
-            id={plan.id}
-            class={`scroll-mt-20 rounded-card border p-5 ${plan.recommended ? "border-brand-600 ring-1 ring-brand-600" : "border-neutral-200"}`}
-          >
-            {plan.recommended && (
-              <p class="mb-2 text-metadata font-medium uppercase tracking-wide text-brand-700">
-                Recommended
-              </p>
-            )}
-            <h2 class="text-card-heading text-neutral-950">{plan.name}</h2>
-            <p class="mt-1 text-supporting text-neutral-600">{plan.audience}</p>
-            <p class="mt-2 text-h3 text-neutral-950">{plan.price}/yr</p>
-            <p class="mt-2 text-supporting text-neutral-600">
-              {plan.domains} domain{plan.domains === 1 ? "" : "s"}
-            </p>
-            <p class="text-supporting text-neutral-600">
-              {plan.monitoring === "None" ? "No monitoring" : `${plan.monitoring} monitoring`}
-            </p>
-            <a
-              href="/sign-in"
-              class="mt-4 block rounded-control border border-neutral-300 px-3 py-2 text-center text-body font-medium text-neutral-800 hover:bg-neutral-50"
-            >
-              {plan.cta}
-            </a>
-          </div>
-        ))
-      }
-    </div>
-
-    <div
-      class="mt-10 overflow-x-auto"
-      tabindex="0"
-      role="region"
-      aria-label="Plan comparison table"
-    >
-      <table class="w-full min-w-[720px] border-collapse text-left text-body">
-        <thead>
-          <tr class="border-b border-neutral-200 text-supporting font-medium text-neutral-600">
-            <th scope="col" class="py-3">Feature</th>
-            {
-              plans.map((plan) => (
-                <th scope="col" class="py-3 text-neutral-950">
-                  {plan.name}
-                </th>
-              ))
-            }
-          </tr>
-        </thead>
-        <tbody class="divide-y divide-neutral-100">
-          <tr
-            ><th scope="row" class="py-3 font-normal text-neutral-600">Annual price</th>{
-              plans.map((p) => <td class="py-3 font-medium">{p.price}</td>)
-            }</tr
-          >
-          <tr
-            ><th scope="row" class="py-3 font-normal text-neutral-600">Saved domains</th>{
-              plans.map((p) => <td class="py-3">{p.domains}</td>)
-            }</tr
-          >
-          <tr
-            ><th scope="row" class="py-3 font-normal text-neutral-600">Monitoring</th>{
-              plans.map((p) => <td class="py-3">{p.monitoring}</td>)
-            }</tr
-          >
-          <tr
-            ><th scope="row" class="py-3 font-normal text-neutral-600">History retention</th>{
-              plans.map((p) => <td class="py-3">{p.history}</td>)
-            }</tr
-          >
-          <tr
-            ><th scope="row" class="py-3 font-normal text-neutral-600"
-              >Manual rescans / domain / month</th
-            >{plans.map((p) => <td class="py-3">{p.rescans}</td>)}</tr
-          >
-          <tr
-            ><th scope="row" class="py-3 font-normal text-neutral-600">Domain groups</th>{
-              plans.map((p) => <td class="py-3">{p.groups ? "Yes" : "No"}</td>)
-            }</tr
-          >
-          <tr
-            ><th scope="row" class="py-3 font-normal text-neutral-600">CSV export</th>{
-              plans.map((p) => <td class="py-3">{p.csv ? "Yes" : "No"}</td>)
-            }</tr
-          >
-          <tr
-            ><th scope="row" class="py-3 font-normal text-neutral-600">Private Atom feed</th>{
-              plans.map((p) => <td class="py-3">{p.feed ? "Yes" : "No"}</td>)
-            }</tr
-          >
-          <tr
-            ><th scope="row" class="py-3 font-normal text-neutral-600">Batch import</th>{
-              plans.map((p) => <td class="py-3">{p.batch > 0 ? `Up to ${p.batch}` : "No"}</td>)
-            }</tr
-          >
-          <tr
-            ><th scope="row" class="py-3 font-normal text-neutral-600">Agency branding</th>{
-              plans.map((p) => <td class="py-3">{p.branding ? "Yes" : "No"}</td>)
-            }</tr
-          >
-        </tbody>
-      </table>
+    <div class="mt-8">
+      <PricingPlans client:load plans={plans} isAuthenticated={session !== null} />
     </div>
 
     <p class="mt-6 text-body text-neutral-700">
-      <a href="/sign-in" class="text-brand-700 underline underline-offset-2">Create an account</a>{
-        " "
+      {
+        session ? (
+          <>Manage your plan any time from your account's billing page.</>
+        ) : (
+          <>
+            <a href="/sign-in" class="text-brand-700 underline underline-offset-2">
+              Create an account
+            </a>{" "}
+            to subscribe — checkout runs through Paddle. Paddle handles payment, tax, and receipts;
+            CrawlPact never sees your card details.
+          </>
+        )
       }
-      to upgrade — checkout runs through Paddle from your dashboard's billing page. Paddle handles payment,
-      tax, and receipts; CrawlPact never sees your card details.
-    </p>
-    <p class="mt-2 text-supporting text-neutral-500">
-      This deployment is still in active development — see <a
-        href="/status"
-        class="text-brand-700 underline underline-offset-2">status</a
-      > for what's verified so far.
     </p>
   </div>
   <AnalyticsBeacon client:load eventName="pricing_viewed" />

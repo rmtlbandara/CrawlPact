@@ -106,6 +106,14 @@ jobs:
           pnpm exec wrangler d1 migrations apply crawlpact-db --remote
           --config apps/web/wrangler.jsonc
 
+      # Idempotent (INSERT OR IGNORE) — safe to run on every deploy, never overwrites or deletes
+      # an existing row. Without this, a migration that adds a new reference-data table (e.g.
+      # Phase 6's plan_prices) ships as an empty table until this runs, breaking any route that
+      # reads it (e.g. /pricing throwing on a missing active price row) even though the migration
+      # itself succeeded. See docs/billing/BILLING_DEPLOYMENT_AND_ROLLBACK_RUNBOOK.md.
+      - name: Seed reference data into production D1
+        run: pnpm run db:seed:reference-data:remote
+
       - name: Deploy production Worker
         # set -o pipefail is required here: without it, `| tee` always exits 0
         # (tee's own exit code), so a real `wrangler deploy` failure would be
