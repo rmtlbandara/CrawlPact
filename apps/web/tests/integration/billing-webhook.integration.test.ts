@@ -458,14 +458,35 @@ describe("Paddle billing webhook (real D1, self-generated HMAC signatures)", () 
     expect(second.status).toBe(200);
     const firstBody = await readJson<{ outcome: string }>(first);
     const secondBody = await readJson<{ outcome: string }>(second);
-    if (firstBody.ok) expect(firstBody.data.outcome).toBe("processed");
-    if (secondBody.ok) expect(secondBody.data.outcome).toBe("processed");
+    // `Promise.all` guarantees nothing about which request's DB write lands
+    // first, so which of these two related deliveries "wins" the initial
+    // insert (and therefore which, if either, isOutOfOrder() later rejects)
+    // is genuinely non-deterministic under real scheduling — see
+    // docs/status/BILLING_WEBHOOK_RACE_TEST_FLAKE.md for the full root-cause
+    // analysis (found 2026-07-30, root-caused 2026-07-31, fixed here). Assert
+    // the final-state invariants that hold under either ordering (Option A in
+    // that doc) instead of one specific per-request outcome: neither delivery
+    // fails outright, and — because `subscription.activated` (T+0.5s) can
+    // never itself be judged out-of-order relative to the earlier `created`
+    // (T+0.0s) event — at least one delivery is always "processed".
+    const validOutcomes = ["processed", "ignored_out_of_order"];
+    if (firstBody.ok) expect(validOutcomes).toContain(firstBody.data.outcome);
+    if (secondBody.ok) expect(validOutcomes).toContain(secondBody.data.outcome);
+    expect([
+      firstBody.ok && firstBody.data.outcome,
+      secondBody.ok && secondBody.data.outcome,
+    ]).toContain("processed");
 
     const subs = await db
       .select()
       .from(schema.subscriptions)
       .where(eq(schema.subscriptions.paddleSubscriptionId, "sub_race_1"));
     expect(subs).toHaveLength(1);
+    // Whichever request wins the race, the row converges on the same safe
+    // final state: the status from the event with the later `occurred_at`
+    // ("active", from subscription.activated) — never a regression back to
+    // the earlier event's "trialing".
+    expect(subs[0]!.status).toBe("active");
 
     for (const paddleEventId of ["evt_race_created", "evt_race_activated"]) {
       const [e] = await db
@@ -473,7 +494,7 @@ describe("Paddle billing webhook (real D1, self-generated HMAC signatures)", () 
         .from(schema.webhookEvents)
         .where(eq(schema.webhookEvents.paddleEventId, paddleEventId))
         .limit(1);
-      expect(e!.status).toBe("processed");
+      expect(["processed", "ignored"]).toContain(e!.status);
     }
   });
 });
