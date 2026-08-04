@@ -150,13 +150,23 @@ not silently claimed done here.
   **all passed**.
 - `pnpm verify:push` (full local CI reproduction — migrate, seed, format/lint/typecheck/unit/
   integration/db:validate/build, then a real Chromium e2e + a11y smoke against a live dev server,
-  then secret scan): see the accompanying PR/CI run for the authoritative result.
+  then secret scan): **all green** (three consecutive clean runs, after fixing an e2e locator regex
+  bug and a doc formatting issue the first run caught).
+- PR #78 CI (`Format, lint, typecheck, unit + integration tests, build` and
+  `Chromium E2E + accessibility smoke`): **both passed**. Merged to `main` as `c5efc97`.
 
 ## Deployment
 
-Not deployed. Per the standing CLAUDE.md rule, production deployment requires the user's explicit,
-in-the-moment authorization, requested separately after this report and after CI is confirmed green
-on the merged PR.
+Deployed to production 2026-08-04 via `deploy-production.yml` against `c5efc97`, with explicit
+user authorization requested and given separately from the merge. Migration
+`0020_audit_continuations.sql` applied to production D1. In-workflow smoke test: 32/32 passed.
+Independently re-verified directly against the live site afterward: homepage/`/sign-in`/
+`/app/continue` respond correctly (the latter redirecting an unauthenticated visitor to
+`/sign-in`), `POST /api/audit/:auditId/continuation` correctly returns `AUDIT_NOT_FOUND` for an
+unknown id, and a real anonymous audit against `e2e-fixture.crawlpact.com` produced a live report
+page containing both the new CTA and the new policy-impact summary. Deployed Worker version ID:
+`03180537-d303-4a48-a112-6f1e1af6c974`. See `CHANGELOG.md`'s "Production deployment (2026-08-04) —
+Phase 5" entry.
 
 ## Next phase
 
