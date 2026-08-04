@@ -14,6 +14,22 @@ the "Production deployment" entries below for the established pattern).
 
 ## Unreleased
 
+Nothing pending — see "Production deployment (2026-08-04)" below for the most recent release.
+
+## Production deployment (2026-08-04)
+
+Phases 0-4 (PRs #68-#72; Phase 4 squash-merged as `e757cbb`) deployed to production via
+`deploy-production.yml`, run against commit `e757cbb5a52cff8781cdc43442fe8518dbf4021b`. No D1
+migrations were pending since the last deployment (`ca6c3c1`, 2026-07-31) — this was a
+Worker-code-only release. The in-workflow smoke test passed 32/32; independently re-verified
+afterward by running `scripts/smoke-test.ts production https://crawlpact.com` directly against the
+live site: **32/32 checks passed**, including live confirmation that `/sample-report/` serves the
+new sample-fixture report (`sample-domain.example`) and the homepage's new "View a sample report"
+and "Review Agency pricing" CTAs are present. Deployed Worker version ID:
+`120bcb7a-c1aa-45a7-8889-c4c47258713a`. Phases 0 and 1 (governance/documentation-only, PRs #68-#69)
+carried no independent deployment action of their own — they took effect simply by being part of
+the same commit history as Phases 2-4.
+
 ### Added
 
 - Phase 2 (Brand Positioning and Messaging System): established
