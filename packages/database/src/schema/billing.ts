@@ -29,6 +29,11 @@ export const subscriptions = sqliteTable("subscriptions", {
   currentPeriodEnd: text("current_period_end"),
   cancelAtPeriodEnd: integer("cancel_at_period_end", { mode: "boolean" }).notNull().default(false),
   lastPaddleEventId: text("last_paddle_event_id"),
+  // The Paddle event `occurred_at` last actually applied to this row —
+  // compared inside the same UPDATE's WHERE clause (compare-and-swap) to
+  // atomically reject a stale, out-of-order concurrent delivery. See
+  // migration 0019 and docs/status/BILLING_WEBHOOK_RACE_TEST_FLAKE.md.
+  lastAppliedOccurredAt: text("last_applied_occurred_at"),
   syncError: text("sync_error"),
   createdAt: text("created_at").notNull(),
   updatedAt: text("updated_at").notNull(),

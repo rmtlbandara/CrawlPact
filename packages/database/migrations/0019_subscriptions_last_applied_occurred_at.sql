@@ -1,0 +1,13 @@
+-- Closes a real race condition in Paddle webhook processing (see
+-- docs/status/BILLING_WEBHOOK_RACE_TEST_FLAKE.md): the previous out-of-order
+-- guard compared an incoming event's occurred_at against the *webhook_events*
+-- table's "latest processed" row, which is only written *after* the
+-- subscriptions row itself is already updated — a window where two related,
+-- near-concurrent deliveries (e.g. subscription.created then
+-- subscription.activated) could both report "processed" while the slower
+-- one silently overwrote the row with its own, older status. Storing the
+-- watermark directly on the row being guarded, and comparing it inside the
+-- same UPDATE statement's WHERE clause (a compare-and-swap), closes the
+-- window entirely: the database itself decides atomically, not application
+-- code acting on a separately-read snapshot.
+ALTER TABLE subscriptions ADD COLUMN last_applied_occurred_at TEXT;

@@ -1,4 +1,4 @@
-import { and, desc, eq } from "drizzle-orm";
+import { and, eq, isNull, lt, or } from "drizzle-orm";
 import { schema } from "@crawlpact/database";
 import type { Database } from "@crawlpact/database";
 import { mapPriceIdToPlanId } from "./plan-mapping";
@@ -138,25 +138,6 @@ async function findOrCreateBillingCustomer(
   return winner?.id ?? null;
 }
 
-async function isOutOfOrder(
-  db: Database,
-  subscriptionRowId: string,
-  occurredAt: string,
-): Promise<boolean> {
-  const [latest] = await db
-    .select({ occurredAt: schema.webhookEvents.occurredAt })
-    .from(schema.webhookEvents)
-    .where(
-      and(
-        eq(schema.webhookEvents.relatedSubscriptionId, subscriptionRowId),
-        eq(schema.webhookEvents.status, "processed"),
-      ),
-    )
-    .orderBy(desc(schema.webhookEvents.occurredAt))
-    .limit(1);
-  return latest ? latest.occurredAt > occurredAt : false;
-}
-
 async function applyPlanFromStatus(
   db: Database,
   userId: string,
@@ -226,21 +207,22 @@ async function handleSubscriptionEvent(
     .where(eq(schema.subscriptions.paddleSubscriptionId, paddleSubscriptionId))
     .limit(1);
 
-  if (existingSub && (await isOutOfOrder(db, existingSub.id, event.occurredAt))) {
-    return {
-      outcome: "ignored_out_of_order",
-      billingCustomerId,
-      subscriptionRowId: existingSub.id,
-    };
-  }
-
   const now = new Date().toISOString();
   const resolvedPlanId = planId ?? existingSub?.planId ?? "free";
 
   let subscriptionRowId: string;
   if (existingSub) {
     subscriptionRowId = existingSub.id;
-    await db
+    // Compare-and-swap: the WHERE clause re-checks `last_applied_occurred_at`
+    // against the row's *current* committed value at UPDATE time, not a
+    // value read earlier in this function — so two related, near-concurrent
+    // deliveries can never both believe they're the newest. Previously this
+    // was a separate SELECT-then-decide check against `webhook_events`,
+    // which left a real window where the slower request's update could land
+    // after the faster one had already been marked "processed" elsewhere but
+    // before its own row write's effects were visible to that check — see
+    // docs/status/BILLING_WEBHOOK_RACE_TEST_FLAKE.md.
+    const updated = await db
       .update(schema.subscriptions)
       .set({
         planId: resolvedPlanId,
@@ -248,9 +230,27 @@ async function handleSubscriptionEvent(
         currentPeriodEnd: currentBillingPeriod?.ends_at ?? existingSub.currentPeriodEnd,
         cancelAtPeriodEnd: scheduledChange?.action === "cancel",
         lastPaddleEventId: event.eventId,
+        lastAppliedOccurredAt: event.occurredAt,
         updatedAt: now,
       })
-      .where(eq(schema.subscriptions.id, existingSub.id));
+      .where(
+        and(
+          eq(schema.subscriptions.id, existingSub.id),
+          or(
+            isNull(schema.subscriptions.lastAppliedOccurredAt),
+            lt(schema.subscriptions.lastAppliedOccurredAt, event.occurredAt),
+          ),
+        ),
+      )
+      .returning({ id: schema.subscriptions.id });
+
+    if (!updated[0]) {
+      return {
+        outcome: "ignored_out_of_order",
+        billingCustomerId,
+        subscriptionRowId: existingSub.id,
+      };
+    }
   } else {
     const inserted = await db
       .insert(schema.subscriptions)
@@ -263,6 +263,7 @@ async function handleSubscriptionEvent(
         currentPeriodEnd: currentBillingPeriod?.ends_at ?? null,
         cancelAtPeriodEnd: scheduledChange?.action === "cancel",
         lastPaddleEventId: event.eventId,
+        lastAppliedOccurredAt: event.occurredAt,
         createdAt: now,
         updatedAt: now,
       })
@@ -271,8 +272,8 @@ async function handleSubscriptionEvent(
       // concurrent delivery can insert this row between our SELECT above and
       // this INSERT. Re-run the handler now that the row exists — it will
       // take the `existingSub` branch above and apply this event as an
-      // update, instead of surfacing a UNIQUE-constraint failure for an
-      // otherwise-valid event.
+      // update (subject to the same compare-and-swap), instead of
+      // surfacing a UNIQUE-constraint failure for an otherwise-valid event.
       .onConflictDoNothing({ target: schema.subscriptions.paddleSubscriptionId })
       .returning({ id: schema.subscriptions.id });
 

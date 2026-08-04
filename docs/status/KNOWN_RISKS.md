@@ -609,12 +609,21 @@ public content-correction submission channel
 (`docs/seo/EDITORIAL_SOURCE_AND_CONTENT_POLICY.md`). Resolve before publishing any of those
 specific items.
 
-## `billing-webhook.integration.test.ts`'s concurrent-race test flakes under load (found 2026-07-30, root-caused 2026-07-31)
+## ~~CRITICAL: concurrent related Paddle webhook deliveries could silently regress a subscription to a stale status~~ (found 2026-07-30 as test flake, real bug found and fixed 2026-08-04)
 
-See `docs/status/BILLING_WEBHOOK_RACE_TEST_FLAKE.md` for the full root-cause analysis and
-recommended remediation. Summary: the test's own `Promise.all`-based concurrency simulation
-doesn't guarantee which of the two fired requests actually writes to the database first, so under
-real load the webhook handler's (correct) out-of-order protection can classify the "later" request
-as `ignored_out_of_order` instead of the test's assumed `processed` — deliberately not fixed as
-part of this workstream since it touches billing-critical ordering logic and needs its own
-dedicated review.
+See `docs/status/BILLING_WEBHOOK_RACE_TEST_FLAKE.md` for the full history. First investigated
+2026-07-30/31 as a flaky integration test and concluded (incorrectly) to be a test-assertion
+problem only, with the webhook handler's out-of-order protection working as designed. Recurred
+twice more in real CI on `main` (`abab3d4`, then `a66f4e5` — a CHANGELOG-only commit, conclusively
+proving it tracked request timing, not code content) before the original recommended fix (assert
+strict final-state invariants rather than one specific per-request outcome) was actually applied
+2026-08-04 — and running that stricter assertion repeatedly (1 failure in 34 local runs) proved the
+original 2026-07-31 conclusion wrong: two related, near-concurrent deliveries (e.g.
+`subscription.created` then `subscription.activated`, as Paddle sends them) could both report
+`outcome: "processed"` while the slower one silently overwrote the row with its own, older status
+— a real, silent subscription-status regression with zero visible error. **Fixed**: rebuilt the
+out-of-order guard in `apps/web/src/lib/billing/webhook-processor.ts` as an atomic
+compare-and-swap against a new `subscriptions.last_applied_occurred_at` column (migration `0019`),
+replacing a separate, racy `SELECT` against `webhook_events`. Verified with 40 consecutive clean
+runs of the previously-flaky test (vs. 1 failure in 34 before the fix) plus 3 consecutive full
+integration-suite runs.
