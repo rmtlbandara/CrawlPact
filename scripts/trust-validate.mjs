@@ -51,6 +51,18 @@ const ALLOWLIST = [
     reason:
       "Asserts these placeholder strings are NOT present in TRUST_CONFIG — a negative test, not a published placeholder.",
   },
+  {
+    file: "apps/web/src/lib/trust-config.test.ts",
+    pattern: "country-reference",
+    reason:
+      "Asserts the string is NOT present in TRUST_CONFIG (negative regex assertion) — not a published value.",
+  },
+  {
+    file: "docs/trust/TRUST_AND_LEGAL_CONFIGURATION.md",
+    pattern: "country-reference",
+    reason:
+      "Historical record of the previously product-owner-approved jurisdiction and why/when it was removed — internal governance history, not public content (2026-08-04 Public Country Reference and Contact Messaging Correction).",
+  },
 ];
 
 function isAllowlisted(rel, patternName) {
@@ -83,7 +95,19 @@ function listFiles(relDir) {
 
 const APPROVED_CONTACTS = ["info@crawlpact.com", "support@crawlpact.com"];
 const APPROVED_OPERATOR = "CrawlPact";
-const APPROVED_JURISDICTION = "Sri Lanka";
+
+// Public Country Reference and Contact Messaging Correction (2026-08-04): no operating country
+// or jurisdiction is published anywhere on the public site — see
+// docs/trust/TRUST_AND_LEGAL_CONFIGURATION.md. These patterns catch the removed country and the
+// negative support-channel wording it was paired with, wherever either might return.
+const PROHIBITED_COUNTRY_PATTERNS = [{ name: "Sri Lanka reference", pattern: /sri\s*lanka/i }];
+
+const PROHIBITED_SUPPORT_WORDING_PATTERNS = [
+  { name: "no live chat", pattern: /no live chat/i },
+  { name: "no phone support", pattern: /no phone support/i },
+  { name: "no guaranteed response time", pattern: /no guaranteed response time/i },
+  { name: "email-only support", pattern: /email-only support/i },
+];
 
 const UNSUPPORTED_SUFFIXES = [
   /CrawlPact[ \t]*\(Pvt\)[ \t]*Ltd\b\.?/i,
@@ -138,6 +162,17 @@ function main() {
     }
   }
 
+  // Contact page communicates the approved positive 24-hour response commitment.
+  const contactPath = "apps/web/src/pages/contact.astro";
+  if (existsSync(path.join(REPO_ROOT, contactPath))) {
+    const content = readFileSync(path.join(REPO_ROOT, contactPath), "utf8");
+    if (!/respond to enquiries within 24 hours/i.test(content)) {
+      errors.push(
+        `${contactPath}: missing the approved 24-hour response commitment ("we respond to enquiries within 24 hours" or equivalent)`,
+      );
+    }
+  }
+
   // security.txt exists and has required fields.
   const securityTxtPath = "apps/web/src/pages/.well-known/security.txt.ts";
   if (!existsSync(path.join(REPO_ROOT, securityTxtPath))) {
@@ -173,9 +208,9 @@ function main() {
     if (!content.includes(`legalEntityName: "${APPROVED_OPERATOR}"`)) {
       errors.push(`${trustConfigPath}: legalEntityName is not exactly "${APPROVED_OPERATOR}"`);
     }
-    if (!content.includes(`governingJurisdiction: "${APPROVED_JURISDICTION}"`)) {
+    if (/governingJurisdiction\s*:/.test(content)) {
       errors.push(
-        `${trustConfigPath}: governingJurisdiction is not exactly "${APPROVED_JURISDICTION}"`,
+        `${trustConfigPath}: must not publish a governingJurisdiction field — no operating country or jurisdiction is approved for public display (2026-08-04 correction)`,
       );
     }
     if (!/registeredAddress:\s*null/.test(content)) {
@@ -213,6 +248,21 @@ function main() {
     for (const pattern of PLACEHOLDER_PATTERNS) {
       if (pattern.test(content) && !isAllowlisted(rel, "placeholder")) {
         errors.push(`${rel}: contains a placeholder pattern (${pattern})`);
+      }
+    }
+
+    // No operating country/jurisdiction anywhere on the public site (2026-08-04 correction) —
+    // narrow, reviewed allowlist only for internal governance history.
+    for (const { name, pattern } of PROHIBITED_COUNTRY_PATTERNS) {
+      if (pattern.test(content) && !isAllowlisted(rel, "country-reference")) {
+        errors.push(`${rel}: contains a prohibited country/jurisdiction reference (${name})`);
+      }
+    }
+
+    // No wording emphasising unavailable support channels (same correction).
+    for (const { name, pattern } of PROHIBITED_SUPPORT_WORDING_PATTERNS) {
+      if (pattern.test(content) && !isAllowlisted(rel, "negative-support-wording")) {
+        errors.push(`${rel}: contains prohibited negative support wording (${name})`);
       }
     }
 

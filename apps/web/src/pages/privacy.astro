@@ -26,9 +26,8 @@ const effectiveDate = new Date(TRUST_CONFIG.policyEffectiveDate).toLocaleDateStr
 
     <h2 class="mt-8 text-h2 text-neutral-950">1. Who operates CrawlPact</h2>
     <p class="mt-3 text-body text-neutral-700">
-      {TRUST_CONFIG.legalEntityName} operates the CrawlPact service from {
-        TRUST_CONFIG.governingJurisdiction
-      }. For privacy questions, personal-data requests, or objections, contact{" "}
+      {TRUST_CONFIG.legalEntityName} operates the CrawlPact service. For privacy questions, personal-data
+      requests, or objections, contact{" "}
       <a
         href={`mailto:${TRUST_CONFIG.privacyContact}`}
         class="text-brand-700 underline underline-offset-2">{TRUST_CONFIG.privacyContact}</a
