@@ -30,6 +30,18 @@ and "Review Agency pricing" CTAs are present. Deployed Worker version ID:
 carried no independent deployment action of their own — they took effect simply by being part of
 the same commit history as Phases 2-4.
 
+**Second deployment the same day**: investigating an intermittent CI failure on `main` (commit
+`abab3d4`, and again on the CHANGELOG-only commit `a66f4e5` above) surfaced a real, previously
+undetected billing bug — concurrent related Paddle webhook deliveries could silently regress a
+subscription's status, both reporting `"processed"` with no visible error (see
+`docs/status/BILLING_WEBHOOK_RACE_TEST_FLAKE.md`). Fixed in PR #74 (squash-merged as `53a56ce`):
+replaced a racy out-of-order check against `webhook_events` with an atomic compare-and-swap on a
+new `subscriptions.last_applied_occurred_at` column (migration `0019`). Deployed via
+`deploy-production.yml` against `53a56cee69c40973a06317fb2b789c80e906e2bb` — migration `0019`
+applied cleanly to live D1, Worker deployed, bindings verified. In-workflow smoke test passed
+32/32; independently re-verified afterward against the live site: **32/32 checks passed**.
+Deployed Worker version ID: `892561e5-2f27-4223-9fa2-e7f2db21ae03`.
+
 ### Added
 
 - Phase 2 (Brand Positioning and Messaging System): established
