@@ -14,6 +14,27 @@ the "Production deployment" entries below for the established pattern).
 
 ## Unreleased
 
+Nothing pending — see "Production deployment (2026-08-04) — Phase 6" below for the most recent
+release.
+
+## Production deployment (2026-08-04) — Phase 6
+
+Phase 6 (Pricing, Plan Architecture and Checkout Continuity, PR #80, squash-merged as `16d5864`)
+deployed to production via `deploy-production.yml`, run against commit
+`16d586419d09c2df39dc1411d079a21a18af0dd2`. One D1 migration was applied (`0021_plan_prices.sql`,
+the new `plan_prices` table and 5 new `subscriptions` columns), followed by the newly-automated
+reference-data seed step. The in-workflow smoke test passed; independently re-verified afterward
+directly against the live site: `/pricing` renders all 7 real approved offers (Free $0; Solo
+$9/mo, $89/yr; Pro $19/mo, $189/yr; Agency $39/mo, $389/yr, "Most Popular" badge on Pro), its
+structured pricing data contains exactly 7 `Offer` entries at those same real prices, `/app/billing`
+and `/admin/plans` both correctly redirect an unauthenticated visitor to `/sign-in`, and
+`POST /api/billing/checkout` correctly rejects a cross-origin request with `403 FORBIDDEN`
+(`Cross-site request blocked`). Deployed Worker version ID: `7ed25286-f394-4517-aca6-5fe5168b41a4`.
+Build artifact checksum: `c3f65964f0aae4196ef6b806a288fd307c6baef8dc6e24eb499493785c23f293`. See
+`docs/reports/PHASE_06_PRICING_PADDLE_CHECKOUT_COMPLETION_REPORT.md` for the full change list. As
+documented throughout this phase, no real paid Paddle checkout was run as part of this deployment
+— RISK-001 remains open.
+
 ### Added — Phase 6: Pricing, Plan Architecture and Checkout Continuity
 
 - A DB-backed, multi-interval, multi-environment pricing catalog (migration
