@@ -14,6 +14,27 @@ the "Production deployment" entries below for the established pattern).
 
 ## Unreleased
 
+Nothing pending — see "Production deployment (2026-08-04) — Phase 7" below for the most recent
+release.
+
+## Production deployment (2026-08-04) — Phase 7
+
+Phase 7 (Vertical Landing Pages and Platform SEO Architecture, PR #82, squash-merged as `4637e1a`)
+deployed to production via `deploy-production.yml`, run against commit
+`4637e1a224b8a49d4a44a7d5c42cd0ee65c5afbf`. No new D1 migration this phase (content-only). The
+in-workflow smoke test passed; independently re-verified afterward directly against the live site:
+all 10 new routes (`/for/{agencies,publishers,saas-and-documentation,web-developers}`, `/platforms`,
+`/platforms/{cloudflare,wordpress,shopify,vercel,netlify}`) return `HTTP 200`, all 9 content pages
+plus the `/platforms` static route appear in the live `/sitemap.xml`, `/for/agencies` renders its
+real `<h1>` content, and the header nav's new "Platforms" link is present. Deployed Worker version
+ID: `630258b4-c020-4105-9ca3-550897f7c0e3`. Build artifact checksum:
+`c3f65964f0aae4196ef6b806a288fd307c6baef8dc6e24eb499493785c23f293` (checksums the Worker's
+`wrangler.json` binding manifest, which is unchanged from Phase 6 — expected for a content-only
+deploy, not a sign the build didn't run). See
+`docs/reports/PHASE_07_VERTICAL_PLATFORM_SEO_COMPLETION_REPORT.md` for the full change list. As
+documented throughout this phase, the 5 extended platform guides (nginx, apache, fastly, akamai,
+GitHub Pages) were deliberately not built — RISK-031 remains open, tracked for a future session.
+
 ### Added — Phase 7: Vertical Landing Pages and Platform SEO Architecture
 
 - Two new content collections, `verticals` and `platforms` (`apps/web/src/content.config.ts`).
@@ -44,10 +65,6 @@ the "Production deployment" entries below for the established pattern).
 - 5 extended platform guides (nginx, apache, fastly, akamai, GitHub Pages) — the phase prompt's own
   research/evidence/uniqueness bar wasn't attempted this session; explicitly not built rather than
   published thin. Tracked as RISK-031.
-
-Not yet deployed to production — see "Production deployment" entries below for the established
-pattern; this section will move to a dated entry once Phase 7 actually ships. Most recent
-production release remains "Production deployment (2026-08-04) — Phase 6" below.
 
 ## Production deployment (2026-08-04) — Phase 6
 

@@ -73,13 +73,33 @@ baseline — it is not evidence about production load performance, which require
 preview-Worker run this repository's existing CI workflow already performs on every deploy and
 will run again the next time this branch's preview environment builds.
 
-## What still needs a genuine post-deploy check
+## Real production Lighthouse run (post-deploy, 2026-08-04)
 
-Once this branch reaches the preview Worker (via the existing `deploy-preview.yml` CI job), the
-production-representative Lighthouse numbers for `/for/agencies` and `/platforms/cloudflare` will
-be available from that job's own log, gated at the same thresholds as every other page
-(performance ≥85, accessibility ≥95, best-practices ≥85, SEO ≥90, LCP ≤3000ms, CLS ≤0.1) — this is
-the number that actually matters, not the dev-server table above. If that run fails specifically on
-one of the two new pages (and not the pre-existing three), that is a genuine Phase 7 regression to
-investigate before merge; if all five fail or pass together, it reflects a shared, pre-existing
-condition, not something this phase introduced.
+Phase 7 deployed to production the same day (Worker `630258b4-c020-4105-9ca3-550897f7c0e3`). Ran
+`node scripts/lighthouse-check.mjs https://crawlpact.com` directly against the live site —
+genuine production numbers, not a dev-server artifact:
+
+| Path                                 | Performance | Accessibility | Best Practices | SEO |      LCP | CLS |
+| ------------------------------------ | ----------: | ------------: | -------------: | --: | -------: | --: |
+| `/` (pre-existing)                   |          79 |           100 |             92 | 100 | 4,653 ms |   0 |
+| `/pricing` (pre-existing)            |          99 |           100 |             92 | 100 | 1,787 ms |   0 |
+| `/crawlers/amazonbot` (pre-existing) |          71 |           100 |             92 | 100 | 5,070 ms |   0 |
+| `/for/agencies` (Phase 7)            |          73 |           100 |             92 | 100 | 4,788 ms |   0 |
+| `/platforms/cloudflare` (Phase 7)    |          90 |           100 |             92 | 100 | 3,300 ms |   0 |
+
+**Reading these numbers honestly**: 3 of the 5 pages fail the performance/LCP threshold
+(performance ≥85, LCP ≤3000ms) — `/`, `/crawlers/amazonbot`, and `/for/agencies`. This is **not** a
+Phase-7-specific regression: `/for/agencies` (73/100, 4,788ms) performs almost identically to the
+pre-existing, unmodified `/crawlers/amazonbot` (71/100, 5,070ms), and `/platforms/cloudflare`
+(Phase 7's other new template) actually outperforms both of those pre-existing pages at 90/100,
+missing only the LCP threshold by 300ms. `/pricing` is the outlier in the other direction (99/100).
+Accessibility (100/100), Best Practices (92/92), SEO (100/100), and CLS (0/0) are identical across
+every page tested, new and old alike — confirming Phase 7 introduced no accessibility, structured-
+data, or layout-shift regression.
+
+**Real finding, disclosed, not Phase-7-scoped to fix**: this is the first time `lighthouse-check.mjs`
+has been run directly against `https://crawlpact.com` — CI only ever runs it against the _preview_
+Worker (`deploy-preview.yml`), never production, so this site-wide performance/LCP gap was
+previously unmeasured, not previously passing. Recorded as RISK-033, routed to Phase 11 (Database,
+Storage, Retention and Performance Hardening) — the phase that already owns performance work —
+rather than attempted as an out-of-scope fix here.
