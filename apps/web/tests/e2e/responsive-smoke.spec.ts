@@ -69,6 +69,22 @@ test.describe("Responsive layout smoke", () => {
         await assertNoHorizontalOverflow(page);
       });
 
+      test("a vertical landing page renders its pricing guidance without horizontal overflow (Phase 7)", async ({
+        page,
+      }) => {
+        await page.goto("/for/agencies");
+        await expect(page.getByRole("heading", { level: 1 })).toBeVisible();
+        await assertNoHorizontalOverflow(page);
+      });
+
+      test("a platform guide renders its official references without horizontal overflow (Phase 7)", async ({
+        page,
+      }) => {
+        await page.goto("/platforms/cloudflare");
+        await expect(page.getByRole("heading", { level: 1 })).toBeVisible();
+        await assertNoHorizontalOverflow(page);
+      });
+
       // MobileNav.tsx is `xl:hidden` — this project's remapped `xl:`
       // breakpoint is 1024px (see SiteHeader.astro), so the "Open menu"
       // button is present at both 360 and 768, hidden only at 1280.

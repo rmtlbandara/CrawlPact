@@ -14,8 +14,40 @@ the "Production deployment" entries below for the established pattern).
 
 ## Unreleased
 
-Nothing pending — see "Production deployment (2026-08-04) — Phase 6" below for the most recent
-release.
+### Added — Phase 7: Vertical Landing Pages and Platform SEO Architecture
+
+- Two new content collections, `verticals` and `platforms` (`apps/web/src/content.config.ts`).
+- 4 audience-specific vertical landing pages at `/for/<slug>` (agencies, publishers,
+  SaaS-and-documentation, web developers) — SSR (`prerender = false`), reading live pricing via
+  the existing `getPlanCatalog()` (same source `pricing.astro` uses).
+- A platform-guide hub at `/platforms` plus 5 verified, source-cited platform guides at
+  `/platforms/<slug>` (Cloudflare, WordPress, Shopify, Vercel, Netlify) — prerendered, every
+  technical claim traced to `docs/seo/PLATFORM_CLAIM_SOURCE_REGISTER.md` and rendered as a
+  template-generated "Official references" section.
+- 9 new first-party product events (`vertical_page_viewed`, `vertical_audit_cta_clicked`,
+  `vertical_sample_report_clicked`, `vertical_pricing_clicked`, `platform_guide_viewed`,
+  `platform_audit_cta_clicked`, `platform_official_source_clicked`,
+  `platform_related_guide_clicked`, `content_correction_clicked` — see
+  `docs/analytics/PHASE_07_CONTENT_CONVERSION_EVENT_MODEL.md`).
+- New header nav link ("Platforms"), a homepage "Solutions" teaser section
+  (`VerticalsSection.astro`), and a new footer "Solutions" column linking all 4 vertical pages and
+  the platform hub.
+- Two new quality-gate scripts: `pnpm content:validate` (wired into `pnpm quality`) and
+  `pnpm content:links:check` (manual/scheduled — makes live network calls, so kept out of the
+  network-independent `quality` gate).
+- 14 new governance/content docs under `docs/seo/`, `docs/content/`, `docs/security/`,
+  `docs/analytics/` — see `docs/governance/DOCUMENTATION_INVENTORY.md`'s "Phase 7 update" and
+  `docs/reports/PHASE_07_VERTICAL_PLATFORM_SEO_COMPLETION_REPORT.md` for the full list.
+
+### Deferred — Phase 7
+
+- 5 extended platform guides (nginx, apache, fastly, akamai, GitHub Pages) — the phase prompt's own
+  research/evidence/uniqueness bar wasn't attempted this session; explicitly not built rather than
+  published thin. Tracked as RISK-031.
+
+Not yet deployed to production — see "Production deployment" entries below for the established
+pattern; this section will move to a dated entry once Phase 7 actually ships. Most recent
+production release remains "Production deployment (2026-08-04) — Phase 6" below.
 
 ## Production deployment (2026-08-04) — Phase 6
 

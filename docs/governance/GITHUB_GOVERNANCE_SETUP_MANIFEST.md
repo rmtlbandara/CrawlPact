@@ -2,6 +2,37 @@
 
 **Status: verification-blocked (by user decision, not access failure).**
 
+## Phase 7 update (2026-08-04)
+
+Phase 6 (PR #80, docs-only deployment record PR #81) merged to `main` and deployed to production.
+Phase 7 (Vertical Landing Pages and Platform SEO Architecture) is **substantially complete** — see
+`docs/reports/PHASE_07_VERTICAL_PLATFORM_SEO_COMPLETION_REPORT.md`. Same manifest-only decision
+carried forward. It does **not** close the 6 follow-up issues Phase 6 routed here (tagline
+reconciliation, `package.json` descriptions, RISK-001 real paid checkout, the flaky webhook race
+test, `pnpm paddle:catalog:sync`, real sandbox Paddle prices) — all six are billing/checkout-area
+items, and Phase 7's own execution prompt explicitly prohibited touching pricing, Paddle, checkout,
+or crawler-evaluation logic at all. Re-routed below to `phase-08`, not silently dropped. When this
+manifest is applied, additionally create these follow-up issues Phase 7 found but deliberately did
+not build:
+
+- **"Research and publish the 5 extended platform guides (nginx, apache, fastly, akamai, GitHub
+  Pages)"** — Stage 7D, explicitly deferred this session per the phase's own stated permission (the
+  official-source research/evidence/uniqueness bar was not attempted, not merely unmet). See
+  `docs/risks/ACTIVE_RISKS.md` RISK-031 and `docs/seo/SEO_CONTENT_GOVERNANCE.md`.
+- **"Connect a Google Search Console property for crawlpact.com and complete the manual
+  verification checklist"** — no property exists yet; see `docs/risks/ACTIVE_RISKS.md` RISK-032 and
+  `docs/seo/PHASE_07_SEARCH_PERFORMANCE_BASELINE.md`.
+- **"Add a header dropdown/menu for vertical landing pages if the flat 'Platforms' link plus
+  homepage/footer coverage proves insufficient for discoverability"** — a deliberately simpler
+  design was shipped this phase (see `docs/seo/INTERNAL_LINK_ARCHITECTURE.md`); revisit only if
+  real usage data shows a problem, not preemptively.
+- **(Carried forward, unchanged, from Phase 6 — routed to `phase-08`)**: "Reconcile SRS §2.3 Primary
+  Tagline with the Phase 2 canonical brand system" (RISK-028); "Add `description` fields to the 10
+  `package.json` files that currently lack one"; "Run a real, authorized, small-value paid Paddle
+  checkout end to end" (RISK-001); "Fix the flaky `billing-webhook.integration.test.ts`
+  concurrent-race test" (RISK-012); "Build `pnpm paddle:catalog:sync`"; "Create real sandbox Paddle
+  prices for genuine end-to-end sandbox checkout testing".
+
 ## Phase 6 update (2026-08-04)
 
 Phase 5 (PR #78, docs-only deployment record PR #79) merged to `main`. Phase 6 (Pricing, Plan

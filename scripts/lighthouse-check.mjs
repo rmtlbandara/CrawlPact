@@ -19,7 +19,9 @@ if (!baseUrl) {
 
 // One representative page per distinct template archetype — matches the
 // set this project's a11y suite already treats as representative.
-const PAGES = ["/", "/pricing", "/crawlers/amazonbot"];
+// /for/agencies and /platforms/cloudflare added Phase 7 (Vertical Landing Pages and Platform SEO
+// Architecture) — the first SSR content-collection template and the first platform-guide template.
+const PAGES = ["/", "/pricing", "/crawlers/amazonbot", "/for/agencies", "/platforms/cloudflare"];
 
 // Thresholds intentionally below this session's actual measured scores
 // (98-99 performance, 100 accessibility, ~2.0-2.3s LCP against a local

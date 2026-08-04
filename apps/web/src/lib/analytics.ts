@@ -62,6 +62,18 @@ export const PRODUCT_EVENT_NAMES = [
   "plan_change_confirmed",
   "plan_change_failed",
   "customer_portal_opened",
+  // Vertical Landing Pages and Platform SEO Architecture (Phase 7). No audited domain, email,
+  // full URL with private identifiers, or report evidence is ever sent as a property — see
+  // docs/analytics/PHASE_07_CONTENT_CONVERSION_EVENT_MODEL.md.
+  "vertical_page_viewed",
+  "vertical_audit_cta_clicked",
+  "vertical_sample_report_clicked",
+  "vertical_pricing_clicked",
+  "platform_guide_viewed",
+  "platform_audit_cta_clicked",
+  "platform_official_source_clicked",
+  "platform_related_guide_clicked",
+  "content_correction_clicked",
 ] as const;
 
 export type ProductEventName = (typeof PRODUCT_EVENT_NAMES)[number];
