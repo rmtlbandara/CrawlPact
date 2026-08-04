@@ -26,6 +26,10 @@ not build:
   homepage/footer coverage proves insufficient for discoverability"** — a deliberately simpler
   design was shipped this phase (see `docs/seo/INTERNAL_LINK_ARCHITECTURE.md`); revisit only if
   real usage data shows a problem, not preemptively.
+- **"Investigate and fix the production Lighthouse performance/LCP gap found during Phase 7's
+  post-deploy verification"** — a real, pre-existing, site-wide condition (not specific to Phase
+  7's new templates), first measured this phase because `deploy-preview.yml` only ever checks the
+  preview Worker, never production. See `docs/risks/ACTIVE_RISKS.md` RISK-033.
 - **(Carried forward, unchanged, from Phase 6 — routed to `phase-08`)**: "Reconcile SRS §2.3 Primary
   Tagline with the Phase 2 canonical brand system" (RISK-028); "Add `description` fields to the 10
   `package.json` files that currently lack one"; "Run a real, authorized, small-value paid Paddle

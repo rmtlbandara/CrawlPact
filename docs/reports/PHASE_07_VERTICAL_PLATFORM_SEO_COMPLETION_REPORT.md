@@ -10,10 +10,11 @@ the phase's required minimum on both content types (4/4, 5/5). The 5 extended pl
 (nginx, apache, fastly, akamai, GitHub Pages) were deliberately deferred per the phase prompt's own
 stated permission, not silently dropped (RISK-031).
 
-**Status: substantially complete.** All required content, infrastructure, tests, and governance
-docs are built and passing on the feature branch `phase-07-vertical-platform-seo`. Not yet merged
-or deployed to production as of this report — see "Next steps" below for what remains and the
-explicit confirmation this document does not itself grant.
+**Status: substantially complete, deployed to production.** All required content, infrastructure,
+tests, and governance docs were built, quality-gated, merged (PR #82, squash-merged as `4637e1a`),
+and deployed to production 2026-08-04 after explicit user confirmation — Worker version
+`630258b4-c020-4105-9ca3-550897f7c0e3`. All 10 new routes independently verified live (`HTTP 200`,
+present in the live `/sitemap.xml`, real content rendering) — see "Deployment" below.
 
 ## Starting point
 
@@ -181,16 +182,37 @@ the two new content-validation scripts), `docs/seo/{EDITORIAL_SOURCE_AND_CONTENT
 `docs/governance/{DOCUMENTATION_INVENTORY,GITHUB_GOVERNANCE_SETUP_MANIFEST}.md`,
 `docs/roadmap/CRAWLPACT_IMPROVEMENT_IMPLEMENTATION_PLAN.md`, `CHANGELOG.md`.
 
-## Next steps
+## Deployment
 
-1. Create the follow-up GitHub issues listed in `docs/governance/GITHUB_GOVERNANCE_SETUP_MANIFEST.md`'s
-   "Phase 7 update" section.
-2. Commit, push, open a PR (title: `feat(seo): add vertical landing pages and verified platform
-guides`), wait for CI to go green, merge.
-3. Request a fresh, separate, explicit, in-the-moment confirmation before deploying to production —
-   this report does not itself grant that authorization, consistent with every prior phase's
-   established pattern.
-4. Once deployed: re-run `scripts/lighthouse-check.mjs` against the real preview/production Worker
-   for true (not dev-server) performance numbers on the two new templates; complete the manual
-   Search Console checklist once a property exists; move this changelog entry from `## Unreleased`
-   to a dated production-deployment entry, matching every prior phase's pattern.
+Committed, pushed, and opened as PR #82 (`feat(seo): add vertical landing pages and verified
+platform guides`). Both required CI checks passed (format/lint/typecheck/unit+integration/build;
+Chromium E2E + accessibility smoke). Squash-merged to `main` as `4637e1a`. Deployed to production
+via `deploy-production.yml` after explicit, in-the-moment user confirmation — Worker version
+`630258b4-c020-4105-9ca3-550897f7c0e3`, build artifact checksum
+`c3f65964f0aae4196ef6b806a288fd307c6baef8dc6e24eb499493785c23f293` (the deploy workflow's own
+required "CI must have succeeded for this exact commit" gate initially and correctly refused the
+squash-merge commit, since a squash merge produces a new SHA with no CI history of its own — waited
+for `main`'s push-triggered CI to complete on that commit, then redeployed successfully).
+
+The in-workflow smoke test passed; independently re-verified directly against
+`https://crawlpact.com` afterward: all 10 new routes return `HTTP 200`, all 9 content pages plus
+the `/platforms` static route appear in the live `/sitemap.xml`, `/for/agencies` renders its real
+`<h1>` content, and the header nav's new "Platforms" link is present.
+
+A direct production Lighthouse run (`node scripts/lighthouse-check.mjs https://crawlpact.com`) —
+the first time this script was ever pointed at production rather than the preview Worker — found a
+real, pre-existing, site-wide performance/LCP gap (3 of 5 tested pages fail threshold, including
+the pre-existing, unmodified `/crawlers/amazonbot`). This is not a Phase 7 regression: Phase 7's
+`/platforms/cloudflare` template actually outperforms two of the three failing pre-existing pages.
+Disclosed and recorded as RISK-033, routed to Phase 11 rather than fixed here (out of this phase's
+scope). See `docs/seo/PHASE_07_SEARCH_PERFORMANCE_BASELINE.md` for the full numbers.
+
+## Follow-up items not yet created as real GitHub issues
+
+Per this repository's standing, explicitly-confirmed decision (`docs/governance/GITHUB_GOVERNANCE_SETUP_MANIFEST.md`:
+"Status: verification-blocked (by user decision, not access failure)"), no real GitHub
+milestones/labels/issues exist yet — only the manifest is maintained. This phase's follow-up items
+(Stage 7D, Search Console gap, header-dropdown revisit trigger, RISK-033, plus the 6 Phase-6-origin
+items re-routed to `phase-08`) are recorded in that manifest's new "Phase 7 update" section, ready
+to apply via its included `gh` commands whenever that standing decision changes — not created as
+live issues in this session.

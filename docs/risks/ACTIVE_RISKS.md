@@ -12,7 +12,9 @@ Last reviewed: 2026-08-04 (Phase 7), consolidating `docs/status/KNOWN_RISKS.md`'
 items with the 13 new risks Phase 0's baseline audit found
 (`docs/baseline/2026-08-03/BASELINE_RISKS_AND_UNKNOWNS.md`). Phase 6 closed RISK-016 (see
 `docs/risks/RISK_ARCHIVE.md` ARC-024) and mitigated RISK-017. Phase 7 added RISK-031 (deferred
-extended platform guides) and RISK-032 (no Search Console property connected).
+extended platform guides), RISK-032 (no Search Console property connected), and RISK-033
+(pre-existing production Lighthouse performance/LCP gap, first measured during Phase 7's own
+post-deploy verification).
 
 ---
 
@@ -416,6 +418,33 @@ extended platform guides) and RISK-032 (no Search Console property connected).
 - **Status**: accepted
 - **Acceptance criteria for closure**: A Search Console property is connected and the manual
   verification checklist in `PHASE_07_SEARCH_PERFORMANCE_BASELINE.md` is completed at least once.
+
+### RISK-033 — Production Lighthouse performance/LCP fails threshold on 3 of 5 tested pages (pre-existing, first measured this phase)
+
+- **Category**: Performance · **Severity**: P2 · **Probability**: Certain (measured directly)
+- **Impact**: A direct `scripts/lighthouse-check.mjs` run against `https://crawlpact.com` (first
+  time this script was ever run against production rather than the preview Worker) found `/`
+  (79/100, LCP 4,653ms), `/crawlers/amazonbot` (71/100, LCP 5,070ms), and `/for/agencies` (73/100,
+  LCP 4,788ms) all fail the stated thresholds (performance ≥85, LCP ≤3000ms). This is **not** a
+  Phase 7 regression — `/for/agencies` performs almost identically to the pre-existing, unmodified
+  `/crawlers/amazonbot`, and Phase 7's other new page (`/platforms/cloudflare`, 90/100) actually
+  outperforms both. `deploy-preview.yml` only ever runs this check against the preview Worker, so
+  production's real Lighthouse numbers were previously unmeasured, not previously passing.
+  Accessibility (100/100), SEO (100/100), Best Practices (92/92), and CLS (0/0) are unaffected and
+  identical across every page tested.
+- **Evidence**: `docs/seo/PHASE_07_SEARCH_PERFORMANCE_BASELINE.md` ("Real production Lighthouse run
+  (post-deploy, 2026-08-04)")
+- **Current mitigation**: None yet — genuinely unaddressed. `scripts/lighthouse-check.mjs`'s
+  thresholds continue to gate the preview Worker on every deploy, so no further regression is
+  invisible; this risk is about the already-existing production gap the preview check cannot see.
+- **Owner**: Engineering owner · **Trigger**: Any performance-hardening pass, or a future Lighthouse
+  run against production showing further degradation
+- **Review date**: Next release readiness review · **Target phase**: Phase 11 (Database, Storage,
+  Retention and Performance Hardening) — the phase that already owns performance work
+- **Status**: accepted
+- **Acceptance criteria for closure**: A direct production Lighthouse run shows all tested pages
+  meeting the stated performance/LCP thresholds, or `deploy-production.yml` itself gates on this
+  check the way `deploy-preview.yml` already does for the preview Worker.
 
 ---
 
