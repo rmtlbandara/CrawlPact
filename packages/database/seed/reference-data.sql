@@ -48,6 +48,45 @@ INSERT OR IGNORE INTO plans (
   ('pro', 'Pro', 17900, 25, 'weekly', 730, 10, 1, 1, 'full', 1, 10, 0),
   ('agency', 'Agency', 39900, 100, 'weekly', 1095, 20, 1, 1, 'full', 1, 100, 1);
 
+-- 1a. Plan prices (Phase 6, migration 0021) — see
+-- docs/billing/APPROVED_PRICING_AND_ENTITLEMENT_MATRIX.md and
+-- docs/billing/PADDLE_LIVE_CATALOG_MAP.md. Paddle price/product IDs are public identifiers, not
+-- secrets — safe to commit. `production` rows use the real live catalog (verified via Paddle
+-- MCP readback 2026-08-04); `sandbox` rows use obviously-fake placeholder IDs, following the
+-- existing `pri_sandbox_placeholder` convention, since no sandbox account was available this
+-- phase — see docs/billing/PADDLE_LIVE_PREFLIGHT_CHANGE_MANIFEST.md. Both environments' rows
+-- coexist safely in every database copy: the application only ever queries the row matching its
+-- own runtime `PADDLE_ENVIRONMENT`, so a production-environment row sitting inert in a local
+-- dev/test database is harmless — it's a public identifier, never used because that server's own
+-- environment never matches it.
+INSERT OR IGNORE INTO plan_prices (
+  id, plan_id, environment, interval, amount_usd_cents,
+  paddle_product_id, paddle_price_id, active_for_new_checkout, legacy,
+  effective_date
+) VALUES
+  -- Current, active-for-new-checkout production prices.
+  ('solo_month_production', 'solo', 'production', 'month', 900, 'pro_01kyfjzj2pte9mcgyg4f3smpem', 'pri_01kz5ttr3ke4kz63y6yx6bh5tk', 1, 0, '2026-08-04T00:00:00.000Z'),
+  ('solo_year_production', 'solo', 'production', 'year', 8900, 'pro_01kyfjzj2pte9mcgyg4f3smpem', 'pri_01kz5ttr64b2m9p930t2n660dj', 1, 0, '2026-08-04T00:00:00.000Z'),
+  ('pro_month_production', 'pro', 'production', 'month', 1900, 'pro_01kyfjzj6xdb6he6mygawd165n', 'pri_01kz5ttr946mfx6qr6gq3n7k2b', 1, 0, '2026-08-04T00:00:00.000Z'),
+  ('pro_year_production', 'pro', 'production', 'year', 18900, 'pro_01kyfjzj6xdb6he6mygawd165n', 'pri_01kz5ttrbf0v9t3yntw2azbgzz', 1, 0, '2026-08-04T00:00:00.000Z'),
+  ('agency_month_production', 'agency', 'production', 'month', 3900, 'pro_01kyfjzjb29p9y2ebtbxzx6nkv', 'pri_01kz5ttrdwg6gbzj0054ffnshy', 1, 0, '2026-08-04T00:00:00.000Z'),
+  ('agency_year_production', 'agency', 'production', 'year', 38900, 'pro_01kyfjzjb29p9y2ebtbxzx6nkv', 'pri_01kz5ttrgbgjhn91qn146n23kn', 1, 0, '2026-08-04T00:00:00.000Z'),
+  -- Legacy production annual prices — pre-existing, unarchived, never offered to new checkout;
+  -- kept so the real existing subscriber's webhook events keep resolving to a plan forever. See
+  -- docs/billing/LEGACY_PRICE_AND_SUBSCRIBER_POLICY.md.
+  ('solo_year_production_legacy', 'solo', 'production', 'year', 7900, 'pro_01kyfjzj2pte9mcgyg4f3smpem', 'pri_01kyfjzj3t4x2t4dqrmnkjj0r2', 0, 1, '2026-07-26T00:00:00.000Z'),
+  ('pro_year_production_legacy', 'pro', 'production', 'year', 17900, 'pro_01kyfjzj6xdb6he6mygawd165n', 'pri_01kyfjzj81k6w2ds6r6a2jcv93', 0, 1, '2026-07-26T00:00:00.000Z'),
+  ('agency_year_production_legacy', 'agency', 'production', 'year', 39900, 'pro_01kyfjzjb29p9y2ebtbxzx6nkv', 'pri_01kyfjzjc4tbhve9czw1dq2b1b', 0, 1, '2026-07-26T00:00:00.000Z'),
+  -- Sandbox placeholders (obviously fake — BILLING_ENABLED's placeholder check in
+  -- packages/config/src/env.ts already refuses to boot with these anywhere billing is enabled,
+  -- exactly like the existing PADDLE_PRICE_ID_* placeholders).
+  ('solo_month_sandbox', 'solo', 'sandbox', 'month', 900, 'pro_sandbox_placeholder', 'pri_sandbox_placeholder_solo_month', 1, 0, '2026-08-04T00:00:00.000Z'),
+  ('solo_year_sandbox', 'solo', 'sandbox', 'year', 8900, 'pro_sandbox_placeholder', 'pri_sandbox_placeholder_solo_year', 1, 0, '2026-08-04T00:00:00.000Z'),
+  ('pro_month_sandbox', 'pro', 'sandbox', 'month', 1900, 'pro_sandbox_placeholder', 'pri_sandbox_placeholder_pro_month', 1, 0, '2026-08-04T00:00:00.000Z'),
+  ('pro_year_sandbox', 'pro', 'sandbox', 'year', 18900, 'pro_sandbox_placeholder', 'pri_sandbox_placeholder_pro_year', 1, 0, '2026-08-04T00:00:00.000Z'),
+  ('agency_month_sandbox', 'agency', 'sandbox', 'month', 3900, 'pro_sandbox_placeholder', 'pri_sandbox_placeholder_agency_month', 1, 0, '2026-08-04T00:00:00.000Z'),
+  ('agency_year_sandbox', 'agency', 'sandbox', 'year', 38900, 'pro_sandbox_placeholder', 'pri_sandbox_placeholder_agency_year', 1, 0, '2026-08-04T00:00:00.000Z');
+
 -- 2. Admin roles (SRS §28.18 RBAC catalog) — exact values, matching
 --    migrations/0007_admin_security.sql's role model ------------------------
 INSERT OR IGNORE INTO admin_roles (id, name, description) VALUES

@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { Alert, Button } from "@crawlpact/ui";
+import { track } from "../../lib/analytics-client";
 
 export function PortalButton() {
   const [busy, setBusy] = useState(false);
@@ -19,6 +20,7 @@ export function PortalButton() {
         setError(body.error?.message ?? "The billing portal is unavailable right now.");
         return;
       }
+      track("customer_portal_opened");
       window.location.href = body.data.url;
     } finally {
       setBusy(false);

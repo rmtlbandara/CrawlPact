@@ -14,8 +14,80 @@ the "Production deployment" entries below for the established pattern).
 
 ## Unreleased
 
-Nothing pending — see "Production deployment (2026-08-04) — Phase 5" below for the most recent
-release.
+### Added — Phase 6: Pricing, Plan Architecture and Checkout Continuity
+
+- A DB-backed, multi-interval, multi-environment pricing catalog (migration
+  `0021_plan_prices.sql`, `apps/web/src/lib/billing/plan-catalog.ts`) replacing the old flat
+  annual-only `PADDLE_PRICE_ID_*` env-var mapping — real monthly and yearly Solo/Pro/Agency prices
+  created live in Paddle production (`docs/billing/PADDLE_LIVE_CATALOG_MAP.md`) under a documented
+  preflight/idempotency process (`docs/billing/PADDLE_LIVE_PREFLIGHT_CHANGE_MANIFEST.md`), with the
+  3 pre-existing annual prices preserved as legacy, never-offered-for-new-checkout mappings
+  (`docs/billing/LEGACY_PRICE_AND_SUBSCRIBER_POLICY.md`).
+- Server-side plan-change (upgrade/downgrade/billing-cycle-change) support: real Paddle
+  proration previews, immediate application for upgrades, and an application-level scheduled
+  application for downgrades that never bills early and preserves current entitlements until the
+  next period (`docs/billing/PLAN_CHANGE_AND_PRORATION_POLICY.md`; fixes RISK-017's "Upgrade to X"
+  mislabelling defect) — `PlanChangeButton`/`BillingPlansSection` on `/app/billing`, plus a new
+  Worker cron job (`applyDueScheduledDowngrades`) that applies due scheduled changes.
+- Checkout continuity: a visitor's plan/interval choice on `/pricing` survives an unauthenticated
+  sign-up/sign-in round trip and preselects on `/app/billing`, carrying only a semantic
+  `plan`/`interval` pair, never a price ID or amount
+  (`docs/billing/CHECKOUT_CONTINUITY_ARCHITECTURE.md`).
+- A fully redesigned, always-live `/pricing` page (monthly/yearly toggle, full comparison table,
+  structured `Offer` data for both intervals) reading the real catalog per-request; the homepage's
+  pricing teaser shows marketing copy only, no price figures (avoids ever baking stale pricing
+  into its prerendered static build).
+- Super Admin `/admin/plans` now shows the full Paddle price catalog (per environment, legacy/
+  active/archived status, live subscriber counts, last-verified date) with automatic reconciliation
+  flags (missing/duplicate mappings, stray active legacy prices, orphaned archived prices);
+  `/admin/subscriptions` now shows each subscriber's plan/interval, any scheduled change, and
+  legacy/environment-mismatch flags.
+- A read-only `pnpm paddle:catalog:verify <preview|production>` command reconciling the DB catalog
+  against a live Paddle API read (`docs/billing/PADDLE_CATALOG_RECONCILIATION_RUNBOOK.md`).
+- `docs/security/PHASE_06_BILLING_AND_CHECKOUT_THREAT_REVIEW.md` — a full threat review covering
+  client-controlled pricing, legacy/environment price misuse, webhook race/idempotency,
+  cross-account linking, open redirect, portal-URL leakage, admin entitlement override, and
+  proration-preview/actual-charge mismatch, each mapped to the actual protecting code.
+- 26 new tests: a unit suite for the upgrade/downgrade direction rule (both the server rule and its
+  client-side label mirror), a new integration suite for checkout price resolution and the three
+  plan-change endpoints (including client-price-tampering, free-plan, invalid-interval, CSRF, and
+  no-active-subscription rejection cases), two new webhook integration tests (legacy-price
+  resolution, unresolvable-price honesty), a real-browser e2e test for checkout continuity, an a11y
+  check for `/app/billing`, and a responsive-smoke check for `/app/billing` at all 5 breakpoints.
+
+### Changed
+
+- `apps/web/src/pages/api/billing/checkout.ts` now accepts `{planId, interval}` and resolves the
+  real Paddle price server-side via the new catalog — never trusts a client-supplied price ID or
+  amount.
+- The Paddle webhook processor now resolves `items[0].price.id` through the DB-backed catalog
+  (legacy-aware) instead of flat env-var equality, and persists the resolved `paddle_price_id`/
+  `billing_interval` on every subscription row.
+- Both `deploy-preview.yml` and `deploy-production.yml` now run the idempotent reference-data seed
+  step immediately after migrations, on every deploy — closes a real gap found while preparing this
+  phase's own deployment (a new reference-data-dependent table, such as `plan_prices`, previously
+  shipped empty until someone remembered to seed it manually; see
+  `docs/billing/BILLING_DEPLOYMENT_AND_ROLLBACK_RUNBOOK.md`).
+
+### Removed
+
+- `apps/web/src/lib/billing/plan-mapping.ts`, `apps/web/src/lib/plans.ts` (and its guard-rail test
+  asserting "no monthly pricing exists," necessarily removed since monthly pricing is now the
+  point), and `packages/core/src/api/contracts/billing.ts` (RISK-016: dead code whose field names
+  didn't match the real implementation).
+
+### Known limitations (not fixed by this phase)
+
+- **RISK-001 remains open**: no real, paid Paddle checkout has been run — this phase verified the
+  live catalog (real prices created and read back), checkout-opening (server-side price
+  resolution), and webhook processing (against the new price model), but deliberately did not
+  trigger a real charge without separate, explicit authorization.
+- **RISK-012** (the pre-existing flaky concurrent-webhook-race integration test) was not fixed in
+  this phase despite being nominally targeted — touches billing-critical ordering logic and was
+  judged to need dedicated review rather than a rushed change; carried forward.
+- RISK-028 (SRS §2.3 tagline reconciliation) and the 10 missing `package.json` `"description"`
+  fields, both carried forward from Phase 5, remain open and are carried forward again to Phase 7 —
+  this phase's own prompt scoped it specifically to pricing/checkout.
 
 ## Production deployment (2026-08-04) — Phase 5
 

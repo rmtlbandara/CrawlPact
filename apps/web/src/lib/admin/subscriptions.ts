@@ -2,7 +2,7 @@ import { and, desc, eq, gte, isNull, lte, sql } from "drizzle-orm";
 import { schema } from "@crawlpact/database";
 import type { Database } from "@crawlpact/database";
 import { getSubscription } from "../billing/paddle-api";
-import { mapPriceIdToPlanId } from "../billing/plan-mapping";
+import { resolvePriceToPlan } from "../billing/plan-catalog";
 import { PADDLE_TO_LOCAL_STATUS } from "../billing/webhook-processor";
 
 export type SubscriptionFilters = {
@@ -13,12 +13,18 @@ export type SubscriptionFilters = {
   mismatchOnly?: boolean;
   syncErrorOnly?: boolean;
   renewingBefore?: string;
+  /** Current runtime PADDLE_ENVIRONMENT — used only to compute the `environmentMismatch` flag
+   * below, never to filter rows out (a subscription must always be visible regardless). */
+  currentEnvironment?: "sandbox" | "production";
 };
 
 /** SRS §28.5: subscriptions joined with owning user/billing customer, plus a
  * computed "entitlement mismatch" flag (local `users.plan_id` disagrees with
  * the subscription's own plan while it's active — the exact drift the
- * mission's resync action exists to fix). */
+ * mission's resync action exists to fix). Also left-joins `plan_prices` (Phase
+ * 6) to surface whether the subscriber's own price is legacy (retired from
+ * new checkout, still mapped) or was minted in a different Paddle environment
+ * than the one this deployment is currently running against. */
 export async function listSubscriptions(db: Database, filters: SubscriptionFilters = {}) {
   const rows = await db
     .select({
@@ -29,6 +35,11 @@ export async function listSubscriptions(db: Database, filters: SubscriptionFilte
         displayName: schema.users.displayName,
         planId: schema.users.planId,
       },
+      price: {
+        legacy: schema.planPrices.legacy,
+        environment: schema.planPrices.environment,
+        activeForNewCheckout: schema.planPrices.activeForNewCheckout,
+      },
     })
     .from(schema.subscriptions)
     .innerJoin(
@@ -36,6 +47,10 @@ export async function listSubscriptions(db: Database, filters: SubscriptionFilte
       eq(schema.subscriptions.billingCustomerId, schema.billingCustomers.id),
     )
     .innerJoin(schema.users, eq(schema.billingCustomers.userId, schema.users.id))
+    .leftJoin(
+      schema.planPrices,
+      eq(schema.subscriptions.paddlePriceId, schema.planPrices.paddlePriceId),
+    )
     .orderBy(desc(schema.subscriptions.updatedAt));
 
   return rows
@@ -44,6 +59,11 @@ export async function listSubscriptions(db: Database, filters: SubscriptionFilte
       entitlementMismatch:
         row.subscription.status === "active" && row.subscription.planId !== row.user.planId,
       syncError: row.subscription.syncError,
+      environmentMismatch: Boolean(
+        filters.currentEnvironment &&
+        row.price?.environment &&
+        row.price.environment !== filters.currentEnvironment,
+      ),
     }))
     .filter((row) => {
       if (filters.planId && row.subscription.planId !== filters.planId) return false;
@@ -74,9 +94,6 @@ export async function resyncSubscription(
   env: {
     PADDLE_API_KEY: string;
     PADDLE_ENVIRONMENT: "sandbox" | "production";
-    PADDLE_PRICE_ID_SOLO: string;
-    PADDLE_PRICE_ID_PRO: string;
-    PADDLE_PRICE_ID_AGENCY: string;
   },
   subscriptionId: string,
 ): Promise<ResyncResult> {
@@ -99,13 +116,15 @@ export async function resyncSubscription(
   }
 
   const localStatus = PADDLE_TO_LOCAL_STATUS[result.status] ?? sub.status;
-  const planId = result.priceId ? mapPriceIdToPlanId(env, result.priceId) : null;
+  const resolved = result.priceId ? await resolvePriceToPlan(db, result.priceId) : null;
 
   await db
     .update(schema.subscriptions)
     .set({
       status: localStatus,
-      planId: planId ?? sub.planId,
+      planId: resolved?.planId ?? sub.planId,
+      paddlePriceId: result.priceId || sub.paddlePriceId,
+      billingInterval: resolved?.interval ?? sub.billingInterval,
       currentPeriodEnd: result.currentPeriodEnd ?? sub.currentPeriodEnd,
       syncError: null,
       updatedAt: now,

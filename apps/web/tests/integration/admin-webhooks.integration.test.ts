@@ -145,7 +145,7 @@ describe("Super Admin webhook operations (real D1)", () => {
         id: "sub_orphan_1",
         customer_id: "ctm_orphan_1",
         status: "active",
-        items: [{ price: { id: "pri_solo" } }],
+        items: [{ price: { id: "pri_test_solo_month" } }],
         current_billing_period: { ends_at: new Date(Date.now() + 365 * 86400_000).toISOString() },
       },
     });

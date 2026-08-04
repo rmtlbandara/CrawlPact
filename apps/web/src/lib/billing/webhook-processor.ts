@@ -1,8 +1,7 @@
 import { and, eq, isNull, lt, or } from "drizzle-orm";
 import { schema } from "@crawlpact/database";
 import type { Database } from "@crawlpact/database";
-import { mapPriceIdToPlanId } from "./plan-mapping";
-import type { PriceIdMap } from "./plan-mapping";
+import { resolvePriceToPlan } from "./plan-catalog";
 import { trackEvent } from "../analytics";
 
 /**
@@ -165,7 +164,6 @@ async function applyPlanFromStatus(
 async function handleSubscriptionEvent(
   db: Database,
   event: ParsedPaddleEvent,
-  priceIdMap: PriceIdMap,
 ): Promise<{ outcome: ProcessOutcome; billingCustomerId?: string; subscriptionRowId?: string }> {
   const data = event.data;
   const paddleSubscriptionId = data.id as string | undefined;
@@ -199,7 +197,10 @@ async function handleSubscriptionEvent(
   const localStatus = PADDLE_TO_LOCAL_STATUS[paddleStatus];
   if (!localStatus) return { outcome: "failed" };
 
-  const planId = priceId ? mapPriceIdToPlanId(priceIdMap, priceId) : null;
+  // Resolves against every known price — current and legacy alike — so an existing
+  // subscriber's events keep resolving to a plan forever, even after a newer price supersedes
+  // theirs for new checkout. See docs/billing/LEGACY_PRICE_AND_SUBSCRIBER_POLICY.md.
+  const resolvedPrice = priceId ? await resolvePriceToPlan(db, priceId) : null;
 
   const [existingSub] = await db
     .select()
@@ -208,7 +209,7 @@ async function handleSubscriptionEvent(
     .limit(1);
 
   const now = new Date().toISOString();
-  const resolvedPlanId = planId ?? existingSub?.planId ?? "free";
+  const resolvedPlanId = resolvedPrice?.planId ?? existingSub?.planId ?? "free";
 
   let subscriptionRowId: string;
   if (existingSub) {
@@ -231,6 +232,8 @@ async function handleSubscriptionEvent(
         cancelAtPeriodEnd: scheduledChange?.action === "cancel",
         lastPaddleEventId: event.eventId,
         lastAppliedOccurredAt: event.occurredAt,
+        paddlePriceId: priceId ?? existingSub.paddlePriceId,
+        billingInterval: resolvedPrice?.interval ?? existingSub.billingInterval,
         updatedAt: now,
       })
       .where(
@@ -264,6 +267,8 @@ async function handleSubscriptionEvent(
         cancelAtPeriodEnd: scheduledChange?.action === "cancel",
         lastPaddleEventId: event.eventId,
         lastAppliedOccurredAt: event.occurredAt,
+        paddlePriceId: priceId ?? null,
+        billingInterval: resolvedPrice?.interval ?? null,
         createdAt: now,
         updatedAt: now,
       })
@@ -278,7 +283,7 @@ async function handleSubscriptionEvent(
       .returning({ id: schema.subscriptions.id });
 
     if (!inserted[0]) {
-      return handleSubscriptionEvent(db, event, priceIdMap);
+      return handleSubscriptionEvent(db, event);
     }
     subscriptionRowId = inserted[0].id;
   }
@@ -433,7 +438,6 @@ async function handleCustomerEvent(
 
 export async function processPaddleWebhookEvent(
   db: Database,
-  priceIdMap: PriceIdMap,
   event: ParsedPaddleEvent,
 ): Promise<ProcessOutcome> {
   const now = new Date().toISOString();
@@ -477,7 +481,7 @@ export async function processPaddleWebhookEvent(
   let result: { outcome: ProcessOutcome; billingCustomerId?: string; subscriptionRowId?: string };
   try {
     if (event.eventType.startsWith("subscription.")) {
-      result = await handleSubscriptionEvent(db, event, priceIdMap);
+      result = await handleSubscriptionEvent(db, event);
     } else if (event.eventType.startsWith("transaction.")) {
       result = await handleTransactionEvent(db, event);
     } else if (event.eventType.startsWith("adjustment.")) {

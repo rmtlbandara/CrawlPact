@@ -194,3 +194,24 @@ directory), and `docs/reports/PHASE_05_ANONYMOUS_AUDIT_CONVERSION_COMPLETION_REP
 Phase 5 code changed, matching the convention already used for `PHASE_04_HOMEPAGE_BASELINE.md`. See
 the completion report for the full change list. Total documentation-file count is now ~126
 (118 post-Phase-4-correction + 8 new).
+
+## Phase 6 update (2026-08-04)
+
+13 new files, all `retain-current`/`current-authoritative` at creation, first under a new
+`docs/billing/` directory:
+`docs/billing/{PHASE_06_EXISTING_BILLING_BASELINE,APPROVED_PRICING_AND_ENTITLEMENT_MATRIX,
+PADDLE_LIVE_PREFLIGHT_CHANGE_MANIFEST,PADDLE_LIVE_CATALOG_MAP,LEGACY_PRICE_AND_SUBSCRIBER_POLICY,
+PLAN_CHANGE_AND_PRORATION_POLICY,CHECKOUT_CONTINUITY_ARCHITECTURE,PADDLE_WEBHOOK_EVENT_MATRIX,
+PADDLE_CATALOG_RECONCILIATION_RUNBOOK,BILLING_DEPLOYMENT_AND_ROLLBACK_RUNBOOK}.md`,
+`docs/security/PHASE_06_BILLING_AND_CHECKOUT_THREAT_REVIEW.md`,
+`docs/analytics/PHASE_06_BILLING_EVENT_MODEL.md`, and
+`docs/reports/PHASE_06_PRICING_PADDLE_CHECKOUT_COMPLETION_REPORT.md` (`evidence`).
+`PHASE_06_EXISTING_BILLING_BASELINE.md` is the required-baseline snapshot taken before any Phase 6
+code changed, matching the convention already used for `PHASE_04_HOMEPAGE_BASELINE.md`/
+`PHASE_05_EXISTING_CONVERSION_FLOW_BASELINE.md`. `PADDLE_LIVE_CATALOG_MAP.md` records the 6 real
+Paddle production price IDs this phase created live — non-secret, public identifiers, same
+disclosure judgement already applied to `docs/deployment/PADDLE_LIVE_CONFIGURATION.md`.
+`docs/deployment/PADDLE_LIVE_GO_LIVE_CHECKLIST.md`'s "item 5 (real paid lifecycle) still open"
+note (row above) remains accurate — Phase 6 did not close it (see RISK-001). See the completion
+report for the full change list. Total documentation-file count is now ~139 (126 post-Phase-5 + 13
+new).

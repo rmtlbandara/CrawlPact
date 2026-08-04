@@ -21,6 +21,7 @@ export const GET: APIRoute = async ({ request, url }) => {
       cancelling: url.searchParams.get("cancelling") === "true",
       mismatchOnly: url.searchParams.get("mismatch") === "true",
       syncErrorOnly: url.searchParams.get("syncError") === "true",
+      currentEnvironment: getEnv().PADDLE_ENVIRONMENT,
     });
     return jsonResponse(ok(rows, requestId), 200);
   } catch (error) {

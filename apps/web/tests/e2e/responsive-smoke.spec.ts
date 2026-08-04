@@ -111,6 +111,17 @@ test.describe("Responsive layout smoke", () => {
           await assertNoHorizontalOverflow(page);
         }
       });
+
+      test("billing page (Phase 6 plan cards and comparison) renders without horizontal overflow", async ({
+        page,
+      }) => {
+        for (const viewport of VIEWPORTS) {
+          await page.setViewportSize({ width: viewport.width, height: viewport.height });
+          await page.goto("/app/billing");
+          await expect(page.getByRole("heading", { level: 1 })).toBeVisible();
+          await assertNoHorizontalOverflow(page);
+        }
+      });
     });
 
     test.describe("Super Admin shell", () => {

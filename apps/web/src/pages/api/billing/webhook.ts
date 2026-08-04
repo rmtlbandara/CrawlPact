@@ -51,15 +51,7 @@ export const POST: APIRoute = async ({ request }) => {
       throw new ApiError("VALIDATION_FAILED", "Malformed webhook payload.");
     }
 
-    const outcome = await processPaddleWebhookEvent(
-      db,
-      {
-        PADDLE_PRICE_ID_SOLO: env.PADDLE_PRICE_ID_SOLO,
-        PADDLE_PRICE_ID_PRO: env.PADDLE_PRICE_ID_PRO,
-        PADDLE_PRICE_ID_AGENCY: env.PADDLE_PRICE_ID_AGENCY,
-      },
-      event,
-    );
+    const outcome = await processPaddleWebhookEvent(db, event);
 
     // A duplicate or an unhandled event type is still acknowledged with 200 —
     // only signature failure and malformed payloads above are real errors.

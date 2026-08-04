@@ -8,9 +8,10 @@ below rather than duplicated. Do not maintain a third active-risk list anywhere 
 
 Statuses: `open` · `mitigating` · `accepted` · `blocked` · `monitoring`.
 
-Last reviewed: 2026-08-03 (Phase 1), consolidating `docs/status/KNOWN_RISKS.md`'s still-open
+Last reviewed: 2026-08-04 (Phase 6), consolidating `docs/status/KNOWN_RISKS.md`'s still-open
 items with the 13 new risks Phase 0's baseline audit found
-(`docs/baseline/2026-08-03/BASELINE_RISKS_AND_UNKNOWNS.md`).
+(`docs/baseline/2026-08-03/BASELINE_RISKS_AND_UNKNOWNS.md`). Phase 6 closed RISK-016 (see
+`docs/risks/RISK_ARCHIVE.md` ARC-024) and mitigated RISK-017.
 
 ---
 
@@ -19,9 +20,9 @@ items with the 13 new risks Phase 0's baseline audit found
 - **Category**: Billing · **Severity**: P1 · **Probability**: Certain (known gap, not yet attempted)
 - **Impact**: Whether a real payment correctly links `custom_data.userId` and grants the plan has never been observed, only inferred from webhook simulation and code review.
 - **Evidence**: `docs/status/KNOWN_RISKS.md` (webhook resolution entries), `docs/baseline/2026-08-03/BILLING_AND_PLAN_BASELINE.md`
-- **Current mitigation**: Webhook delivery mechanism independently verified live 2026-07-28 (8 real signed events). Signature/idempotency/state-machine logic proven.
+- **Current mitigation**: Webhook delivery mechanism independently verified live 2026-07-28 (8 real signed events). Signature/idempotency/state-machine logic proven. **Updated Phase 6 (2026-08-04)**: the live Paddle catalog itself is now real (6 new production prices created and read back — `docs/billing/PADDLE_LIVE_CATALOG_MAP.md`), server-side checkout price resolution is verified against real catalog data, and the webhook processor's price→plan resolution was re-verified against the new DB-backed model (`docs/billing/PADDLE_WEBHOOK_EVENT_MATRIX.md`). What remains genuinely unverified is unchanged: a real customer paying real money and the resulting `custom_data.userId` linkage → plan grant.
 - **Owner**: Billing owner · **Trigger**: Before any commercial launch or real customer onboarding
-- **Review date**: Before Gate B (Conversion-ready) · **Target phase**: Phase 6
+- **Review date**: Before Gate B (Conversion-ready) · **Target phase**: Phase 7
 - **GitHub issue**: not yet created (see `docs/governance/GITHUB_GOVERNANCE_SETUP_MANIFEST.md`)
 - **Status**: open
 - **Acceptance criteria for closure**: One real, authorized, small-value paid checkout completes end-to-end (payment → webhook → plan grant), verified and then reverted/refunded per a documented test protocol.
@@ -141,9 +142,9 @@ items with the 13 new risks Phase 0's baseline audit found
 - **Category**: Test coverage, Billing · **Severity**: P2 · **Probability**: Confirmed to occur under load
 - **Impact**: The test's own concurrency simulation doesn't guarantee write order, so the (correct) out-of-order protection can legitimately classify the "later" request differently than the test assumes.
 - **Evidence**: `docs/status/BILLING_WEBHOOK_RACE_TEST_FLAKE.md`
-- **Current mitigation**: Deliberately not fixed — touches billing-critical ordering logic, needs dedicated review.
+- **Current mitigation**: Deliberately not fixed — touches billing-critical ordering logic, needs dedicated review. **Updated Phase 6 (2026-08-04)**: this phase touched the same test file (added 2 new webhook resolution tests, all passing including the existing race test) but deliberately did not attempt a fix — a rushed change to billing-critical ordering logic under this phase's already-substantial scope was judged riskier than carrying the flake forward for dedicated review.
 - **Owner**: Billing owner · **Trigger**: Next billing-webhook-adjacent change
-- **Review date**: Phase 6 · **Target phase**: Phase 6
+- **Review date**: Phase 7 · **Target phase**: Phase 7
 - **Status**: open
 - **Acceptance criteria for closure**: Test rewritten to assert on either valid outcome, or made deterministic.
 
@@ -180,27 +181,16 @@ items with the 13 new risks Phase 0's baseline audit found
 - **Status**: open
 - **Acceptance criteria for closure**: 3 consecutive real-CI runs pass against the built-server target before it's trusted as the primary gate again.
 
-### RISK-016 — `packages/core/src/api/contracts/billing.ts` describes a checkout API shape that was never built
-
-- **Category**: Documentation, Product · **Severity**: P2 · **Probability**: Certain (confirmed dead code)
-- **Impact**: Field names (`plan` vs. real `planId`) and response shape (`checkoutUrl` vs. real `{priceId,customData,clientToken,environment}`) both mismatch the real implementation; anyone treating this file as ground truth would be wrong on every field.
-- **Evidence**: `docs/baseline/2026-08-03/BILLING_AND_PLAN_BASELINE.md`
-- **Current mitigation**: None — confirmed zero references to its exported schemas anywhere outside the file itself.
-- **Owner**: Engineering owner · **Trigger**: Any future billing-contract refactor
-- **Review date**: Phase 6 · **Target phase**: Phase 6
-- **Status**: open
-- **Acceptance criteria for closure**: The file is removed (dead code) or rewritten to match the real implementation.
-
 ### RISK-017 — Billing dashboard UI labels every non-current paid plan "Upgrade to X" regardless of actual tier direction
 
 - **Category**: Product, Conversion · **Severity**: P2 · **Probability**: Certain (confirmed UI defect)
 - **Impact**: A Pro subscriber sees "Upgrade to Solo" for a genuine downgrade; no server-side subscription-change endpoint exists to distinguish the flows.
 - **Evidence**: `docs/baseline/2026-08-03/BILLING_AND_PLAN_BASELINE.md`
-- **Current mitigation**: None.
+- **Current mitigation**: **Fixed, Phase 6 (2026-08-04)** — a single ordered-pair `(planRank, intervalWeight)` direction rule (`apps/web/src/lib/billing/plan-change.ts`'s `planChangeDirection`, mirrored client-side by `BillingPlansSection.tsx`'s `directionLabel`) correctly labels upgrade vs. downgrade for both plan changes and billing-cycle changes; covered by 13 unit tests (`plan-change.test.ts`, `BillingPlansSection.test.ts`). See `docs/billing/PLAN_CHANGE_AND_PRORATION_POLICY.md`.
 - **Owner**: Product owner · **Trigger**: Next billing-UI change
-- **Review date**: Phase 6 · **Target phase**: Phase 6
-- **Status**: open
-- **Acceptance criteria for closure**: UI correctly labels upgrade vs. downgrade, and the underlying Paddle checkout behavior for an existing subscriber is verified (see RISK-001).
+- **Review date**: Phase 7 · **Target phase**: Phase 7
+- **Status**: mitigating
+- **Acceptance criteria for closure**: UI correctly labels upgrade vs. downgrade (done), and the underlying Paddle checkout behavior for an existing subscriber is verified against a real paid subscription (still tied to RISK-001, which remains open — a real upgrade/downgrade has been exercised against Paddle's real preview/update API for an existing subscription in this phase's own testing, but not yet for a subscription created by a real paid checkout).
 
 ### RISK-018 — `reference-data.sql`'s dynamic operator-based crawler-entry insert risks violating registry-release immutability on re-run
 
@@ -328,7 +318,7 @@ items with the 13 new risks Phase 0's baseline audit found
   independent Phase 2 research passes and `pnpm brand:validate`) — the exposure is a documentation
   conflict, not a live customer-facing claim.
 - **Owner**: Product owner · **Trigger**: Any future SRS revision or brand-copy audit
-- **Review date**: Phase 3 · **Target phase**: Phase 3
+- **Review date**: Phase 7 · **Target phase**: Phase 7 (carried forward unclaimed through Phases 3-6; each phase's own execution prompt scoped it elsewhere — see `docs/governance/GITHUB_GOVERNANCE_SETUP_MANIFEST.md`)
 - **Status**: open
 - **Acceptance criteria for closure**: SRS §2.3 updated to match the canonical tagline, or an ADR
   is recorded explicitly authorising the deviation and reconciling the two documents.

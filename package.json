@@ -30,6 +30,7 @@
     "db:migrate:remote": "pnpm --filter @crawlpact/database run migrate:remote",
     "db:seed": "pnpm --filter @crawlpact/database run seed:local",
     "db:seed:reference-data:remote": "pnpm --filter @crawlpact/database run seed:reference-data:remote",
+    "db:seed:reference-data:remote:preview": "pnpm --filter @crawlpact/database run seed:reference-data:remote:preview",
     "db:validate": "pnpm --filter @crawlpact/database run validate",
     "db:reset:local": "pnpm --filter @crawlpact/database run reset:local",
     "registry:validate": "node scripts/registry-tools.mjs validate",
@@ -55,7 +56,8 @@
     "deploy:production": "bash scripts/deploy.sh production",
     "deploy:verify-bindings": "node --experimental-strip-types scripts/verify-bindings.ts",
     "smoke:preview": "node --experimental-strip-types scripts/smoke-test.ts preview https://crawlpact-web-preview.rmtlbandara.workers.dev",
-    "smoke:production": "node --experimental-strip-types scripts/smoke-test.ts production https://crawlpact.com"
+    "smoke:production": "node --experimental-strip-types scripts/smoke-test.ts production https://crawlpact.com",
+    "paddle:catalog:verify": "node --experimental-strip-types scripts/paddle-catalog-verify.ts"
   },
   "devDependencies": {
     "@axe-core/playwright": "4.12.1",

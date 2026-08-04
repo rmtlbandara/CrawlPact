@@ -1,14 +1,17 @@
 ---
-import type { Plan } from "../../lib/plans";
+import { PLAN_COPY } from "../../lib/billing/plan-catalog";
 
 /**
- * Homepage Section 10 — pricing preview (Phase 4 IA §17). Reads from the same `PLANS` array as
- * `/pricing` (see `apps/web/src/lib/plans.ts`) — no duplicate hardcoded pricing. Deliberately
- * simpler than the full pricing page (name, audience, domain limit, monitoring, price, CTA only —
- * no feature-comparison table).
+ * Homepage Section 10 — pricing preview (Phase 4 IA §17). This page is statically prerendered
+ * (see index.astro's `prerender = true`) for performance — a build-time render has no live
+ * Cloudflare D1 binding, so this teaser deliberately shows only the static marketing copy
+ * (`PLAN_COPY`, plain module-level TS constants — the same object `/pricing`'s server-rendered
+ * page reads its own copy from) and never a price figure or entitlement number, both of which
+ * live in the DB-backed `plan_prices`/`plans` tables and could otherwise silently go stale in a
+ * cached static build. The full, always-live pricing lives on `/pricing` (server-rendered, Phase
+ * 6), which every card here links straight through to.
  */
-export type Props = { plans: Plan[] };
-const { plans } = Astro.props;
+const PLAN_ORDER = ["free", "solo", "pro", "agency"] as const;
 ---
 
 <section class="mx-auto max-w-[1240px] px-4 py-16 sm:px-6">
@@ -23,37 +26,33 @@ const { plans } = Astro.props;
     </a>
   </div>
   <p class="mt-2 max-w-2xl text-body text-neutral-700">
-    Annual pricing. Billing is handled by Paddle; applicable taxes may be calculated during
-    checkout.
+    Monthly and yearly pricing. Billing is handled by Paddle; applicable taxes may be calculated
+    during checkout.
   </p>
   <div class="mt-8 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
     {
-      plans.map((plan) => (
-        <div
-          class={`rounded-card border p-5 ${plan.recommended ? "border-brand-600 ring-1 ring-brand-600" : "border-neutral-200"}`}
-        >
-          {plan.recommended && (
-            <p class="mb-2 text-metadata font-medium uppercase tracking-wide text-brand-700">
-              Recommended
-            </p>
-          )}
-          <h3 class="text-card-heading text-neutral-950">{plan.name}</h3>
-          <p class="mt-1 text-supporting text-neutral-500">{plan.audience}</p>
-          <p class="mt-2 text-h3 text-neutral-950">{plan.price}/yr</p>
-          <p class="mt-2 text-supporting text-neutral-600">
-            {plan.domains} domain{plan.domains === 1 ? "" : "s"}
-          </p>
-          <p class="text-supporting text-neutral-600">
-            {plan.monitoring === "None" ? "No monitoring" : `${plan.monitoring} monitoring`}
-          </p>
-          <a
-            href={`/pricing#${plan.id}`}
-            class="mt-4 block rounded-control border border-neutral-300 px-3 py-2 text-center text-body font-medium text-neutral-800 hover:bg-neutral-50"
+      PLAN_ORDER.map((id) => {
+        const plan = PLAN_COPY[id];
+        return (
+          <div
+            class={`rounded-card border p-5 ${plan.recommended ? "border-brand-600 ring-1 ring-brand-600" : "border-neutral-200"}`}
           >
-            {plan.cta}
-          </a>
-        </div>
-      ))
+            {plan.recommended && (
+              <p class="mb-2 text-metadata font-medium uppercase tracking-wide text-brand-700">
+                Most Popular
+              </p>
+            )}
+            <h3 class="text-card-heading text-neutral-950">{plan.name}</h3>
+            <p class="mt-1 text-supporting text-neutral-500">{plan.audience}</p>
+            <a
+              href={`/pricing#${id}`}
+              class="mt-4 block rounded-control border border-neutral-300 px-3 py-2 text-center text-body font-medium text-neutral-800 hover:bg-neutral-50"
+            >
+              {plan.cta}
+            </a>
+          </div>
+        );
+      })
     }
   </div>
 </section>

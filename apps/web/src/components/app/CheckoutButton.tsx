@@ -1,12 +1,15 @@
 import { useState } from "react";
 import { initializePaddle } from "@paddle/paddle-js";
 import { Alert, Button } from "@crawlpact/ui";
+import { track } from "../../lib/analytics-client";
 
 export function CheckoutButton({
   planId,
+  interval,
   label,
 }: {
   planId: "solo" | "pro" | "agency";
+  interval: "month" | "year";
   label: string;
 }) {
   const [busy, setBusy] = useState(false);
@@ -15,11 +18,12 @@ export function CheckoutButton({
   async function handleClick() {
     setBusy(true);
     setError(null);
+    track("plan_selected", { planId, interval });
     try {
       const response = await fetch("/api/billing/checkout", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ planId }),
+        body: JSON.stringify({ planId, interval }),
       });
       const body = (await response.json()) as {
         ok: boolean;
@@ -33,6 +37,7 @@ export function CheckoutButton({
       };
       if (!body.ok || !body.data) {
         setError(body.error?.message ?? "Could not start checkout.");
+        track("checkout_failed", { planId, interval });
         return;
       }
 
@@ -42,9 +47,11 @@ export function CheckoutButton({
       });
       if (!paddle) {
         setError("Checkout could not be loaded. Please try again.");
+        track("checkout_failed", { planId, interval });
         return;
       }
 
+      track("checkout_opened", { planId, interval });
       paddle.Checkout.open({
         items: [{ priceId: body.data.priceId, quantity: 1 }],
         customData: body.data.customData,

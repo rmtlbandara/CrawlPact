@@ -29,7 +29,11 @@ export const POST: APIRoute = async ({ request, params }) => {
     });
 
     const env = getEnv();
-    const result = await resyncSubscription(db, env, subscriptionId);
+    const result = await resyncSubscription(
+      db,
+      { PADDLE_API_KEY: env.PADDLE_API_KEY, PADDLE_ENVIRONMENT: env.PADDLE_ENVIRONMENT },
+      subscriptionId,
+    );
     if (!result.ok) {
       throw new ApiError("BILLING_SYNC_ERROR", `Resynchronisation failed: ${result.message}`);
     }

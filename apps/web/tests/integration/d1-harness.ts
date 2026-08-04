@@ -81,6 +81,27 @@ export async function createD1TestHarness(): Promise<D1TestHarness> {
     )
     .run();
 
+  // Mirrors packages/database/seed/reference-data.sql's Phase 6 `plan_prices` rows exactly
+  // (sandbox environment only — real production Paddle IDs are irrelevant to tests, which always
+  // run with PADDLE_ENVIRONMENT="sandbox"), plus one legacy row so tests can exercise the
+  // "existing subscriber on a retired price" path. IDs are deliberately predictable
+  // (`pri_test_<plan>_<interval>`) so tests can reference them directly without a lookup.
+  await db
+    .prepare(
+      `INSERT INTO plan_prices (
+        id, plan_id, environment, interval, amount_usd_cents,
+        paddle_product_id, paddle_price_id, active_for_new_checkout, legacy, effective_date
+      ) VALUES
+        ('solo_month_sandbox', 'solo', 'sandbox', 'month', 900, 'pro_test_solo', 'pri_test_solo_month', 1, 0, '2026-08-04T00:00:00.000Z'),
+        ('solo_year_sandbox', 'solo', 'sandbox', 'year', 8900, 'pro_test_solo', 'pri_test_solo_year', 1, 0, '2026-08-04T00:00:00.000Z'),
+        ('pro_month_sandbox', 'pro', 'sandbox', 'month', 1900, 'pro_test_pro', 'pri_test_pro_month', 1, 0, '2026-08-04T00:00:00.000Z'),
+        ('pro_year_sandbox', 'pro', 'sandbox', 'year', 18900, 'pro_test_pro', 'pri_test_pro_year', 1, 0, '2026-08-04T00:00:00.000Z'),
+        ('agency_month_sandbox', 'agency', 'sandbox', 'month', 3900, 'pro_test_agency', 'pri_test_agency_month', 1, 0, '2026-08-04T00:00:00.000Z'),
+        ('agency_year_sandbox', 'agency', 'sandbox', 'year', 38900, 'pro_test_agency', 'pri_test_agency_year', 1, 0, '2026-08-04T00:00:00.000Z'),
+        ('solo_year_sandbox_legacy', 'solo', 'sandbox', 'year', 7900, 'pro_test_solo', 'pri_test_solo_year_legacy', 0, 1, '2026-07-26T00:00:00.000Z')`,
+    )
+    .run();
+
   // A minimal active registry release (one operator, one crawler) so tests
   // that call getActiveRegistry()/runAudit() (e.g. the monitoring sweep)
   // don't need to hand-roll this every time.

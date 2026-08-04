@@ -28,3 +28,28 @@ export const plans = sqliteTable("plans", {
   createdAt: text("created_at").notNull(),
   updatedAt: text("updated_at").notNull(),
 });
+
+// Mirrors packages/database/migrations/0021_plan_prices.sql — the Phase 6
+// DB-backed replacement for the old flat annual-price-per-plan model. See
+// docs/billing/APPROVED_PRICING_AND_ENTITLEMENT_MATRIX.md.
+export const planPrices = sqliteTable("plan_prices", {
+  id: text("id").primaryKey(),
+  planId: text("plan_id")
+    .notNull()
+    .$type<"free" | "solo" | "pro" | "agency">()
+    .references(() => plans.id),
+  environment: text("environment").notNull().$type<"sandbox" | "production">(),
+  interval: text("interval").notNull().$type<"month" | "year">(),
+  amountUsdCents: integer("amount_usd_cents").notNull(),
+  paddleProductId: text("paddle_product_id").notNull(),
+  paddlePriceId: text("paddle_price_id").notNull(),
+  activeForNewCheckout: integer("active_for_new_checkout", { mode: "boolean" })
+    .notNull()
+    .default(true),
+  legacy: integer("legacy", { mode: "boolean" }).notNull().default(false),
+  effectiveDate: text("effective_date").notNull(),
+  archivedAt: text("archived_at"),
+  lastVerifiedAt: text("last_verified_at"),
+  createdAt: text("created_at").notNull(),
+  updatedAt: text("updated_at").notNull(),
+});

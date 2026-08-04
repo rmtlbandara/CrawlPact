@@ -13,7 +13,6 @@ import PricingPreviewSection from "../components/homepage/PricingPreviewSection.
 import { Accordion } from "@crawlpact/ui";
 import { CRAWLER_PURPOSE_LABELS } from "@crawlpact/registry";
 import { BRAND } from "../config/brand";
-import { PLANS } from "../lib/plans";
 
 const crawlerPreview = (await getCollection("crawlers")).slice(0, 4);
 
@@ -308,7 +307,7 @@ const faqItems = [
   </section>
 
   <!-- Section 10 — Pricing preview -->
-  <PricingPreviewSection plans={PLANS} />
+  <PricingPreviewSection />
 
   <!-- Section 11 — FAQ -->
   <section class="bg-neutral-50 py-16">

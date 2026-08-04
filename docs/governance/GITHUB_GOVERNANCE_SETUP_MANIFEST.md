@@ -2,6 +2,38 @@
 
 **Status: verification-blocked (by user decision, not access failure).**
 
+## Phase 6 update (2026-08-04)
+
+Phase 5 (PR #78, docs-only deployment record PR #79) merged to `main`. Phase 6 (Pricing, Plan
+Architecture and Checkout Continuity) is **substantially complete** — see
+`docs/reports/PHASE_06_PRICING_PADDLE_CHECKOUT_COMPLETION_REPORT.md`. Same manifest-only decision
+carried forward. This closes RISK-016 and RISK-017 (each independently targeted at Phase 6 since
+Phase 0's baseline audit — not follow-ups Phase 5 itself routed here): "the dead
+`packages/core/src/api/contracts/billing.ts` module" and "the downgrade-labelling UI defect" — both
+delivered (RISK-016 closed, RISK-017 mitigated). It does **not** close the two follow-up issues
+Phase 5 actually routed here (tagline reconciliation, `package.json` descriptions) — both carried
+forward again below, since Phase 6's own execution prompt scoped it to pricing/checkout
+specifically. When this manifest is applied, additionally create these follow-up issues Phase 6
+found but deliberately did not fix in place:
+
+- **"Reconcile SRS §2.3 Primary Tagline with the Phase 2 canonical brand system"** — carried
+  forward unclaimed from Phases 2 through 6, routed to `phase-07`. See
+  `docs/risks/ACTIVE_RISKS.md` RISK-028.
+- **"Add `description` fields to the 10 `package.json` files that currently lack one"** — same
+  carry-forward, routed to `phase-07`.
+- **"Run a real, authorized, small-value paid Paddle checkout end to end"** — RISK-001, explicitly
+  not attempted this phase without separate authorization; routed to `phase-07` or whichever phase
+  is designated for commercial launch readiness.
+- **"Fix the flaky `billing-webhook.integration.test.ts` concurrent-race test"** — RISK-012,
+  touched but deliberately not fixed this phase (billing-critical ordering logic, needs dedicated
+  review); routed to `phase-07`.
+- **"Build `pnpm paddle:catalog:sync` (write-capable catalog reconciliation)"** — deliberately not
+  built this phase; only the read-only `pnpm paddle:catalog:verify` exists. See
+  `docs/billing/PADDLE_CATALOG_RECONCILIATION_RUNBOOK.md`.
+- **"Create real sandbox Paddle prices for genuine end-to-end sandbox checkout testing"** — the
+  sandbox `plan_prices` rows are placeholder-only (no real sandbox Paddle catalog was created this
+  phase); see `docs/billing/PADDLE_CATALOG_RECONCILIATION_RUNBOOK.md`.
+
 ## Phase 5 update (2026-08-04)
 
 Phase 4 (PR #72/#73) merged to `main`. Phase 5 (Anonymous Audit Result and Account-Conversion

@@ -71,9 +71,11 @@ async function run(): Promise<void> {
   const base = baseUrl.replace(/\/$/, "");
 
   await checkPage("Home page", `${base}/`, 200);
-  // Prerendered static pages (unlike the SSR routes checked below) get a
-  // trailing-slash redirect from the Workers Assets binding — checking the
-  // bare path here would spuriously fail on a real, working deploy.
+  // /pricing is SSR (Phase 6: it reads the live plan_prices catalog per-request, so it can't be
+  // prerendered — see docs/billing/CHECKOUT_CONTINUITY_ARCHITECTURE.md). Astro's route pattern
+  // for it (`^\/pricing\/?$`, trailingSlash: "ignore") matches with or without the trailing
+  // slash, so this also implicitly confirms the page didn't regress back to a prerendered static
+  // file (which would 404 on a bare, non-index path check like this one only if misconfigured).
   await checkPage("Pricing page", `${base}/pricing/`, 200);
   await checkPage("robots.txt", `${base}/robots.txt`, 200, ["Sitemap:"]);
   await checkPage("sitemap.xml", `${base}/sitemap.xml`, 200);

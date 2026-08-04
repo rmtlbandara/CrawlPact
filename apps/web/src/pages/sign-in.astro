@@ -7,8 +7,28 @@ import { eq } from "drizzle-orm";
 import { getEnv } from "../lib/env";
 import { getPageSession } from "../lib/auth/page-session";
 import { isSafeRelativeRedirect } from "../lib/auth/safe-redirect";
+import { PLAN_COPY } from "../lib/billing/plan-catalog";
+import type { PaidPlanId, BillingInterval } from "../lib/billing/plan-catalog";
 
 const db = createDb(getEnv().DB);
+
+// Phase 6 (Pricing, Plan Architecture and Checkout Continuity): the pricing page's own CTAs
+// carry only a semantic `plan`/`interval` pair here — never a price ID or amount (see
+// docs/security/PHASE_06_BILLING_AND_CHECKOUT_THREAT_REVIEW.md). This is display-copy-only, same
+// as the continuation lookup below; the actual checkout still independently re-validates and
+// resolves the real price server-side at /app/billing, regardless of what this page shows.
+const PAID_PLAN_IDS = new Set<PaidPlanId>(["solo", "pro", "agency"]);
+const BILLING_INTERVALS = new Set<BillingInterval>(["month", "year"]);
+const requestedPlanRaw = Astro.url.searchParams.get("plan");
+const requestedIntervalRaw = Astro.url.searchParams.get("interval");
+const requestedPlan =
+  requestedPlanRaw && PAID_PLAN_IDS.has(requestedPlanRaw as PaidPlanId)
+    ? (requestedPlanRaw as PaidPlanId)
+    : null;
+const requestedInterval =
+  requestedIntervalRaw && BILLING_INTERVALS.has(requestedIntervalRaw as BillingInterval)
+    ? (requestedIntervalRaw as BillingInterval)
+    : "year";
 
 // Phase 5 (Anonymous Audit Result and Account-Conversion Flow): a "Save and monitor this
 // domain" click carries an opaque continuation ID here as a query parameter, not report
@@ -38,6 +58,12 @@ if (continuationId && continuationId.length > 0 && continuationId.length <= 128)
   }
   const target = `/app/continue?continuation=${encodeURIComponent(continuationId)}`;
   if (isSafeRelativeRedirect(target)) redirectTo = target;
+} else if (requestedPlan) {
+  // Only takes effect when no Phase 5 audit continuation is present — a visitor never arrives
+  // with both a live continuation and a plan selection at once in practice, and the
+  // continuation (an expiring, single-use record) takes priority if they somehow did.
+  const target = `/app/billing?plan=${requestedPlan}&interval=${requestedInterval}`;
+  if (isSafeRelativeRedirect(target)) redirectTo = target;
 }
 
 // Already-authenticated users should never see the sign-in form again (SRS-adjacent Phase 5
@@ -49,8 +75,10 @@ if (session) {
 
 const heading = continuationDomain
   ? `Continue to save and monitor ${continuationDomain}`
-  : "Sign in";
-const initialMode = continuationDomain ? "signup" : "signin";
+  : requestedPlan
+    ? `Create an account to subscribe to ${PLAN_COPY[requestedPlan].name}`
+    : "Sign in";
+const initialMode = continuationDomain || requestedPlan ? "signup" : "signin";
 ---
 
 <MarketingLayout
@@ -65,6 +93,10 @@ const initialMode = continuationDomain ? "signup" : "signin";
         <p class="mt-4 text-body-lg text-neutral-700">
           Your completed public audit remains available either way. Create an account or sign in to
           save this domain and set up monitoring.
+        </p>
+      ) : requestedPlan ? (
+        <p class="mt-4 text-body-lg text-neutral-700">
+          Create an account or sign in, then confirm your plan from your account's billing page.
         </p>
       ) : (
         <p class="mt-4 text-body-lg text-neutral-700">
