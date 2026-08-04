@@ -220,14 +220,42 @@ reconciliation command) was deliberately not built — only the read-only `verif
 
 ## Deployment
 
-Not yet deployed as of this report. Per CLAUDE.md's non-negotiable rule, production deployment
-requires a fresh, separate, explicit, in-the-moment confirmation regardless of this phase's kickoff
-instruction to "deploy to production" — that confirmation will be requested at the point of actual
-deployment, after commit/PR/merge. The live Paddle **catalog** write (6 new prices) already
-happened earlier in this phase with its own explicit confirmation — that piece is done and is not
-re-requested at deploy time. The deployment sequence itself (migrate → seed → deploy → verify
-bindings → smoke test) is unchanged from the standard pipeline, now with the reference-data seed
-step automated (see above) rather than a manual post-deploy step to remember.
+Merged to `main` as `16d586419d09c2df39dc1411d079a21a18af0dd2` (PR #80, squash-merge; CI green on
+both the PR and the resulting `main` push — including the Chromium E2E + accessibility smoke job,
+88/88 and 87/87 respectively). Deployed to production 2026-08-04 via `deploy-production.yml`, with
+explicit user authorization requested and given separately from the merge, per CLAUDE.md's
+non-negotiable rule (the live Paddle **catalog** write, 6 new prices, already had its own separate
+explicit confirmation earlier in this phase). Migration `0021_plan_prices.sql` applied to
+production D1, followed by the newly-automated reference-data seed step (see "Deployment gap found
+and fixed" above) — the in-workflow smoke test passed.
+
+Independently re-verified directly against the live site afterward:
+
+- `/pricing` (200) renders all 7 real approved offers with correct prices: Free $0; Solo $9/mo,
+  $89/yr; Pro $19/mo, $189/yr; Agency $39/mo, $389/yr — "Most Popular" badge on Pro. No Paddle
+  price ID appears anywhere in the page's HTML (only exposed through the authenticated checkout
+  API response, never baked into public markup).
+- The page's structured pricing data (`WebApplication`/`Offer` JSON-LD) contains exactly 7 `Offer`
+  entries, at those same 7 real prices — confirming both intervals are listed regardless of the
+  client-side toggle default.
+- `/app/billing` and `/admin/plans` both correctly return `302` to `/sign-in` for an unauthenticated
+  request.
+- `POST /api/billing/checkout` correctly rejects a cross-origin request with `403 FORBIDDEN`
+  (`"Cross-site request blocked."`) — live confirmation of the CSRF defense-in-depth described in
+  the threat review.
+- `GET /api/billing/webhook` correctly returns `404` (the route only defines `POST`).
+
+Deployed Worker version ID: `7ed25286-f394-4517-aca6-5fe5168b41a4`. Build artifact checksum:
+`c3f65964f0aae4196ef6b806a288fd307c6baef8dc6e24eb499493785c23f293`. See `CHANGELOG.md`'s
+"Production deployment (2026-08-04) — Phase 6" entry.
+
+**Not part of this deployment's verification, consistent with the rest of this report**: no real
+Paddle checkout, plan-change, or webhook event was triggered against production as part of this
+verification pass — the checks above confirm the new code is live and behaving correctly for
+unauthenticated/cross-origin/read-only requests, not a real paid transaction. `pnpm paddle:catalog:verify
+production` was not run from this session (no production credentials available here); running it
+is a reasonable, low-risk follow-up to independently confirm the live Paddle catalog still matches
+`plan_prices` post-deploy.
 
 ## Next phase
 
