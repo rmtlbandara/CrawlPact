@@ -100,6 +100,62 @@ test.describe("Sitemap-listed pages carry correct, unique SEO metadata", () => {
   });
 });
 
+test.describe("Phase 7 pages: valid JSON-LD and matching visible breadcrumbs", () => {
+  const PHASE_7_PAGES = [
+    { path: "/for/agencies", breadcrumbTail: "Agencies" },
+    { path: "/for/publishers", breadcrumbTail: "Publishers" },
+    { path: "/platforms", breadcrumbTail: null },
+    { path: "/platforms/cloudflare", breadcrumbTail: "Cloudflare" },
+    { path: "/platforms/wordpress", breadcrumbTail: "WordPress" },
+  ];
+
+  for (const { path, breadcrumbTail } of PHASE_7_PAGES) {
+    test(`${path} has valid JSON-LD${breadcrumbTail ? " with a matching BreadcrumbList" : ""}`, async ({
+      request,
+    }) => {
+      const response = await request.get(path);
+      expect(response.ok()).toBe(true);
+      const html = await response.text();
+
+      const jsonLdMatch = /<script type="application\/ld\+json"[^>]*>([\s\S]*?)<\/script>/.exec(
+        html,
+      );
+      expect(jsonLdMatch, `${path}: no JSON-LD script found`).not.toBeNull();
+      const jsonLd = JSON.parse(jsonLdMatch![1]!) as { "@graph": Record<string, unknown>[] };
+      expect(Array.isArray(jsonLd["@graph"])).toBe(true);
+
+      // Organization and WebSite are present on every page (BaseLayout.astro) — a basic sanity
+      // check that the graph wasn't accidentally emptied.
+      const types = jsonLd["@graph"].map((node) => node["@type"]);
+      expect(types).toContain("Organization");
+      expect(types).toContain("WebSite");
+
+      if (breadcrumbTail) {
+        const breadcrumbNode = jsonLd["@graph"].find((node) => node["@type"] === "BreadcrumbList");
+        expect(breadcrumbNode, `${path}: no BreadcrumbList node`).toBeDefined();
+        const itemList = breadcrumbNode!.itemListElement as { name: string }[];
+        expect(itemList.at(-1)?.name).toBe(breadcrumbTail);
+
+        // The visible breadcrumb nav (MarketingLayout.astro) must show the same final crumb.
+        // Scope the aria-current match to inside the breadcrumb <nav> itself — the header nav's
+        // own links can also carry aria-current="page" (e.g. "Platforms" for any /platforms/*
+        // path), so a page-wide search can match the wrong element.
+        const breadcrumbNavMatch = /<nav[^>]*aria-label="Breadcrumb"[^>]*>([\s\S]*?)<\/nav>/.exec(
+          html,
+        );
+        expect(
+          breadcrumbNavMatch,
+          `${path}: no <nav aria-label="Breadcrumb"> found`,
+        ).not.toBeNull();
+        const visibleBreadcrumbMatch = /aria-current="page"[^>]*>([^<]+)</.exec(
+          breadcrumbNavMatch![1]!,
+        );
+        expect(visibleBreadcrumbMatch?.[1]?.trim()).toBe(breadcrumbTail);
+      }
+    });
+  }
+});
+
 test.describe("Non-indexable routes are genuinely excluded", () => {
   test("sign-in, an audit report, and admin routes are all noindex — via meta tag or X-Robots-Tag header", async ({
     request,

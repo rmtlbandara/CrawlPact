@@ -1,0 +1,228 @@
+---
+// Phase 7 (Vertical Landing Pages and Platform SEO Architecture). SSR, unlike guides/crawlers —
+// see docs/seo/SITEMAP_AND_INDEXABILITY_POLICY.md for why: the pricing-guidance section below
+// reads live pricing via getPlanCatalog(), which has no D1 binding available at prerender/build
+// time (the same constraint Phase 6 documented for the homepage's pricing teaser).
+export const prerender = false;
+import { getEntry, getCollection, render } from "astro:content";
+import MarketingLayout from "../../layouts/MarketingLayout.astro";
+import { AnalyticsBeacon } from "../../components/AnalyticsBeacon";
+import { createDb } from "@crawlpact/database";
+import { getEnv } from "../../lib/env";
+import { getPlanCatalog, PLAN_COPY } from "../../lib/billing/plan-catalog";
+import type { PlanId } from "../../lib/billing/plan-catalog";
+
+const { slug } = Astro.params;
+const entry = slug ? await getEntry("verticals", slug) : undefined;
+
+if (!entry) {
+  Astro.response.status = 404;
+}
+
+let Content: Awaited<ReturnType<typeof render>>["Content"] | null = null;
+let recommended: Awaited<ReturnType<typeof getPlanCatalog>>[number] | undefined;
+let otherVerticals: Awaited<ReturnType<typeof getCollection<"verticals">>> = [];
+let relatedPlatforms: Awaited<ReturnType<typeof getCollection<"platforms">>> = [];
+let relatedGuides: Awaited<ReturnType<typeof getCollection<"guides">>> = [];
+
+if (entry) {
+  ({ Content } = await render(entry));
+
+  const db = createDb(getEnv().DB);
+  const env = getEnv();
+  const catalog = await getPlanCatalog(db, env.PADDLE_ENVIRONMENT);
+  recommended = catalog.find((p) => p.id === entry.data.recommendedPlan);
+
+  otherVerticals = (await getCollection("verticals")).filter((v) => v.id !== entry.id);
+
+  if (entry.data.relatedPlatformSlugs?.length) {
+    const slugs = entry.data.relatedPlatformSlugs;
+    relatedPlatforms = (await getCollection("platforms")).filter((p) => slugs.includes(p.id));
+  }
+  if (entry.data.relatedGuideSlugs?.length) {
+    const slugs = entry.data.relatedGuideSlugs;
+    relatedGuides = (await getCollection("guides")).filter((g) => slugs.includes(g.id));
+  }
+}
+---
+
+{
+  !entry ? (
+    <MarketingLayout
+      title="Page not found | CrawlPact"
+      description="This page doesn't exist or may have moved."
+      noindex={true}
+    >
+      <div class="mx-auto max-w-[560px] px-4 py-24 text-center sm:px-6">
+        <p class="text-metadata font-medium uppercase tracking-wide text-neutral-500">404</p>
+        <h1 class="mt-2 text-h1 text-neutral-950">Page not found</h1>
+        <p class="mt-4 text-body-lg text-neutral-700">
+          This page doesn't exist, or it may have moved. Nothing on your end was scanned or
+          affected.
+        </p>
+        <a
+          href="/"
+          class="mt-6 inline-block rounded-control bg-brand-600 px-5 py-2.5 text-body font-medium text-white hover:bg-brand-700"
+        >
+          Go to the homepage
+        </a>
+      </div>
+    </MarketingLayout>
+  ) : (
+    <MarketingLayout
+      title={`${entry.data.title} | CrawlPact`}
+      description={entry.data.description}
+      canonicalPath={`/for/${entry.id}/`}
+      ogImage="/og/for.png"
+      ogType="article"
+      publishedDate={entry.data.publishedDate}
+      updatedDate={entry.data.updatedDate}
+      breadcrumbs={[
+        { name: "Use cases", url: "/for/agencies" },
+        { name: entry.data.audience, url: `/for/${entry.id}/` },
+      ]}
+    >
+      <article class="mx-auto max-w-reading px-4 py-12 sm:px-6">
+        <p class="text-metadata font-medium uppercase tracking-wide text-neutral-500">
+          For {entry.data.audience}
+        </p>
+        <h1 class="mt-1 text-h1 text-neutral-950">{entry.data.title}</h1>
+        <p class="mt-3 text-body-lg text-neutral-700">{entry.data.primaryProblem}</p>
+
+        <div class="mt-6 flex flex-wrap gap-4">
+          <a
+            href="/audit"
+            data-analytics-event="vertical_audit_cta_clicked"
+            class="rounded-control bg-brand-600 px-5 py-2.5 text-body font-medium text-white hover:bg-brand-700"
+          >
+            Audit a domain
+          </a>
+          <a
+            href="/sample-report"
+            data-analytics-event="vertical_sample_report_clicked"
+            class="rounded-control border border-neutral-300 px-5 py-2.5 text-body font-medium text-neutral-800 hover:bg-neutral-50"
+          >
+            View a sample report
+          </a>
+        </div>
+
+        <div class="prose prose-neutral mt-10 max-w-none wrap-break-word text-body text-neutral-800">
+          {Content && <Content />}
+        </div>
+
+        {recommended && (
+          <div class="mt-10 rounded-card border border-neutral-200 bg-neutral-50 p-6">
+            <p class="text-metadata font-medium uppercase tracking-wide text-neutral-500">
+              Plan guidance
+            </p>
+            <h2 class="mt-1 text-h3 text-neutral-950">
+              {PLAN_COPY[entry.data.recommendedPlan as PlanId].name} is the usual fit
+            </h2>
+            {recommended.pricing && (
+              <p class="mt-2 text-body text-neutral-700">
+                ${(recommended.pricing.month.amountUsdCents / 100).toFixed(0)}/month or $
+                {(recommended.pricing.year.amountUsdCents / 100).toFixed(0)}/year —{" "}
+                {recommended.savedDomainLimit} saved domains,{" "}
+                {recommended.monitoringFrequency === "none"
+                  ? "no automatic monitoring"
+                  : `${recommended.monitoringFrequency} monitoring`}
+                . Every plan, including Free, gets the same complete, accurate audit — paid plans
+                add saved domains, monitoring, history, and export/sharing capacity, not a more
+                accurate result.
+              </p>
+            )}
+            <a
+              href={`/pricing#${entry.data.recommendedPlan}`}
+              data-analytics-event="vertical_pricing_clicked"
+              class="mt-4 inline-block text-body font-medium text-brand-700 underline underline-offset-2"
+            >
+              Review {PLAN_COPY[entry.data.recommendedPlan as PlanId].name} pricing
+            </a>
+          </div>
+        )}
+
+        {relatedPlatforms.length > 0 && (
+          <div class="mt-10 border-t border-neutral-200 pt-8">
+            <h2 class="text-h3 text-neutral-950">Relevant platform guides</h2>
+            <ul class="mt-4 grid gap-3 sm:grid-cols-2">
+              {relatedPlatforms.map((platform) => (
+                <li>
+                  <a
+                    href={`/platforms/${platform.id}/`}
+                    class="block rounded-card border border-neutral-200 bg-white p-4 hover:border-brand-300"
+                  >
+                    <p class="text-card-heading text-neutral-950">{platform.data.title}</p>
+                    <p class="mt-1 text-supporting text-neutral-600">{platform.data.description}</p>
+                  </a>
+                </li>
+              ))}
+            </ul>
+          </div>
+        )}
+
+        {relatedGuides.length > 0 && (
+          <div class="mt-10 border-t border-neutral-200 pt-8">
+            <h2 class="text-h3 text-neutral-950">Related guides</h2>
+            <ul class="mt-4 flex flex-col gap-3">
+              {relatedGuides.map((guide) => (
+                <li>
+                  <a
+                    href={`/guides/${guide.id}/`}
+                    class="block rounded-card border border-neutral-200 bg-white p-4 hover:border-brand-300"
+                  >
+                    <p class="text-card-heading text-neutral-950">{guide.data.title}</p>
+                    <p class="mt-1 text-supporting text-neutral-600">{guide.data.description}</p>
+                  </a>
+                </li>
+              ))}
+            </ul>
+          </div>
+        )}
+
+        {otherVerticals.length > 0 && (
+          <div class="mt-10 border-t border-neutral-200 pt-8">
+            <h2 class="text-h3 text-neutral-950">Other teams CrawlPact serves</h2>
+            <ul class="mt-4 grid gap-3 sm:grid-cols-3">
+              {otherVerticals.map((other) => (
+                <li>
+                  <a
+                    href={`/for/${other.id}/`}
+                    class="block rounded-card border border-neutral-200 bg-white p-4 hover:border-brand-300"
+                  >
+                    <p class="text-card-heading text-neutral-950">{other.data.audience}</p>
+                  </a>
+                </li>
+              ))}
+            </ul>
+          </div>
+        )}
+      </article>
+      <AnalyticsBeacon
+        client:load
+        eventName="vertical_page_viewed"
+        properties={{ vertical: entry.id }}
+      />
+    </MarketingLayout>
+  )
+}
+
+<script>
+  // Lightweight, unhydrated click-delegation for vertical-page CTA analytics (Phase 7) — same
+  // pattern as index.astro's homepage conversion-path tracking: a single event listener, no
+  // client framework island, fire-and-forget, never blocks navigation. Runs unconditionally (the
+  // 404 branch simply has no [data-analytics-event] elements to match).
+  document.addEventListener("click", (event) => {
+    const target = (event.target as HTMLElement).closest<HTMLElement>("[data-analytics-event]");
+    if (!target) return;
+    const eventName = target.dataset.analyticsEvent;
+    if (!eventName) return;
+    fetch("/api/analytics/track", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ eventName }),
+      keepalive: true,
+    }).catch(() => {
+      // Analytics must never surface an error to the user.
+    });
+  });
+</script>

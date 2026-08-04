@@ -8,10 +8,11 @@ below rather than duplicated. Do not maintain a third active-risk list anywhere 
 
 Statuses: `open` · `mitigating` · `accepted` · `blocked` · `monitoring`.
 
-Last reviewed: 2026-08-04 (Phase 6), consolidating `docs/status/KNOWN_RISKS.md`'s still-open
+Last reviewed: 2026-08-04 (Phase 7), consolidating `docs/status/KNOWN_RISKS.md`'s still-open
 items with the 13 new risks Phase 0's baseline audit found
 (`docs/baseline/2026-08-03/BASELINE_RISKS_AND_UNKNOWNS.md`). Phase 6 closed RISK-016 (see
-`docs/risks/RISK_ARCHIVE.md` ARC-024) and mitigated RISK-017.
+`docs/risks/RISK_ARCHIVE.md` ARC-024) and mitigated RISK-017. Phase 7 added RISK-031 (deferred
+extended platform guides) and RISK-032 (no Search Console property connected).
 
 ---
 
@@ -370,6 +371,51 @@ items with the 13 new risks Phase 0's baseline audit found
 - **Acceptance criteria for closure**: Either accepted permanently as documented UX, or a
   reversible-consumption design is adopted that provably preserves the single-save-per-continuation
   guarantee under concurrent requests.
+
+### RISK-031 — Phase 7's 5 extended platform guides (nginx, apache, fastly, akamai, GitHub Pages) were deferred, not built
+
+- **Category**: Content/SEO · **Severity**: P3 · **Probability**: N/A (explicitly deferred)
+- **Impact**: Only the 5 priority platform guides (Cloudflare, WordPress, Shopify, Vercel, Netlify)
+  were built and published this phase. The phase prompt explicitly permitted deferring the 5
+  extended guides if the official-source research/evidence/uniqueness bar wasn't met in-session,
+  and explicitly prohibited publishing them merely to hit a page count. `/platforms` (the hub) has
+  only 4 category sections populated, not the eventual full set — a real, disclosed content gap,
+  not a silent shortfall.
+- **Evidence**: `docs/seo/SEARCH_INTENT_AND_PAGE_MAP.md` ("Stage 7D... publication priority 2"),
+  `docs/seo/SEO_CONTENT_GOVERNANCE.md` (extended platform guides row: "0 — deferred"),
+  `docs/reports/PHASE_07_VERTICAL_PLATFORM_SEO_COMPLETION_REPORT.md` ("Deferred work")
+- **Current mitigation**: None needed — the 5 priority guides satisfy the phase's required minimum
+  (5/5); the extended set was always contingent, not committed.
+- **Owner**: Product owner · **Trigger**: A future session with budget to research and verify the
+  5 extended platforms against the same official-source bar
+- **Review date**: Next content-roadmap review · **Target phase**: Unscheduled follow-up (tracked
+  as a GitHub issue, not a numbered phase)
+- **Status**: accepted
+- **Acceptance criteria for closure**: Either the 5 extended guides are researched, verified against
+  real official documentation, and published following the same standard as the priority 5, or a
+  product-owner decision formally closes the platform-guide set at 5.
+
+### RISK-032 — No Google Search Console property connected; Phase 7 indexing cannot be verified against real search data
+
+- **Category**: SEO/Observability · **Severity**: P3 · **Probability**: Certain (known gap)
+- **Impact**: There is no Search Console property connected to `crawlpact.com`, so Phase 7's new
+  `/for/*`/`/platforms/*` pages cannot be confirmed indexed, checked for crawl errors, or compared
+  against real query/impression data post-launch. This is a pre-existing gap (no prior phase
+  connected one either), not something Phase 7 introduced, but Phase 7 is the first phase whose
+  success is specifically measured by organic search performance.
+- **Evidence**: `docs/seo/PHASE_07_SEARCH_PERFORMANCE_BASELINE.md` ("no property connected" +
+  manual verification checklist), `docs/seo/ROUTE_REGISTRY.md` ("no production Cloudflare account
+  connected" — the same class of pre-launch gap)
+- **Current mitigation**: `docs/seo/PHASE_07_SEARCH_PERFORMANCE_BASELINE.md`'s manual verification
+  checklist stands in until a property exists; `pnpm run content:links:check` independently catches
+  a broken official source without needing Search Console.
+- **Owner**: Product owner · **Trigger**: Connecting a Search Console property (a one-time,
+  low-effort setup task, not a code change)
+- **Review date**: Next release readiness review · **Target phase**: Phase 18 (Production Launch
+  Readiness and Final Audit) — same phase as the other pre-launch external-account gaps
+- **Status**: accepted
+- **Acceptance criteria for closure**: A Search Console property is connected and the manual
+  verification checklist in `PHASE_07_SEARCH_PERFORMANCE_BASELINE.md` is completed at least once.
 
 ---
 

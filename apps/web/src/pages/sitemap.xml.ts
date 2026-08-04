@@ -26,6 +26,7 @@ const STATIC_ROUTES = [
   "/tools/llms-txt-validator",
   "/tools/content-signals-checker",
   "/guides",
+  "/platforms",
   "/methodology",
   "/scoring",
   "/scanner",
@@ -44,6 +45,8 @@ export const GET: APIRoute = async ({ site }) => {
   const base = site ?? new URL("https://crawlpact.com");
   const crawlers = await getCollection("crawlers");
   const guides = await getCollection("guides");
+  const verticals = await getCollection("verticals");
+  const platforms = await getCollection("platforms");
 
   const entries: UrlEntry[] = [
     ...STATIC_ROUTES.map((path) => ({ path })),
@@ -54,6 +57,15 @@ export const GET: APIRoute = async ({ site }) => {
     ...guides.map((guide) => ({
       path: `/guides/${guide.id}/`,
       lastmod: guide.data.updatedDate ?? guide.data.publishedDate,
+    })),
+    // Phase 7 — see docs/seo/SITEMAP_AND_INDEXABILITY_POLICY.md.
+    ...verticals.map((vertical) => ({
+      path: `/for/${vertical.id}/`,
+      lastmod: vertical.data.updatedDate ?? vertical.data.publishedDate,
+    })),
+    ...platforms.map((platform) => ({
+      path: `/platforms/${platform.id}/`,
+      lastmod: platform.data.updatedDate ?? platform.data.publishedDate,
     })),
   ];
 

@@ -4,15 +4,21 @@ This is CrawlPact's central editorial policy: who is responsible for public cont
 as an acceptable source, how content gets reviewed and corrected, and how automation may be used
 in producing it. It applies to every public content type: crawler-reference pages
 (`apps/web/src/content/crawlers/*.md`), guides (`apps/web/src/content/guides/*.md`), free-tool
-pages, `/methodology`, `/scoring`, `/scanner`, comparison/decision content, and any future SEO
-article added to the site.
+pages, `/methodology`, `/scoring`, `/scanner`, comparison/decision content, vertical landing pages
+(`apps/web/src/content/verticals/*.md`, Phase 7), platform guides
+(`apps/web/src/content/platforms/*.md`, Phase 7), and any future SEO article added to the site.
 
-It does not replace the two existing, narrower policies it builds on:
+It does not replace the narrower policies it builds on:
 
 - `docs/registry/SOURCE_VERIFICATION_POLICY.md` — the specific standard for verifying a crawler
   registry record's operator, token, and purpose.
 - `docs/seo/SEO_CONTENT_GOVERNANCE.md` — content-minimum tracking and the no-thin-pages rule.
 - `docs/registry/CRAWLER_REGISTRY_GOVERNANCE.md` — how registry releases are versioned.
+- `docs/seo/AI_ASSISTED_CONTENT_GOVERNANCE.md` (Phase 7) — this policy's "How automation assists
+  content production" section applied concretely to vertical/platform content.
+- `docs/content/VERTICAL_PAGE_CONTENT_STANDARD.md` and
+  `docs/content/PLATFORM_GUIDE_CONTENT_STANDARD.md` (Phase 7) — the specific required-sections and
+  prohibited-claims lists for each new content type.
 
 Where this document and those disagree, the narrower, more specific document governs its own
 area; this document governs everything those don't already cover.
@@ -79,6 +85,11 @@ In priority order, for any factual claim about a crawler, specification, or stan
    status.
 3. **Official Cloudflare, Paddle, or Astro documentation** — for claims about this product's own
    infrastructure behaviour.
+4. **The relevant platform's own official documentation, repositories, and changelogs** (Phase 7
+   platform guides — e.g. Cloudflare, WordPress, Shopify, Vercel, Netlify) — the only acceptable
+   source for a claim about how that specific platform serves `robots.txt`, headers, or other
+   crawler-policy-relevant public signals. See `docs/seo/PLATFORM_CLAIM_SOURCE_REGISTER.md` for
+   the per-claim evidence this produced.
 
 **Not acceptable as a primary source, ever**: SEO blogs, "list of AI bots" aggregator sites,
 forum posts, social media claims, or a competitor's marketing copy — even to corroborate something
