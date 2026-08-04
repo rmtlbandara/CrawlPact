@@ -15,6 +15,10 @@ const VIEWPORTS = [
   { name: "360", width: 360, height: 800 },
   { name: "768", width: 768, height: 1024 },
   { name: "1280", width: 1280, height: 900 },
+  // 1440/1920 added Phase 4 (Homepage Information Architecture and Conversion Redesign) — its
+  // own required-viewport list includes desktop widths beyond the pre-existing 1280 check.
+  { name: "1440", width: 1440, height: 960 },
+  { name: "1920", width: 1920, height: 1080 },
 ];
 
 async function assertNoHorizontalOverflow(page: Page): Promise<void> {
@@ -47,6 +51,12 @@ test.describe("Responsive layout smoke", () => {
 
       test("a crawler detail page renders without horizontal overflow", async ({ page }) => {
         await page.goto("/crawlers/gptbot");
+        await expect(page.getByRole("heading", { level: 1 })).toBeVisible();
+        await assertNoHorizontalOverflow(page);
+      });
+
+      test("the sample report renders without horizontal overflow (Phase 4)", async ({ page }) => {
+        await page.goto("/sample-report");
         await expect(page.getByRole("heading", { level: 1 })).toBeVisible();
         await assertNoHorizontalOverflow(page);
       });

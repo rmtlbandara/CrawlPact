@@ -140,7 +140,17 @@ export function AuditReportView({
     crawlers: (
       <section key="crawlers">
         <h2 className="text-h3 text-neutral-950">Crawler access matrix</h2>
-        <div className="mt-4 overflow-x-auto rounded-card border border-neutral-200">
+        {/* A scrollable region must itself be keyboard-focusable (WCAG 2.1.1;
+            axe-core's "scrollable-region-focusable" rule) even though `role="region"`
+            isn't in jsx-a11y's interactive-role list — see packages/ui/src/components/DataTable.tsx
+            for the same documented pattern. */}
+        <div
+          className="mt-4 overflow-x-auto rounded-card border border-neutral-200"
+          // eslint-disable-next-line jsx-a11y/no-noninteractive-tabindex
+          tabIndex={0}
+          role="region"
+          aria-label="Crawler access matrix table"
+        >
           <table className="w-full text-left text-body">
             <thead className="bg-neutral-50 text-supporting font-medium text-neutral-600">
               <tr>

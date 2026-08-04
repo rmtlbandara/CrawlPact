@@ -85,6 +85,49 @@ GITHUB_BRAND_METADATA_MANIFEST}.md`, a central `apps/web/src/config/brand.ts` mo
   the rewritten Privacy Policy, neither resolved; routed to Phase 13 and Phase 11 respectively,
   per this phase's explicit scope boundary against changing analytics/retention behaviour.
 
+### Added (Phase 4 — Homepage Information Architecture and Conversion Redesign)
+
+- A new `/sample-report` page reusing the real `AuditReportView` component (the same one real
+  reports use) with a new, schema-validated fixture (`apps/web/src/lib/sample-report.fixture.ts`)
+  — no report-rendering logic was duplicated.
+- Five new homepage section components under `apps/web/src/components/homepage/`
+  (`RiskSection`, `SampleReportSection`, `CrawlerPurposeSection`, `AgencySection`,
+  `PricingPreviewSection`).
+- `apps/web/src/lib/plans.ts` — a single source for the plan data `pricing.astro` and the new
+  homepage pricing preview both read, replacing a previously duplicated hand-typed array (same
+  values, no price/limit/entitlement change).
+- Five new homepage-specific analytics event names (`sample_report_clicked`,
+  `homepage_pricing_clicked`, `homepage_agency_cta_clicked`, `homepage_methodology_clicked`,
+  `homepage_crawler_directory_clicked`), tracked via a small unhydrated click-delegation script —
+  no new client-side framework island.
+- `docs/design/{PHASE_04_HOMEPAGE_BASELINE,HOMEPAGE_INFORMATION_ARCHITECTURE,
+HOMEPAGE_CONTENT_MODEL,HOMEPAGE_COMPONENT_MAP}.md` — see
+  `docs/reports/PHASE_04_HOMEPAGE_CONVERSION_REDESIGN_COMPLETION_REPORT.md`.
+
+### Changed (Phase 4)
+
+- Redesigned the homepage to a 12-section information architecture (see
+  `docs/design/HOMEPAGE_INFORMATION_ARCHITECTURE.md`): added a dedicated crawler-policy-risks
+  section, a dedicated agency/multi-domain workflow section, and a four-category crawler-purpose
+  explainer; consolidated the former "Core features" and "Built for real workflows" card grids
+  into the evidence/methodology and agency sections to avoid duplicate content.
+- Kept the hero H1 and primary CTA label unchanged — both were already SRS-aligned and
+  Phase-2-validated; changing them would have created a fresh, avoidable documentation deviation
+  (see `docs/design/PHASE_04_HOMEPAGE_BASELINE.md` "Implementation decisions").
+- Extended `apps/web/tests/e2e/responsive-smoke.spec.ts`'s viewport matrix (added 1440px/1920px)
+  and added a `/sample-report` overflow check, per Phase 4's required viewport list.
+
+### Verified (Phase 4)
+
+- Production-build Lighthouse comparison (built `main` at `abab3d4` in a separate git worktree vs.
+  this branch, both served statically): performance 99→99, accessibility 100→100, best practices
+  96→96, SEO 100→100, LCP ~2114ms→~2113ms, CLS 0→0 — no measurable regression despite the new
+  route and sections, because no new client hydration was added to the homepage itself.
+- Fixed a real WCAG 2.2 AA violation surfaced by testing `/sample-report`: `AuditReportView`'s
+  crawler-access-matrix table wrapper is now keyboard-focusable (`role="region"`, `tabIndex={0}`),
+  following the same pattern already established in `packages/ui/src/components/DataTable.tsx` —
+  benefits real report pages too, not just the sample page.
+
 ## Production deployment (2026-07-31)
 
 PR #59 (this release's full change set, squash-merged as `e245793`) deployed to production via

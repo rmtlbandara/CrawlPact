@@ -18,6 +18,7 @@ const ROUTES = [
   "/about",
   "/contact",
   "/audit",
+  "/sample-report",
   "/pricing",
   "/crawlers",
   "/crawlers/amazonbot",

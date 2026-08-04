@@ -2,6 +2,24 @@
 
 **Status: verification-blocked (by user decision, not access failure).**
 
+## Phase 4 update (2026-08-04)
+
+Phase 3 (PR #71) merged to `main`. Phase 4 (Homepage Information Architecture and Conversion
+Redesign) is complete — see
+`docs/reports/PHASE_04_HOMEPAGE_CONVERSION_REDESIGN_COMPLETION_REPORT.md`. Same manifest-only
+decision carried forward. When this manifest is applied, additionally create these follow-up
+issues Phase 4 found but deliberately did not fix in place:
+
+- **"Reconcile SRS §2.3 Primary Tagline with the Phase 2 canonical brand system"** — carried
+  forward unclaimed from Phases 2 and 3, routed to `phase-05`. See
+  `docs/risks/ACTIVE_RISKS.md` RISK-028.
+- **"Add `description` fields to the 10 `package.json` files that currently lack one"** — same
+  carry-forward, routed to `phase-05`.
+- **"Contextual anonymous-report conversion CTA"** and **"audit-to-account continuity"** — both
+  explicitly out of Phase 4's scope, routed to `phase-05`.
+- **"Real aggregate proof metrics (audits completed, domains monitored, etc.)"** — deferred until
+  a safe, privacy-reviewed methodology exists, routed to `phase-16`.
+
 ## Phase 3 update (2026-08-03)
 
 Phase 2 (PR #70) merged to `main`. Phase 3 (Legal Identity, Contact, Security and Trust

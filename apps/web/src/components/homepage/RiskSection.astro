@@ -1,0 +1,38 @@
+---
+/**
+ * Homepage Section 2 — "Three crawler-policy risks" (Phase 4 IA §9). Static content, no
+ * hydration — see docs/design/HOMEPAGE_COMPONENT_MAP.md.
+ */
+const RISKS = [
+  {
+    title: "Search crawlers may be blocked unintentionally",
+    body: "A broad AI-crawler rule may also affect crawlers used for search or user-requested retrieval — not only model-training crawlers.",
+  },
+  {
+    title: "Training access may remain unspecified",
+    body: "A website may intend to restrict model-training crawlers while publishing no explicit rule for several verified crawler tokens. Unspecified is a neutral state, not a guarantee either way.",
+  },
+  {
+    title: "Deployments and CDN settings can change the public policy",
+    body: "The policy a team intends may differ from the public response after a deployment, framework update, or CDN-generated rewrite.",
+  },
+];
+---
+
+<section id="product" class="mx-auto max-w-[1240px] px-4 py-16 sm:px-6">
+  <h2 class="text-h2 text-neutral-950">One crawler-policy mistake can create the wrong outcome.</h2>
+  <div class="mt-8 grid gap-6 sm:grid-cols-3">
+    {
+      RISKS.map((risk) => (
+        <div class="rounded-card border border-neutral-200 bg-white p-5">
+          <h3 class="text-card-heading text-neutral-950">{risk.title}</h3>
+          <p class="mt-2 text-body text-neutral-700">{risk.body}</p>
+        </div>
+      ))
+    }
+  </div>
+  <p class="mt-6 max-w-2xl text-supporting text-neutral-500">
+    Not every website needs the same policy, and not all AI crawling is harmful — the point is
+    knowing, with evidence, what your website currently declares.
+  </p>
+</section>

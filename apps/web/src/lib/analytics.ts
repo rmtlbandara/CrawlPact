@@ -25,6 +25,15 @@ export const PRODUCT_EVENT_NAMES = [
   "report_shared",
   "notification_opened",
   "crawler_reference_page_opened",
+  // Homepage conversion-path clicks (Phase 4, Homepage Information
+  // Architecture and Conversion Redesign) — page-view-style beacons for
+  // link/CTA clicks that have no natural server-side mutation to hang
+  // tracking off of, matching this file's own existing pattern above.
+  "sample_report_clicked",
+  "homepage_pricing_clicked",
+  "homepage_agency_cta_clicked",
+  "homepage_methodology_clicked",
+  "homepage_crawler_directory_clicked",
 ] as const;
 
 export type ProductEventName = (typeof PRODUCT_EVENT_NAMES)[number];
