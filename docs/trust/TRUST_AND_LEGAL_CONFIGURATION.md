@@ -2,20 +2,42 @@
 
 **Level 1 document (Current authoritative).** The single record of what legal/trust facts are
 approved for publication, who approved them, and what was deliberately left out. Established Phase
-3 (Legal Identity, Contact, Security and Trust Foundation), 2026-08-03. Backs
-`apps/web/src/lib/trust-config.ts` — update both together.
+3 (Legal Identity, Contact, Security and Trust Foundation), 2026-08-03. Amended 2026-08-04 (Public
+Country Reference and Contact Messaging Correction) — see "Governing jurisdiction removed" below.
+Backs `apps/web/src/lib/trust-config.ts` — update both together.
 
 ## Approved facts
 
-| Fact                       | Value                           | Approved   | Owner         |
-| -------------------------- | ------------------------------- | ---------- | ------------- |
-| Legal/operator name        | CrawlPact (no corporate suffix) | 2026-08-03 | Product owner |
-| Governing jurisdiction     | Sri Lanka                       | 2026-08-03 | Product owner |
-| Privacy contact            | info@crawlpact.com              | 2026-08-03 | Product owner |
-| Security contact           | info@crawlpact.com              | 2026-08-03 | Product owner |
-| Support contact            | support@crawlpact.com           | 2026-08-03 | Product owner |
-| Content-correction contact | support@crawlpact.com           | 2026-08-03 | Product owner |
-| Billing contact            | support@crawlpact.com           | 2026-08-03 | Product owner |
+| Fact                       | Value                               | Approved   | Owner         |
+| -------------------------- | ----------------------------------- | ---------- | ------------- |
+| Legal/operator name        | CrawlPact (no corporate suffix)     | 2026-08-03 | Product owner |
+| Governing jurisdiction     | _(none published — see note below)_ | 2026-08-04 | Product owner |
+| Privacy contact            | info@crawlpact.com                  | 2026-08-03 | Product owner |
+| Security contact           | info@crawlpact.com                  | 2026-08-03 | Product owner |
+| Support contact            | support@crawlpact.com               | 2026-08-03 | Product owner |
+| Content-correction contact | support@crawlpact.com               | 2026-08-03 | Product owner |
+| Billing contact            | support@crawlpact.com               | 2026-08-03 | Product owner |
+
+## Governing jurisdiction removed (2026-08-04)
+
+Phase 3 (2026-08-03) originally approved and published "Sri Lanka" as CrawlPact's operating
+country and Terms of Service governing jurisdiction. On 2026-08-04, the product owner explicitly
+instructed removing every public reference to this (or any) country — see the Public Country
+Reference and Contact Messaging Correction prompt and
+`docs/reports/PUBLIC_COUNTRY_AND_CONTACT_MESSAGING_CORRECTION_REPORT.md`. This is a deliberate
+policy reversal, not a data-loss event: the previous value is preserved here only as an accurate
+historical record of what was previously approved and why it changed.
+
+**Current state**: no operating country, jurisdiction, or governing-law clause is published
+anywhere on the public site (`apps/web/src/lib/trust-config.ts` no longer exports a
+`governingJurisdiction` field at all). It was **not** replaced with another country, city, region,
+or "international"/"global" wording, per the correction's explicit instruction. Terms of Service
+§21 ("Governing law") was removed rather than left with an invented or placeholder value —
+`apps/web/src/pages/terms.astro` now runs §1–§22 with no governing-law section. This reopens a
+professional-legal-review item, tracked as **RISK-029** in `docs/risks/ACTIVE_RISKS.md`: the
+current Terms architecture is written to work without a governing-law clause, but republishing one
+in future requires a fresh, explicit product-owner decision recorded in this document, not a
+silent reintroduction.
 
 ## Intentionally omitted fields
 

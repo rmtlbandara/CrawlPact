@@ -130,7 +130,7 @@ items with the 13 new risks Phase 0's baseline audit found
 - **Category**: Legal · **Severity**: P2 · **Probability**: N/A (explicitly deferred)
 - **Impact**: Blocks a specific, scoped set of items only: a registered address on any public page, a registration number, tax information, and a jurisdiction-specific consumer-protection-regime citation. Does **not** block the release as a whole.
 - **Evidence**: `docs/release/LEGAL_INFORMATION_CHECKLIST.md`, `docs/trust/TRUST_AND_LEGAL_CONFIGURATION.md`. **Not an SRS requirement** — see `docs/baseline/2026-08-03/DOCUMENTATION_CONFLICTS.md` DC-010; this is a product-owner governance decision, not an SRS-derived blocker.
-- **Current mitigation**: **Partially resolved (Phase 3, 2026-08-03)** — the product owner supplied and approved an operator name ("CrawlPact", no corporate suffix), governing jurisdiction ("Sri Lanka"), and five contact addresses (privacy/security/support/corrections/billing), all now live across `/privacy`, `/terms`, `/security`, `/contact`, `/about`, the footer, `apps/web/src/lib/trust-config.ts`, and `/.well-known/security.txt`. The registered address, registration number, and tax information remain explicitly, deliberately deferred — not invented.
+- **Current mitigation**: **Partially resolved (Phase 3, 2026-08-03)** — the product owner supplied and approved an operator name ("CrawlPact", no corporate suffix) and five contact addresses (privacy/security/support/corrections/billing), all live across `/privacy`, `/terms`, `/security`, `/contact`, `/about`, the footer, `apps/web/src/lib/trust-config.ts`, and `/.well-known/security.txt`. **Updated 2026-08-04**: the governing jurisdiction ("Sri Lanka") originally approved alongside these was subsequently removed at explicit product-owner instruction — no operating country or jurisdiction is published anywhere on the public site; see RISK-029 for the resulting Terms-of-Service governing-law gap this reopens. The registered address, registration number, and tax information remain explicitly, deliberately deferred — not invented.
 - **Owner**: Legal/business owner · **Trigger**: Any decision to publish the three remaining gated items above
 - **Review date**: Next release readiness review · **Target phase**: Phase 18 (Production Launch Readiness and Final Audit)
 - **Status**: accepted
@@ -332,6 +332,29 @@ items with the 13 new risks Phase 0's baseline audit found
 - **Status**: open
 - **Acceptance criteria for closure**: SRS §2.3 updated to match the canonical tagline, or an ADR
   is recorded explicitly authorising the deviation and reconciling the two documents.
+
+### RISK-029 — Terms of Service has no governing-law clause after the 2026-08-04 country-reference removal
+
+- **Category**: Legal · **Severity**: P2 · **Probability**: N/A (explicitly deferred)
+- **Impact**: `/terms` no longer has a "Governing law" section (formerly §21) and `/terms` §2, `/about`,
+  and `/privacy` §1 no longer state an operating country — the product owner explicitly instructed
+  removing every public country/jurisdiction reference (Public Country Reference and Contact
+  Messaging Correction, 2026-08-04) rather than publish a stale or invented jurisdiction. Does
+  **not** block the release: the Terms architecture was written to be self-consistent without a
+  governing-law clause (no cross-references to the removed section remain).
+- **Evidence**: `docs/trust/TRUST_AND_LEGAL_CONFIGURATION.md` "Governing jurisdiction removed",
+  `docs/release/LEGAL_INFORMATION_CHECKLIST.md`,
+  `docs/reports/PUBLIC_COUNTRY_AND_CONTACT_MESSAGING_CORRECTION_REPORT.md`
+- **Current mitigation**: None published; genuinely absent by explicit product-owner instruction,
+  not invented and not silently replaced with another location.
+- **Owner**: Legal/business owner · **Trigger**: Any future decision to republish a governing-law
+  clause
+- **Review date**: Next release readiness review · **Target phase**: Phase 18 (Production Launch
+  Readiness and Final Audit)
+- **Status**: accepted
+- **Acceptance criteria for closure**: A governing jurisdiction is republished only after a fresh,
+  explicit product-owner decision recorded in `docs/trust/TRUST_AND_LEGAL_CONFIGURATION.md`,
+  ideally after professional legal review of the resulting Terms of Service clause.
 
 ---
 

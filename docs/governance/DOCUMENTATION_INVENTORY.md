@@ -172,3 +172,12 @@ HOMEPAGE_INFORMATION_ARCHITECTURE,PHASE_04_HOMEPAGE_BASELINE}.md` — see the ro
 a point-in-time snapshot, matching the convention already used for
 `docs/baseline/2026-08-03/PHASE_0_BASELINE_REPORT.md`). Total documentation-file count is now ~117
 (113 post-Phase-3 + 4 new).
+
+## Public Country Reference and Contact Messaging Correction update (2026-08-04)
+
+One new file: `docs/reports/PUBLIC_COUNTRY_AND_CONTACT_MESSAGING_CORRECTION_REPORT.md`
+(`current-authoritative`, `evidence`). `docs/trust/TRUST_AND_LEGAL_CONFIGURATION.md` and
+`docs/release/LEGAL_INFORMATION_CHECKLIST.md` were updated in place (governing jurisdiction
+removed, historical record preserved, not archived) rather than superseded — this is a focused
+correction to already-current documents, not a new phase. Total documentation-file count is now
+~118 (117 post-Phase-4 + 1 new).

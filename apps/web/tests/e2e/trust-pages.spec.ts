@@ -64,6 +64,26 @@ test.describe("Contact routing uses the approved addresses", () => {
   });
 });
 
+test.describe("Public Country Reference and Contact Messaging Correction (2026-08-04)", () => {
+  test("/contact does not display a country and shows the 24-hour response commitment", async ({
+    page,
+  }) => {
+    await page.goto("/contact");
+    const bodyText = await page.locator("body").innerText();
+    expect(bodyText).not.toMatch(/sri lanka/i);
+    expect(bodyText).not.toMatch(/no live chat|no phone support|no guaranteed response time/i);
+    await expect(page.getByText(/respond to enquiries within 24 hours/i)).toBeVisible();
+  });
+
+  for (const path of ["/", "/about", "/privacy", "/terms"]) {
+    test(`${path} does not display a country reference`, async ({ page }) => {
+      await page.goto(path);
+      const bodyText = await page.locator("body").innerText();
+      expect(bodyText).not.toMatch(/sri lanka/i);
+    });
+  }
+});
+
 test.describe("Footer trust navigation", () => {
   for (const [label, href] of [
     ["About CrawlPact", "/about"],

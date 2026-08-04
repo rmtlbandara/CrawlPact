@@ -11,6 +11,15 @@
  * guess — because that information has not been supplied; do not fill either in without a
  * fresh, explicit product-owner decision recorded in that same document. See
  * `docs/release/LEGAL_INFORMATION_CHECKLIST.md` for the remaining open items.
+ *
+ * `governingJurisdiction` was removed 2026-08-04 (Public Country Reference and Contact
+ * Messaging Correction) at the product owner's explicit instruction — no operating country or
+ * jurisdiction is published anywhere on the public site. This is a deliberate, product-owner
+ * decision, not an oversight; it is not replaced with another country, a city, a region, or
+ * "international"/"global" wording. See `docs/trust/TRUST_AND_LEGAL_CONFIGURATION.md` for the
+ * full historical record, and `docs/risks/ACTIVE_RISKS.md` RISK-029 for the resulting open item
+ * (Terms of Service no longer publishes a governing-law clause, pending professional legal
+ * review before one can be republished).
  */
 export const TRUST_CONFIG = {
   productName: "CrawlPact",
@@ -19,7 +28,6 @@ export const TRUST_CONFIG = {
   // no corporate suffix (Ltd./Inc./Pvt Ltd/etc.) — CrawlPact is not represented as a registered
   // company or separate legal person; see docs/release/LEGAL_INFORMATION_CHECKLIST.md.
   legalEntityName: "CrawlPact",
-  governingJurisdiction: "Sri Lanka",
 
   // Still genuinely unavailable — do not fill with a guessed, virtual, or borrowed address/number.
   registeredAddress: null as string | null,

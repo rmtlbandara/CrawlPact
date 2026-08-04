@@ -6,8 +6,9 @@ describe("TRUST_CONFIG approved values", () => {
     expect(TRUST_CONFIG.legalEntityName).toBe("CrawlPact");
   });
 
-  it("has the approved governing jurisdiction", () => {
-    expect(TRUST_CONFIG.governingJurisdiction).toBe("Sri Lanka");
+  it("does not publish any operating country or jurisdiction", () => {
+    expect(TRUST_CONFIG).not.toHaveProperty("governingJurisdiction");
+    expect(JSON.stringify(TRUST_CONFIG)).not.toMatch(/sri lanka/i);
   });
 
   it("has the approved contact addresses", () => {

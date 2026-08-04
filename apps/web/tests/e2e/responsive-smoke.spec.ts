@@ -61,6 +61,14 @@ test.describe("Responsive layout smoke", () => {
         await assertNoHorizontalOverflow(page);
       });
 
+      test("the contact page renders its addresses without horizontal overflow", async ({
+        page,
+      }) => {
+        await page.goto("/contact");
+        await expect(page.getByRole("heading", { level: 1 })).toBeVisible();
+        await assertNoHorizontalOverflow(page);
+      });
+
       // MobileNav.tsx is `xl:hidden` — this project's remapped `xl:`
       // breakpoint is 1024px (see SiteHeader.astro), so the "Open menu"
       // button is present at both 360 and 768, hidden only at 1280.
