@@ -14,6 +14,44 @@ the "Production deployment" entries below for the established pattern).
 
 ## Unreleased
 
+Nothing pending — see "Production deployment (2026-08-05) — Phase 11: Database, Storage,
+Retention and Performance Hardening" below for the most recent release.
+
+## Production deployment (2026-08-05) — Phase 11: Database, Storage, Retention and Performance Hardening
+
+PR #86 (squash-merged as `36166a4`) plus a same-day follow-up test-timeout fix, PR #87
+(squash-merged as `fc3ef36`), deployed to production via `deploy-production.yml`, run against
+commit `fc3ef36aaa437b352b7a1568f26103e7f703de62`. Four new D1 migrations applied (`0022`–`0025`).
+The in-workflow quality-gate re-run, migration apply, deploy, binding verification, and smoke test
+all passed; independently re-verified afterward directly against the live site:
+
+- `/`, `/status`, `/pricing`, `/changelog`, `/robots.txt`, `/sitemap.xml`, `/audit`,
+  `/crawlers/amazonbot`, `/platforms/cloudflare` all return `HTTP 200` (redirects to their
+  trailing-slash form for prerendered directory routes, as expected).
+- The new public-cache opt-ins are live and correct: `/for/agencies`, `/scanner`, and `/changelog`
+  return `Cache-Control: public, max-age=300`; `/pricing` (deliberately excluded — session-
+  dependent rendering) and `/app/domains`/`/api/domains` (private, unauthenticated → 401) all
+  return `Cache-Control: private, no-store` — the deny-by-default middleware default confirmed
+  live on both HTML and API routes.
+- `GET /api/admin/capacity` returns `401` unauthenticated, as expected.
+- Real production D1 confirms all four migrations applied: `scan_diffs`'s FKs now show
+  `on_delete: SET NULL` (were `NO ACTION`), `audit_continuations.scan_id` now shows
+  `on_delete: CASCADE` (was `NO ACTION`), `scans.findings_omitted_count` exists, and the new
+  composite index `idx_domains_monitoring_state_next_scan_at` exists — all via a real
+  `PRAGMA foreign_key_list`/`sqlite_master` query against production, not assumed from the
+  migration files alone. Table count unchanged at 42 (as expected — none of the four migrations
+  added a table).
+- Deployed Worker version: `7d1b4cc4-2232-4c21-9f91-5b154f94e5c2`.
+
+**Known limitation disclosed during this deploy, not caused by it**: the preview environment
+(`crawlpact-web-preview`) is separately missing `PADDLE_API_KEY`/`PADDLE_WEBHOOK_SECRET` secrets,
+causing `deploy-preview.yml`'s binding-verification step to fail — confirmed pre-existing (the
+same failure hit the three unrelated preview deploys immediately before this one) and unrelated to
+Phase 11's own build/migrate/deploy steps, which all succeeded on preview despite the later
+verification step failing. Production's own secrets and binding verification are unaffected and
+passed. This preview-specific gap needs a real secret value set on the preview Worker to fix —
+routed to a future fix, not attempted here (no real secret value was available to set).
+
 ### Phase 11 — Database, Storage, Retention and Performance Hardening
 
 Full detail: `docs/reports/PHASE_11_DATABASE_STORAGE_PERFORMANCE_COMPLETION_REPORT.md`.
@@ -56,10 +94,8 @@ Full detail: `docs/reports/PHASE_11_DATABASE_STORAGE_PERFORMANCE_COMPLETION_REPO
 - `pnpm lighthouse:check` now gates on the median of 3 runs (not 1), covers `/sample-report`, and
   uploads full per-run results as a CI artifact.
 
-Nothing deployed yet — see "Production deployment" entries below for what's actually live.
-
-Prior release: "Production deployment (2026-08-05) — Brand refresh and pricing-card
-alignment fix" below.
+Deployed the same day — see "Production deployment (2026-08-05) — Phase 11" above for the real
+deployment/verification evidence.
 
 ## Production deployment (2026-08-05) — Brand refresh and pricing-card alignment fix
 

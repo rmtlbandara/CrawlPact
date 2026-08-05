@@ -185,9 +185,38 @@ secret scan (clean).
 
 ## Deployment
 
-Not yet deployed. Per this repo's standing rule, production deployment requires fresh, explicit,
-in-the-moment approval regardless of prior-session authorization — that approval will be requested
-separately after this PR merges, matching the exact pattern used for every prior phase.
+Merged (PR #86, squash-merged as `36166a4`) and deployed to production 2026-08-05, with explicit,
+in-the-moment approval requested and given separately for both the merge and the deploy, matching
+the exact pattern used for every prior phase. Production CI's own quality-gate re-run caught one
+real bug PR #86's own CI run missed — a new test (`data-retention.integration.test.ts`'s failure-
+isolation test, which spins up a second full Miniflare D1 harness inline) exceeded vitest's
+5000ms default timeout on the production workflow's colder runner, though it passed both locally
+and in the PR's own CI. Fixed with a targeted timeout increase (PR #87, squash-merged as
+`fc3ef36`, no application logic changed) and re-deployed successfully. Deployed Worker version:
+`7d1b4cc4-2232-4c21-9f91-5b154f94e5c2`.
+
+**Independent post-deploy verification** (beyond the workflow's own smoke test): all four new
+migrations confirmed applied via real production `PRAGMA foreign_key_list`/`sqlite_master`
+queries (`scan_diffs`/`audit_continuations` FKs show the corrected `ON DELETE` behavior,
+`scans.findings_omitted_count` exists, the new composite index exists; table count unchanged at
+42, as expected). The new public-cache opt-ins and the deny-by-default header were independently
+re-verified live via direct `curl` against production — `/for/agencies`, `/scanner`, `/changelog`
+return `public, max-age=300`; `/pricing` (deliberately excluded), `/app/domains`, and
+`/api/domains` (401 unauthenticated) all return `private, no-store`. `GET /api/admin/capacity`
+returns `401` unauthenticated, as expected. See `CHANGELOG.md`'s 2026-08-05 entry for the full
+evidence list.
+
+**A real, disclosed limitation found during this deploy**: the preview environment
+(`crawlpact-web-preview`) is separately missing `PADDLE_API_KEY`/`PADDLE_WEBHOOK_SECRET` secrets,
+causing `deploy-preview.yml`'s post-deploy binding-verification step (and therefore the Lighthouse/
+smoke-test steps gated behind it) to fail — confirmed pre-existing via the same failure on the
+three unrelated preview deploys immediately before this phase's merge, and unrelated to Phase 11's
+own build/migrate/deploy steps, which all succeeded on preview. This meant Stage 11I's full preview
+verification (Lighthouse against the deployed preview, a live monitoring/retention dry-run against
+synthetic preview data) could not be completed as originally planned — disclosed here rather than
+silently skipped. Production's own secrets and binding verification are unaffected. Fixing the
+preview secrets gap requires a real secret value this session does not have access to; routed to a
+separate follow-up.
 
 ## Risk closure
 
@@ -209,9 +238,9 @@ headers, index). No SRS requirement was narrowed, skipped, or silently reinterpr
 
 ## Next-phase-8 starting point
 
-All Phase 11 work is real, tested, and merge-ready pending explicit approval to merge and deploy.
-Phase 8 can proceed once this phase is deployed and its post-deploy verification
-(Stage 11I: preview migration application, real monitoring/retention dry-runs against synthetic
-data, snapshot-format compatibility check, Lighthouse against the deployed preview) confirms no
-regression — per the user's own instruction, this report's approval to proceed to Phase 8 follows
-that deployment, not this report alone.
+Phase 11 is merged and deployed to production (2026-08-05, Worker version
+`7d1b4cc4-2232-4c21-9f91-5b154f94e5c2`), with independent post-deploy verification confirming no
+regression — see "Deployment" above. Stage 11I's full preview-environment verification (Lighthouse
+against the deployed preview, live monitoring/retention dry-runs against synthetic preview data)
+could not be completed due to a disclosed, pre-existing, unrelated preview-secrets gap; production
+itself is unaffected and independently verified. **Phase 8 is clear to begin.**
