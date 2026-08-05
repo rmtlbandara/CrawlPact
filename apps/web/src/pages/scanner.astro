@@ -3,6 +3,11 @@ export const prerender = false;
 import MarketingLayout from "../layouts/MarketingLayout.astro";
 import { getEnv } from "../lib/env";
 
+// Phase 11 (docs/performance/PUBLIC_CACHE_POLICY.md): identical content for
+// every visitor (only reads an env flag, no session/cookie-dependent
+// rendering) — safe to opt into public caching.
+Astro.response.headers.set("Cache-Control", "public, max-age=300");
+
 const auditEngineEnabled = getEnv().AUDIT_ENGINE_ENABLED === "true";
 ---
 

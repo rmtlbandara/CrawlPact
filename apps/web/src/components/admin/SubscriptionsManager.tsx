@@ -18,7 +18,9 @@ type SubscriptionRow = {
     scheduledChangeEffectiveAt: string | null;
   };
   billingCustomer: { paddleCustomerId: string };
-  user: { id: string; displayName: string; planId: string };
+  // null once the owning account has been deleted (Phase 11, RISK-009) — the
+  // billing/subscription trail itself is never deleted, only the user link.
+  user: { id: string; displayName: string; planId: string } | null;
   price: {
     legacy: boolean | null;
     environment: string | null;
@@ -100,14 +102,17 @@ export function SubscriptionsManager() {
     {
       key: "user",
       header: "User",
-      render: (row) => (
-        <a
-          href={`/admin/users/${row.user.id}`}
-          className="font-medium text-brand-700 hover:underline"
-        >
-          {row.user.displayName}
-        </a>
-      ),
+      render: (row) =>
+        row.user ? (
+          <a
+            href={`/admin/users/${row.user.id}`}
+            className="font-medium text-brand-700 hover:underline"
+          >
+            {row.user.displayName}
+          </a>
+        ) : (
+          <span className="text-neutral-500 italic">Deleted account</span>
+        ),
     },
     {
       key: "plan",

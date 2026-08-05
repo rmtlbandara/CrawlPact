@@ -204,6 +204,12 @@ export const auditReportResponseSchema = z.object({
   score: policyHealthScoreSchema,
   crawlerMatrix: z.array(crawlerMatrixRowSchema),
   findings: z.array(findingSchema),
+  // Phase 11: > 0 means this scan's real finding count exceeded
+  // MAX_PERSISTED_FINDINGS and some were left out (highest-severity and
+  // most-diverse-by-code kept, per selectFindingsForPersistence) — the
+  // report UI must disclose this, never silently show a truncated list as
+  // if it were complete.
+  findingsOmittedCount: z.number().int().nonnegative(),
   registryVersion: z.string().nullable(),
   rulesetVersion: z.string().nullable(),
   limitations: z.array(z.string()),

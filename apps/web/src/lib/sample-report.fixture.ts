@@ -148,6 +148,7 @@ export const SAMPLE_REPORT: AuditReportResponse = {
       rulesetVersion: "2026.07.2",
     },
   ],
+  findingsOmittedCount: 0,
   registryVersion: "2026.07.3",
   rulesetVersion: "2026.07.2",
   limitations: [

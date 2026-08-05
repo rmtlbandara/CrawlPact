@@ -14,6 +14,20 @@ read). This document exists so that once real traffic exists, there is a pre-agr
 Do not read this document as a promise that CrawlPact will remain on Cloudflare's Free plan
 indefinitely — it explicitly is not. It defines when to stop assuming Free is sufficient.
 
+**Re-verified live 2026-08-05 (Phase 11, Stage 11H)**: every Workers, D1, and R2 Free-plan figure
+in this document was re-checked directly against `developers.cloudflare.com` (not re-derived from
+the 2026-07-26 figures below). Confirmed unchanged, with no drift found: Workers daily requests
+(100,000), CPU time (10 ms/invocation), subrequests (50/request), Worker size (3 MB), Cron
+Triggers (5/account), static asset files (20,000)/per-file size (25 MiB); D1 rows read (5M/day),
+rows written (100,000/day), account storage (5 GB total); R2 storage (10 GB-month), Class A
+operations (1M/month), Class B operations (10M/month). The one figure not re-confirmed verbatim
+this pass — D1's per-database 500 MB ceiling (distinct from the 5 GB account total) — returned
+incomplete search results from this session's documentation tool; it is presumed unchanged (this
+class of per-resource limit is not one Cloudflare has historically tightened) but should be
+explicitly re-checked, not re-assumed, at the next real re-verification pass. See
+`docs/operations/PHASE_11_CLOUDFLARE_PLAN_DECISION.md` for what this re-verification changes (or
+doesn't) about the current plan decision.
+
 ## How to read this document
 
 Each trigger has:

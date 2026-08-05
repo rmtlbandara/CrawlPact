@@ -173,6 +173,7 @@ describe("detectConflicts", () => {
             paymentTerms: [],
             unsupportedElements: [],
             issues: [],
+            truncated: false,
           },
           contentSignals: { recognised: { "ai-train": "yes" }, unknownFields: {}, raw: "" },
         },

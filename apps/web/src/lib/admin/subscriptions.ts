@@ -24,7 +24,16 @@ export type SubscriptionFilters = {
  * mission's resync action exists to fix). Also left-joins `plan_prices` (Phase
  * 6) to surface whether the subscriber's own price is legacy (retired from
  * new checkout, still mapped) or was minted in a different Paddle environment
- * than the one this deployment is currently running against. */
+ * than the one this deployment is currently running against.
+ *
+ * `users` is left-joined, not inner-joined (Phase 11, RISK-009):
+ * `billing_customers.user_id` survives account deletion as NULL (migration
+ * 0013) specifically so the billing/financial trail outlives the account —
+ * an inner join here silently hid exactly those rows from this admin view,
+ * even though the underlying `billingCustomer`/`subscription` rows were
+ * always intact and directly queryable. `row.user` is `null` for a deleted
+ * account; callers must render a "Deleted account" label, never assume it's
+ * present. */
 export async function listSubscriptions(db: Database, filters: SubscriptionFilters = {}) {
   const rows = await db
     .select({
@@ -46,7 +55,7 @@ export async function listSubscriptions(db: Database, filters: SubscriptionFilte
       schema.billingCustomers,
       eq(schema.subscriptions.billingCustomerId, schema.billingCustomers.id),
     )
-    .innerJoin(schema.users, eq(schema.billingCustomers.userId, schema.users.id))
+    .leftJoin(schema.users, eq(schema.billingCustomers.userId, schema.users.id))
     .leftJoin(
       schema.planPrices,
       eq(schema.subscriptions.paddlePriceId, schema.planPrices.paddlePriceId),
@@ -57,7 +66,9 @@ export async function listSubscriptions(db: Database, filters: SubscriptionFilte
     .map((row) => ({
       ...row,
       entitlementMismatch:
-        row.subscription.status === "active" && row.subscription.planId !== row.user.planId,
+        row.subscription.status === "active" &&
+        row.user !== null &&
+        row.subscription.planId !== row.user.planId,
       syncError: row.subscription.syncError,
       environmentMismatch: Boolean(
         filters.currentEnvironment &&
@@ -137,7 +148,12 @@ export async function resyncSubscription(
 export type TransactionFilters = { userId?: string; status?: string };
 
 /** SRS §28.6: transaction records for the revenue/finance view. Only fields
- * Paddle actually sends are shown — no fabricated fee/net figures. */
+ * Paddle actually sends are shown — no fabricated fee/net figures.
+ *
+ * `users` is left-joined, not inner-joined (Phase 11, RISK-009) — same
+ * reasoning as `listSubscriptions` above: a deleted account's transaction
+ * history must remain visible to admins, with `row.user === null` rendered
+ * as a "Deleted account" label rather than silently dropped from the list. */
 export async function listTransactions(db: Database, filters: TransactionFilters = {}) {
   const rows = await db
     .select({
@@ -151,12 +167,12 @@ export async function listTransactions(db: Database, filters: TransactionFilters
       schema.billingCustomers,
       eq(schema.transactions.billingCustomerId, schema.billingCustomers.id),
     )
-    .innerJoin(schema.users, eq(schema.billingCustomers.userId, schema.users.id))
+    .leftJoin(schema.users, eq(schema.billingCustomers.userId, schema.users.id))
     .leftJoin(schema.subscriptions, eq(schema.transactions.subscriptionId, schema.subscriptions.id))
     .orderBy(desc(schema.transactions.occurredAt));
 
   return rows.filter((row) => {
-    if (filters.userId && row.user.id !== filters.userId) return false;
+    if (filters.userId && row.user?.id !== filters.userId) return false;
     if (filters.status && row.transaction.status !== filters.status) return false;
     return true;
   });

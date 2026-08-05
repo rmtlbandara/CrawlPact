@@ -215,6 +215,16 @@ export function AuditReportView({
     findings: (
       <section key="findings">
         <h2 className="text-h3 text-neutral-950">Findings</h2>
+        {report.findingsOmittedCount > 0 && (
+          <Alert tone="info" title="Showing the most important findings">
+            <p>
+              This scan found more issues than fit in one report. The {report.findings.length}{" "}
+              highest-severity findings across every distinct issue type are shown below;{" "}
+              {report.findingsOmittedCount} lower-priority, same-type findings are not individually
+              listed.
+            </p>
+          </Alert>
+        )}
         {report.findings.length === 0 ? (
           <p className="mt-3 text-body text-neutral-600">
             No conflicts were detected against the selected preset.

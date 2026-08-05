@@ -14,8 +14,52 @@ the "Production deployment" entries below for the established pattern).
 
 ## Unreleased
 
-Nothing pending — see "Production deployment (2026-08-05) — Brand refresh and pricing-card
-alignment fix" below for the most recent release.
+### Phase 11 — Database, Storage, Retention and Performance Hardening
+
+Full detail: `docs/reports/PHASE_11_DATABASE_STORAGE_PERFORMANCE_COMPLETION_REPORT.md`.
+
+#### Fixed
+
+- `scan_diffs.previous_scan_id`/`current_scan_id` and `audit_continuations.scan_id` had no
+  `ON DELETE` clause, risking an aborted daily retention purge (RISK-005) — migrations `0022`/
+  `0023` add `ON DELETE SET NULL`/`CASCADE` respectively.
+- Admin subscriptions/transactions views hid rows for later-deleted accounts (`INNER JOIN` to
+  `users`, RISK-009) — changed to `LEFT JOIN` with a "Deleted account" label.
+- A monitoring-sweep fairness bug (unspecified D1 row order could let newer domains starve an
+  equally- or more-overdue one when the due backlog exceeded the batch cap) — `claimDueDomains`
+  now orders by `next_scan_at ASC`.
+- A real logic bug in this phase's own new retention-chunking code (backlog falsely reported when
+  the eligible row count was an exact multiple of the chunk size) — caught by this phase's own
+  test before shipping.
+
+#### Changed
+
+- `scan_resources` (`html_meta`/`sitemap` types) now stores a minimised evidence blob instead of
+  the full raw fetched body — reduces the two largest storage contributors (RISK-007) by roughly
+  two orders of magnitude; old rows remain readable via a format-detecting fallback.
+- Scan persistence now uses a single atomic `db.batch()` call instead of ~30–76 individual
+  statements per scan.
+- Findings persistence now caps at 25 (severity-first, code-diverse selection), disclosing any
+  omitted count in the report UI; RSL and sitemap parsers now have the same 200,000-byte
+  pre-parse bound the HTML parser already had.
+- The daily retention purge is now chunk-bounded, supports a real dry-run mode, and isolates each
+  category's failure from the others.
+- SSR responses now default to `Cache-Control: private, no-store` unless a page explicitly opts
+  into public caching (`changelog`, `scanner`, `for/[slug]`, `status`).
+
+#### Added
+
+- `resource_hash` (previously unused) now populated for every fetched scan resource.
+- An R2 orphan-cleanup admin action for the `AGENCY_LOGOS` bucket (bounded, dry-run-by-default).
+- A read-only operational capacity admin view (`GET /api/admin/capacity`).
+- A composite `domains(monitoring_state, next_scan_at)` index (migration `0025`).
+- `pnpm lighthouse:check` now gates on the median of 3 runs (not 1), covers `/sample-report`, and
+  uploads full per-run results as a CI artifact.
+
+Nothing deployed yet — see "Production deployment" entries below for what's actually live.
+
+Prior release: "Production deployment (2026-08-05) — Brand refresh and pricing-card
+alignment fix" below.
 
 ## Production deployment (2026-08-05) — Brand refresh and pricing-card alignment fix
 

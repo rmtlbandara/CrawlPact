@@ -12,6 +12,15 @@ import { getEnv } from "../../lib/env";
 import { getPlanCatalog, PLAN_COPY } from "../../lib/billing/plan-catalog";
 import type { PlanId } from "../../lib/billing/plan-catalog";
 
+// Phase 11 (docs/performance/PUBLIC_CACHE_POLICY.md): identical content for
+// every visitor per slug (no session/cookie-dependent rendering — confirmed
+// by reading this file in full before adding this) — safe to opt into
+// public caching. Also directly reduces the live getPlanCatalog() D1 read
+// this page makes on every request (see the Stage 11F/SSR-D1-reduction
+// notes in that doc) by letting the edge absorb repeat requests within the
+// TTL window.
+Astro.response.headers.set("Cache-Control", "public, max-age=300");
+
 const { slug } = Astro.params;
 const entry = slug ? await getEntry("verticals", slug) : undefined;
 

@@ -1,5 +1,6 @@
+import { eq } from "drizzle-orm";
 import { afterAll, afterEach, beforeAll, describe, expect, it, vi } from "vitest";
-import { createDb } from "@crawlpact/database";
+import { createDb, schema } from "@crawlpact/database";
 import type { Database } from "@crawlpact/database";
 import type { DnsResolver } from "@crawlpact/scanner";
 import { createD1TestHarness } from "./d1-harness";
@@ -245,5 +246,134 @@ describe("audit report signal fields (llms.txt/RSL/Content Signals/robots meta) 
     expect(report.robotsMeta.checked).toBe(true);
     expect(report.robotsMeta.metaRobots).toBeNull();
     expect(report.robotsMeta.xRobotsTag).toEqual([]);
+  });
+
+  it("stores html_meta as a minimised evidence blob with a resource hash, not the raw HTML (Phase 11, RISK-007)", async () => {
+    const { cookie } = await signUpUser("Storage Reduction User");
+
+    const homepageHtml =
+      '<html><head><meta name="robots" content="noindex"><link rel="canonical" href="https://example.com/"></head></html>';
+    globalThis.fetch = vi.fn(async (input: RequestInfo | URL) => {
+      const url = String(input);
+      if (url.endsWith("/robots.txt")) return makeResponse(200, "User-agent: *\nAllow: /\n");
+      if (url.endsWith("/llms.txt") || url.endsWith("/llms-full.txt")) return makeResponse(404, "");
+      if (url.endsWith("/.well-known/rsl.xml")) return makeResponse(404, "");
+      if (url.endsWith("/sitemap.xml")) return makeResponse(404, "");
+      return makeResponse(200, homepageHtml);
+    }) as unknown as typeof fetch;
+
+    const scanId = await runAndPersistScan(cookie, "example.org");
+
+    const [row] = await db
+      .select()
+      .from(schema.scanResources)
+      .where(eq(schema.scanResources.id, `${scanId}_html_meta`))
+      .limit(1);
+    if (!row) throw new Error("html_meta resource row not found");
+
+    expect(row.snapshotText).not.toBeNull();
+    expect(row.snapshotText!.length).toBeLessThan(homepageHtml.length + 500);
+    const parsed = JSON.parse(row.snapshotText!) as { format: string };
+    expect(parsed.format).toBe("html_meta_evidence_v1");
+    expect(row.resourceHash).not.toBeNull();
+    expect(row.resourceHash).toMatch(/^[0-9a-f]{64}$/);
+
+    // The report layer still reads the same, correct signals back out of
+    // the minimised blob as it did from the old raw-HTML format.
+    const report = await getScanReport(db, scanId);
+    if (!report) throw new Error("report not found");
+    expect(report.robotsMeta.metaRobots).toBe("noindex");
+    expect(report.robotsMeta.canonicalUrl).toBe("https://example.com/");
+  });
+
+  it("still reads a pre-Phase-11 html_meta row that holds raw HTML instead of the minimised blob (backward compatibility)", async () => {
+    const { cookie } = await signUpUser("Legacy Row User");
+    const scanId = await runAndPersistScan(cookie, "example.co");
+
+    // Simulate a row written before this phase: overwrite the just-persisted
+    // (minimised) html_meta row with raw HTML, exactly as the old code path
+    // used to store it. Old rows are never rewritten by this phase, so this
+    // is the real, permanent shape they're in.
+    await db
+      .update(schema.scanResources)
+      .set({
+        snapshotText:
+          '<html><head><meta name="robots" content="noindex, nofollow"><link rel="canonical" href="https://legacy.example/"></head></html>',
+        resourceHash: null,
+      })
+      .where(eq(schema.scanResources.id, `${scanId}_html_meta`));
+
+    const report = await getScanReport(db, scanId);
+    if (!report) throw new Error("report not found");
+    expect(report.robotsMeta.checked).toBe(true);
+    expect(report.robotsMeta.metaRobots).toBe("noindex, nofollow");
+    expect(report.robotsMeta.canonicalUrl).toBe("https://legacy.example/");
+  });
+
+  it("populates a SHA-256 resource_hash for every fetched resource type, not just html_meta (Phase 11, resource hashing)", async () => {
+    const { cookie } = await signUpUser("Resource Hash User");
+
+    globalThis.fetch = vi.fn(async (input: RequestInfo | URL) => {
+      const url = String(input);
+      if (url.endsWith("/robots.txt")) return makeResponse(200, "User-agent: *\nAllow: /\n");
+      if (url.endsWith("/llms.txt")) return makeResponse(200, "# Hash Test\n");
+      if (url.endsWith("/llms-full.txt")) return makeResponse(404, "");
+      if (url.endsWith("/.well-known/rsl.xml")) return makeResponse(404, "");
+      if (url.endsWith("/sitemap.xml")) return makeResponse(404, "");
+      return makeResponse(200, "<html><head></head><body>hash me</body></html>");
+    }) as unknown as typeof fetch;
+
+    const scanId = await runAndPersistScan(cookie, "example.dev");
+
+    const rows = await db
+      .select()
+      .from(schema.scanResources)
+      .where(eq(schema.scanResources.scanId, scanId));
+
+    const robotsRow = rows.find((r) => r.resourceType === "robots_txt");
+    const llmsRow = rows.find((r) => r.resourceType === "llms_txt");
+    const htmlMetaRow = rows.find((r) => r.resourceType === "html_meta");
+
+    for (const row of [robotsRow, llmsRow, htmlMetaRow]) {
+      expect(row?.resourceHash).toMatch(/^[0-9a-f]{64}$/);
+    }
+    // Different fetched bodies must hash differently — a real digest, not a
+    // constant placeholder.
+    expect(robotsRow?.resourceHash).not.toBe(llmsRow?.resourceHash);
+    expect(robotsRow?.resourceHash).not.toBe(htmlMetaRow?.resourceHash);
+  });
+
+  it("stores sitemap as its already-computed SitemapValidation result, not the raw XML (Phase 11, RISK-007)", async () => {
+    const { cookie } = await signUpUser("Sitemap Storage User");
+
+    const sitemapXml =
+      `<?xml version="1.0"?><urlset><url><loc>https://example.io/a</loc></url></urlset>` +
+      "x".repeat(5_000);
+    globalThis.fetch = vi.fn(async (input: RequestInfo | URL) => {
+      const url = String(input);
+      if (url.endsWith("/robots.txt")) return makeResponse(200, "User-agent: *\nAllow: /\n");
+      if (url.endsWith("/llms.txt") || url.endsWith("/llms-full.txt")) return makeResponse(404, "");
+      if (url.endsWith("/.well-known/rsl.xml")) return makeResponse(404, "");
+      if (url.endsWith("/sitemap.xml")) return makeResponse(200, sitemapXml);
+      return makeResponse(200, "<html><head></head><body>hi</body></html>");
+    }) as unknown as typeof fetch;
+
+    const scanId = await runAndPersistScan(cookie, "example.io");
+
+    const [row] = await db
+      .select()
+      .from(schema.scanResources)
+      .where(eq(schema.scanResources.id, `${scanId}_sitemap`))
+      .limit(1);
+    if (!row) throw new Error("sitemap resource row not found");
+
+    expect(row.snapshotText).not.toBeNull();
+    expect(row.snapshotText!.length).toBeLessThan(sitemapXml.length / 2);
+    const parsed = JSON.parse(row.snapshotText!) as {
+      looksLikeSitemap: boolean;
+      sampledUrls: string[];
+    };
+    expect(parsed.looksLikeSitemap).toBe(true);
+    expect(parsed.sampledUrls).toEqual(["https://example.io/a"]);
   });
 });

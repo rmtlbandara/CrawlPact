@@ -238,3 +238,31 @@ governance): `docs/seo/EDITORIAL_SOURCE_AND_CONTENT_POLICY.md`, `docs/seo/ROUTE_
 Phase 5–6 staleness this same phase's precondition check found and disclosed — see
 `docs/seo/PHASE_07_PRODUCTION_PRECONDITION_RECORD.md`). See the completion report for the full
 change list. Total documentation-file count is now ~153 (139 post-Phase-6 + 14 new).
+
+## Phase 11 update (2026-08-05)
+
+18 new files, all `retain-current`/`current-authoritative` at creation, not yet deployed (branch
+`phase-11-database-storage-performance-hardening`):
+`docs/performance/{PHASE_11_PRODUCTION_CAPACITY_BASELINE,PHASE_11_SCAN_PERSISTENCE_BENCHMARK,
+PUBLIC_CACHE_POLICY,PHASE_11_PAGE_PERFORMANCE_ROOT_CAUSE,PHASE_11_PAGE_PERFORMANCE_RESULTS,
+PERFORMANCE_BUDGETS}.md`,
+`docs/data/{PHASE_11_FOREIGN_KEY_AND_DELETION_AUDIT,PHASE_11_STORAGE_OPTIMISATION_DESIGN,
+PHASE_11_RESOURCE_HASH_AND_DEDUPLICATION_POLICY,PHASE_11_RETENTION_DECISION_MATRIX,
+PHASE_11_D1_QUERY_AND_INDEX_AUDIT}.md`,
+`docs/operations/{PHASE_11_SCHEDULED_JOB_SEPARATION_DECISION,PHASE_11_CLOUDFLARE_PLAN_DECISION,
+PHASE_11_DATABASE_RECOVERY_RUNBOOK,PHASE_11_OPERATIONAL_CAPACITY_VIEW}.md`,
+`docs/security/PHASE_11_DATA_AND_PERFORMANCE_THREAT_REVIEW.md`, and
+`docs/reports/PHASE_11_DATABASE_STORAGE_PERFORMANCE_COMPLETION_REPORT.md` (`evidence`). Unlike
+Phase 4–7, this phase used real Cloudflare MCP measurement (production D1/Workers/R2 queries, a
+real Lighthouse run against `https://crawlpact.com`) in place of a written pre-phase baseline
+snapshot — `PHASE_11_PRODUCTION_CAPACITY_BASELINE.md` serves that role, generated from live
+production evidence rather than a document written before code changed. Two existing files were
+updated in place rather than superseded: `docs/data/DATA_RETENTION.md` and
+`docs/operations/CLOUDFLARE_UPGRADE_TRIGGERS.md` (both `retain-current`, unchanged status). This
+phase deliberately did **not** implement a purge job for `product_events`/`security_events`/
+`notifications` despite writing the decision matrix for them — see
+`PHASE_11_RETENTION_DECISION_MATRIX.md` for why (no SRS-specified retention period exists for
+these three, so implementation is deferred pending explicit approval, per the phase's own
+"implement only approved retention periods" scope boundary — not an oversight). See the completion
+report for the full change list. Total documentation-file count is now ~171 (153 post-Phase-7 + 18
+new).

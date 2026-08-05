@@ -42,6 +42,16 @@ product owner); Google Analytics runs on public marketing pages only, a disclose
 SRS §6.2 (the product owner has since confirmed keeping GA — see
 `docs/risks/ACTIVE_RISKS.md` RISK-021). Full detail: `docs/risks/ACTIVE_RISKS.md`.
 
+**Phase 11 (Database, Storage, Retention and Performance Hardening) status**: complete on branch
+`phase-11-database-storage-performance-hardening`, fully tested (`pnpm verify:push` green in
+full), **not yet merged or deployed to production** as of this note. Closes RISK-005/RISK-009,
+mitigates RISK-007, re-models RISK-008 (unchanged conclusion: accepted tradeoff at current
+volume), assesses RISK-006 (recommendation recorded, not implemented pending approval), and finds
+RISK-033's production performance gap already closed via real re-measurement. See
+`docs/reports/PHASE_11_DATABASE_STORAGE_PERFORMANCE_COMPLETION_REPORT.md` for full detail. This
+note should be replaced with a real "deployed" update (Worker version, verification evidence) once
+that merge/deploy actually happens — do not treat this paragraph as evidence of a live deployment.
+
 ## Capability table
 
 Status vocabulary: `verified-live` · `verified-disabled` · `verified-partial` ·
@@ -129,8 +139,10 @@ re-run (RISK-018); no cookie-consent mechanism for the GA deviation (RISK-021).
   values are never API-readable by design.
 - E2E, accessibility, and Lighthouse suites were not re-run during Phase 0/1 (no UI/behavior
   change occurred in either phase).
-- A 40-vs-39 table-count discrepancy between local `db:validate` and a live production count is
-  unresolved (RISK-019).
+- A 40-vs-39 table-count discrepancy between local `db:validate` and a live production count —
+  **resolved by Phase 11**: re-measured production table list (42, via `sqlite_master`) against a
+  fresh extraction of every `sqliteTable(...)` in the Drizzle schema (also 42) — exact match, name
+  for name. No longer reproduces against the current schema/production state (RISK-019).
 
 ## Evidence links
 
@@ -139,6 +151,7 @@ re-run (RISK-018); no cookie-consent mechanism for the GA deviation (RISK-021).
 - Test evidence: `docs/baseline/2026-08-03/TEST_AND_CI_EVIDENCE.md`
 - Phase 6 completion report: `docs/reports/PHASE_06_PRICING_PADDLE_CHECKOUT_COMPLETION_REPORT.md`
 - Phase 7 completion report: `docs/reports/PHASE_07_VERTICAL_PLATFORM_SEO_COMPLETION_REPORT.md`
+- Phase 11 completion report (not yet deployed — see the status note above): `docs/reports/PHASE_11_DATABASE_STORAGE_PERFORMANCE_COMPLETION_REPORT.md`
 - Current risk register: `docs/risks/ACTIVE_RISKS.md`
 - Changelog: `CHANGELOG.md`
 - Requirements traceability: `docs/status/REQUIREMENTS_TRACEABILITY.md`

@@ -14,7 +14,9 @@ type TransactionRow = {
     refundStatus: string | null;
     chargebackStatus: string | null;
   };
-  user: { id: string; displayName: string };
+  // null once the owning account has been deleted (Phase 11, RISK-009) — the
+  // transaction record itself is never deleted, only the user link.
+  user: { id: string; displayName: string } | null;
   subscription: { id: string; planId: string } | null;
 };
 
@@ -50,14 +52,17 @@ export function TransactionsManager() {
     {
       key: "user",
       header: "User",
-      render: (row) => (
-        <a
-          href={`/admin/users/${row.user.id}`}
-          className="font-medium text-brand-700 hover:underline"
-        >
-          {row.user.displayName}
-        </a>
-      ),
+      render: (row) =>
+        row.user ? (
+          <a
+            href={`/admin/users/${row.user.id}`}
+            className="font-medium text-brand-700 hover:underline"
+          >
+            {row.user.displayName}
+          </a>
+        ) : (
+          <span className="text-neutral-500 italic">Deleted account</span>
+        ),
     },
     {
       key: "plan",

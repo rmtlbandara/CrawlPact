@@ -82,7 +82,13 @@ export async function detectSchedulerAnomalies(db: Database): Promise<SchedulerA
     }
 
     const recentRuns = jobRuns.slice(0, 20);
-    const failedCount = recentRuns.filter((r) => r.status === "failed").length;
+    // Phase 11 (Stage 11D): "completed_with_errors" (a retention run that
+    // isolated a per-category failure rather than aborting entirely) still
+    // counts toward the failure rate — it means a real error occurred, just
+    // one that didn't take the whole job down with it.
+    const failedCount = recentRuns.filter(
+      (r) => r.status === "failed" || r.status === "completed_with_errors",
+    ).length;
     if (recentRuns.length >= 5 && failedCount / recentRuns.length > HIGH_FAILURE_RATE_THRESHOLD) {
       anomalies.push({
         type: "excessive_failure_rate",

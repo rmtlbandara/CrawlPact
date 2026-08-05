@@ -243,7 +243,15 @@ PRODUCT_TERMINOLOGY_GLOSSARY,CLAIMS_AND_MESSAGING_GUIDE,MESSAGING_SURFACE_INVENT
 - **Dependencies**: Phase 1.
 - **Completion gate**: `scan_diffs` FKs have explicit `ON DELETE` behavior; table-count
   discrepancy explained/fixed; a documented decision exists for the three no-purge-job tables.
-- **Status**: not started.
+- **Status**: complete on branch `phase-11-database-storage-performance-hardening`, not yet
+  merged/deployed. `scan_diffs`/`audit_continuations` FKs fixed (migrations `0022`/`0023`); the
+  table-count discrepancy re-measured and found not to reproduce against current
+  schema/production (42=42 exact match); a documented decision recorded for the three
+  no-purge-job tables (`docs/data/PHASE_11_RETENTION_DECISION_MATRIX.md` — implementation deferred
+  pending approval, per the phase's own scope boundary, not because the decision itself is
+  incomplete); the CPU-budget risk re-modeled with concrete tightening measures shipped
+  (`docs/operations/PHASE_11_CLOUDFLARE_PLAN_DECISION.md`). Full detail:
+  `docs/reports/PHASE_11_DATABASE_STORAGE_PERFORMANCE_COMPLETION_REPORT.md`.
 
 ### Phase 12 — Security, CI, Dependency and Quality-Gate Improvements
 

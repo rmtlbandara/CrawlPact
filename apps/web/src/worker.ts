@@ -122,13 +122,26 @@ async function runRetentionJob(
   const startedAt = new Date().toISOString();
   try {
     const result = await runDataRetentionPurge(db);
+    // Phase 11 (Stage 11D): a per-category failure no longer aborts the
+    // whole job (see data-retention.ts's failure-isolation doc comment) —
+    // reflect that honestly rather than always recording "completed". A
+    // backlog that hit its per-run chunk cap is expected, bounded, normal
+    // operation (it resolves itself over the next few runs), not an error,
+    // so it's noted in the summary text but doesn't change the status.
+    const errorDetail = Object.entries(result.categories)
+      .filter(([, c]) => c.error !== null)
+      .map(([name, c]) => `${name}:${c.error}`)
+      .join("; ");
     await env.DB.prepare(
-      "INSERT INTO scheduled_job_runs (job_name, cron_expression, status, error_summary, started_at, completed_at) VALUES (?, ?, 'completed', ?, ?, ?)",
+      "INSERT INTO scheduled_job_runs (job_name, cron_expression, status, error_summary, started_at, completed_at) VALUES (?, ?, ?, ?, ?, ?)",
     )
       .bind(
         "data_retention_purge",
         cronExpression,
-        `anonymous_scans=${result.anonymousScansDeleted} domain_scans=${result.domainScansDeleted} accounts=${result.accountsPurged} entitlements_expired=${result.entitlementsExpired}`,
+        result.hasErrors ? "completed_with_errors" : "completed",
+        `anonymous_scans=${result.anonymousScansDeleted} domain_scans=${result.domainScansDeleted} accounts=${result.accountsPurged} entitlements_expired=${result.entitlementsExpired} expired_continuations=${result.expiredContinuationsDeleted}` +
+          (result.hasBacklog ? " backlog_remaining=true" : "") +
+          (errorDetail ? ` errors=[${errorDetail}]` : ""),
         startedAt,
         new Date().toISOString(),
       )
