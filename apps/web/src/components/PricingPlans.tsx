@@ -87,7 +87,7 @@ export function PricingPlans({
             key={plan.id}
             id={plan.id}
             className={
-              "scroll-mt-20 rounded-card border p-5 " +
+              "flex h-full scroll-mt-20 flex-col rounded-card border p-5 " +
               (plan.recommended ? "border-brand-600 ring-1 ring-brand-600" : "border-neutral-200")
             }
           >
@@ -122,7 +122,7 @@ export function PricingPlans({
             <a
               href={ctaHref(plan)}
               onClick={() => track("plan_selected", { planId: plan.id, interval })}
-              className="mt-4 block rounded-control border border-neutral-300 px-3 py-2 text-center text-body font-medium text-neutral-800 hover:bg-neutral-50"
+              className="mt-auto block rounded-control border border-neutral-300 px-3 py-2 text-center text-body font-medium text-neutral-800 hover:bg-neutral-50"
             >
               {plan.cta}
             </a>
