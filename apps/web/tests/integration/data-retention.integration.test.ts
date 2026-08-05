@@ -470,36 +470,44 @@ describe("data retention purge (real D1)", () => {
     expect(remaining.filter((r) => r.id.startsWith("chunk_scan_"))).toHaveLength(0);
   });
 
-  it("isolates a category failure — other categories still run and report their real results (Phase 11, Stage 11D)", async () => {
-    // A dedicated, throwaway harness (not the shared `db` used by every
-    // other test in this file) so a genuinely broken table doesn't corrupt
-    // any other test. Dropping audit_continuations forces a real SQL error
-    // specifically inside purgeExpiredAuditContinuations, while leaving
-    // every other table — and therefore every other category — intact.
-    const harness = await createD1TestHarness();
-    const isolatedDb = createDb(harness.db);
-    try {
-      await insertScan(isolatedDb, {
-        id: "isolation_scan_old_anon",
-        domainId: null,
-        startedAt: daysAgo(8),
-      });
-      await harness.db.prepare("DROP TABLE audit_continuations").run();
+  it(
+    "isolates a category failure — other categories still run and report their real results (Phase 11, Stage 11D)",
+    { timeout: 20_000 },
+    async () => {
+      // A dedicated, throwaway harness (not the shared `db` used by every
+      // other test in this file) so a genuinely broken table doesn't corrupt
+      // any other test. Dropping audit_continuations forces a real SQL error
+      // specifically inside purgeExpiredAuditContinuations, while leaving
+      // every other table — and therefore every other category — intact.
+      // Spinning up a second full Miniflare D1 harness (fresh migrations
+      // applied) inside a single test is slower than vitest's 5000ms default,
+      // especially on a colder CI runner — confirmed by a real timeout in
+      // production CI before this fix, not assumed preemptively.
+      const harness = await createD1TestHarness();
+      const isolatedDb = createDb(harness.db);
+      try {
+        await insertScan(isolatedDb, {
+          id: "isolation_scan_old_anon",
+          domainId: null,
+          startedAt: daysAgo(8),
+        });
+        await harness.db.prepare("DROP TABLE audit_continuations").run();
 
-      const result = await runDataRetentionPurge(isolatedDb);
-      expect(result.hasErrors).toBe(true);
-      expect(result.categories.expired_audit_continuations.error).not.toBeNull();
-      // The broken category contributes 0, not a crash of the whole run.
-      expect(result.expiredContinuationsDeleted).toBe(0);
-      // Every other category still ran and produced a real result, not an error —
-      // proven by the anonymous scan actually being deleted despite the failure above.
-      expect(result.categories.anonymous_scans.error).toBeNull();
-      expect(result.anonymousScansDeleted).toBeGreaterThanOrEqual(1);
-      expect(result.categories.domain_scans.error).toBeNull();
-      expect(result.categories.deleted_accounts.error).toBeNull();
-      expect(result.categories.expired_entitlements.error).toBeNull();
-    } finally {
-      await harness.dispose();
-    }
-  });
+        const result = await runDataRetentionPurge(isolatedDb);
+        expect(result.hasErrors).toBe(true);
+        expect(result.categories.expired_audit_continuations.error).not.toBeNull();
+        // The broken category contributes 0, not a crash of the whole run.
+        expect(result.expiredContinuationsDeleted).toBe(0);
+        // Every other category still ran and produced a real result, not an error —
+        // proven by the anonymous scan actually being deleted despite the failure above.
+        expect(result.categories.anonymous_scans.error).toBeNull();
+        expect(result.anonymousScansDeleted).toBeGreaterThanOrEqual(1);
+        expect(result.categories.domain_scans.error).toBeNull();
+        expect(result.categories.deleted_accounts.error).toBeNull();
+        expect(result.categories.expired_entitlements.error).toBeNull();
+      } finally {
+        await harness.dispose();
+      }
+    },
+  );
 });
