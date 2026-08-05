@@ -1,4 +1,4 @@
-import { and, eq, isNull, lte, or } from "drizzle-orm";
+import { and, asc, eq, isNull, lte, or } from "drizzle-orm";
 import { schema } from "@crawlpact/database";
 import type { Database } from "@crawlpact/database";
 import type { PolicyPreset } from "@crawlpact/policy";
@@ -32,6 +32,16 @@ type DomainRow = typeof schema.domains.$inferSelect;
  * the whole idempotency/lock mechanism, no separate lock table needed. If
  * this process crashes mid-scan, the domain self-heals: it becomes due
  * again once the lock window elapses.
+ *
+ * Phase 11 (RISK-008, fair scheduling): ordered by `next_scan_at` ascending
+ * — confirmed via a real D1 probe that SQLite sorts NULL first in ASC
+ * order, so a domain that has never been scanned sorts ahead of every
+ * timestamped one, and among timestamped domains the longest-overdue sorts
+ * first. Without this, when the daily due backlog exceeds `batchSize`, D1's
+ * unspecified row order (effectively insertion order) meant the same
+ * early-created domains could win every sweep indefinitely while a
+ * later-created, equally- or more-overdue domain starved. This makes the
+ * batch cap's selection fair by actual overdue-ness, not creation date.
  */
 async function claimDueDomains(
   db: Database,
@@ -50,6 +60,7 @@ async function claimDueDomains(
         or(isNull(schema.domains.nextScanAt), lte(schema.domains.nextScanAt, nowIso)),
       ),
     )
+    .orderBy(asc(schema.domains.nextScanAt))
     .limit(limit);
 
   const dueCandidates = candidates.filter((c) => c.monitoringFrequency !== "none");

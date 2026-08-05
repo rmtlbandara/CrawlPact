@@ -2,8 +2,8 @@ import { describe, expect, it } from "vitest";
 import { parseLlmsTxt } from "./llms-txt";
 import { parseContentSignals } from "./content-signals";
 import { parseHtmlSignals, parseXRobotsTag } from "./html-signals";
-import { validateSitemap } from "./sitemap";
-import { parseRsl } from "./rsl";
+import { MAX_SITEMAP_SCAN_BYTES, validateSitemap } from "./sitemap";
+import { MAX_RSL_SCAN_BYTES, parseRsl } from "./rsl";
 
 describe("parseLlmsTxt", () => {
   it("recognises a well-formed file", () => {
@@ -80,6 +80,36 @@ describe("validateSitemap", () => {
     expect(result.looksLikeSitemap).toBe(false);
     expect(result.issues.length).toBeGreaterThan(0);
   });
+
+  it("reports truncated:false for a well-formed document under the bound", () => {
+    const xml = `<urlset><url><loc>https://example.com/a</loc></url></urlset>`;
+    expect(validateSitemap(xml).truncated).toBe(false);
+  });
+
+  it("bounds a document larger than MAX_SITEMAP_SCAN_BYTES, sampling only from the first portion (Phase 11, §13.2)", () => {
+    const xml = `<urlset><url><loc>https://example.com/a</loc></url></urlset>${"x".repeat(MAX_SITEMAP_SCAN_BYTES)}`;
+    const result = validateSitemap(xml);
+    expect(result.truncated).toBe(true);
+    expect(result.looksLikeSitemap).toBe(true);
+    expect(result.sampledUrls).toEqual(["https://example.com/a"]);
+    expect(result.issues.some((issue) => issue.includes("bounded scan limit"))).toBe(true);
+  });
+
+  it("does not scan past the bound for <loc> entries that start after it, without crashing", () => {
+    const padding = "<!--" + "x".repeat(MAX_SITEMAP_SCAN_BYTES) + "-->";
+    const xml = `<urlset>${padding}<url><loc>https://example.com/late</loc></url></urlset>`;
+    const result = validateSitemap(xml);
+    expect(result.truncated).toBe(true);
+    expect(result.sampledUrls).toEqual([]);
+    expect(result.issues).toContain("No <loc> entries were found.");
+  });
+
+  it("reports truncated:true even on the not-a-sitemap path when input exceeds the bound", () => {
+    const xml = "not a sitemap ".repeat(MAX_SITEMAP_SCAN_BYTES);
+    const result = validateSitemap(xml);
+    expect(result.looksLikeSitemap).toBe(false);
+    expect(result.truncated).toBe(true);
+  });
 });
 
 describe("parseRsl", () => {
@@ -101,5 +131,41 @@ describe("parseRsl", () => {
     const xml = `<license><permits>search</permits><futureTag>x</futureTag></license>`;
     const result = parseRsl(xml);
     expect(result.unsupportedElements).toContain("futuretag");
+  });
+
+  it("reports truncated:false and parses normally for input at or under the bound", () => {
+    const xml = `<license><permits>search</permits></license>`;
+    const result = parseRsl(xml);
+    expect(result.truncated).toBe(false);
+    expect(result.issues).toEqual([]);
+  });
+
+  it("reports truncated:false for the no-license-found path when input is under the bound", () => {
+    const result = parseRsl("<html></html>");
+    expect(result.truncated).toBe(false);
+  });
+
+  it("bounds a document larger than MAX_RSL_SCAN_BYTES, truncating before parsing and disclosing it (Phase 11, §13.1)", () => {
+    const padding = "x".repeat(MAX_RSL_SCAN_BYTES);
+    const xml = `<license><permits>search</permits></license>${padding}`;
+    const result = parseRsl(xml);
+    expect(result.truncated).toBe(true);
+    expect(result.discovered).toBe(true);
+    expect(result.issues.some((issue) => issue.includes("bounded scan limit"))).toBe(true);
+  });
+
+  it("still finds a <license> element that starts within the bound even when the overall document is oversized", () => {
+    const xml = `<license><permits>search</permits><prohibits>ai-train</prohibits></license>${"x".repeat(MAX_RSL_SCAN_BYTES)}`;
+    const result = parseRsl(xml);
+    expect(result.discovered).toBe(true);
+    expect(result.permits).toEqual(["search"]);
+    expect(result.prohibits).toEqual(["ai-train"]);
+  });
+
+  it("reports truncated:true even on the no-license-found path when input exceeds the bound", () => {
+    const xml = "x".repeat(MAX_RSL_SCAN_BYTES + 1);
+    const result = parseRsl(xml);
+    expect(result.discovered).toBe(false);
+    expect(result.truncated).toBe(true);
   });
 });

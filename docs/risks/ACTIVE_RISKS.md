@@ -8,13 +8,18 @@ below rather than duplicated. Do not maintain a third active-risk list anywhere 
 
 Statuses: `open` · `mitigating` · `accepted` · `blocked` · `monitoring`.
 
-Last reviewed: 2026-08-04 (Phase 7), consolidating `docs/status/KNOWN_RISKS.md`'s still-open
-items with the 13 new risks Phase 0's baseline audit found
+Last reviewed: 2026-08-05 (Phase 11, Database, Storage, Retention and Performance Hardening).
+Phase 11 closed RISK-005 and RISK-009 (see `docs/risks/RISK_ARCHIVE.md` ARC-025/ARC-026),
+mitigated RISK-007 (P1→P3, `mitigating`) and re-modeled RISK-008 (concrete tightening measures
+shipped, still `monitoring` — structural exposure at commercial scale unchanged), assessed
+RISK-006 (decision matrix written, implementation deferred pending approval, still `monitoring`),
+and recommends closing RISK-033 (real production re-measurement shows the gap already closed —
+see `docs/reports/PHASE_11_DATABASE_STORAGE_PERFORMANCE_COMPLETION_REPORT.md`). Prior review:
+2026-08-04 (Phase 7), consolidating `docs/status/KNOWN_RISKS.md`'s still-open items with the 13
+new risks Phase 0's baseline audit found
 (`docs/baseline/2026-08-03/BASELINE_RISKS_AND_UNKNOWNS.md`). Phase 6 closed RISK-016 (see
 `docs/risks/RISK_ARCHIVE.md` ARC-024) and mitigated RISK-017. Phase 7 added RISK-031 (deferred
-extended platform guides), RISK-032 (no Search Console property connected), and RISK-033
-(pre-existing production Lighthouse performance/LCP gap, first measured during Phase 7's own
-post-deploy verification).
+extended platform guides), RISK-032 (no Search Console property connected), and RISK-033.
 
 ---
 
@@ -63,60 +68,38 @@ post-deploy verification).
 - **Status**: open
 - **Acceptance criteria for closure**: A deliberate product decision is made and implemented (enable+allow-list, or leave disabled) for each.
 
-### RISK-005 — `scan_diffs.previous_scan_id`/`current_scan_id` have no `ON DELETE` clause
-
-- **Category**: Database · **Severity**: P1 · **Probability**: Possible (daily retention cron already runs)
-- **Impact**: If the retention purge deletes a `scans` row still referenced by a `scan_diffs` row, the delete throws `SQLITE_CONSTRAINT_FOREIGNKEY`, potentially aborting that day's purge — same bug class already fixed for 14 other columns in migrations 0013–0015.
-- **Evidence**: `docs/data/DATA_RETENTION.md`, `docs/baseline/2026-08-03/DATABASE_AND_MIGRATION_BASELINE.md`
-- **Current mitigation**: None yet — confirmed still unfixed at current HEAD.
-- **Owner**: Engineering owner · **Trigger**: Any future migration touching `scan_diffs`
-- **Review date**: Phase 11 · **Target phase**: Phase 11
-- **Status**: open
-- **Acceptance criteria for closure**: A migration adds `ON DELETE SET NULL` (matching the established pattern), proven by a test that fails against the old schema and passes against the fix.
-
 ### RISK-006 — `product_events`, `security_events`, and `notifications` have no purge job
 
 - **Category**: Database, Privacy · **Severity**: P2 · **Probability**: Low at current volume, structural
 - **Impact**: Unlike scan-related tables (bounded by plan-tier retention), these three grow indefinitely regardless of plan or account lifetime.
-- **Evidence**: `docs/data/DATA_RETENTION.md`, `docs/status/KNOWN_RISKS.md`
-- **Current mitigation**: None — low individual risk at today's volumes.
-- **Owner**: Engineering owner · **Trigger**: Volume growth past current assumptions
-- **Review date**: Phase 11 · **Target phase**: Phase 11
+- **Evidence**: `docs/data/DATA_RETENTION.md`, `docs/data/PHASE_11_RETENTION_DECISION_MATRIX.md`
+- **Current mitigation**: Assessed, not implemented — Phase 11 found the SRS's own retention table (§34) is silent on these three categories specifically (only "Administrative logs: at least 24 months" and "Billing: as legally/operationally required" are specified), so per the phase's "implement only approved retention periods" scope boundary, a recommendation (18mo/24mo/90-days-after-read respectively) is recorded but not implemented without explicit approval.
+- **Owner**: Engineering owner · **Trigger**: Volume growth past current assumptions, or explicit approval of the Phase 11 recommendation
+- **Review date**: Phase 11 (reviewed, kept open) · **Target phase**: Next phase touching retention, pending approval
 - **Status**: monitoring
 - **Acceptance criteria for closure**: A retention decision is made and a purge job implemented, or the decision to leave unbounded is explicitly and permanently accepted with a documented reason.
 
 ### RISK-007 — `scan_resources.snapshot_text` (`html_meta` type) stores the full truncated HTML body
 
-- **Category**: Database, Performance · **Severity**: P1 · **Probability**: Certain — modeled to approach/exceed the 500MB D1 cap within 1–2 years at commercial scale
-- **Impact**: Largest quantified D1 storage growth driver.
-- **Evidence**: `docs/data/D1_STORAGE_CAPACITY_AUDIT.md`, `docs/status/KNOWN_RISKS.md`
-- **Current mitigation**: Two candidate fixes identified (reduce capture to parsed fields only; populate the unused `resource_hash` column for dedup), neither implemented yet.
-- **Owner**: Engineering owner · **Trigger**: Approaching modeled capacity thresholds
-- **Review date**: Phase 11 · **Target phase**: Phase 11
-- **Status**: open
-- **Acceptance criteria for closure**: One of the two candidate fixes is implemented and the capacity model is re-run showing meaningfully extended runway.
+- **Category**: Database, Performance · **Severity**: P1 → P3 (downgraded, see below) · **Probability**: Was certain at commercial scale; largest contributor now mitigated
+- **Impact**: Was the largest quantified D1 storage growth driver.
+- **Evidence**: `docs/data/D1_STORAGE_CAPACITY_AUDIT.md`, `docs/data/PHASE_11_STORAGE_OPTIMISATION_DESIGN.md`
+- **Current mitigation**: Phase 11 implemented the first candidate fix for both dominant contributors — `html_meta` (measured production average 53,554 bytes/row, 5.4× the old estimate) and `sitemap` (20,891 bytes/row, 13.9× the old estimate) both now store a minimised evidence blob instead of the raw fetched body, reducing each by roughly two orders of magnitude. `resource_hash` also now populated for future dedup use. Old rows remain readable via a format-detecting fallback — no destructive rewrite.
+- **Owner**: Engineering owner · **Trigger**: Post-deploy production re-measurement
+- **Review date**: Phase 11 (mitigated) · **Target phase**: Stage 11I post-deploy verification for final closure
+- **Status**: mitigating
+- **Acceptance criteria for closure**: A post-deploy production re-measurement (not a local benchmark) confirms the real per-scan storage cost dropped in line with the projection in `docs/operations/PHASE_11_CLOUDFLARE_PLAN_DECISION.md`.
 
 ### RISK-008 — CrawlPact's real workload likely exceeds the Workers Free CPU budget at commercial scale
 
 - **Category**: Infrastructure, Performance · **Severity**: P1 · **Probability**: Certain at the SRS's own 150+/1,000-domain commercial target; low at current real volume (2 users, 9 domains)
 - **Impact**: `MAX_DOMAINS_PER_SWEEP=20`'s monitoring batch and per-scan CPU cost are modeled to exceed the 10ms/invocation ceiling well below the commercial target.
-- **Evidence**: `docs/operations/SCAN_CAPACITY_BUDGET.md`, `docs/operations/MONITORING_CAPACITY_PLAN.md`, `docs/operations/CLOUDFLARE_UPGRADE_TRIGGERS.md`
-- **Current mitigation**: Accepted, explicit tradeoff at current near-zero volume — not a resolved risk. Concrete tightening measures identified (D1 write batching, capping findings, RSL/sitemap size bounds).
+- **Evidence**: `docs/operations/SCAN_CAPACITY_BUDGET.md`, `docs/operations/MONITORING_CAPACITY_PLAN.md`, `docs/operations/CLOUDFLARE_UPGRADE_TRIGGERS.md`, `docs/operations/PHASE_11_CLOUDFLARE_PLAN_DECISION.md`
+- **Current mitigation**: Phase 11 shipped the concrete tightening measures this risk's acceptance criteria named: D1 write batching (`db.batch()`, ~33:1 statement reduction), findings cap, RSL/sitemap size bounds, `html_meta`/`sitemap` storage reduction (RISK-007), and a monitoring-sweep fairness fix. Re-modeled in `docs/operations/PHASE_11_CLOUDFLARE_PLAN_DECISION.md`: real measured usage sits far below every Free-plan threshold, and a growth projection using the post-fix per-scan storage cost does not identify an imminent need to upgrade even at the SRS's commercial target. Still an accepted tradeoff, not a resolved risk — the underlying structural exposure at true commercial scale remains real.
 - **Owner**: Operations owner · **Trigger**: Real customer volume approaching modeled thresholds (see `CLOUDFLARE_UPGRADE_TRIGGERS.md`)
-- **Review date**: Every material volume increase · **Target phase**: Phase 11
+- **Review date**: Phase 11 (re-modeled) · **Target phase**: Every material volume increase
 - **Status**: monitoring
-- **Acceptance criteria for closure**: Either tightening measures are implemented and re-modeled, or a Workers Paid upgrade is made ahead of the trigger thresholds.
-
-### RISK-009 — Admin subscriptions/transactions views hide rows for later-deleted accounts
-
-- **Category**: Product, Admin · **Severity**: P2 · **Probability**: Certain (structural)
-- **Impact**: `INNER JOIN` to `users` means a billing customer whose account was deleted (`user_id = NULL`) doesn't appear in `/admin/subscriptions`/`/admin/transactions`, even though the row is intact and directly queryable.
-- **Evidence**: `docs/data/DATA_RETENTION.md`, `docs/status/REQUIREMENTS_TRACEABILITY.md` §28.5–§28.7
-- **Current mitigation**: None — disclosed gap from the Step 21 account-deletion-survival fix.
-- **Owner**: Engineering owner · **Trigger**: Any admin billing-visibility complaint
-- **Review date**: Phase 11 · **Target phase**: Phase 11
-- **Status**: open
-- **Acceptance criteria for closure**: `LEFT JOIN` + null-safe owner display implemented in both the lib functions and their components.
+- **Acceptance criteria for closure**: Either tightening measures are implemented and re-modeled (done this phase), or a Workers Paid upgrade is made ahead of the trigger thresholds. Kept open (not closed) since the structural exposure at commercial scale is unchanged by mitigation alone.
 
 ### RISK-010 — Agency-branding logo objects in R2 can become orphaned
 
@@ -434,17 +417,22 @@ post-deploy verification).
   identical across every page tested.
 - **Evidence**: `docs/seo/PHASE_07_SEARCH_PERFORMANCE_BASELINE.md` ("Real production Lighthouse run
   (post-deploy, 2026-08-04)")
-- **Current mitigation**: None yet — genuinely unaddressed. `scripts/lighthouse-check.mjs`'s
-  thresholds continue to gate the preview Worker on every deploy, so no further regression is
-  invisible; this risk is about the already-existing production gap the preview check cannot see.
-- **Owner**: Engineering owner · **Trigger**: Any performance-hardening pass, or a future Lighthouse
-  run against production showing further degradation
-- **Review date**: Next release readiness review · **Target phase**: Phase 11 (Database, Storage,
-  Retention and Performance Hardening) — the phase that already owns performance work
-- **Status**: accepted
+- **Current mitigation**: Real production re-measurement in Phase 11
+  (`docs/performance/PHASE_11_PAGE_PERFORMANCE_RESULTS.md`, `PHASE_11_PAGE_PERFORMANCE_ROOT_CAUSE.md`)
+  found every previously-failing page now scores 94–99 (was 71–90) with LCP 1,579–2,940ms (was
+  3,300–5,070ms) — the gap had already closed before this phase touched any frontend code (several
+  commits landed between the two measurement dates; this phase's own investigation did not isolate
+  which one, and discloses that honestly rather than claiming credit). `scripts/lighthouse-check.mjs`
+  now gates on the median of 3 runs (not 1) and covers a previously-missing template
+  (`/sample-report`), reducing the chance of this kind of gap going undetected again.
+- **Owner**: Engineering owner · **Trigger**: A future Lighthouse run against production showing
+  regression back below threshold
+- **Review date**: Phase 11 (re-measured, recommend closing) · **Target phase**: N/A — no further
+  phase work identified as necessary
+- **Status**: monitoring
 - **Acceptance criteria for closure**: A direct production Lighthouse run shows all tested pages
-  meeting the stated performance/LCP thresholds, or `deploy-production.yml` itself gates on this
-  check the way `deploy-preview.yml` already does for the preview Worker.
+  meeting the stated performance/LCP thresholds — **met** by this phase's real re-measurement.
+  Recommend moving to `RISK_ARCHIVE.md` upon this phase's merge.
 
 ---
 

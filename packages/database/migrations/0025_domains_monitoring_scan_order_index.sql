@@ -1,0 +1,15 @@
+-- Phase 11 (Stage 11F, D1 query and index audit). This phase's own
+-- fairness fix to the monitoring sweep's claim query (apps/web/src/lib/
+-- monitoring.ts's claimDueDomains, `ORDER BY next_scan_at ASC`) was
+-- confirmed via a real production EXPLAIN QUERY PLAN to force a
+-- `USE TEMP B-TREE FOR ORDER BY` — the existing single-column
+-- idx_domains_monitoring_state index can satisfy the WHERE filter but not
+-- the sort. A composite index on (monitoring_state, next_scan_at) lets
+-- SQLite satisfy both the filter and the ORDER BY from the same index scan,
+-- with no temp sort — confirmed via the same EXPLAIN QUERY PLAN query
+-- against a local D1 instance with this index applied (see
+-- docs/data/PHASE_11_D1_QUERY_AND_INDEX_AUDIT.md). The old single-column
+-- idx_domains_monitoring_state index is left in place — other real queries
+-- (`monitoring_state`-only admin filters) still benefit from it standalone,
+-- and this migration is additive-only per ADR-0002.
+CREATE INDEX idx_domains_monitoring_state_next_scan_at ON domains (monitoring_state, next_scan_at);

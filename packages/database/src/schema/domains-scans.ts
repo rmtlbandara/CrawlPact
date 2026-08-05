@@ -88,6 +88,11 @@ export const scans = sqliteTable("scans", {
   externalRequestCount: integer("external_request_count").notNull().default(0),
   errorCategory: text("error_category"),
   recommendedAdditions: text("recommended_additions"),
+  // Phase 11: how many findings were left off this scan's persisted evidence
+  // because the real count exceeded MAX_PERSISTED_FINDINGS
+  // (packages/policy/src/findings.ts). 0 means "not capped" — the honest
+  // value for every scan that predates this column.
+  findingsOmittedCount: integer("findings_omitted_count").notNull().default(0),
   startedAt: text("started_at").notNull(),
   completedAt: text("completed_at"),
 });
@@ -191,12 +196,8 @@ export const scanDiffs = sqliteTable("scan_diffs", {
   domainId: text("domain_id")
     .notNull()
     .references(() => domains.id),
-  previousScanId: text("previous_scan_id")
-    .notNull()
-    .references(() => scans.id),
-  currentScanId: text("current_scan_id")
-    .notNull()
-    .references(() => scans.id),
+  previousScanId: text("previous_scan_id").references(() => scans.id),
+  currentScanId: text("current_scan_id").references(() => scans.id),
   diffType: text("diff_type")
     .notNull()
     .$type<"website_drift" | "registry_drift" | "preset_change">(),

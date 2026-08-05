@@ -1,5 +1,5 @@
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
-import { eq } from "drizzle-orm";
+import { eq, inArray } from "drizzle-orm";
 import { createDb, schema } from "@crawlpact/database";
 import type { Database } from "@crawlpact/database";
 import type { AuditResult } from "../../src/lib/run-audit";
@@ -306,5 +306,54 @@ describe("scheduled monitoring sweep (real D1)", () => {
       ]),
     );
     expect(nextSweep.domainsSelected).toBe(0);
+  });
+
+  it("prioritises the most-overdue domains first when the due backlog exceeds the batch size (Phase 11, RISK-008 fair scheduling)", async () => {
+    // A never-scanned domain (nextScanAt: null) is the most overdue of all,
+    // then oldest-timestamp-first, then the least-overdue due domain.
+    const { domainId: neverScanned } = await insertTestUserAndDomain(db, {
+      monitoringFrequency: "weekly",
+      nextScanAt: null,
+    });
+    const { domainId: oldestDue } = await insertTestUserAndDomain(db, {
+      monitoringFrequency: "weekly",
+      nextScanAt: new Date(Date.now() - 10 * 24 * 60 * 60 * 1000).toISOString(),
+    });
+    const { domainId: leastOverdue } = await insertTestUserAndDomain(db, {
+      monitoringFrequency: "weekly",
+      nextScanAt: new Date(Date.now() - 60 * 1000).toISOString(),
+    });
+
+    await db
+      .update(schema.runtimeConfiguration)
+      .set({ value: "2" })
+      .where(eq(schema.runtimeConfiguration.key, "monitoring_scan_batch_size"));
+
+    const result = await runMonitoringSweep(
+      db,
+      queueRunAudit([
+        fakeAuditResult({ status: "completed", score: 90, crawlerResult: "allowed" }),
+        fakeAuditResult({ status: "completed", score: 90, crawlerResult: "allowed" }),
+      ]),
+    );
+    expect(result.domainsSelected).toBe(2);
+
+    const domains = await db
+      .select({ id: schema.domains.id, lastScanId: schema.domains.lastScanId })
+      .from(schema.domains)
+      .where(inArray(schema.domains.id, [neverScanned, oldestDue, leastOverdue]));
+    const wasScanned = (id: string) => domains.find((d) => d.id === id)!.lastScanId !== null;
+
+    expect(wasScanned(neverScanned)).toBe(true);
+    expect(wasScanned(oldestDue)).toBe(true);
+    // The least-overdue domain lost the batch-size cap to the two more
+    // overdue ones — this is exactly the fairness property under test.
+    expect(wasScanned(leastOverdue)).toBe(false);
+
+    // Restore the default so this test doesn't affect any test that runs after it.
+    await db
+      .update(schema.runtimeConfiguration)
+      .set({ value: "20" })
+      .where(eq(schema.runtimeConfiguration.key, "monitoring_scan_batch_size"));
   });
 });

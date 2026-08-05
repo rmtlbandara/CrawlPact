@@ -47,6 +47,7 @@ function baseReport(overrides: Partial<AuditReportResponse> = {}): AuditReportRe
     score: { state: "scored", value: 80, label: "Good", categoryBreakdown: [] },
     crawlerMatrix: [],
     findings: [],
+    findingsOmittedCount: 0,
     registryVersion: "2026.08.1",
     rulesetVersion: "2026.08.1",
     limitations: [],

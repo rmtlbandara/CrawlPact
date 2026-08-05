@@ -118,7 +118,7 @@ failing the D1 write would leave a live D1 reference pointing at nothing.
   `lib/sharing.ts`) follows this order — the D1 `revokedAt` update runs and returns the logo's R2
   object key (if any) from the row it just updated, and only then is `AGENCY_LOGOS.delete(...)`
   called.
-- **Known gap, disclosed rather than fixed in the same pass**: bulk revocation
+- **Known gap, still not fixed at the source**: bulk revocation
   (`revokeAllSharedReportsForUser` in `lib/admin/users.ts`, used by
   `POST /api/admin/users/:userId/revoke-shared-reports`) does not look up or delete any logo
   objects for the shares it revokes — those R2 objects become orphaned. Similarly, nothing in
@@ -126,6 +126,14 @@ failing the D1 write would leave a live D1 reference pointing at nothing.
   uploaded logo objects. Given this feature's low expected volume (one small image per
   agency-branded share, capped at 1 MiB), the practical storage impact today is small — see
   `docs/status/KNOWN_RISKS.md`.
+- **Phase 11 mitigation — after-the-fact cleanup, not a source fix**: `lib/r2-orphan-cleanup.ts`
+  (`POST /api/admin/settings/r2-orphan-cleanup`) is a bounded, D1-reference-verified, dry-run-
+  capable admin action that inventories `AGENCY_LOGOS` for objects no `shared_reports` row
+  references any more (past a grace period, so an upload mid-flight is never mistaken for an
+  orphan) and can delete them. This closes the _storage_ consequence of the gap above without
+  closing the gap itself — the two source code paths still don't proactively delete on revoke —
+  so this remains an admin-triggered safety net, not a scheduled job, until/unless the source
+  paths are fixed directly.
 
 ## What's still open
 

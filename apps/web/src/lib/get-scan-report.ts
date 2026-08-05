@@ -9,7 +9,13 @@ import type {
   RobotsMetaSignal,
   RslSignal,
 } from "@crawlpact/core";
-import { parseContentSignals, parseHtmlSignals, parseLlmsTxt, parseRsl } from "@crawlpact/scanner";
+import {
+  isHtmlMetaEvidence,
+  parseContentSignals,
+  parseHtmlSignals,
+  parseLlmsTxt,
+  parseRsl,
+} from "@crawlpact/scanner";
 import {
   SCORE_CATEGORY_LABELS,
   SCORE_CATEGORY_ORDER,
@@ -79,8 +85,27 @@ function buildRobotsMetaSignal(
       xRobotsTag,
     };
   }
-  const parsed = parseHtmlSignals(htmlMetaRow.snapshotText);
-  return { checked: true, ...parsed, xRobotsTag };
+  // Phase 11 (RISK-007): rows written after this phase store a minimised
+  // JSON evidence blob (buildHtmlMetaEvidence) rather than raw HTML — parse
+  // it directly rather than re-running signal extraction on it. Rows written
+  // before this phase still hold raw HTML and are read exactly as before, so
+  // old scans remain fully readable without any migration/backfill.
+  let parsedJson: unknown;
+  try {
+    parsedJson = JSON.parse(htmlMetaRow.snapshotText);
+  } catch {
+    parsedJson = null;
+  }
+  const parsed = isHtmlMetaEvidence(parsedJson)
+    ? parsedJson
+    : parseHtmlSignals(htmlMetaRow.snapshotText);
+  return {
+    checked: true,
+    metaRobots: parsed.metaRobots,
+    canonicalUrl: parsed.canonicalUrl,
+    policyReferenceLinks: parsed.policyReferenceLinks,
+    xRobotsTag,
+  };
 }
 
 /**
@@ -213,6 +238,7 @@ export async function getScanReport(
         rulesetVersion: rulesetVersion?.versionLabel ?? finding.rulesetVersionId,
       };
     }),
+    findingsOmittedCount: scan.findingsOmittedCount,
     registryVersion: registryVersion?.versionLabel ?? null,
     rulesetVersion: rulesetVersion?.versionLabel ?? null,
     limitations: [

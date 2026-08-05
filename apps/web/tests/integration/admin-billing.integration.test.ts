@@ -11,6 +11,7 @@ vi.mock("../../src/lib/env", () => ({ getEnv: () => mockEnv }));
 const registerBegin = (await import("../../src/pages/api/auth/register/begin")).POST;
 const registerFinish = (await import("../../src/pages/api/auth/register/finish")).POST;
 const listSubscriptionsRoute = (await import("../../src/pages/api/admin/subscriptions/index")).GET;
+const listTransactionsRoute = (await import("../../src/pages/api/admin/transactions/index")).GET;
 const resyncRoute = (
   await import("../../src/pages/api/admin/subscriptions/[subscriptionId]/resync")
 ).POST;
@@ -258,6 +259,70 @@ describe("Super Admin subscription and entitlement operations (real D1)", () => 
       .bind("sub_test")
       .first();
     expect((sub as { sync_error: string | null }).sync_error).toBeTruthy();
+  });
+
+  it("keeps a deleted account's subscription and transaction history visible to admins, labelled rather than dropped (Phase 11, RISK-009)", async () => {
+    const deletedCustomer = await signUpTestUser("Soon Deleted Customer");
+    const now = new Date().toISOString();
+
+    await db
+      .prepare(
+        "INSERT INTO billing_customers (id, user_id, paddle_customer_id, created_at, updated_at) VALUES (?, ?, ?, ?, ?)",
+      )
+      .bind("bc_deleted", deletedCustomer.userId, "ctm_deleted", now, now)
+      .run();
+    await db
+      .prepare(
+        `INSERT INTO subscriptions (id, billing_customer_id, paddle_subscription_id, plan_id, status, current_period_end, created_at, updated_at)
+         VALUES (?, ?, ?, 'agency', 'active', ?, ?, ?)`,
+      )
+      .bind("sub_deleted", "bc_deleted", "sub_paddle_deleted", now, now, now)
+      .run();
+    await db
+      .prepare(
+        `INSERT INTO transactions (id, billing_customer_id, subscription_id, paddle_transaction_id, currency, gross_amount_cents, status, occurred_at, created_at)
+         VALUES (?, ?, ?, ?, 'USD', 38900, 'completed', ?, ?)`,
+      )
+      .bind("txn_deleted", "bc_deleted", "sub_deleted", "txn_paddle_deleted", now, now)
+      .run();
+
+    // Real hard-delete of the user row — billing_customers.user_id survives
+    // as NULL via migration 0013's ON DELETE SET NULL, exactly like the
+    // production retention purge does; this directly exercises that FK
+    // behaviour without re-running the whole retention job (already covered
+    // by data-retention.integration.test.ts).
+    await db.prepare("DELETE FROM users WHERE id = ?").bind(deletedCustomer.userId).run();
+
+    const subsResponse = await listSubscriptionsRoute(
+      ctx(getRequest("http://x/api/admin/subscriptions", adminCookie)),
+    );
+    const subsBody =
+      await readJson<
+        { subscription: { id: string }; user: { id: string; displayName: string } | null }[]
+      >(subsResponse);
+    if (!subsBody.ok) throw new Error("list failed");
+    const survivingSub = subsBody.data.find((r) => r.subscription.id === "sub_deleted");
+    expect(survivingSub).toBeDefined();
+    expect(survivingSub!.user).toBeNull();
+
+    const txnsResponse = await listTransactionsRoute(
+      ctx(getRequest("http://x/api/admin/transactions", adminCookie)),
+    );
+    const txnsBody =
+      await readJson<
+        { transaction: { id: string; grossAmountCents: number }; user: { id: string } | null }[]
+      >(txnsResponse);
+    if (!txnsBody.ok) throw new Error("list failed");
+    const survivingTxn = txnsBody.data.find((r) => r.transaction.id === "txn_deleted");
+    expect(survivingTxn).toBeDefined();
+    expect(survivingTxn!.user).toBeNull();
+    expect(survivingTxn!.transaction.grossAmountCents).toBe(38900);
+
+    // No deleted user's PII (id, name) leaks anywhere in either response —
+    // the row is present, but only as billing/transaction facts, never the
+    // now-gone identity.
+    expect(JSON.stringify(subsBody.data)).not.toContain(deletedCustomer.userId);
+    expect(JSON.stringify(txnsBody.data)).not.toContain(deletedCustomer.userId);
   });
 
   it("rejects a non-admin from every subscription/entitlement route", async () => {

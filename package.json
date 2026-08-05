@@ -59,7 +59,8 @@
     "deploy:verify-bindings": "node --experimental-strip-types scripts/verify-bindings.ts",
     "smoke:preview": "node --experimental-strip-types scripts/smoke-test.ts preview https://crawlpact-web-preview.rmtlbandara.workers.dev",
     "smoke:production": "node --experimental-strip-types scripts/smoke-test.ts production https://crawlpact.com",
-    "paddle:catalog:verify": "node --experimental-strip-types scripts/paddle-catalog-verify.ts"
+    "paddle:catalog:verify": "node --experimental-strip-types scripts/paddle-catalog-verify.ts",
+    "performance:scan": "vitest run --project integration apps/web/tests/integration/persist-scan-benchmark.integration.test.ts"
   },
   "devDependencies": {
     "@axe-core/playwright": "4.12.1",

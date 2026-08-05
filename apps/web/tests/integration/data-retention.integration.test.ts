@@ -106,6 +106,123 @@ describe("data retention purge (real D1)", () => {
     expect(ids).toContain("scan_current_baseline_old");
   });
 
+  it("purges an expired scan referenced by a scan_diffs row without throwing, and the diff survives with a null-safe reference (RISK-005, Phase 11)", async () => {
+    const now = new Date().toISOString();
+    const userId = crypto.randomUUID();
+    await db.insert(schema.users).values({
+      id: userId,
+      displayName: "Scan Diff Retention User",
+      status: "active",
+      planId: "free", // 30-day retention
+      isAdmin: false,
+      createdAt: now,
+      updatedAt: now,
+    });
+
+    const domainId = crypto.randomUUID();
+    await db.insert(schema.domains).values({
+      id: domainId,
+      ownerUserId: userId,
+      displayName: "scan-diff-retention.example",
+      canonicalOrigin: "https://scan-diff-retention.example",
+      originalInput: "scan-diff-retention.example",
+      preset: "maximum_ai_visibility",
+      monitoringState: "active",
+      monitoringFrequency: "none",
+      consecutiveFailureCount: 0,
+      createdAt: now,
+      updatedAt: now,
+    });
+
+    // The diff's *previous* scan is old enough to be purged by Free's 30-day
+    // retention; the *current* scan is the domain's live baseline, so it must
+    // survive untouched regardless of age (mirrors the real monitoring path:
+    // a scan_diffs row is written comparing the domain's prior baseline
+    // against its new one — see handleScanSuccess in lib/monitoring.ts).
+    await insertScan(db, { id: "diff_scan_expired", domainId, startedAt: daysAgo(40) });
+    await insertScan(db, { id: "diff_scan_current", domainId, startedAt: daysAgo(1) });
+    await db
+      .update(schema.domains)
+      .set({ lastScanId: "diff_scan_current" })
+      .where(eq(schema.domains.id, domainId));
+
+    const scanDiffId = crypto.randomUUID();
+    await db.insert(schema.scanDiffs).values({
+      id: scanDiffId,
+      domainId,
+      previousScanId: "diff_scan_expired",
+      currentScanId: "diff_scan_current",
+      diffType: "website_drift",
+      summary: "1 crawler result changed",
+      details: "[]",
+      createdAt: now,
+    });
+
+    // Before the RISK-005 fix, this purge would throw
+    // SQLITE_CONSTRAINT_FOREIGNKEY here, because scan_diffs.previous_scan_id
+    // had no ON DELETE clause and still pointed at diff_scan_expired.
+    const result = await runDataRetentionPurge(db);
+    expect(result.domainScansDeleted).toBeGreaterThanOrEqual(1);
+
+    const remainingScans = await db
+      .select({ id: schema.scans.id })
+      .from(schema.scans)
+      .where(eq(schema.scans.domainId, domainId));
+    const remainingIds = remainingScans.map((r) => r.id);
+    expect(remainingIds).not.toContain("diff_scan_expired");
+    // The domain's current baseline is protected regardless of age.
+    expect(remainingIds).toContain("diff_scan_current");
+
+    const [survivingDiff] = await db
+      .select()
+      .from(schema.scanDiffs)
+      .where(eq(schema.scanDiffs.id, scanDiffId))
+      .limit(1);
+    expect(survivingDiff).toBeDefined();
+    expect(survivingDiff!.previousScanId).toBeNull();
+    expect(survivingDiff!.currentScanId).toBe("diff_scan_current");
+    expect(survivingDiff!.summary).toBe("1 crawler result changed");
+  });
+
+  it("purges an expired anonymous scan that still has a lingering audit_continuations row, cascading it away rather than throwing (Phase 11)", async () => {
+    await insertScan(db, {
+      id: "anon_scan_with_continuation",
+      domainId: null,
+      startedAt: daysAgo(8),
+    });
+    // Continuations expire after 60 minutes (audit-continuation.ts) but
+    // nothing deletes the row on expiry -- this reproduces a real
+    // long-lingering, already-expired, never-consumed continuation still
+    // pointing at a scan that's now old enough to be purged.
+    await db.insert(schema.auditContinuations).values({
+      id: "cont_orphan_candidate",
+      scanId: "anon_scan_with_continuation",
+      canonicalOrigin: "https://example.com",
+      intendedAction: "save_only",
+      createdAt: daysAgo(8),
+      expiresAt: daysAgo(7.9), // long expired
+    });
+
+    // Before this fix, this purge would throw SQLITE_CONSTRAINT_FOREIGNKEY,
+    // because audit_continuations.scan_id had no ON DELETE clause.
+    const result = await runDataRetentionPurge(db);
+    expect(result.anonymousScansDeleted).toBe(1);
+
+    const [survivingScan] = await db
+      .select({ id: schema.scans.id })
+      .from(schema.scans)
+      .where(eq(schema.scans.id, "anon_scan_with_continuation"))
+      .limit(1);
+    expect(survivingScan).toBeUndefined();
+
+    const [survivingContinuation] = await db
+      .select()
+      .from(schema.auditContinuations)
+      .where(eq(schema.auditContinuations.id, "cont_orphan_candidate"))
+      .limit(1);
+    expect(survivingContinuation).toBeUndefined();
+  });
+
   it("hard-deletes an account past the cancellable grace period, cascading its owned data away", async () => {
     const now = new Date().toISOString();
     const userId = crypto.randomUUID();
@@ -290,5 +407,99 @@ describe("data retention purge (real D1)", () => {
       .where(eq(schema.productEvents.eventName, "account_created"));
     expect(survivingEvent).toBeDefined();
     expect(survivingEvent!.userId).toBeNull();
+  });
+
+  it("dry-run mode reports the real, exact count of eligible rows without deleting anything (Phase 11, Stage 11D)", async () => {
+    await insertScan(db, { id: "dryrun_scan_old_anon", domainId: null, startedAt: daysAgo(8) });
+    await insertScan(db, { id: "dryrun_scan_recent_anon", domainId: null, startedAt: daysAgo(1) });
+
+    const result = await runDataRetentionPurge(db, new Date(), { dryRun: true });
+    expect(result.dryRun).toBe(true);
+    expect(result.categories.anonymous_scans.wouldAffect).toBeGreaterThanOrEqual(1);
+    expect(result.categories.anonymous_scans.affected).toBe(0);
+    // Every flat count stays 0 in dry-run mode — nothing was actually deleted.
+    expect(result.anonymousScansDeleted).toBe(0);
+
+    const remaining = await db.select({ id: schema.scans.id }).from(schema.scans);
+    expect(remaining.map((r) => r.id)).toContain("dryrun_scan_old_anon");
+
+    // A real (non-dry-run) run afterwards actually deletes it — proves the
+    // dry run didn't just fail to count.
+    const realResult = await runDataRetentionPurge(db);
+    expect(realResult.anonymousScansDeleted).toBeGreaterThanOrEqual(1);
+    const afterReal = await db.select({ id: schema.scans.id }).from(schema.scans);
+    expect(afterReal.map((r) => r.id)).not.toContain("dryrun_scan_old_anon");
+  });
+
+  it("chunks deletes and reports backlogRemaining when more eligible rows exist than the per-run cap, then finishes them on the next run (Phase 11, Stage 11D)", async () => {
+    const statements = Array.from({ length: 9 }, (_, i) =>
+      db.insert(schema.scans).values({
+        id: `chunk_scan_${i}`,
+        domainId: null,
+        triggeredBy: "anonymous",
+        targetInput: "https://example.com",
+        canonicalOrigin: "https://example.com",
+        status: "completed",
+        scoreState: "scored",
+        score: 80,
+        externalRequestCount: 1,
+        startedAt: daysAgo(8),
+        completedAt: daysAgo(8),
+      }),
+    );
+    await db.batch(statements as [(typeof statements)[number], ...(typeof statements)[number][]]);
+
+    // A tiny chunk size/max-chunks pair (3 rows/chunk, 1 chunk/run) makes a
+    // 9-row backlog take exactly 3 runs to fully clear, without needing
+    // thousands of real rows to exercise the same cap-then-resume logic
+    // production uses at chunkSize=500/maxChunks=20.
+    const run1 = await runDataRetentionPurge(db, new Date(), { chunkSize: 3, maxChunks: 1 });
+    expect(run1.categories.anonymous_scans.affected).toBe(3);
+    expect(run1.categories.anonymous_scans.backlogRemaining).toBe(true);
+    expect(run1.hasBacklog).toBe(true);
+
+    const run2 = await runDataRetentionPurge(db, new Date(), { chunkSize: 3, maxChunks: 1 });
+    expect(run2.categories.anonymous_scans.affected).toBe(3);
+    expect(run2.categories.anonymous_scans.backlogRemaining).toBe(true);
+
+    const run3 = await runDataRetentionPurge(db, new Date(), { chunkSize: 3, maxChunks: 1 });
+    expect(run3.categories.anonymous_scans.affected).toBe(3);
+    expect(run3.categories.anonymous_scans.backlogRemaining).toBe(false);
+
+    const remaining = await db.select({ id: schema.scans.id }).from(schema.scans);
+    expect(remaining.filter((r) => r.id.startsWith("chunk_scan_"))).toHaveLength(0);
+  });
+
+  it("isolates a category failure — other categories still run and report their real results (Phase 11, Stage 11D)", async () => {
+    // A dedicated, throwaway harness (not the shared `db` used by every
+    // other test in this file) so a genuinely broken table doesn't corrupt
+    // any other test. Dropping audit_continuations forces a real SQL error
+    // specifically inside purgeExpiredAuditContinuations, while leaving
+    // every other table — and therefore every other category — intact.
+    const harness = await createD1TestHarness();
+    const isolatedDb = createDb(harness.db);
+    try {
+      await insertScan(isolatedDb, {
+        id: "isolation_scan_old_anon",
+        domainId: null,
+        startedAt: daysAgo(8),
+      });
+      await harness.db.prepare("DROP TABLE audit_continuations").run();
+
+      const result = await runDataRetentionPurge(isolatedDb);
+      expect(result.hasErrors).toBe(true);
+      expect(result.categories.expired_audit_continuations.error).not.toBeNull();
+      // The broken category contributes 0, not a crash of the whole run.
+      expect(result.expiredContinuationsDeleted).toBe(0);
+      // Every other category still ran and produced a real result, not an error —
+      // proven by the anonymous scan actually being deleted despite the failure above.
+      expect(result.categories.anonymous_scans.error).toBeNull();
+      expect(result.anonymousScansDeleted).toBeGreaterThanOrEqual(1);
+      expect(result.categories.domain_scans.error).toBeNull();
+      expect(result.categories.deleted_accounts.error).toBeNull();
+      expect(result.categories.expired_entitlements.error).toBeNull();
+    } finally {
+      await harness.dispose();
+    }
   });
 });

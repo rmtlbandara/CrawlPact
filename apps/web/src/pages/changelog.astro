@@ -5,6 +5,14 @@ import { createDb, schema } from "@crawlpact/database";
 import { isNotNull, desc } from "drizzle-orm";
 import { getEnv } from "../lib/env";
 
+// Phase 11 (docs/performance/PUBLIC_CACHE_POLICY.md): identical content for
+// every visitor (no session/cookie-dependent rendering, confirmed by
+// reading this file in full before adding this) — safe to opt into public
+// caching. 5 minutes is short enough that a new release/changelog entry is
+// never stale for long, long enough to meaningfully absorb repeat reads of
+// the registryVersions query below.
+Astro.response.headers.set("Cache-Control", "public, max-age=300");
+
 const db = createDb(getEnv().DB);
 const registryReleases = await db
   .select()

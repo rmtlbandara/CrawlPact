@@ -1,0 +1,39 @@
+# Phase 11 D1 query and index audit
+
+Stage 11F. Real `EXPLAIN QUERY PLAN` evidence — run directly against production D1
+(`dd295b75-7376-4f05-8c50-fb0a63cc3cee`) via the Cloudflare MCP D1 query tool, read-only, no data
+modified — for the codebase's actual highest-frequency real queries (not invented representative
+ones), plus the one composite index this audit found and added, with local-harness proof it
+actually removes the inefficiency it targets. Method: every query below was copied from real
+source (file:line cited), not approximated.
+
+## Findings
+
+| Query (source)                                                                                                                                                         | Plan                                                                                                                                                                                                                         | Verdict                                                                                                                                                                                                                   |
+| ---------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `claimDueDomains` — monitoring sweep's due-domain claim, `monitoring.ts` (as of this phase's fairness fix, `ORDER BY next_scan_at ASC`)                                | **Before this phase's index**: `SEARCH domains USING INDEX idx_domains_monitoring_state` + `USE TEMP B-TREE FOR ORDER BY`. **After**: `SEARCH domains USING INDEX idx_domains_monitoring_state_next_scan_at` — no temp sort. | **Fixed this phase** — see migration `0025`. Harmless at today's 9-row table, but the fairness `ORDER BY` this phase just added would have force a real sort on every sweep at scale; fixed before it could compound.     |
+| `getScanReport`'s `scan_resources`/`findings` by `scan_id` (`get-scan-report.ts`)                                                                                      | `SEARCH ... USING INDEX idx_scan_resources_scan_id` / `idx_findings_scan_id`                                                                                                                                                 | Correct as-is — already indexed, no scan.                                                                                                                                                                                 |
+| `getScanReport`'s crawler-matrix join (`scan_crawler_results` → `crawlers` → `crawler_operators`)                                                                      | `SEARCH scr USING INDEX idx_scan_crawler_results_scan_id` then both joins via each table's own primary-key autoindex                                                                                                         | Correct as-is — every step of the join is an index seek, not a scan.                                                                                                                                                      |
+| `listDomains` — a user's saved domains (`domains.ts`)                                                                                                                  | `SEARCH domains USING INDEX idx_domains_owner_user_id`                                                                                                                                                                       | Correct as-is. No `ORDER BY` in the real query (confirmed by reading `domains.ts` — an earlier draft of this audit assumed one and was wrong; corrected before writing this row).                                         |
+| `getUnreadCount` — notification bell count (`notifications.ts`)                                                                                                        | `SEARCH notifications USING INDEX idx_notifications_user_id`                                                                                                                                                                 | Correct as-is — the `read_at IS NULL` half of the filter is applied against the small per-user row set the index seek already narrowed to, not a second full scan.                                                        |
+| `purgeExpiredAuditContinuations` (`data-retention.ts`, Stage 11D)                                                                                                      | `SEARCH audit_continuations USING INDEX idx_audit_continuations_expires_at`                                                                                                                                                  | Correct as-is.                                                                                                                                                                                                            |
+| `purgeAnonymousScans` (`data-retention.ts`)                                                                                                                            | `SEARCH scans USING INDEX idx_scans_domain_id (domain_id=?)` (SQLite can seek `IS NULL` through a btree index)                                                                                                               | Correct as-is — `started_at` is then filtered from the already-narrow `domain_id IS NULL` row set, not scanned separately.                                                                                                |
+| Admin subscriptions/transactions list — `subscriptions` LEFT JOIN `billing_customers` LEFT JOIN `users` (`lib/admin/subscriptions.ts`, RISK-009 fix target, Stage 11B) | `SCAN s` (full scan of `subscriptions`), joins via each side's primary-key autoindex                                                                                                                                         | Correct as-is — this listing has no `WHERE` filter by design (an admin sees every subscription), so a scan of the driving table is the only possible plan regardless of indexing; both join legs are already index seeks. |
+
+## What this audit did not need to change
+
+Every other high-frequency lookup checked (domain-by-id ownership check, scan-by-id, crawler
+registry lookups, `plan_prices` lookup — `idx_plan_prices_lookup`, already a composite covering
+`plan_id, environment, interval, active_for_new_checkout`) already resolves via an index seek, not
+a scan — this schema's existing index set (`0012_performance_indexes.sql` and the per-table
+indexes added across migrations 0002–0021) was already well-targeted at real query shapes. This
+audit's real yield was the one composite index above, made necessary by this phase's own new
+`ORDER BY`, not a backlog of pre-existing gaps.
+
+## Method note on why no index was removed
+
+The phase's own instruction is "add/remove indexes only with real justification." No index was
+found to be unused by any real query in this codebase (checked by grep-matching every
+`CREATE INDEX`'s column(s) against real `.where()`/`.orderBy()` call sites) — removing one on
+the strength of "not used in this session's spot-checks" would risk a real regression the next
+time a rarer-but-real code path (e.g. an admin filter view) runs. None removed.

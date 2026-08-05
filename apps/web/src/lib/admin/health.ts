@@ -38,6 +38,13 @@ export async function getSystemStatusSummary(
   }
   for (const [jobName, job] of latestByJob) {
     if (job.status === "failed") reasons.push(`Last "${jobName}" run failed.`);
+    // Phase 11 (Stage 11D): a retention run that isolated a category
+    // failure still reports "completed" for the categories that
+    // succeeded, but the run as a whole is not fully healthy — surface it
+    // the same as "failed" would be, just with its own wording.
+    if (job.status === "completed_with_errors") {
+      reasons.push(`Last "${jobName}" run completed with at least one category error.`);
+    }
     const ageMs = Date.now() - new Date(job.startedAt).getTime();
     if (job.status === "running" && ageMs > 15 * 60 * 1000) {
       reasons.push(`"${jobName}" has been running for over 15 minutes — may be stuck.`);
@@ -108,7 +115,11 @@ export async function getComponentHealth(db: Database): Promise<ComponentHealth[
     },
     {
       name: "Data retention job",
-      status: lastRetentionJob?.status === "failed" ? "degraded" : "operational",
+      status:
+        lastRetentionJob?.status === "failed" ||
+        lastRetentionJob?.status === "completed_with_errors"
+          ? "degraded"
+          : "operational",
       detail: lastRetentionJob
         ? `Last run ${lastRetentionJob.startedAt}: ${lastRetentionJob.status}.`
         : "No retention job has run yet.",

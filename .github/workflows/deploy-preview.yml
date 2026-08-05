@@ -80,6 +80,21 @@ jobs:
         run: pnpm run lighthouse:check https://crawlpact-web-preview.rmtlbandara.workers.dev
         env:
           CHROME_PATH: ${{ steps.setup-chrome.outputs.chrome-path }}
+          LIGHTHOUSE_ARTIFACT_DIR: ${{ runner.temp }}/lighthouse
+
+      # Phase 11 (Stage 11G): always uploaded, not just on failure — a
+      # passing run's full per-run data (not just the gating median) is
+      # what makes a suspicious pass (e.g. a median that only barely
+      # cleared threshold) inspectable after the fact, matching the
+      # median-of-3 gating this script now uses.
+      - name: Upload Lighthouse results
+        if: always()
+        uses: actions/upload-artifact@v7
+        with:
+          name: lighthouse-results-${{ github.event.workflow_run.head_sha }}
+          path: ${{ runner.temp }}/lighthouse/lighthouse-results.json
+          retention-days: 30
+          if-no-files-found: ignore
 
       - name: Record deployment summary
         if: always()

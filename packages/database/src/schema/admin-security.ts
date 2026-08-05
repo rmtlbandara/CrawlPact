@@ -57,7 +57,9 @@ export const scheduledJobRuns = sqliteTable("scheduled_job_runs", {
   id: integer("id").primaryKey({ autoIncrement: true }),
   jobName: text("job_name").notNull(),
   cronExpression: text("cron_expression"),
-  status: text("status").notNull().$type<"running" | "completed" | "failed">(),
+  status: text("status")
+    .notNull()
+    .$type<"running" | "completed" | "completed_with_errors" | "failed">(),
   domainsSelected: integer("domains_selected").notNull().default(0),
   scansCreated: integer("scans_created").notNull().default(0),
   scansCompleted: integer("scans_completed").notNull().default(0),

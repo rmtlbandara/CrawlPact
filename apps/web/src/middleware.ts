@@ -64,5 +64,24 @@ export const onRequest = defineMiddleware(async (context, next) => {
     response.headers.set("X-Robots-Tag", "noindex, nofollow, noarchive");
   }
 
+  // Phase 11 (docs/performance/PUBLIC_CACHE_POLICY.md): deny-by-default
+  // caching. Every SSR response that doesn't already carry its own
+  // Cache-Control gets `private, no-store` here — this is what makes
+  // "only explicitly-reviewed pages opt into public caching" actually safe
+  // rather than aspirational. Cloudflare Workers Cache's own documented
+  // behavior is the reason this matters even though caching isn't enabled
+  // for this Worker yet: a response with *no* Cache-Control header at all
+  // is not "not cached" — RFC 9111 heuristic freshness applies, caching a
+  // bare 200 for up to 2 hours by default the moment Workers Cache is ever
+  // turned on. Without this default, every admin/app/api response would be
+  // one config flag away from being briefly cacheable across users. Pages
+  // that are genuinely public and identical for every visitor set their own
+  // `Cache-Control: public, max-age=N` before this line runs (see
+  // changelog.astro, scanner.astro, for/[slug].astro, status.astro) and
+  // this default never overrides them.
+  if (!response.headers.has("Cache-Control")) {
+    response.headers.set("Cache-Control", "private, no-store");
+  }
+
   return response;
 });
