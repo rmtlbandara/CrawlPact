@@ -4,7 +4,6 @@ import { getCollection } from "astro:content";
 import MarketingLayout from "../layouts/MarketingLayout.astro";
 import { AuditForm } from "../components/AuditForm";
 import { AnalyticsBeacon } from "../components/AnalyticsBeacon";
-import WebsiteAuditMark from "../components/WebsiteAuditMark.astro";
 import RiskSection from "../components/homepage/RiskSection.astro";
 import SampleReportSection from "../components/homepage/SampleReportSection.astro";
 import CrawlerPurposeSection from "../components/homepage/CrawlerPurposeSection.astro";
@@ -115,7 +114,12 @@ const faqItems = [
           <li>Deterministic recommendations</li>
         </ul>
       </div>
-      <WebsiteAuditMark class="hidden w-[380px] shrink-0 xl:block" />
+      <img
+        src="/branding/artwork1.png"
+        alt=""
+        aria-hidden="true"
+        class="hidden w-[380px] shrink-0 xl:block"
+      />
     </div>
   </section>
 

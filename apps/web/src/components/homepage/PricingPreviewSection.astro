@@ -35,7 +35,7 @@ const PLAN_ORDER = ["free", "solo", "pro", "agency"] as const;
         const plan = PLAN_COPY[id];
         return (
           <div
-            class={`rounded-card border p-5 ${plan.recommended ? "border-brand-600 ring-1 ring-brand-600" : "border-neutral-200"}`}
+            class={`flex h-full flex-col rounded-card border p-5 ${plan.recommended ? "border-brand-600 ring-1 ring-brand-600" : "border-neutral-200"}`}
           >
             {plan.recommended && (
               <p class="mb-2 text-metadata font-medium uppercase tracking-wide text-brand-700">
@@ -46,7 +46,7 @@ const PLAN_ORDER = ["free", "solo", "pro", "agency"] as const;
             <p class="mt-1 text-supporting text-neutral-500">{plan.audience}</p>
             <a
               href={`/pricing#${id}`}
-              class="mt-4 block rounded-control border border-neutral-300 px-3 py-2 text-center text-body font-medium text-neutral-800 hover:bg-neutral-50"
+              class="mt-auto block rounded-control border border-neutral-300 px-3 py-2 text-center text-body font-medium text-neutral-800 hover:bg-neutral-50"
             >
               {plan.cta}
             </a>
