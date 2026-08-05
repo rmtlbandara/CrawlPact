@@ -1,10 +1,10 @@
 ---
 Document owner: Engineering owner
 Status: current-authoritative
-Last verified: 2026-08-04
-Repository commit: 4637e1a224b8a49d4a44a7d5c42cd0ee65c5afbf (main, post-Phase-7-merge)
-Production deployment identifier: crawlpact-web (Cloudflare Worker), https://crawlpact.com
-Database migration version: 0021_plan_prices.sql (21/21 applied, production and preview, zero drift)
+Last verified: 2026-08-05
+Repository commit: fc3ef36aaa437b352b7a1568f26103e7f703de62 (main, post-Phase-11-merge, deployed)
+Production deployment identifier: crawlpact-web (Cloudflare Worker), https://crawlpact.com — Worker version 7d1b4cc4-2232-4c21-9f91-5b154f94e5c2
+Database migration version: 0025_domains_monitoring_scan_order_index.sql (25/25 applied to production, confirmed via real PRAGMA/sqlite_master queries 2026-08-05; preview migrations applied per deploy-preview.yml's own log, but preview's separate post-migration binding-verification step failed on a pre-existing, unrelated missing-secrets gap — see CHANGELOG.md's 2026-08-05 Phase 11 entry)
 Crawler registry version: 2026.07.3 (active release; 23 crawlers seeded, correction pending publication as a new release — see docs/registry/CRAWLER_REGISTRY_GOVERNANCE.md)
 Phase 0 baseline reference: docs/baseline/2026-08-03/ (superseded on billing/migration facts by Phases 5–6 below; not re-run this pass)
 Review frequency: Every release, or monthly
@@ -32,7 +32,7 @@ verified platform guides (`/platforms/*`) — content-only, no product-behavior 
 production 2026-08-04, Worker version `630258b4-c020-4105-9ca3-550897f7c0e3`; all 10 new routes
 independently confirmed live (see the Phase 7 completion report).
 **Production and the default branch (`main`) are aligned** — no known drift as of the last
-deployed commit (`4637e1a`).
+deployed commit (`fc3ef36`).
 
 Major limitations: a real **paid** Paddle checkout lifecycle has never been run (webhook
 processing itself is verified live — RISK-001, still open); the Workers Free CPU budget constrains
@@ -42,15 +42,18 @@ product owner); Google Analytics runs on public marketing pages only, a disclose
 SRS §6.2 (the product owner has since confirmed keeping GA — see
 `docs/risks/ACTIVE_RISKS.md` RISK-021). Full detail: `docs/risks/ACTIVE_RISKS.md`.
 
-**Phase 11 (Database, Storage, Retention and Performance Hardening) status**: complete on branch
-`phase-11-database-storage-performance-hardening`, fully tested (`pnpm verify:push` green in
-full), **not yet merged or deployed to production** as of this note. Closes RISK-005/RISK-009,
-mitigates RISK-007, re-models RISK-008 (unchanged conclusion: accepted tradeoff at current
-volume), assesses RISK-006 (recommendation recorded, not implemented pending approval), and finds
-RISK-033's production performance gap already closed via real re-measurement. See
-`docs/reports/PHASE_11_DATABASE_STORAGE_PERFORMANCE_COMPLETION_REPORT.md` for full detail. This
-note should be replaced with a real "deployed" update (Worker version, verification evidence) once
-that merge/deploy actually happens — do not treat this paragraph as evidence of a live deployment.
+**Phase 11 (Database, Storage, Retention and Performance Hardening) status**: merged and deployed
+to production 2026-08-05, Worker version `7d1b4cc4-2232-4c21-9f91-5b154f94e5c2` (PR #86, plus a
+same-day test-timeout fix PR #87). Closes RISK-005/RISK-009 (both independently re-verified live —
+`scan_diffs`/`audit_continuations` FKs now show the corrected `ON DELETE` behavior via a real
+production `PRAGMA foreign_key_list` query), mitigates RISK-007, re-models RISK-008 (unchanged
+conclusion: accepted tradeoff at current volume), assesses RISK-006 (recommendation recorded, not
+implemented pending approval), and finds RISK-033's production performance gap already closed via
+real re-measurement. The new public-cache opt-ins (`/for/*`, `/scanner`, `/changelog`) and the
+deny-by-default `private, no-store` default were independently re-verified live via direct `curl`
+against production. See `docs/reports/PHASE_11_DATABASE_STORAGE_PERFORMANCE_COMPLETION_REPORT.md`
+and `CHANGELOG.md`'s 2026-08-05 entry for full deployment evidence, including a disclosed,
+pre-existing, unrelated preview-environment secrets gap found (not caused) during this deploy.
 
 ## Capability table
 
