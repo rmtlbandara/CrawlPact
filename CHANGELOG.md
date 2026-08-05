@@ -14,8 +14,37 @@ the "Production deployment" entries below for the established pattern).
 
 ## Unreleased
 
-Nothing pending — see "Production deployment (2026-08-04) — Phase 7" below for the most recent
-release.
+Nothing pending — see "Production deployment (2026-08-05) — Brand refresh and pricing-card
+alignment fix" below for the most recent release.
+
+## Production deployment (2026-08-05) — Brand refresh and pricing-card alignment fix
+
+PR #84 (squash-merged as `e902e6c`) deployed to production via `deploy-production.yml`, run
+against commit `e902e6c78932995a64bbf83d317961bf170cccc2`. No new D1 migration (Worker/asset-only
+release). The in-workflow smoke test passed; independently re-verified afterward directly against
+the live site: `/`, `/status`, `/robots.txt`, `/sitemap.xml`, `/pricing`, and `/favicon.png` all
+return `HTTP 200`; the retired `/favicon.svg` now correctly 404s; the homepage HTML references the
+new `/branding/artwork1.png` and `/branding/crawlpact-icon.webp` assets; the `<link rel="icon">`
+tag points at `/favicon.png`; and the pricing cards' markup contains the `mt-auto` button-alignment
+fix. Deployed Worker version ID: `51bd702e-4dab-4d30-8f65-9205e4a03d6f`. Build artifact checksum:
+`c3f65964f0aae4196ef6b806a288fd307c6baef8dc6e24eb499493785c23f293` (identical to Phase 7's — this
+deploy changed only static assets and component markup, not the Worker's binding manifest that the
+checksum covers, so an unchanged value is expected, not a sign the build didn't run).
+
+### Changed
+
+- Replaced the abstract "C-bracket" mark with a new shield-and-checkmark logo/icon across the
+  favicon, header, footer, app nav, admin nav, and all `/og/*.png` social-preview images
+  (`apps/web/src/components/BrandMark.astro` and its callers); removed the now-redundant colour
+  badge wrapper around it since the new icon carries its own colour.
+- Redrew the homepage hero illustration (`apps/web/public/branding/artwork1.png`): replaced the
+  placeholder mark inside the magnifying-glass lens with a checkmark styled to match the lens's own
+  glossy gradient and highlight treatment, with the browser-card line style echoed faintly inside
+  the lens.
+- Fixed pricing-card CTA misalignment on the homepage and `/pricing`: the "Most Popular" badge on
+  the Pro card pushed its button out of line with the other three cards; cards are now full-height
+  flex columns with the button pinned to the bottom (`PricingPlans.tsx`,
+  `PricingPreviewSection.astro`).
 
 ## Production deployment (2026-08-04) — Phase 7
 
