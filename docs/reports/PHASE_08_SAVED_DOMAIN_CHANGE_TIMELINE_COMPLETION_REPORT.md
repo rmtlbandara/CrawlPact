@@ -275,8 +275,24 @@ the three `public-status.integration.test.ts` tests that each create their own f
 
 ## Deployment
 
-Not yet deployed as of this report. Requires explicit, in-the-moment approval per this repo's
-standing rule, requested separately after merge.
+Merged (PR #91, squash-merged as `8d7d291`, including a same-PR CI-only bug fix — two locators in
+the new e2e spec were ambiguous against genuinely duplicated on-page text, fixed alongside
+removing that duplication from `DomainChangeTimeline.tsx` — applied and CI-green before merge) and
+deployed to production 2026-08-06, with explicit, in-the-moment approval requested and given
+separately for both the merge and the deploy. Deployed Worker version:
+`629c546c-ba30-4147-af6f-b750e5c051b2`. Three new additive D1 migrations applied (`0026`, `0027`,
+`0028`).
+
+**Independent post-deploy verification** (beyond the workflow's own smoke test): direct production
+D1 queries (`SELECT name FROM sqlite_master WHERE name='domain_change_events'`;
+`SELECT sql FROM sqlite_master WHERE name IN ('findings','domains')`) confirm all three migrations
+applied — the `domain_change_events` table exists, and `findings`/`domains` carry the new
+`fingerprint`/`scan_lock_until` columns. Direct `curl` checks confirm `/app/domains` and
+`/app/domains/:id` correctly redirect an unauthenticated request to `/sign-in` (302), and
+`GET /api/domains/:id/timeline` correctly returns `401 UNAUTHENTICATED`. The public homepage (200)
+and public status page (still "Operational") were also checked, confirming this deploy did not
+regress the prior status/changelog trust correction. See `CHANGELOG.md`'s 2026-08-06 Phase 8 entry
+for the full evidence list.
 
 ## Deferred work
 
