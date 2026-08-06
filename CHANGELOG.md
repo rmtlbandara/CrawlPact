@@ -14,9 +14,45 @@ the "Production deployment" entries below for the established pattern).
 
 ## Unreleased
 
-### Public Status and Changelog Trust Correction
+Nothing pending — see "Production deployment (2026-08-06) — Public Status and Changelog Trust
+Correction" below for the most recent release.
 
-Full detail: `docs/reports/PUBLIC_STATUS_AND_CHANGELOG_TRUST_CORRECTION_REPORT.md`.
+## Production deployment (2026-08-06) — Public Status and Changelog Trust Correction
+
+PR #89 (squash-merged as `885afb4`) deployed to production via `deploy-production.yml`, run
+against commit `885afb4ff53be6469b3dc5b1a5b9941c1b242b6f`. No new D1 migration (Worker/asset-only
+release). Full detail: `docs/reports/PUBLIC_STATUS_AND_CHANGELOG_TRUST_CORRECTION_REPORT.md`.
+
+This deploy fixed a real, live production bug: `/status` had been showing "Degraded performance"
+for the overall status and "Billing and checkout" — confirmed via direct production checks
+**before** this deploy, and independently confirmed **fixed** via the same checks immediately
+after: `https://crawlpact.com/status` now shows "Operational" for both the overall status (with
+the new summary sentence "All public CrawlPact services are operating normally.") and "Billing and
+checkout". The dead `docs/status/IMPLEMENTATION_STATUS.md` link is gone from the page footer.
+`https://crawlpact.com/changelog` now renders the new production-appropriate introduction and the
+corrected "(Part 3)" entry title (previously "(Part 3, in progress)"). Deployed Worker version:
+`da3ee995-b18b-4b14-b169-735b2a1859b8`.
+
+### Fixed
+
+- The public status page's "Billing and checkout" component (and the public overall status) could
+  show "Degraded performance" based on a stale, unbounded (no time window) count of historical
+  webhook-processing failures with zero real recent user impact — root-caused and fixed with a
+  real 1-hour time window plus a new `publicImpact` gate so an internal-only concern can never
+  again automatically escalate the public page.
+- Removed a dead public link to the archived `IMPLEMENTATION_STATUS.md` doc.
+
+### Changed
+
+- Removed the trust-reducing "no reliable uptime measurement" sentence from `/status`, without a
+  replacement negative explanation or a fabricated percentage.
+- `/status` now shows a plain-language overall-status summary sentence.
+- `/admin/health` now shows the public status alongside internal diagnostics, clearly labelled.
+- `/changelog`'s introduction is now production-appropriate; corrected one stale entry title.
+
+### Added
+
+- `pnpm status:validate`, wired into CI.
 
 #### Fixed
 

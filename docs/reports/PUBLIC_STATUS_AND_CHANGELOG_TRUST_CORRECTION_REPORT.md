@@ -196,6 +196,16 @@ infrastructure.
 
 ## Deployment
 
-Not yet deployed as of this report. Per this repo's standing rule, production deployment requires
-fresh, explicit, in-the-moment approval — requested separately after merge, matching the pattern
-used for every prior phase/correction in this repository.
+Merged (PR #89, squash-merged as `885afb4`) and deployed to production 2026-08-06, with explicit,
+in-the-moment approval requested and given separately for both the merge and the deploy. Deployed
+Worker version: `da3ee995-b18b-4b14-b169-735b2a1859b8`. No new D1 migration.
+
+**Independent post-deploy verification** (beyond the workflow's own smoke test): a direct `curl` of
+`https://crawlpact.com/status` after deployment confirms the overall status and "Billing and
+checkout" both now render "Operational" (both showed "Degraded performance" before this deploy —
+the exact live bug this correction found and fixed), the new plain-language summary sentence ("All
+public CrawlPact services are operating normally.") renders, and the dead
+`docs/status/IMPLEMENTATION_STATUS.md` link is gone from the footer. A direct `curl` of
+`https://crawlpact.com/changelog` confirms the new production-appropriate introduction and the
+corrected "(Part 3)" entry title both render. See `CHANGELOG.md`'s 2026-08-06 entry for the full
+evidence list.
