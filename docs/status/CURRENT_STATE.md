@@ -2,9 +2,9 @@
 Document owner: Engineering owner
 Status: current-authoritative
 Last verified: 2026-08-06
-Repository commit: 885afb4ff53be6469b3dc5b1a5b9941c1b242b6f (main, post-Public-Status-and-Changelog-Trust-Correction merge, deployed)
-Production deployment identifier: crawlpact-web (Cloudflare Worker), https://crawlpact.com — Worker version da3ee995-b18b-4b14-b169-735b2a1859b8
-Database migration version: 0025_domains_monitoring_scan_order_index.sql (25/25 applied to production, confirmed via real PRAGMA/sqlite_master queries 2026-08-05; preview migrations applied per deploy-preview.yml's own log, but preview's separate post-migration binding-verification step failed on a pre-existing, unrelated missing-secrets gap — see CHANGELOG.md's 2026-08-05 Phase 11 entry)
+Repository commit: 8d7d291528d201011ef69e4f857264a3d67fec93 (main, post-Phase-8 merge, deployed)
+Production deployment identifier: crawlpact-web (Cloudflare Worker), https://crawlpact.com — Worker version 629c546c-ba30-4147-af6f-b750e5c051b2
+Database migration version: 0028_domains_scan_lock.sql (28/28 applied to production, confirmed via real sqlite_master queries 2026-08-06 — domain_change_events table and the findings.fingerprint/domains.scan_lock_until columns all independently verified present)
 Crawler registry version: 2026.07.3 (active release; 23 crawlers seeded, correction pending publication as a new release — see docs/registry/CRAWLER_REGISTRY_GOVERNANCE.md)
 Phase 0 baseline reference: docs/baseline/2026-08-03/ (superseded on billing/migration facts by Phases 5–6 below; not re-run this pass)
 Review frequency: Every release, or monthly
@@ -32,7 +32,7 @@ verified platform guides (`/platforms/*`) — content-only, no product-behavior 
 production 2026-08-04, Worker version `630258b4-c020-4105-9ca3-550897f7c0e3`; all 10 new routes
 independently confirmed live (see the Phase 7 completion report).
 **Production and the default branch (`main`) are aligned** — no known drift as of the last
-deployed commit (`885afb4`).
+deployed commit (`8d7d291`).
 
 Major limitations: a real **paid** Paddle checkout lifecycle has never been run (webhook
 processing itself is verified live — RISK-001, still open); the Workers Free CPU budget constrains
@@ -65,6 +65,20 @@ deployment (both now show "Operational"). Removed the trust-reducing uptime-abse
 dead link to the (already correctly archived, since Phase 1) `IMPLEMENTATION_STATUS.md` doc. See
 `docs/reports/PUBLIC_STATUS_AND_CHANGELOG_TRUST_CORRECTION_REPORT.md` and `CHANGELOG.md`'s
 2026-08-06 entry for full deployment evidence.
+
+**Phase 8 (Saved-Domain Experience and Change Timeline) status**: merged and deployed to
+production 2026-08-06, Worker version `629c546c-ba30-4147-af6f-b750e5c051b2` (PR #91, plus a
+same-PR CI-only bug fix before merge). Adds a deterministic change-attribution model, a
+materialised policy-change timeline (`domain_change_events`, migration `0026`), a before/after
+scan-comparison view, and finding-lifecycle classification (`findings.fingerprint`, migration
+`0027`). Found and fixed two real, previously-unguarded gaps: no duplicate-simultaneous-scan
+prevention on manual rescans (`domains.scan_lock_until`, migration `0028`), and a hardcoded
+`monitoring: "Not enabled"` bug in the reused policy-summary function. All three migrations and
+the redesigned saved-domain routes independently re-verified live (direct production D1 queries
+confirming the new table/columns; direct `curl` checks confirming the new/redesigned routes
+correctly require authentication). See
+`docs/reports/PHASE_08_SAVED_DOMAIN_CHANGE_TIMELINE_COMPLETION_REPORT.md` and `CHANGELOG.md`'s
+2026-08-06 Phase 8 entry for full deployment evidence.
 
 ## Capability table
 

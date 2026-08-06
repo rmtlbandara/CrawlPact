@@ -14,9 +14,45 @@ the "Production deployment" entries below for the established pattern).
 
 ## Unreleased
 
-### Phase 8: Saved-Domain Experience and Change Timeline
+Nothing pending — see "Production deployment (2026-08-06) — Phase 8: Saved-Domain Experience and
+Change Timeline" below for the most recent release.
 
-Full detail: `docs/reports/PHASE_08_SAVED_DOMAIN_CHANGE_TIMELINE_COMPLETION_REPORT.md`.
+## Production deployment (2026-08-06) — Phase 8: Saved-Domain Experience and Change Timeline
+
+PR #91 (squash-merged as `8d7d291`; follow-up CI-only bug fix included in the same PR before
+merge) deployed to production via `deploy-production.yml`, run against commit
+`8d7d291528d201011ef69e4f857264a3d67fec93`. Three new additive D1 migrations applied
+(`0026_domain_change_events`, `0027_findings_fingerprint_column`,
+`0028_domains_scan_lock`). Deployed Worker version: `629c546c-ba30-4147-af6f-b750e5c051b2`. Full
+detail: `docs/reports/PHASE_08_SAVED_DOMAIN_CHANGE_TIMELINE_COMPLETION_REPORT.md`.
+
+**Independent post-deploy verification**: direct production D1 queries confirm all three
+migrations applied (`domain_change_events` table exists; `findings.fingerprint` and
+`domains.scan_lock_until` columns exist). Direct `curl` checks confirm `/app/domains` and
+`/app/domains/:id` correctly redirect an unauthenticated request to `/sign-in` (302), and
+`GET /api/domains/:id/timeline` correctly returns `401 UNAUTHENTICATED` for an unauthenticated
+request. The public homepage (200) and the public status page (still "Operational", confirming
+the prior status/changelog trust correction was not regressed by this deploy) were also checked.
+
+### Added
+
+- A deterministic, versioned change-attribution model
+  (`website_policy | registry_driven | mixed | operational | uncertain | baseline`).
+- A materialised, paginated, idempotent policy-change timeline (`domain_change_events`).
+- A real before/after scan-comparison view with escaped evidence and finding-lifecycle
+  classification.
+- A real duplicate-simultaneous-scan lock (`domains.scan_lock_until`) and a new
+  `SCAN_ALREADY_RUNNING` error code.
+- A redesigned saved-domain list and domain-detail page.
+
+### Fixed
+
+- `computePolicySummary()`'s `monitoring` field was hardcoded to `"Not enabled"` regardless of the
+  domain's real monitoring state.
+- The saved-domain scan-history list rendered raw status-enum text instead of a human label
+  (closes messaging-audit item C3).
+- `scan_diffs`-equivalent data had no customer-facing UI at all before this phase (closes
+  messaging-audit item C5).
 
 #### Added
 
