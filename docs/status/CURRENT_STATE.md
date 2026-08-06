@@ -1,9 +1,9 @@
 ---
 Document owner: Engineering owner
 Status: current-authoritative
-Last verified: 2026-08-05
-Repository commit: fc3ef36aaa437b352b7a1568f26103e7f703de62 (main, post-Phase-11-merge, deployed)
-Production deployment identifier: crawlpact-web (Cloudflare Worker), https://crawlpact.com — Worker version 7d1b4cc4-2232-4c21-9f91-5b154f94e5c2
+Last verified: 2026-08-06
+Repository commit: 885afb4ff53be6469b3dc5b1a5b9941c1b242b6f (main, post-Public-Status-and-Changelog-Trust-Correction merge, deployed)
+Production deployment identifier: crawlpact-web (Cloudflare Worker), https://crawlpact.com — Worker version da3ee995-b18b-4b14-b169-735b2a1859b8
 Database migration version: 0025_domains_monitoring_scan_order_index.sql (25/25 applied to production, confirmed via real PRAGMA/sqlite_master queries 2026-08-05; preview migrations applied per deploy-preview.yml's own log, but preview's separate post-migration binding-verification step failed on a pre-existing, unrelated missing-secrets gap — see CHANGELOG.md's 2026-08-05 Phase 11 entry)
 Crawler registry version: 2026.07.3 (active release; 23 crawlers seeded, correction pending publication as a new release — see docs/registry/CRAWLER_REGISTRY_GOVERNANCE.md)
 Phase 0 baseline reference: docs/baseline/2026-08-03/ (superseded on billing/migration facts by Phases 5–6 below; not re-run this pass)
@@ -32,7 +32,7 @@ verified platform guides (`/platforms/*`) — content-only, no product-behavior 
 production 2026-08-04, Worker version `630258b4-c020-4105-9ca3-550897f7c0e3`; all 10 new routes
 independently confirmed live (see the Phase 7 completion report).
 **Production and the default branch (`main`) are aligned** — no known drift as of the last
-deployed commit (`fc3ef36`).
+deployed commit (`885afb4`).
 
 Major limitations: a real **paid** Paddle checkout lifecycle has never been run (webhook
 processing itself is verified live — RISK-001, still open); the Workers Free CPU budget constrains
@@ -54,6 +54,17 @@ deny-by-default `private, no-store` default were independently re-verified live 
 against production. See `docs/reports/PHASE_11_DATABASE_STORAGE_PERFORMANCE_COMPLETION_REPORT.md`
 and `CHANGELOG.md`'s 2026-08-05 entry for full deployment evidence, including a disclosed,
 pre-existing, unrelated preview-environment secrets gap found (not caused) during this deploy.
+
+**Public Status and Changelog Trust Correction status**: merged and deployed to production
+2026-08-06, Worker version `da3ee995-b18b-4b14-b169-735b2a1859b8` (PR #89). Found and fixed a real,
+live production bug in the process: `/status` had been showing "Degraded performance" for the
+overall status and "Billing and checkout" — caused by an all-time, no-time-window count of stale
+webhook-processing failures with zero real recent impact, confirmed via production D1 and Paddle's
+own delivery log before the fix, and independently confirmed live via direct `curl` after
+deployment (both now show "Operational"). Removed the trust-reducing uptime-absence sentence and a
+dead link to the (already correctly archived, since Phase 1) `IMPLEMENTATION_STATUS.md` doc. See
+`docs/reports/PUBLIC_STATUS_AND_CHANGELOG_TRUST_CORRECTION_REPORT.md` and `CHANGELOG.md`'s
+2026-08-06 entry for full deployment evidence.
 
 ## Capability table
 
