@@ -40,6 +40,7 @@ Every error response has the shape:
 | `AUDIT_ENGINE_DISABLED` |         503 | The scanner is not enabled in this environment. Returned instead of any fabricated result — see `docs/status/KNOWN_RISKS.md`. |
 | `AUDIT_NOT_FOUND`       |         404 | The referenced audit/scan ID does not exist or is not visible to the caller.                                                  |
 | `AUDIT_QUOTA_EXCEEDED`  |         429 | The account has exhausted its plan's manual rescan quota for this domain.                                                     |
+| `SCAN_ALREADY_RUNNING`  |         409 | A scan is already in progress for this domain (Phase 8 duplicate-scan lock, `domains.scan_lock_until`).                       |
 
 ## Authentication
 

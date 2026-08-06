@@ -18,6 +18,8 @@ import { trackEvent } from "../../../../lib/analytics";
 import { getBlockedTargetPatterns } from "../../../../lib/blocked-targets";
 import { getIntConfig } from "../../../../lib/runtime-config";
 import { jsonErrorResponse, jsonResponse } from "../../../../lib/json-response";
+import { releaseScanLock, tryClaimScanLock } from "../../../../lib/scan-lock";
+import { generateTimelineEvent } from "../../../../lib/domain-timeline";
 
 export const prerender = false;
 
@@ -63,48 +65,82 @@ export const POST: APIRoute = async ({ request, params }) => {
       );
     }
 
-    await trackEvent(db, "audit_started", { userId: user.id, properties: { trigger: "manual" } });
+    // Prevents two concurrent rescan requests (or a rescan racing the
+    // scheduled sweep) from both running against this domain at once — a
+    // real, previously-unguarded gap found during Phase 8 baseline
+    // research. The quota check above only reads existing `scans` rows, so
+    // a request that loses this claim never actually consumes its monthly
+    // allowance. Released in `finally` regardless of outcome.
+    const claimed = await tryClaimScanLock(db, domain.id);
+    if (!claimed) {
+      throw new ApiError(
+        "SCAN_ALREADY_RUNNING",
+        "A scan is already in progress for this domain. Try again shortly.",
+      );
+    }
 
-    const blocklist = await getBlockedTargetPatterns(db);
-    const totalTimeoutMs = (await getIntConfig(db, "scan_total_timeout_seconds", 30)) * 1000;
-    const auditResult = await runAudit(
-      domain.canonicalOrigin,
-      domain.preset as PolicyPreset,
-      registry.crawlers,
-      registry.rulesetVersionId,
-      { blocklist, totalTimeoutMs },
-    );
+    try {
+      await trackEvent(db, "audit_started", { userId: user.id, properties: { trigger: "manual" } });
+      await trackEvent(db, "domain_rescan_started", { userId: user.id });
 
-    const scanId = crypto.randomUUID();
-    await persistScan(
-      db,
-      {
+      const blocklist = await getBlockedTargetPatterns(db);
+      const totalTimeoutMs = (await getIntConfig(db, "scan_total_timeout_seconds", 30)) * 1000;
+      const auditResult = await runAudit(
+        domain.canonicalOrigin,
+        domain.preset as PolicyPreset,
+        registry.crawlers,
+        registry.rulesetVersionId,
+        { blocklist, totalTimeoutMs },
+      );
+
+      const scanId = crypto.randomUUID();
+      await persistScan(
+        db,
+        {
+          scanId,
+          targetInput: domain.canonicalOrigin,
+          preset: domain.preset,
+          registryVersionId: registry.registryVersionId,
+          rulesetVersionId: registry.rulesetVersionId,
+          domainId: domain.id,
+          triggeredBy: "manual",
+          triggeredByUserId: user.id,
+        },
+        auditResult,
+      );
+
+      // Timeline-event generation must never block the response — see the
+      // identical rationale in monitoring.ts's safeGenerateTimelineEvent.
+      try {
+        await generateTimelineEvent(db, {
+          domainId: domain.id,
+          previousScanId: domain.lastScanId,
+          currentScanId: scanId,
+        });
+      } catch (error) {
+        console.error("Timeline event generation failed", { domainId: domain.id, scanId, error });
+      }
+
+      await recordScanOnDomain(db, domain.id, {
         scanId,
-        targetInput: domain.canonicalOrigin,
-        preset: domain.preset,
-        registryVersionId: registry.registryVersionId,
-        rulesetVersionId: registry.rulesetVersionId,
-        domainId: domain.id,
-        triggeredBy: "manual",
-        triggeredByUserId: user.id,
-      },
-      auditResult,
-    );
+        score: auditResult.score.state === "scored" ? auditResult.score.value : null,
+        nextScanAt: computeNextScanAt(domain.monitoringFrequency),
+      });
 
-    await recordScanOnDomain(db, domain.id, {
-      scanId,
-      score: auditResult.score.state === "scored" ? auditResult.score.value : null,
-      nextScanAt: computeNextScanAt(domain.monitoringFrequency),
-    });
+      const succeeded =
+        auditResult.status === "completed" || auditResult.status === "completed_with_warnings";
+      await trackEvent(db, succeeded ? "audit_completed" : "audit_failed", {
+        userId: user.id,
+        properties: { status: auditResult.status, trigger: "manual" },
+      });
+      await trackEvent(db, succeeded ? "domain_rescan_completed" : "domain_rescan_failed", {
+        userId: user.id,
+      });
 
-    const succeeded =
-      auditResult.status === "completed" || auditResult.status === "completed_with_warnings";
-    await trackEvent(db, succeeded ? "audit_completed" : "audit_failed", {
-      userId: user.id,
-      properties: { status: auditResult.status, trigger: "manual" },
-    });
-
-    return jsonResponse(ok({ scanId, status: auditResult.status }, requestId), 200);
+      return jsonResponse(ok({ scanId, status: auditResult.status }, requestId), 200);
+    } finally {
+      await releaseScanLock(db, domain.id);
+    }
   } catch (error) {
     return jsonErrorResponse(error, requestId);
   }

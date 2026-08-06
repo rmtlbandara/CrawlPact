@@ -286,29 +286,36 @@ describe("audit report signal fields (llms.txt/RSL/Content Signals/robots meta) 
     expect(report.robotsMeta.canonicalUrl).toBe("https://example.com/");
   });
 
-  it("still reads a pre-Phase-11 html_meta row that holds raw HTML instead of the minimised blob (backward compatibility)", async () => {
-    const { cookie } = await signUpUser("Legacy Row User");
-    const scanId = await runAndPersistScan(cookie, "example.co");
+  // Real network call (runAndPersistScan against example.co) — under full-suite
+  // system load this can exceed vitest's default 5000ms, same class of flake
+  // fixed for the Phase 11 retention test in PR #87; same fix here.
+  it(
+    "still reads a pre-Phase-11 html_meta row that holds raw HTML instead of the minimised blob (backward compatibility)",
+    { timeout: 20_000 },
+    async () => {
+      const { cookie } = await signUpUser("Legacy Row User");
+      const scanId = await runAndPersistScan(cookie, "example.co");
 
-    // Simulate a row written before this phase: overwrite the just-persisted
-    // (minimised) html_meta row with raw HTML, exactly as the old code path
-    // used to store it. Old rows are never rewritten by this phase, so this
-    // is the real, permanent shape they're in.
-    await db
-      .update(schema.scanResources)
-      .set({
-        snapshotText:
-          '<html><head><meta name="robots" content="noindex, nofollow"><link rel="canonical" href="https://legacy.example/"></head></html>',
-        resourceHash: null,
-      })
-      .where(eq(schema.scanResources.id, `${scanId}_html_meta`));
+      // Simulate a row written before this phase: overwrite the
+      // just-persisted (minimised) html_meta row with raw HTML, exactly as
+      // the old code path used to store it. Old rows are never rewritten by
+      // this phase, so this is the real, permanent shape they're in.
+      await db
+        .update(schema.scanResources)
+        .set({
+          snapshotText:
+            '<html><head><meta name="robots" content="noindex, nofollow"><link rel="canonical" href="https://legacy.example/"></head></html>',
+          resourceHash: null,
+        })
+        .where(eq(schema.scanResources.id, `${scanId}_html_meta`));
 
-    const report = await getScanReport(db, scanId);
-    if (!report) throw new Error("report not found");
-    expect(report.robotsMeta.checked).toBe(true);
-    expect(report.robotsMeta.metaRobots).toBe("noindex, nofollow");
-    expect(report.robotsMeta.canonicalUrl).toBe("https://legacy.example/");
-  });
+      const report = await getScanReport(db, scanId);
+      if (!report) throw new Error("report not found");
+      expect(report.robotsMeta.checked).toBe(true);
+      expect(report.robotsMeta.metaRobots).toBe("noindex, nofollow");
+      expect(report.robotsMeta.canonicalUrl).toBe("https://legacy.example/");
+    },
+  );
 
   it("populates a SHA-256 resource_hash for every fetched resource type, not just html_meta (Phase 11, resource hashing)", async () => {
     const { cookie } = await signUpUser("Resource Hash User");

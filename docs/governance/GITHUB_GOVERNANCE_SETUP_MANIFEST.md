@@ -2,6 +2,37 @@
 
 **Status: verification-blocked (by user decision, not access failure).**
 
+## Phase 8 update (2026-08-06)
+
+Phase 8 (Saved-Domain Experience and Change Timeline) is **complete** — see
+`docs/reports/PHASE_08_SAVED_DOMAIN_CHANGE_TIMELINE_COMPLETION_REPORT.md`. Same manifest-only
+decision carried forward — no live GitHub issue created. When this manifest is applied, create:
+
+- **"Add a saved-domain policy timeline and change comparison"** — already **resolved** by this
+  pass; record as closed-on-creation with a link to the completion report and the merge commit,
+  matching this repo's established precedent (see the Phase 7/status-correction entries below).
+- Real content: added a deterministic change-attribution model, a materialised policy-change
+  timeline (`domain_change_events`), a before/after comparison view, and finding-lifecycle
+  classification, all against real D1 tests (32 new integration tests). Found and fixed two real,
+  previously-unguarded gaps along the way: no duplicate-simultaneous-scan prevention on manual
+  rescans (`domains.scan_lock_until`), and a hardcoded `monitoring: "Not enabled"` bug in the
+  reused policy-summary function. Closed messaging-audit items C3 and C5
+  (`docs/brand/MESSAGING_SURFACE_INVENTORY.md`).
+- **(Carried forward, unchanged, from Phase 7 — not addressed by this phase, whose actual
+  execution prompt scoped it to saved-domain experience and change timeline only, not the wider
+  objective text in this roadmap's own Phase 8 entry)**: "Reconcile SRS §2.3 Primary Tagline with
+  the Phase 2 canonical brand system" (RISK-028); "Add `description` fields to the 10
+  `package.json` files that currently lack one"; the export/report-export test-coverage gap
+  (`CAPABILITY_MATRIX.md` row 14); plus the unchanged Phase 6-originated items: "Run a real,
+  authorized, small-value paid Paddle checkout end to end" (RISK-001); "Fix the flaky
+  `billing-webhook.integration.test.ts` concurrent-race test" (RISK-012); "Build
+  `pnpm paddle:catalog:sync`"; "Create real sandbox Paddle prices for genuine end-to-end sandbox
+  checkout testing".
+- **New, found this phase**: "Batch `listDomains()`'s open-findings count into a single query" —
+  a pre-existing N+1 query pattern found during Phase 8's own query-architecture review, currently
+  bounded and low-risk (see `docs/risks/ACTIVE_RISKS.md` RISK-034), deliberately left unfixed to
+  keep this phase's own change surface focused.
+
 ## Public Status and Changelog Trust Correction update (2026-08-06)
 
 Same manifest-only decision carried forward — no live GitHub issue created. When this manifest is

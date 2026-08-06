@@ -44,6 +44,10 @@ export const domains = sqliteTable(
     currentScore: integer("current_score"),
     consecutiveFailureCount: integer("consecutive_failure_count").notNull().default(0),
     notes: text("notes"),
+    // Phase 8: short-lived claim preventing a manual rescan and a scheduled
+    // sweep (or two concurrent manual rescans) from both scanning this
+    // domain at once. See migration 0028 and lib/scan-lock.ts.
+    scanLockUntil: text("scan_lock_until"),
     createdAt: text("created_at").notNull(),
     updatedAt: text("updated_at").notNull(),
     deletedAt: text("deleted_at"),
@@ -175,6 +179,12 @@ export const findings = sqliteTable("findings", {
     .notNull()
     .references(() => rulesetVersions.id),
   createdAt: text("created_at").notNull(),
+  // Phase 8: first-class copy of the fingerprint already computed at persist
+  // time (packages/policy/src/findings.ts) and already stored inside the
+  // `evidence` JSON blob above — this column makes it queryable/comparable
+  // across scans for the finding-lifecycle feature without JSON-parsing
+  // every row. See migration 0027 and FINDING_LIFECYCLE_MODEL.md.
+  fingerprint: text("fingerprint"),
 });
 
 // Phase 5 (Anonymous Audit Result and Account-Conversion Flow). See migration 0020 and
@@ -203,5 +213,48 @@ export const scanDiffs = sqliteTable("scan_diffs", {
     .$type<"website_drift" | "registry_drift" | "preset_change">(),
   summary: text("summary").notNull(),
   details: text("details").notNull(),
+  createdAt: text("created_at").notNull(),
+});
+
+// Phase 8 (Saved-Domain Experience and Change Timeline). See
+// docs/product/DOMAIN_TIMELINE_EVENT_MODEL.md for the full column rationale.
+export const domainChangeEvents = sqliteTable("domain_change_events", {
+  id: text("id").primaryKey(),
+  domainId: text("domain_id")
+    .notNull()
+    .references(() => domains.id),
+  eventType: text("event_type")
+    .notNull()
+    .$type<
+      | "baseline"
+      | "website_policy_change"
+      | "registry_driven_change"
+      | "mixed_change"
+      | "operational_change"
+    >(),
+  changeOrigin: text("change_origin")
+    .notNull()
+    .$type<
+      "website_policy" | "registry_driven" | "mixed" | "operational" | "uncertain" | "baseline"
+    >(),
+  attentionLevel: text("attention_level")
+    .notNull()
+    .$type<"informational" | "review_recommended" | "high_attention">(),
+  observedAt: text("observed_at").notNull(),
+  previousScanId: text("previous_scan_id").references(() => scans.id),
+  currentScanId: text("current_scan_id").references(() => scans.id),
+  previousRegistryVersionId: text("previous_registry_version_id").references(
+    () => registryVersions.id,
+  ),
+  currentRegistryVersionId: text("current_registry_version_id").references(
+    () => registryVersions.id,
+  ),
+  affectedPurposesJson: text("affected_purposes_json").notNull(),
+  findingCountsJson: text("finding_counts_json").notNull(),
+  summary: text("summary").notNull(),
+  detailsJson: text("details_json").notNull(),
+  completeness: text("completeness").notNull().$type<"complete" | "partial">(),
+  fingerprint: text("fingerprint").notNull(),
+  modelVersion: text("model_version").notNull(),
   createdAt: text("created_at").notNull(),
 });

@@ -10,6 +10,7 @@ import { persistScan } from "./persist-scan";
 import { computeNextScanAt } from "./scan-scheduling";
 import { getBlockedTargetPatterns } from "./blocked-targets";
 import { getIntConfig } from "./runtime-config";
+import { generateTimelineEvent } from "./domain-timeline";
 
 /**
  * Scheduled monitoring sweep (SRS §25, Part 2 Step 15). Invoked from
@@ -63,7 +64,12 @@ async function claimDueDomains(
     .orderBy(asc(schema.domains.nextScanAt))
     .limit(limit);
 
-  const dueCandidates = candidates.filter((c) => c.monitoringFrequency !== "none");
+  // Phase 8: skip a domain a manual rescan currently holds
+  // (domains.scan_lock_until, apps/web/src/lib/scan-lock.ts) — it self-heals
+  // next sweep once that short-lived lock expires, same as any other claim.
+  const dueCandidates = candidates.filter(
+    (c) => c.monitoringFrequency !== "none" && (!c.scanLockUntil || c.scanLockUntil <= nowIso),
+  );
   const lockUntil = new Date(now.getTime() + claimLockMinutes * 60 * 1000).toISOString();
   const claimed: DomainRow[] = [];
 
@@ -189,12 +195,39 @@ async function handleScanSuccess(
     }
   }
 
+  // Phase 8: generated unconditionally (not gated on drift.crawlerResultChanges
+  // above) — the timeline's own attribution model compares raw resource
+  // content and registry identity directly, so it can detect a real website
+  // or registry change even when the evaluated crawler outcome happened to
+  // stay the same. generateTimelineEvent() itself is a no-op (returns null,
+  // writes nothing) when nothing material changed.
+  await safeGenerateTimelineEvent(db, domain.id, domain.lastScanId, scanId);
+
   await recordScheduledScanOutcome(db, domain.id, {
     succeeded: true,
     scanId,
     score: auditResult.score.state === "scored" ? auditResult.score.value : null,
     nextScanAt: computeNextScanAt(domain.monitoringFrequency),
   });
+}
+
+/**
+ * Phase 8: timeline-event generation must never block scan completion,
+ * monitoring status, or the existing notification path above — a failure
+ * here (e.g. a transient D1 error) is swallowed, not rethrown. `console.error`
+ * gives Workers Logs real visibility without an unhandled-rejection crash.
+ */
+async function safeGenerateTimelineEvent(
+  db: Database,
+  domainId: string,
+  previousScanId: string | null,
+  currentScanId: string,
+): Promise<void> {
+  try {
+    await generateTimelineEvent(db, { domainId, previousScanId, currentScanId });
+  } catch (error) {
+    console.error("Timeline event generation failed", { domainId, currentScanId, error });
+  }
 }
 
 function backoffNextScanAt(failureCount: number, from: Date): string {
@@ -211,6 +244,11 @@ async function handleScanFailure(
 ): Promise<void> {
   const newFailureCount = domain.consecutiveFailureCount + 1;
   const pause = newFailureCount >= failureThreshold;
+
+  // Phase 8: only meaningful when there's a previous successful scan to
+  // compare against — see generateTimelineEvent's own no-previous-scan
+  // guard for why a failed *first* scan produces no event.
+  await safeGenerateTimelineEvent(db, domain.id, domain.lastScanId, scanId);
 
   await recordScheduledScanOutcome(db, domain.id, {
     succeeded: false,

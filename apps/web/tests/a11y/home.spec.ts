@@ -146,6 +146,73 @@ test.describe("authenticated routes", () => {
     expect(results.violations, JSON.stringify(results.violations, null, 2)).toEqual([]);
   });
 
+  test("the empty saved-domain list (Phase 8) has no automatically detectable WCAG 2.2 AA violations", async ({
+    page,
+  }) => {
+    await addVirtualAuthenticator(page);
+    const displayName = `A11y Domains ${Date.now()}-${crypto.randomUUID().slice(0, 8)}`;
+    await registerNewAccount(page, displayName);
+    await page.goto("/app/domains");
+    const results = await new AxeBuilder({ page })
+      .withTags(["wcag2a", "wcag2aa", "wcag22aa"])
+      .analyze();
+    expect(results.violations, JSON.stringify(results.violations, null, 2)).toEqual([]);
+  });
+
+  test("a real saved-domain detail page, including the current-policy summary and change timeline (Phase 8), has no automatically detectable WCAG 2.2 AA violations", async ({
+    page,
+  }) => {
+    test.setTimeout(60_000);
+    await clearAnonymousAuditRateLimit(page);
+    await addVirtualAuthenticator(page);
+    await page.goto("/");
+    const auditButton = page.getByRole("button", { name: "Audit a domain" }).first();
+    await retryUntilSettled(async () => {
+      await page.getByLabel("Domain or URL to audit").first().fill(SCAN_FIXTURE_DOMAIN);
+      await auditButton.click();
+      await expect(auditButton).toBeDisabled({ timeout: 1_000 });
+    });
+    await page.waitForURL("**/audit/*", { timeout: 45_000 });
+    await ensureRealPage(page);
+    await retryUntilSettled(async () => {
+      await Promise.all([
+        page.waitForResponse(
+          (res) => res.url().includes("/continuation") && res.request().method() === "POST",
+        ),
+        page.getByRole("button", { name: "Save and monitor this domain" }).click(),
+      ]);
+    });
+    await page.waitForURL("**/sign-in?continuation=*");
+    await ensureRealPage(page);
+    await page.getByLabel("Display name").fill(`A11y Domain Detail ${Date.now()}`);
+    await Promise.all([
+      page.waitForResponse((res) => res.url().includes("/api/auth/register/finish")),
+      page.getByRole("button", { name: "Create account with a passkey" }).click(),
+    ]);
+    await page.getByText("Save your recovery codes now").waitFor();
+    await page.getByLabel("I have saved these recovery codes somewhere safe.").check();
+    await page.getByRole("button", { name: "Continue to dashboard" }).click();
+    await page.waitForURL("**/app/continue?continuation=*");
+    await ensureRealPage(page);
+    await retryUntilSettled(async () => {
+      await Promise.all([
+        page.waitForResponse(
+          (res) =>
+            res.url().includes("/api/audit/continuation/") && res.request().method() === "POST",
+        ),
+        page.getByRole("button", { name: "Confirm and save" }).click(),
+      ]);
+    });
+    await page.getByRole("link", { name: /^Go to/ }).click();
+    await page.waitForURL("**/app/domains/*");
+    await ensureRealPage(page);
+    await expect(page.getByRole("heading", { name: "Current policy summary" })).toBeVisible();
+    const results = await new AxeBuilder({ page })
+      .withTags(["wcag2a", "wcag2aa", "wcag22aa"])
+      .analyze();
+    expect(results.violations, JSON.stringify(results.violations, null, 2)).toEqual([]);
+  });
+
   test("Super Admin global dashboard has no automatically detectable WCAG 2.2 AA violations", async ({
     page,
   }) => {

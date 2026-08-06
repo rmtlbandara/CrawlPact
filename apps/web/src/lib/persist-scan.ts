@@ -12,8 +12,9 @@ function nowIso(): string {
 
 /** Unkeyed SHA-256 hex digest — used only for change-detection/evidence
  * hashing of already-public page content, never for anything sensitive (see
- * hashIp/hashShareToken for the HMAC pattern used where secrecy matters). */
-async function sha256Hex(text: string): Promise<string> {
+ * hashIp/hashShareToken for the HMAC pattern used where secrecy matters).
+ * Exported for reuse by domain-timeline.ts's event fingerprinting (Phase 8). */
+export async function sha256Hex(text: string): Promise<string> {
   const digest = await crypto.subtle.digest("SHA-256", new TextEncoder().encode(text));
   return Array.from(new Uint8Array(digest), (b) => b.toString(16).padStart(2, "0")).join("");
 }
@@ -262,6 +263,10 @@ export async function persistScan(
         sourceUrl: finding.sourceUrl,
         rulesetVersionId: params.rulesetVersionId,
         createdAt: nowIso(),
+        // Phase 8: first-class copy of the same fingerprint, so cross-scan
+        // finding-lifecycle classification can query it directly instead of
+        // JSON-parsing `evidence` on every row. See migration 0027.
+        fingerprint: finding.fingerprint,
       }),
     );
   }

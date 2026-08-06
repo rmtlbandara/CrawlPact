@@ -29,10 +29,10 @@ not itself implement anything.
 | 5   | Anonymous Audit Result and Account-Conversion Flow         | P1       | Phase 4      | **complete** (see `docs/reports/PHASE_05_ANONYMOUS_AUDIT_CONVERSION_COMPLETION_REPORT.md`)                                                            |
 | 6   | Pricing, Plan Architecture and Checkout Continuity         | P1       | Phase 4      | **complete** (see `docs/reports/PHASE_06_PRICING_PADDLE_CHECKOUT_COMPLETION_REPORT.md`)                                                               |
 | 7   | Vertical Landing Pages and Platform SEO Architecture       | P2       | Phases 2–4   | **substantially complete** (PR #82, merged `4637e1a`, deployed to production; see `docs/reports/PHASE_07_VERTICAL_PLATFORM_SEO_COMPLETION_REPORT.md`) |
-| 8   | Saved-Domain Experience and Change Timeline                | P1       | Phase 5      | not started                                                                                                                                           |
+| 8   | Saved-Domain Experience and Change Timeline                | P1       | Phase 5      | **complete** (see `docs/reports/PHASE_08_SAVED_DOMAIN_CHANGE_TIMELINE_COMPLETION_REPORT.md`)                                                          |
 | 9   | Agency Workspace and Portfolio Workflows                   | P2       | Phase 8      | not started                                                                                                                                           |
 | 10  | Notification Channels and Monitoring Reliability           | P1       | Phase 8      | not started                                                                                                                                           |
-| 11  | Database, Storage, Retention and Performance Hardening     | P0       | Phase 1      | not started                                                                                                                                           |
+| 11  | Database, Storage, Retention and Performance Hardening     | P0       | Phase 1      | **complete** (PR #86, merged `36166a4`, deployed to production; see `docs/reports/PHASE_11_DATABASE_STORAGE_PERFORMANCE_COMPLETION_REPORT.md`)        |
 | 12  | Security, CI, Dependency and Quality-Gate Improvements     | P0       | Phase 1      | not started                                                                                                                                           |
 | 13  | Analytics, Consent and Product Measurement Strategy        | P1       | Phase 1      | not started                                                                                                                                           |
 | 14  | Status, Operations and Service Reliability                 | P1       | Phase 11     | not started                                                                                                                                           |
@@ -217,7 +217,20 @@ PRODUCT_TERMINOLOGY_GLOSSARY,CLAIMS_AND_MESSAGING_GUIDE,MESSAGING_SURFACE_INVENT
   the Phase 2 brand system (RISK-028), and adding `"description"` fields to the 10 `package.json`
   files that currently lack one.
 - **Dependencies**: Phase 5.
-- **Status**: not started.
+- **Status**: complete — merged and deployed to production; see
+  `docs/reports/PHASE_08_SAVED_DOMAIN_CHANGE_TIMELINE_COMPLETION_REPORT.md`. Closed messaging-audit
+  items C3 and C5 (scan-history now reuses `STATUS_LABEL`/`STATUS_TONE`; `scan_diffs`-equivalent
+  data now has a real customer-facing timeline via the new `domain_change_events` table). The
+  export/report-export test-coverage gap and the two unrelated backlog items (RISK-028 tagline
+  reconciliation, `package.json` descriptions) were explicitly **not** absorbed into this pass —
+  out of this phase's own stated scope (saved-domain experience and change timeline only); left
+  open at their existing risk/backlog entries rather than silently dropped or silently expanded
+  into.
+- **Note**: the roadmap's original objective text above (written before this phase's own detailed
+  execution prompt existed) also named "close the export/report-export test-coverage gap" and two
+  unrelated backlog items as in-scope — the actual execution prompt this phase was run against
+  scoped it to saved-domain experience and change timeline only, so those three items remain open,
+  recorded honestly here rather than silently claimed complete.
 
 ### Phase 9 — Agency Workspace and Portfolio Workflows
 
@@ -243,13 +256,15 @@ PRODUCT_TERMINOLOGY_GLOSSARY,CLAIMS_AND_MESSAGING_GUIDE,MESSAGING_SURFACE_INVENT
 - **Dependencies**: Phase 1.
 - **Completion gate**: `scan_diffs` FKs have explicit `ON DELETE` behavior; table-count
   discrepancy explained/fixed; a documented decision exists for the three no-purge-job tables.
-- **Status**: complete on branch `phase-11-database-storage-performance-hardening`, not yet
-  merged/deployed. `scan_diffs`/`audit_continuations` FKs fixed (migrations `0022`/`0023`); the
-  table-count discrepancy re-measured and found not to reproduce against current
-  schema/production (42=42 exact match); a documented decision recorded for the three
-  no-purge-job tables (`docs/data/PHASE_11_RETENTION_DECISION_MATRIX.md` — implementation deferred
-  pending approval, per the phase's own scope boundary, not because the decision itself is
-  incomplete); the CPU-budget risk re-modeled with concrete tightening measures shipped
+- **Status**: complete — merged (PR #86, `36166a4`; follow-up test-timeout fix PR #87) and
+  deployed to production 2026-08-05 (Worker `7d1b4cc4-2232-4c21-9f91-5b154f94e5c2`).
+  `scan_diffs`/`audit_continuations` FKs fixed (migrations `0022`/`0023`, independently
+  re-verified live via production `PRAGMA foreign_key_list`); the table-count discrepancy
+  re-measured and found not to reproduce against current schema/production (42=42 exact match); a
+  documented decision recorded for the three no-purge-job tables
+  (`docs/data/PHASE_11_RETENTION_DECISION_MATRIX.md` — implementation deferred pending approval,
+  per the phase's own scope boundary, not because the decision itself is incomplete); the
+  CPU-budget risk re-modeled with concrete tightening measures shipped
   (`docs/operations/PHASE_11_CLOUDFLARE_PLAN_DECISION.md`). Full detail:
   `docs/reports/PHASE_11_DATABASE_STORAGE_PERFORMANCE_COMPLETION_REPORT.md`.
 

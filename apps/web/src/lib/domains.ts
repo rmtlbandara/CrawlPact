@@ -5,6 +5,7 @@ import type { BatchImportResult, SavedDomain } from "@crawlpact/core";
 import { normalizeTarget } from "@crawlpact/core";
 import { POLICY_PRESETS } from "@crawlpact/policy";
 import type { PolicyPreset } from "@crawlpact/policy";
+import { generatePresetChangeEvent, getLatestChangeEventPerDomain } from "./domain-timeline";
 
 type DomainRow = typeof schema.domains.$inferSelect;
 
@@ -12,7 +13,11 @@ function isPolicyPreset(value: string): value is PolicyPreset {
   return (POLICY_PRESETS as readonly string[]).includes(value);
 }
 
-function toSavedDomain(row: DomainRow, openFindingsCount: number): SavedDomain {
+function toSavedDomain(
+  row: DomainRow,
+  openFindingsCount: number,
+  recentChange?: { changeOrigin: string; summary: string } | null,
+): SavedDomain {
   return {
     domainId: row.id,
     displayName: row.displayName,
@@ -24,6 +29,8 @@ function toSavedDomain(row: DomainRow, openFindingsCount: number): SavedDomain {
     nextScanAt: row.nextScanAt,
     currentScore: row.currentScore,
     openFindingsCount,
+    recentChangeOrigin: recentChange?.changeOrigin ?? null,
+    recentChangeSummary: recentChange?.summary ?? null,
   };
 }
 
@@ -42,8 +49,18 @@ export async function listDomains(db: Database, userId: string): Promise<SavedDo
     .from(schema.domains)
     .where(and(eq(schema.domains.ownerUserId, userId), isNull(schema.domains.deletedAt)));
 
+  // Bounded by the account's own saved-domain limit (≤100, the Agency
+  // ceiling) — one batched recent-change query for the whole page, not one
+  // per row (see getLatestChangeEventPerDomain's own no-N+1 rationale).
+  const recentChanges = await getLatestChangeEventPerDomain(
+    db,
+    rows.map((r) => r.id),
+  );
+
   return Promise.all(
-    rows.map(async (row) => toSavedDomain(row, await openFindingsCountFor(db, row.lastScanId))),
+    rows.map(async (row) =>
+      toSavedDomain(row, await openFindingsCountFor(db, row.lastScanId), recentChanges.get(row.id)),
+    ),
   );
 }
 
@@ -184,6 +201,9 @@ export async function updateDomain(
     return { ok: false, reason: "invalid_preset" };
   }
 
+  const existing = await getOwnedDomain(db, userId, domainId);
+  if (!existing) return { ok: false, reason: "not_found" };
+
   const patch: Partial<typeof schema.domains.$inferInsert> = {
     updatedAt: new Date().toISOString(),
   };
@@ -206,6 +226,24 @@ export async function updateDomain(
     .returning({ id: schema.domains.id });
 
   if (result.length === 0) return { ok: false, reason: "not_found" };
+
+  // Phase 8 (PHASE_08_POLICY_OBJECTIVE_DECISION.md): a real preset change is
+  // recorded as an operational timeline event (SRS FR-POL-004, "preset
+  // changes shall be recorded in account history"). Never blocks the
+  // mutation itself on a timeline-write failure.
+  if (input.preset !== undefined && input.preset !== existing.preset) {
+    try {
+      await generatePresetChangeEvent(db, {
+        domainId,
+        fromPreset: existing.preset,
+        toPreset: input.preset,
+        observedAt: new Date().toISOString(),
+      });
+    } catch (error) {
+      console.error("Preset-change timeline event generation failed", { domainId, error });
+    }
+  }
+
   return { ok: true };
 }
 
