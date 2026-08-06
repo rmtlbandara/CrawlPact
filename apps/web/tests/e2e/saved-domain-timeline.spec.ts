@@ -95,10 +95,16 @@ test.describe("Saved-domain experience", () => {
     // compare against, so the real, honest first-baseline copy renders —
     // never a fabricated "no changes ever" claim.
     await expect(page.getByRole("heading", { name: "What changed" })).toBeVisible();
+    // .first(): the policy-change timeline below (once its async fetch
+    // resolves) renders this same baseline event's summary a second time —
+    // this assertion only needs to confirm the text is present here, not
+    // that it's unique on the page.
     await expect(
-      page.getByText(
-        "This is the first saved baseline. Future scans will appear in the change timeline when a meaningful difference is detected.",
-      ),
+      page
+        .getByText(
+          "This is the first saved baseline. Future scans will appear in the change timeline when a meaningful difference is detected.",
+        )
+        .first(),
     ).toBeVisible();
 
     // Section 4 — monitoring status, including the plan/frequency fields

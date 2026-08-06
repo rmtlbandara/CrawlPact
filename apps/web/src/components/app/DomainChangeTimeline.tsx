@@ -145,12 +145,13 @@ export function DomainChangeTimeline({ domainId }: { domainId: string }) {
         </ol>
       )}
 
-      {retentionBoundary && (
+      {/* The general "retains history for N months" sentence lives once, in
+          the page's own "History retention" section below — this only adds
+          the timeline-specific case where older changes are known to have
+          aged out, avoiding duplicate wording for the common case. */}
+      {retentionBoundary?.hasExpiredHistory && (
         <p className="text-supporting text-neutral-500">
-          This account retains domain audit history for {retentionBoundary.retentionMonths} month
-          {retentionBoundary.retentionMonths === 1 ? "" : "s"}.
-          {retentionBoundary.hasExpiredHistory &&
-            " Earlier scan details are outside the retained history for this account."}
+          Earlier scan details are outside the retained history for this account.
         </p>
       )}
 
