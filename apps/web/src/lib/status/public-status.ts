@@ -1,7 +1,7 @@
 import { desc, eq } from "drizzle-orm";
 import { schema } from "@crawlpact/database";
 import type { Database } from "@crawlpact/database";
-import { getComponentHealth, getSystemStatusSummary } from "../admin/health";
+import { getComponentHealth, getSystemStatusSummary, type SystemStatus } from "../admin/health";
 import { STATUS_COMPONENTS, type StatusComponentKey } from "./components";
 
 /**
@@ -137,10 +137,18 @@ export async function getPublicStatus(db: Database): Promise<PublicStatusReport>
     for (const component of STATUS_COMPONENTS) {
       const internalName = INTERNAL_COMPONENT_MAP[component.key];
       const match = internalName ? componentHealth.find((c) => c.name === internalName) : null;
+      // Public-status-and-changelog trust correction: an internal signal
+      // only ever escalates the *public* level when it represents real,
+      // current user impact (`ComponentHealth.publicImpact` — see
+      // lib/admin/health.ts). An internal `degraded` with `publicImpact:
+      // false` (e.g. a background job's own operational concern) stays at
+      // the foundational baseline here — visible in Super Admin, never on
+      // the public page. Maintenance always escalates: it is itself a
+      // real, deliberate, user-facing state, never an unattended warning.
       const level: PublicStatusLevel = match
         ? match.status === "maintenance"
           ? "maintenance"
-          : match.status === "degraded"
+          : match.status === "degraded" && match.publicImpact
             ? "degraded_performance"
             : "operational"
         : foundationalLevel;
@@ -198,5 +206,129 @@ export async function getPublicStatus(db: Database): Promise<PublicStatusReport>
     currentIncidents,
     scheduledMaintenance,
     recentlyResolved,
+  };
+}
+
+// --- Super Admin dual public/internal view -------------------------------
+// Public-status-and-changelog trust correction. Everything below is
+// read-only and additive — it never changes what `getPublicStatus` computes
+// or returns, it only exposes the internal half of the same real signals
+// (already computed by `getComponentHealth`/`getSystemStatusSummary`)
+// alongside the public result, so an administrator can see both without
+// the public page itself ever leaking internal detail. Nothing here is
+// persisted; every field is computed fresh on each call, same as the public
+// report.
+
+const INTERNAL_OVERALL_RANK: Record<SystemStatus, number> = {
+  operational: 0,
+  maintenance: 1,
+  degraded: 2,
+};
+
+function worseInternal(a: SystemStatus, b: SystemStatus): SystemStatus {
+  return INTERNAL_OVERALL_RANK[a] >= INTERNAL_OVERALL_RANK[b] ? a : b;
+}
+
+export type ComponentStatusOverview = {
+  key: StatusComponentKey;
+  label: string;
+  publicStatus: PublicStatusLevel;
+  /** The active/scheduled public incident affecting this component, if any — same object the public page itself renders, never additional internal-only incident data. */
+  activeIncident: { id: string; title: string } | null;
+  /** `null` when no internal health check is mapped to this public component at all (e.g. website, dashboard_domains, reports_sharing — no dedicated internal signal exists for them today). */
+  internalStatus: SystemStatus | null;
+  internalReason: string | null;
+  publicImpact: boolean | null;
+  verificationSource: string | null;
+};
+
+export type StatusOverview = {
+  checkedAt: string;
+  publicOverall: PublicStatusLevel;
+  internalOverall: SystemStatus;
+  /** Whether users are currently experiencing real degraded service — derived the same way the public page's own overall status is, never from internal-only signals. */
+  hasPublicImpact: boolean;
+  activePublicIncidentCount: number;
+  /** Real-time count of components whose internal status is `degraded` right now but whose `publicImpact` is `false` — the exact set of things Super Admin can see that the public page correctly never shows. */
+  internalWarningCount: number;
+  components: ComponentStatusOverview[];
+};
+
+const VERIFICATION_SOURCE: Partial<Record<StatusComponentKey, string>> = {
+  scheduled_monitoring: "scheduled_job_runs (monitoring_sweep)",
+  billing_checkout: "webhook_events (last 1 hour)",
+  accounts_passkeys: "security_events (auth_failure, last 1 hour)",
+};
+
+/**
+ * The combined public + internal status view for Super Admin (SRS §28.10,
+ * extended by the public-status-and-changelog trust correction). Reuses
+ * `getPublicStatus` and `getComponentHealth` directly rather than
+ * re-deriving their logic, so there is exactly one place that decides "is
+ * this real user impact" (`ComponentHealth.publicImpact`) and exactly one
+ * place that turns internal signals into a public level
+ * (`getPublicStatus`'s own escalation logic) — this function only ever
+ * reads their outputs side by side.
+ */
+export async function getStatusOverview(db: Database): Promise<StatusOverview> {
+  const [publicReport, componentHealth, summary] = await Promise.all([
+    getPublicStatus(db),
+    getComponentHealth(db).catch(() => null),
+    getSystemStatusSummary(db).catch(() => null),
+  ]);
+
+  const activeIncidentByComponent = new Map<StatusComponentKey, { id: string; title: string }>();
+  for (const incident of [...publicReport.currentIncidents, ...publicReport.scheduledMaintenance]) {
+    for (const key of incident.affectedComponents) {
+      activeIncidentByComponent.set(key, { id: incident.id, title: incident.title });
+    }
+  }
+
+  // Internal overall severity reflects EVERY real internal check
+  // (`componentHealth` in full — including checks with no public-component
+  // mapping at all, like the retention job), not just the subset that
+  // happens to have a public analog. A real bug caught by this file's own
+  // test before it shipped: computing this only from the mapped subset
+  // silently hid a genuinely degraded internal-only check from Super
+  // Admin's own "internal overall state" — the opposite of this
+  // correction's purpose.
+  let internalOverall: SystemStatus = (componentHealth ?? []).reduce(
+    (acc, c) => worseInternal(acc, c.status),
+    "operational" as SystemStatus,
+  );
+  let internalWarningCount = (componentHealth ?? []).filter(
+    (c) => c.status === "degraded" && !c.publicImpact,
+  ).length;
+
+  const components: ComponentStatusOverview[] = STATUS_COMPONENTS.map((c) => {
+    const internalName = INTERNAL_COMPONENT_MAP[c.key];
+    const match = internalName
+      ? (componentHealth?.find((h) => h.name === internalName) ?? null)
+      : null;
+    const publicComponent = publicReport.components.find((p) => p.key === c.key);
+    return {
+      key: c.key,
+      label: c.label,
+      publicStatus: publicComponent?.status ?? "status_unavailable",
+      activeIncident: activeIncidentByComponent.get(c.key) ?? null,
+      internalStatus: match?.status ?? null,
+      internalReason: match?.detail ?? null,
+      publicImpact: match?.publicImpact ?? null,
+      verificationSource: VERIFICATION_SOURCE[c.key] ?? null,
+    };
+  });
+  if (summary?.status === "maintenance")
+    internalOverall = worseInternal(internalOverall, "maintenance");
+  if (!componentHealth || !summary) internalOverall = "degraded";
+
+  return {
+    checkedAt: publicReport.checkedAt,
+    publicOverall: publicReport.overall,
+    internalOverall,
+    hasPublicImpact: publicReport.overall !== "operational",
+    activePublicIncidentCount:
+      publicReport.currentIncidents.length + publicReport.scheduledMaintenance.length,
+    internalWarningCount,
+    components,
   };
 }

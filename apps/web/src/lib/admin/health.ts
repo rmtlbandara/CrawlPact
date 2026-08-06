@@ -64,11 +64,34 @@ export async function getSystemStatusSummary(
   return { status: reasons.length === 0 ? "operational" : "degraded", reasons };
 }
 
-export type ComponentHealth = { name: string; status: SystemStatus; detail: string };
+export type ComponentHealth = {
+  name: string;
+  status: SystemStatus;
+  detail: string;
+  /**
+   * Public-status-and-changelog trust correction: whether this internal
+   * signal represents real, current user-facing impact — as opposed to an
+   * internal/administrative/historical concern with no effect on what a
+   * visitor experiences right now. `getPublicStatus` (lib/status/public-status.ts)
+   * only ever escalates a component's *public* status when this is `true`;
+   * an internal `degraded` with `publicImpact: false` stays visible here,
+   * in Super Admin, without ever reaching the public page. See
+   * docs/architecture/INCIDENT_TRACKING_SYSTEM_DESIGN.md §6 and
+   * docs/reports/PUBLIC_STATUS_AND_CHANGELOG_TRUST_CORRECTION_REPORT.md for
+   * the real bug this fixed: an all-time (no time window) failed-webhook
+   * count was permanently escalating the public "Billing and checkout"
+   * component to Degraded performance based on a week-old, already-resolved
+   * batch of failures with zero recent occurrences.
+   */
+  publicImpact: boolean;
+};
+
+const ONE_HOUR_MS = 60 * 60 * 1000;
 
 /** Per-component breakdown for the dedicated /admin/health page (SRS §28.10). */
 export async function getComponentHealth(db: Database): Promise<ComponentHealth[]> {
   const summary = await getSystemStatusSummary(db);
+  const oneHourAgoIso = new Date(Date.now() - ONE_HOUR_MS).toISOString();
 
   const [lastMonitoringJob] = await db
     .select()
@@ -84,20 +107,36 @@ export async function getComponentHealth(db: Database): Promise<ComponentHealth[
     .orderBy(desc(schema.scheduledJobRuns.startedAt))
     .limit(1);
 
+  // Public-status-and-changelog trust correction: previously had no time
+  // window at all, so a single historical batch of failures (e.g. a bug
+  // that was found and fixed days ago) kept this component — and therefore
+  // the public "Billing and checkout" status — permanently degraded. Now
+  // scoped to the last hour, matching this file's own existing convention
+  // for `recentAuthFailures`/`recentInvalidSignatures` below.
   const [recentWebhookFailures] = await db
     .select({ n: sql<number>`count(*)` })
     .from(schema.webhookEvents)
-    .where(sql`${schema.webhookEvents.status} in ('failed', 'permanently_failed')`);
+    .where(
+      sql`${schema.webhookEvents.status} in ('failed', 'permanently_failed') and ${schema.webhookEvents.receivedAt} >= ${oneHourAgoIso}`,
+    );
 
   const [recentAuthFailures] = await db
     .select({ n: sql<number>`count(*)` })
     .from(schema.securityEvents)
     .where(
-      sql`${schema.securityEvents.eventType} = 'auth_failure' and ${schema.securityEvents.createdAt} >= ${new Date(Date.now() - 60 * 60 * 1000).toISOString()}`,
+      sql`${schema.securityEvents.eventType} = 'auth_failure' and ${schema.securityEvents.createdAt} >= ${oneHourAgoIso}`,
     );
 
+  const webhookFailureCount = recentWebhookFailures?.n ?? 0;
+  const authFailureCount = recentAuthFailures?.n ?? 0;
+
   return [
-    { name: "D1 database", status: "operational", detail: "Reachable (this page loaded from it)." },
+    {
+      name: "D1 database",
+      status: "operational",
+      detail: "Reachable (this page loaded from it).",
+      publicImpact: false,
+    },
     {
       name: "API",
       status: summary.status === "maintenance" ? "maintenance" : "operational",
@@ -105,6 +144,11 @@ export async function getComponentHealth(db: Database): Promise<ComponentHealth[
         summary.status === "maintenance"
           ? "Maintenance mode is enabled."
           : "Serving requests normally.",
+      // Maintenance mode is a deliberate, real, user-facing state — every
+      // other "API" concern this summary can report (stuck jobs, retention
+      // errors, elevated invalid signatures) is an internal/administrative
+      // signal with no direct effect on a page load right now.
+      publicImpact: summary.status === "maintenance",
     },
     {
       name: "Scheduler / monitoring sweep",
@@ -112,6 +156,12 @@ export async function getComponentHealth(db: Database): Promise<ComponentHealth[
       detail: lastMonitoringJob
         ? `Last run ${lastMonitoringJob.startedAt}: ${lastMonitoringJob.status}.`
         : "No monitoring sweep has run yet.",
+      // A failed scheduled sweep delays the *next* monitoring email/report —
+      // it does not stop a visitor from using the site at the moment they
+      // load the status page, so it is an internal operational concern, not
+      // current public impact (matches the public-impact rule's own
+      // "internal test/administrative concern" framing).
+      publicImpact: false,
     },
     {
       name: "Data retention job",
@@ -123,16 +173,32 @@ export async function getComponentHealth(db: Database): Promise<ComponentHealth[
       detail: lastRetentionJob
         ? `Last run ${lastRetentionJob.startedAt}: ${lastRetentionJob.status}.`
         : "No retention job has run yet.",
+      // Not mapped to any public component at all (purely an internal
+      // background job) — never has public impact by construction.
+      publicImpact: false,
     },
     {
       name: "Paddle webhook processing",
-      status: (recentWebhookFailures?.n ?? 0) > 10 ? "degraded" : "operational",
-      detail: `${recentWebhookFailures?.n ?? 0} webhook event(s) currently in a failed state.`,
+      status: webhookFailureCount > 0 ? "degraded" : "operational",
+      detail: `${webhookFailureCount} webhook event(s) failed processing in the last hour.`,
+      // A single recent failure surfaces internally immediately (this repo's
+      // existing "no safe gradual zone" philosophy for real, unresolved
+      // errors) but is not, on its own, evidence of widespread user impact —
+      // Paddle retries delivery, and one failed processing attempt does not
+      // mean a customer's purchase was lost. Three or more recent failures
+      // is treated as a real pattern (matches the public-impact rule's own
+      // "widespread elevated errors" example), not an isolated blip.
+      publicImpact: webhookFailureCount >= 3,
     },
     {
       name: "Authentication",
-      status: (recentAuthFailures?.n ?? 0) > 50 ? "degraded" : "operational",
-      detail: `${recentAuthFailures?.n ?? 0} authentication failure(s) in the last hour.`,
+      status: authFailureCount > 50 ? "degraded" : "operational",
+      detail: `${authFailureCount} authentication failure(s) in the last hour.`,
+      // Already time-windowed and already set at a bar well above normal
+      // wrong-password/bad-passkey noise — a real breach past that bar is
+      // treated as real, current public impact (visitors cannot reliably
+      // sign in), unlike the background-job signals above.
+      publicImpact: authFailureCount > 50,
     },
   ];
 }

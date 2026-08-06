@@ -101,6 +101,9 @@ jobs:
       - name: Validate legal, trust, and contact governance
         run: pnpm trust:validate
 
+      - name: Validate status and changelog trust presentation
+        run: pnpm status:validate
+
       - name: Dependency vulnerability check
         run: pnpm audit --audit-level=critical
         # Reviewed 2026-07-29 (re-reviewed during the release-flow

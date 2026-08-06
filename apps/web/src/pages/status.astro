@@ -31,6 +31,18 @@ const LEVEL_TONE_CLASS: Record<PublicStatusLevel, string> = {
   status_unavailable: "text-neutral-500",
 };
 
+const LEVEL_SUMMARY: Record<PublicStatusLevel, string> = {
+  operational: "All public CrawlPact services are operating normally.",
+  degraded_performance:
+    "Some CrawlPact services are experiencing degraded performance. See components and incidents below for detail.",
+  partial_outage:
+    "Part of CrawlPact is currently unavailable. See components and incidents below for detail.",
+  major_outage: "CrawlPact is currently broadly unavailable. See incidents below for detail.",
+  maintenance: "Scheduled maintenance is currently affecting some CrawlPact services.",
+  status_unavailable:
+    "Current status could not be determined. This page never reports Operational when a check fails.",
+};
+
 // The two components with a real, verifiable config-derived signal keep
 // that detail text — this system only escalates their displayed status
 // with incidents, it does not replace the existing checks.
@@ -63,6 +75,7 @@ function formatTimestamp(iso: string): string {
     <div class="mt-6 rounded-card border border-neutral-200 bg-white px-4 py-3">
       <p class="text-supporting text-neutral-500">Overall status</p>
       <p class={`text-h3 ${LEVEL_TONE_CLASS[report.overall]}`}>{LEVEL_LABEL[report.overall]}</p>
+      <p class="mt-1 text-body text-neutral-700">{LEVEL_SUMMARY[report.overall]}</p>
       <p class="mt-1 text-supporting text-neutral-500">
         Last checked {formatTimestamp(report.checkedAt)}
       </p>
@@ -157,17 +170,9 @@ function formatTimestamp(iso: string): string {
       )
     }
 
-    <h2 class="mt-8 text-h2 text-neutral-950">Historical uptime</h2>
-    <p class="mt-3 text-body text-neutral-700">
-      CrawlPact does not yet have reliable historical uptime measurement in place, so no uptime
-      percentage is published here. This section will show real measured history once that exists —
-      not before.
-    </p>
-
     <p class="mt-8 text-supporting text-neutral-500">
       See <a href="/security" class="text-brand-700 underline underline-offset-2">security</a> for how
-      CrawlPact handles vulnerability reports, and the project's{" "}
-      <code>docs/status/IMPLEMENTATION_STATUS.md</code> for full engineering-level detail.
+      CrawlPact handles vulnerability reports.
     </p>
   </article>
 </MarketingLayout>

@@ -205,6 +205,35 @@ describe("Super Admin scheduler and health monitoring (real D1)", () => {
     expect(scheduler?.detail).toMatch(/running|failed|completed/);
   });
 
+  it("additionally returns the public-status-and-changelog trust correction's dual public/internal overview", async () => {
+    const response = await healthRoute(ctx(getRequest("http://x/api/admin/health", adminCookie)));
+    const body = await readJson<{
+      statusOverview: {
+        publicOverall: string;
+        internalOverall: string;
+        hasPublicImpact: boolean;
+        components: { key: string; publicStatus: string; internalStatus: string | null }[];
+      };
+    }>(response);
+    if (!body.ok) throw new Error("health failed");
+    // The failed data_retention_purge runs seeded above (no public-component
+    // mapping at all) degrade the true internal overall state; this must
+    // never degrade the public one, which has no signal for that job either.
+    expect(body.data.statusOverview.internalOverall).toBe("degraded");
+    expect(body.data.statusOverview.publicOverall).toBe("operational");
+    expect(body.data.statusOverview.hasPublicImpact).toBe(false);
+    const monitoring = body.data.statusOverview.components.find(
+      (c) => c.key === "scheduled_monitoring",
+    );
+    // The last real monitoring_sweep row is the stuck (still "running") one
+    // seeded above, not a "failed" one — getComponentHealth's own check only
+    // degrades on a "failed" status, so this component's internal state is
+    // genuinely "operational" here too; this assertion still matters as a
+    // real regression guard (a future change to that check must not let a
+    // stuck-but-not-failed run leak as public "Degraded" either).
+    expect(monitoring?.publicStatus).toBe("operational");
+  });
+
   it("rejects a non-admin from every scheduler/health route", async () => {
     const response = await listJobsRoute(ctx(getRequest("http://x/api/admin/jobs", normalCookie)));
     expect(response.status).toBe(403);

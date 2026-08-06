@@ -15,7 +15,7 @@ if (!admin) return Astro.redirect("/sign-in");
 <AdminLayout title="System health" displayName={admin.user.displayName}>
   <AdminPageHeader
     title="System health"
-    description="Real, data-derived status per component — never a hardcoded 'all good' (SRS §28.10)."
+    description="Real, data-derived status per component — never a hardcoded 'all good' (SRS §28.10). Shows the public status alongside internal diagnostics, clearly labelled."
   />
   <div class="mt-6">
     <HealthOverview client:load />
