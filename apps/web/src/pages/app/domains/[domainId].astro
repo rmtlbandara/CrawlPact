@@ -2,12 +2,22 @@
 export const prerender = false;
 import AppLayout from "../../../layouts/AppLayout.astro";
 import { DomainDetailActions } from "../../../components/app/DomainDetailActions";
-import { ScoreComponent, ErrorState, StatusChip } from "@crawlpact/ui";
-import { scoreLabelFor } from "@crawlpact/policy";
+import { DomainChangeTimeline } from "../../../components/app/DomainChangeTimeline";
+import { DomainScanHistory } from "../../../components/app/DomainScanHistory";
+import { ShareReportDialog } from "../../../components/app/ShareReportDialog";
+import { AuditReportView } from "../../../components/AuditReportView";
+import { ErrorState, StatusChip } from "@crawlpact/ui";
 import { createDb } from "@crawlpact/database";
 import { getEnv } from "../../../lib/env";
 import { getPageSession } from "../../../lib/auth/page-session";
-import { getOwnedDomain, listScansForDomain } from "../../../lib/domains";
+import { getOwnedDomain } from "../../../lib/domains";
+import { getPlan } from "../../../lib/plan";
+import { loadReportViewData } from "../../../lib/report-view-data";
+import { listDomainChangeEvents } from "../../../lib/domain-timeline";
+import { retentionBoundaryFor } from "../../../lib/scan-history";
+import { computePolicySummary } from "../../../lib/policy-summary";
+import { trackEvent } from "../../../lib/analytics";
+import { FAILURE_PAUSE_THRESHOLD } from "../../../lib/monitoring";
 
 const db = createDb(getEnv().DB);
 const result = await getPageSession(db, Astro.request);
@@ -16,12 +26,48 @@ const { user } = result;
 
 const { domainId } = Astro.params;
 const domain = domainId ? await getOwnedDomain(db, user.id, domainId) : null;
-const scans = domain ? await listScansForDomain(db, domain.id) : [];
+
+const plan = domain ? await getPlan(db, user.planId) : null;
+const reportData = domain?.lastScanId ? await loadReportViewData(db, domain.lastScanId) : null;
+const { events: recentEvents } = domain
+  ? await listDomainChangeEvents(db, domain.id, { limit: 1 })
+  : { events: [] };
+const latestEvent = recentEvents[0] ?? null;
+const retentionBoundary =
+  domain && plan ? await retentionBoundaryFor(db, domain.id, plan.historyRetentionDays) : null;
+
+if (domain && plan) {
+  await trackEvent(db, "saved_domain_opened", { userId: user.id, properties: { plan: plan.id } });
+  if (reportData?.report) {
+    await trackEvent(db, "domain_current_state_viewed", { userId: user.id });
+  }
+}
+
+const policySummary = reportData?.report
+  ? computePolicySummary(reportData.report, domain?.monitoringState)
+  : null;
+
+const MONITORING_FREQUENCY_LABEL: Record<string, string> = {
+  none: "Not monitored (plan does not include monitoring)",
+  monthly: "Monthly",
+  weekly: "Weekly",
+};
+
+const monitoringDisplayState = !domain
+  ? null
+  : domain.monitoringFrequency === "none"
+    ? "Plan does not include monitoring"
+    : domain.monitoringState === "paused" &&
+        domain.consecutiveFailureCount >= FAILURE_PAUSE_THRESHOLD
+      ? "Paused after repeated failures"
+      : domain.monitoringState === "paused"
+        ? "Paused"
+        : "Active";
 ---
 
 <AppLayout title={domain ? domain.displayName : "Domain"} displayName={user.displayName}>
   {
-    !domain ? (
+    !domain || !plan ? (
       <ErrorState
         title="Domain not found"
         description="This domain doesn't exist or isn't saved to your account."
@@ -31,63 +77,191 @@ const scans = domain ? await listScansForDomain(db, domain.id) : [];
         <a href="/app/domains" class="text-supporting font-medium text-brand-700">
           ← All domains
         </a>
+
+        {/* Section 1 — Domain header and primary actions */}
         <div class="mt-3 flex flex-wrap items-start justify-between gap-4">
           <div>
             <h1 class="text-h1 text-neutral-950">{domain.displayName}</h1>
             <p class="text-body text-neutral-600">{domain.canonicalOrigin}</p>
+            <p class="mt-1 text-supporting text-neutral-500">
+              Last successful scan:{" "}
+              {domain.lastScanAt ? new Date(domain.lastScanAt).toLocaleString() : "None yet"}
+            </p>
           </div>
-          {domain.lastScanId && (
+          <div class="no-print flex flex-wrap items-center gap-2">
+            {monitoringDisplayState && (
+              <StatusChip
+                tone={monitoringDisplayState === "Active" ? "success" : "unknown"}
+                label={monitoringDisplayState}
+              />
+            )}
+            {domain.lastScanId && (
+              <a
+                href={`/audit/${domain.lastScanId}`}
+                class="inline-block rounded-control border border-neutral-300 bg-white px-4 py-2 text-body font-medium text-neutral-800 hover:bg-neutral-50"
+              >
+                View current report
+              </a>
+            )}
+            {domain.lastScanId && (
+              <ShareReportDialog
+                client:load
+                auditId={domain.lastScanId}
+                agencyBrandingAllowed={plan.agencyBrandingEnabled}
+              />
+            )}
+          </div>
+        </div>
+
+        {/* Section 2 — Current policy summary */}
+        <div class="mt-6 rounded-card border border-neutral-200 bg-white p-5">
+          <h2 class="text-card-heading text-neutral-950">Current policy summary</h2>
+          {!policySummary ? (
+            <p class="mt-2 text-body text-neutral-600">
+              CrawlPact is establishing the first saved baseline.
+            </p>
+          ) : (
+            <div class="mt-3 grid grid-cols-1 gap-3 sm:grid-cols-2">
+              <p class="text-supporting text-neutral-600">
+                Search:{" "}
+                <span class="font-medium text-neutral-900">
+                  {policySummary.aiSearchDiscoverability}
+                </span>
+              </p>
+              <p class="text-supporting text-neutral-600">
+                Training:{" "}
+                <span class="font-medium text-neutral-900">
+                  {policySummary.trainingPolicyDeclaration}
+                </span>
+              </p>
+              <p class="text-supporting text-neutral-600">
+                User-triggered retrieval:{" "}
+                <span class="font-medium text-neutral-900">
+                  {policySummary.userTriggeredRetrieval}
+                </span>
+              </p>
+              <p class="text-supporting text-neutral-600">
+                Agents:{" "}
+                <span class="font-medium text-neutral-900">{policySummary.agentAccess}</span>
+              </p>
+              <p class="text-supporting text-neutral-600">
+                Cross-signal consistency:{" "}
+                <span class="font-medium text-neutral-900">
+                  {policySummary.crossSignalConsistency}
+                </span>
+              </p>
+              <p class="text-supporting text-neutral-600">
+                Monitoring:{" "}
+                <span class="font-medium text-neutral-900">{policySummary.monitoring}</span>
+              </p>
+            </div>
+          )}
+          {reportData?.report && (
+            <p class="mt-3 text-supporting text-neutral-500">
+              Scanned {new Date(reportData.report.scanDate).toLocaleString()} · Registry version{" "}
+              {reportData.report.registryVersion ?? "unknown"}
+            </p>
+          )}
+        </div>
+
+        {/* Section 3 — What changed */}
+        <div class="mt-6 rounded-card border border-neutral-200 bg-white p-5">
+          <h2 class="text-card-heading text-neutral-950">What changed</h2>
+          <p class="mt-2 text-body text-neutral-700">
+            {latestEvent
+              ? latestEvent.summary
+              : domain.lastScanId
+                ? "No material policy change was detected since the previous comparable state."
+                : "This is the first saved baseline. Future scans will appear in the change timeline when a meaningful difference is detected."}
+          </p>
+        </div>
+
+        {/* Section 4 — Monitoring status */}
+        <div class="mt-6 rounded-card border border-neutral-200 bg-white p-5">
+          <h2 class="text-card-heading text-neutral-950">Monitoring status</h2>
+          <dl class="mt-3 grid grid-cols-1 gap-3 sm:grid-cols-2">
+            <div>
+              <dt class="text-supporting text-neutral-500">Frequency</dt>
+              <dd class="text-body text-neutral-900">
+                {MONITORING_FREQUENCY_LABEL[domain.monitoringFrequency] ??
+                  domain.monitoringFrequency}
+              </dd>
+            </div>
+            <div>
+              <dt class="text-supporting text-neutral-500">Next scheduled scan</dt>
+              <dd class="text-body text-neutral-900">
+                {domain.monitoringState === "active" && domain.nextScanAt
+                  ? new Date(domain.nextScanAt).toLocaleString()
+                  : "Not scheduled"}
+              </dd>
+            </div>
+            {domain.consecutiveFailureCount > 0 && (
+              <div>
+                <dt class="text-supporting text-neutral-500">Consecutive failures</dt>
+                <dd class="text-body text-neutral-900">
+                  {domain.consecutiveFailureCount} of {FAILURE_PAUSE_THRESHOLD}
+                </dd>
+              </div>
+            )}
+            <div>
+              <dt class="text-supporting text-neutral-500">Plan</dt>
+              <dd class="text-body text-neutral-900">{plan.id}</dd>
+            </div>
+          </dl>
+          {domain.monitoringFrequency === "none" && (
             <a
-              href={`/audit/${domain.lastScanId}`}
-              class="inline-block rounded-control border border-neutral-300 bg-white px-4 py-2 text-body font-medium text-neutral-800 hover:bg-neutral-50"
+              href="/pricing"
+              class="mt-3 inline-block text-supporting font-medium text-brand-700 underline"
             >
-              View latest report
+              Review pricing for automatic monitoring
             </a>
           )}
         </div>
 
-        <div class="mt-6 grid grid-cols-1 gap-6 lg:grid-cols-[minmax(0,1fr)_360px]">
-          <div class="flex flex-col gap-6">
-            <div class="rounded-card border border-neutral-200 bg-white p-5">
-              <h2 class="text-card-heading text-neutral-950">Policy Health Score</h2>
-              <div class="mt-3">
-                <ScoreComponent
-                  score={
-                    domain.currentScore === null
-                      ? { state: "incomplete" }
-                      : {
-                          state: "scored",
-                          value: domain.currentScore,
-                          label: scoreLabelFor(domain.currentScore),
-                        }
-                  }
-                />
-              </div>
-            </div>
+        {/* Section 5 — Policy-change timeline */}
+        <div class="mt-6 rounded-card border border-neutral-200 bg-white p-5">
+          <h2 class="text-card-heading text-neutral-950">Policy-change timeline</h2>
+          <div class="mt-3">
+            <DomainChangeTimeline client:load domainId={domain.id} />
+          </div>
+        </div>
 
-            <div class="rounded-card border border-neutral-200 bg-white p-5">
-              <h2 class="text-card-heading text-neutral-950">Scan history</h2>
-              {scans.length === 0 ? (
-                <p class="mt-2 text-body text-neutral-600">No scans yet for this domain.</p>
-              ) : (
-                <ul class="mt-3 divide-y divide-neutral-200">
-                  {scans.map((scan) => (
-                    <li class="flex items-center justify-between gap-3 py-2">
-                      <a href={`/audit/${scan.scanId}`} class="text-body text-brand-700">
-                        {new Date(scan.startedAt).toLocaleString()}
-                      </a>
-                      <div class="flex items-center gap-2">
-                        <span class="text-supporting text-neutral-600">{scan.triggeredBy}</span>
-                        <StatusChip
-                          tone={scan.status.startsWith("completed") ? "success" : "warning"}
-                          label={scan.status}
-                        />
-                      </div>
-                    </li>
-                  ))}
-                </ul>
-              )}
-            </div>
+        {/* Sections 6-8 — Current findings, crawler-purpose detail, current evidence
+            (reused from the existing full report renderer rather than duplicated). */}
+        {reportData?.report && (
+          <div class="mt-6 rounded-card border border-neutral-200 bg-white p-5">
+            <AuditReportView
+              client:load
+              report={reportData.report}
+              proposedRobotsText={reportData.proposedRobotsText}
+              diffLines={reportData.diffLines}
+              headingLevel="h2"
+            />
+          </div>
+        )}
+
+        {/* Section 9 — Scan history */}
+        <div class="mt-6 rounded-card border border-neutral-200 bg-white p-5">
+          <h2 class="text-card-heading text-neutral-950">Scan history</h2>
+          <div class="mt-3">
+            <DomainScanHistory client:load domainId={domain.id} />
+          </div>
+        </div>
+
+        {/* Section 11 — Domain settings and retention information (settings actions
+            live in DomainDetailActions; retention messaging shown alongside). */}
+        <div class="mt-6 grid grid-cols-1 gap-6 lg:grid-cols-[minmax(0,1fr)_360px]">
+          <div class="rounded-card border border-neutral-200 bg-white p-5">
+            <h2 class="text-card-heading text-neutral-950">History retention</h2>
+            {retentionBoundary && (
+              <p class="mt-2 text-body text-neutral-700">
+                This account retains domain audit history for {retentionBoundary.retentionMonths}{" "}
+                month
+                {retentionBoundary.retentionMonths === 1 ? "" : "s"} under the {plan.id} plan.
+                {retentionBoundary.hasExpiredHistory &&
+                  " Earlier scan details are outside the retained history for this account."}
+              </p>
+            )}
           </div>
 
           <DomainDetailActions

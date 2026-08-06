@@ -74,6 +74,27 @@ export const PRODUCT_EVENT_NAMES = [
   "platform_official_source_clicked",
   "platform_related_guide_clicked",
   "content_correction_clicked",
+  // Saved-Domain Experience and Change Timeline (Phase 8). No domain name,
+  // full URL, evidence, scan ID, or timeline-event ID is ever sent as a
+  // property — see docs/analytics/PHASE_08_SAVED_DOMAIN_EVENT_MODEL.md.
+  "saved_domains_viewed",
+  "saved_domain_opened",
+  "domain_current_state_viewed",
+  "domain_change_summary_viewed",
+  "domain_timeline_viewed",
+  "domain_timeline_filtered",
+  "domain_change_event_opened",
+  "domain_comparison_opened",
+  "domain_evidence_opened",
+  "domain_scan_history_viewed",
+  "domain_rescan_started",
+  "domain_rescan_completed",
+  "domain_rescan_failed",
+  "domain_monitoring_enabled",
+  "domain_monitoring_disabled",
+  "domain_share_started",
+  "domain_report_printed",
+  "domain_retention_info_viewed",
 ] as const;
 
 export type ProductEventName = (typeof PRODUCT_EVENT_NAMES)[number];

@@ -20,7 +20,8 @@ export type PolicySummaryLabel =
   | "No conflict detected"
   | "Conflict detected"
   | "Incomplete evidence"
-  | "Not enabled";
+  | "Not enabled"
+  | "Active";
 
 export type PolicySummary = {
   aiSearchDiscoverability: PolicySummaryLabel;
@@ -169,7 +170,18 @@ export function deriveConversionCtaCopy(
   return { variant, ...CONVERSION_CTA_COPY[variant] };
 }
 
-export function computePolicySummary(report: AuditReportResponse): PolicySummary {
+/**
+ * `savedDomainMonitoringState` (Phase 8): when this summary is being reused
+ * for a saved domain (as opposed to an anonymous/one-off report), the caller
+ * passes the domain's real monitoring state so the `monitoring` field
+ * reflects it — this function has no domain context otherwise, and without
+ * this parameter always reported "Not enabled" regardless of the truth (a
+ * bug found and fixed during Phase 8's baseline research).
+ */
+export function computePolicySummary(
+  report: AuditReportResponse,
+  savedDomainMonitoringState?: "active" | "paused",
+): PolicySummary {
   const findingCodes = new Set(report.findings.map((f) => f.code));
 
   let aiSearchDiscoverability = classifyByPurpose(report.crawlerMatrix, "search", {
@@ -204,6 +216,6 @@ export function computePolicySummary(report: AuditReportResponse): PolicySummary
       mixed: "Mixed",
     }),
     crossSignalConsistency: classifyCrossSignalConsistency(report),
-    monitoring: "Not enabled",
+    monitoring: savedDomainMonitoringState === "active" ? "Active" : "Not enabled",
   };
 }

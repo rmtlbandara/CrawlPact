@@ -26,7 +26,20 @@ type SavedDomain = {
   nextScanAt: string | null;
   currentScore: number | null;
   openFindingsCount: number;
+  recentChangeOrigin: string | null;
+  recentChangeSummary: string | null;
 };
+
+const RECENT_CHANGE_LABEL: Record<string, string> = {
+  website_policy: "Website-policy change",
+  registry_driven: "Registry-driven change",
+  mixed: "Mixed change",
+  operational: "Operational change",
+  uncertain: "Change (cause uncertain)",
+  baseline: "New baseline",
+};
+
+type SortKey = "none" | "last_scan" | "recent_change";
 
 type Group = { groupId: string; name: string; domainCount: number };
 
@@ -66,7 +79,13 @@ async function fetchJson<T>(url: string): Promise<T | null> {
   return body.ok ? (body.data ?? null) : null;
 }
 
-export function DomainsManager({ batchImportLimit = 0 }: { batchImportLimit?: number }) {
+export function DomainsManager({
+  batchImportLimit = 0,
+  savedDomainLimit,
+}: {
+  batchImportLimit?: number;
+  savedDomainLimit?: number;
+}) {
   const [domains, setDomains] = useState<SavedDomain[] | null>(null);
   const [groups, setGroups] = useState<Group[]>([]);
   const [target, setTarget] = useState("");
@@ -84,6 +103,8 @@ export function DomainsManager({ batchImportLimit = 0 }: { batchImportLimit?: nu
   const [filterMonitoring, setFilterMonitoring] = useState<string>("all");
   const [filterScoreBand, setFilterScoreBand] = useState<ScoreBand>("all");
   const [filterHasFindings, setFilterHasFindings] = useState(false);
+  const [search, setSearch] = useState("");
+  const [sortKey, setSortKey] = useState<SortKey>("none");
 
   async function refresh() {
     const [domainList, groupList] = await Promise.all([
@@ -229,12 +250,29 @@ export function DomainsManager({ batchImportLimit = 0 }: { batchImportLimit?: nu
       render: (row) => (
         <button
           type="button"
-          className="text-supporting font-medium text-brand-700 underline"
+          className="rounded-control focus-visible:outline focus-visible:outline-2 focus-visible:outline-brand-600"
           onClick={() => void handleToggleMonitoring(row)}
+          aria-label={`Monitoring is ${row.monitoringState === "active" ? "active" : "paused"} — click to ${row.monitoringState === "active" ? "pause" : "resume"}`}
         >
-          {row.monitoringState === "active" ? "Active" : "Paused"}
+          <StatusChip
+            tone={row.monitoringState === "active" ? "success" : "unknown"}
+            label={row.monitoringState === "active" ? "Active" : "Paused"}
+          />
         </button>
       ),
+    },
+    {
+      key: "recent_change",
+      header: "Recent change",
+      hideBelow: "lg",
+      render: (row) =>
+        row.recentChangeOrigin ? (
+          <span className="text-supporting text-neutral-700">
+            {RECENT_CHANGE_LABEL[row.recentChangeOrigin] ?? row.recentChangeOrigin}
+          </span>
+        ) : (
+          <span className="text-supporting text-neutral-500">No material change detected</span>
+        ),
     },
     {
       key: "actions",
@@ -359,7 +397,14 @@ export function DomainsManager({ batchImportLimit = 0 }: { batchImportLimit?: nu
         </Alert>
       )}
 
-      {domains === null ? null : domains.length === 0 ? (
+      {domains === null ? (
+        <div className="flex flex-col gap-2" aria-live="polite" aria-busy="true">
+          <span className="sr-only">Loading saved domains…</span>
+          {[0, 1, 2].map((i) => (
+            <div key={i} className="h-14 animate-pulse rounded-card bg-neutral-100" />
+          ))}
+        </div>
+      ) : domains.length === 0 ? (
         <EmptyState
           title="No saved domains yet"
           description="Save a domain above to start tracking its AI crawler policy and scheduling scans."
@@ -368,7 +413,9 @@ export function DomainsManager({ batchImportLimit = 0 }: { batchImportLimit?: nu
         <>
           <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
             <div className="rounded-card border border-neutral-200 bg-white p-4">
-              <p className="text-supporting text-neutral-600">Domains</p>
+              <p className="text-supporting text-neutral-600">
+                {savedDomainLimit ? `Domains (of ${savedDomainLimit} on your plan)` : "Domains"}
+              </p>
               <p className="text-h3 text-neutral-950">{domains.length}</p>
             </div>
             <div className="rounded-card border border-neutral-200 bg-white p-4">
@@ -392,6 +439,29 @@ export function DomainsManager({ batchImportLimit = 0 }: { batchImportLimit?: nu
           </div>
 
           <div className="flex flex-wrap items-end gap-3 rounded-card border border-neutral-200 bg-white p-4">
+            <div className="w-52">
+              <FormField label="Search">
+                <Input
+                  value={search}
+                  onChange={(e) => setSearch(e.target.value)}
+                  placeholder="Search by domain"
+                  aria-label="Search saved domains by name"
+                />
+              </FormField>
+            </div>
+            <div className="w-44">
+              <FormField label="Sort by">
+                <Select
+                  value={sortKey}
+                  onValueChange={(value) => setSortKey(value as SortKey)}
+                  options={[
+                    { value: "none", label: "Default order" },
+                    { value: "last_scan", label: "Last scan" },
+                    { value: "recent_change", label: "Recent change" },
+                  ]}
+                />
+              </FormField>
+            </div>
             {groups.length > 0 && (
               <div className="w-44">
                 <FormField label="Client group">
@@ -441,7 +511,14 @@ export function DomainsManager({ batchImportLimit = 0 }: { batchImportLimit?: nu
           </div>
 
           {(() => {
+            const query = search.trim().toLowerCase();
             const filtered = domains.filter((d) => {
+              if (
+                query &&
+                !d.displayName.toLowerCase().includes(query) &&
+                !d.canonicalOrigin.toLowerCase().includes(query)
+              )
+                return false;
               if (filterGroupId === "none" && d.groupId !== null) return false;
               if (
                 filterGroupId !== "all" &&
@@ -455,13 +532,22 @@ export function DomainsManager({ batchImportLimit = 0 }: { batchImportLimit?: nu
               if (filterHasFindings && d.openFindingsCount === 0) return false;
               return true;
             });
-            return filtered.length === 0 ? (
+            const sorted = [...filtered].sort((a, b) => {
+              if (sortKey === "last_scan") {
+                return (b.lastScanAt ?? "").localeCompare(a.lastScanAt ?? "");
+              }
+              if (sortKey === "recent_change") {
+                return (a.recentChangeOrigin ? 0 : 1) - (b.recentChangeOrigin ? 0 : 1);
+              }
+              return 0;
+            });
+            return sorted.length === 0 ? (
               <EmptyState
                 title="No domains match these filters"
                 description="Try widening your group, monitoring, or score filters."
               />
             ) : (
-              <DataTable columns={columns} rows={filtered} getRowKey={(row) => row.domainId} />
+              <DataTable columns={columns} rows={sorted} getRowKey={(row) => row.domainId} />
             );
           })()}
         </>

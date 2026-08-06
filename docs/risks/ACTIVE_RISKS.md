@@ -8,7 +8,12 @@ below rather than duplicated. Do not maintain a third active-risk list anywhere 
 
 Statuses: `open` · `mitigating` · `accepted` · `blocked` · `monitoring`.
 
-Last reviewed: 2026-08-05 (Phase 11, Database, Storage, Retention and Performance Hardening).
+Last reviewed: 2026-08-06 (Phase 8, Saved-Domain Experience and Change Timeline). Phase 8 closed a
+real duplicate-simultaneous-scan gap (not previously tracked as a numbered risk — found and fixed
+in the same pass, see `docs/reports/PHASE_08_SAVED_DOMAIN_CHANGE_TIMELINE_COMPLETION_REPORT.md`)
+and added RISK-034 (a pre-existing N+1 query pattern found, deliberately left unfixed to keep the
+phase's change surface focused). Prior review: 2026-08-05 (Phase 11, Database, Storage, Retention
+and Performance Hardening).
 Phase 11 closed RISK-005 and RISK-009 (see `docs/risks/RISK_ARCHIVE.md` ARC-025/ARC-026),
 mitigated RISK-007 (P1→P3, `mitigating`) and re-modeled RISK-008 (concrete tightening measures
 shipped, still `monitoring` — structural exposure at commercial scale unchanged), assessed
@@ -433,6 +438,29 @@ extended platform guides), RISK-032 (no Search Console property connected), and 
 - **Acceptance criteria for closure**: A direct production Lighthouse run shows all tested pages
   meeting the stated performance/LCP thresholds — **met** by this phase's real re-measurement.
   Recommend moving to `RISK_ARCHIVE.md` upon this phase's merge.
+
+### RISK-034 — `listDomains()`'s open-findings count is an N+1 query pattern (pre-existing, found during Phase 8)
+
+- **Category**: Performance · **Severity**: P3 · **Probability**: Certain (confirmed by code
+  reading, not yet measured under real load)
+- **Impact**: `openFindingsCountFor()` (`apps/web/src/lib/domains.ts`) runs one `SELECT COUNT(*)`
+  per domain when building the saved-domain list, rather than one batched query for the whole
+  page. Bounded in practice by `savedDomainLimit` (≤100, the Agency ceiling), so this is not
+  currently a correctness or unbounded-growth risk — but it is the exact pattern Phase 8's own
+  query-architecture rules explicitly prohibit for new work, and this pre-existing instance was
+  left as-is rather than opportunistically rewritten, to keep Phase 8's own change surface focused
+  (see `docs/product/PHASE_08_SAVED_DOMAIN_EXPERIENCE_BASELINE.md`).
+- **Evidence**: `apps/web/src/lib/domains.ts`'s `openFindingsCountFor`/`listDomains` (found while
+  fixing the adjacent, real N+1 gap for the new "recent change" column in the same function, which
+  _was_ fixed with a single batched query — `getLatestChangeEventPerDomain`).
+- **Current mitigation**: None yet — bounded by the existing 100-domain plan ceiling.
+- **Owner**: Engineering owner · **Trigger**: A future phase touching the saved-domain list, or
+  real production D1-read measurement showing this pattern is a meaningful cost driver.
+- **Review date**: Next phase touching `lib/domains.ts` · **Target phase**: Unscheduled — revisit
+  only if real usage or measurement shows this is a meaningful cost driver.
+- **Status**: accepted
+- **Acceptance criteria for closure**: `listDomains()`'s open-findings count is computed via one
+  batched query for the whole page, matching the pattern already used for `recentChangeOrigin`.
 
 ---
 

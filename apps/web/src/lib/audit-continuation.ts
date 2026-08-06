@@ -10,6 +10,25 @@ import { persistScan } from "./persist-scan";
 import { computeNextScanAt } from "./scan-scheduling";
 import { getBlockedTargetPatterns } from "./blocked-targets";
 import { getIntConfig } from "./runtime-config";
+import { generateTimelineEvent } from "./domain-timeline";
+
+/**
+ * Phase 8: the domain saved here is always brand new (just created by the
+ * calling route), so this is always a genuine first-ever baseline — never
+ * blocks the save/scan outcome on a timeline-write failure, matching the
+ * identical rationale in monitoring.ts's safeGenerateTimelineEvent.
+ */
+async function safeGenerateBaselineEvent(
+  db: Database,
+  domainId: string,
+  scanId: string,
+): Promise<void> {
+  try {
+    await generateTimelineEvent(db, { domainId, previousScanId: null, currentScanId: scanId });
+  } catch (error) {
+    console.error("Baseline timeline event generation failed", { domainId, scanId, error });
+  }
+}
 
 /**
  * Secure continuation mechanism preserving anonymous-audit intent through signup/login (Phase
@@ -148,6 +167,7 @@ export async function establishBaseline(
         score: scan.score,
         nextScanAt: computeNextScanAt(params.monitoringFrequency),
       });
+      await safeGenerateBaselineEvent(db, params.domainId, scan.id);
       return {
         strategy: "adopted",
         scanId: scan.id,
@@ -199,6 +219,7 @@ export async function establishBaseline(
     score: auditResult.score.state === "scored" ? auditResult.score.value : null,
     nextScanAt: computeNextScanAt(params.monitoringFrequency),
   });
+  await safeGenerateBaselineEvent(db, params.domainId, newScanId);
 
   return {
     strategy: "rerun",

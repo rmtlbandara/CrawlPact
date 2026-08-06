@@ -1,0 +1,178 @@
+---
+export const prerender = false;
+import AppLayout from "../../../../../../layouts/AppLayout.astro";
+import { ErrorState, StatusChip } from "@crawlpact/ui";
+import { createDb } from "@crawlpact/database";
+import { getEnv } from "../../../../../../lib/env";
+import { getPageSession } from "../../../../../../lib/auth/page-session";
+import { getOwnedDomain } from "../../../../../../lib/domains";
+import { compareScans } from "../../../../../../lib/domain-comparison";
+import { COMPARABLE_RESOURCE_TYPES } from "../../../../../../lib/change-attribution";
+import { trackEvent } from "../../../../../../lib/analytics";
+
+const db = createDb(getEnv().DB);
+const result = await getPageSession(db, Astro.request);
+if (!result) return Astro.redirect("/sign-in");
+const { user } = result;
+
+const { domainId, previousScanId, currentScanId } = Astro.params;
+const domain = domainId ? await getOwnedDomain(db, user.id, domainId) : null;
+
+// Every ID is validated server-side against the requesting user's own
+// domain ownership before compareScans() touches any scan/evidence row — a
+// scan ID from another account (or a made-up one) always ends up in the
+// same "incompatible" branch a real mismatch would, never a distinct error
+// that would let an attacker distinguish "exists but not yours" from
+// "doesn't exist" (docs/product/DOMAIN_COMPARISON_MODEL.md).
+const comparison =
+  domain && previousScanId && currentScanId
+    ? await compareScans(db, domain.id, previousScanId, currentScanId)
+    : null;
+
+if (domain) {
+  await trackEvent(db, "domain_comparison_opened", { userId: user.id });
+}
+
+// Narrowed once here (rather than relying on TS to re-narrow the union
+// inside the JSX template below, which it does not always do cleanly in
+// .astro files) so every reference in the template below has a concrete,
+// fully-typed `compatible` comparison result.
+const compatible = comparison && comparison.compatible ? comparison : null;
+
+const RESOURCE_LABEL: Record<string, string> = {
+  robots_txt: "robots.txt",
+  llms_txt: "llms.txt",
+  llms_full_txt: "llms-full.txt",
+  rsl: "RSL",
+  content_signals: "Content Signals",
+  html_meta: "HTML meta / canonical",
+  http_headers: "HTTP headers",
+};
+---
+
+<AppLayout title="Compare scans" displayName={user.displayName}>
+  {
+    !domain ? (
+      <ErrorState
+        title="Domain not found"
+        description="This domain doesn't exist or isn't saved to your account."
+      />
+    ) : !compatible ? (
+      <ErrorState
+        title="Comparison unavailable"
+        description={
+          !comparison || comparison.compatible
+            ? "The selected scans do not contain enough comparable evidence."
+            : comparison.reason
+        }
+      />
+    ) : (
+      <>
+        <a href={`/app/domains/${domain.id}`} class="text-supporting font-medium text-brand-700">
+          ← {domain.displayName}
+        </a>
+        <h1 class="mt-3 text-h1 text-neutral-950">Scan comparison</h1>
+
+        <div class="mt-6 grid grid-cols-1 gap-4 sm:grid-cols-2">
+          <div class="rounded-card border border-neutral-200 bg-white p-4">
+            <h2 class="text-supporting font-medium text-neutral-500">Previous</h2>
+            <p class="mt-1 text-body text-neutral-900">
+              Registry: {compatible.previousRegistryVersion ?? "unknown"}
+            </p>
+          </div>
+          <div class="rounded-card border border-neutral-200 bg-white p-4">
+            <h2 class="text-supporting font-medium text-neutral-500">Current</h2>
+            <p class="mt-1 text-body text-neutral-900">
+              Registry: {compatible.currentRegistryVersion ?? "unknown"}
+            </p>
+          </div>
+        </div>
+
+        <div class="mt-6 rounded-card border border-neutral-200 bg-white p-5">
+          <h2 class="text-card-heading text-neutral-950">Evidence changes</h2>
+          <div class="mt-3 flex flex-col gap-4">
+            {COMPARABLE_RESOURCE_TYPES.filter(
+              (type) => compatible.resources.find((r) => r.resourceType === type)?.changed,
+            ).map((type) => {
+              const resource = compatible.resources.find((r) => r.resourceType === type)!;
+              return (
+                <div class="rounded-card border border-neutral-200 p-3">
+                  <h3 class="text-supporting font-medium text-neutral-800">
+                    {RESOURCE_LABEL[type] ?? type}
+                  </h3>
+                  <div class="mt-2 grid grid-cols-1 gap-3 sm:grid-cols-2">
+                    <div>
+                      <p class="text-metadata font-medium text-neutral-500">Previous</p>
+                      {resource.previous ? (
+                        <pre class="mt-1 max-h-40 overflow-auto whitespace-pre-wrap break-words rounded bg-neutral-50 p-2 text-code text-neutral-800">
+                          {resource.previous.snapshotText ?? "(empty)"}
+                        </pre>
+                      ) : (
+                        <p class="mt-1 text-supporting text-neutral-500">
+                          This resource was not fetched during the previous scan.
+                        </p>
+                      )}
+                      {resource.previous?.truncated && (
+                        <StatusChip tone="unknown" label="Truncated" />
+                      )}
+                    </div>
+                    <div>
+                      <p class="text-metadata font-medium text-neutral-500">Current</p>
+                      {resource.current ? (
+                        <pre class="mt-1 max-h-40 overflow-auto whitespace-pre-wrap break-words rounded bg-neutral-50 p-2 text-code text-neutral-800">
+                          {resource.current.snapshotText ?? "(empty)"}
+                        </pre>
+                      ) : (
+                        <p class="mt-1 text-supporting text-neutral-500">
+                          This resource was not fetched during the current scan.
+                        </p>
+                      )}
+                      {resource.current?.truncated && (
+                        <StatusChip tone="unknown" label="Truncated" />
+                      )}
+                    </div>
+                  </div>
+                </div>
+              );
+            })}
+            {compatible.resources.every((r) => !r.changed) && (
+              <p class="text-body text-neutral-600">
+                No evidence content changed between these scans.
+              </p>
+            )}
+          </div>
+        </div>
+
+        <div class="mt-6 rounded-card border border-neutral-200 bg-white p-5">
+          <h2 class="text-card-heading text-neutral-950">Finding lifecycle</h2>
+          {compatible.findingLifecycle.entries.length === 0 ? (
+            <p class="mt-2 text-body text-neutral-600">
+              No finding-level changes between these scans.
+            </p>
+          ) : (
+            <ul class="mt-3 flex flex-col gap-2">
+              {compatible.findingLifecycle.entries.map((entry) => (
+                <li class="flex flex-wrap items-center gap-2 rounded-card border border-neutral-200 p-3">
+                  <StatusChip
+                    tone={
+                      entry.state === "resolved"
+                        ? "success"
+                        : entry.state === "appeared"
+                          ? "error"
+                          : entry.state === "changed"
+                            ? "warning"
+                            : "info"
+                    }
+                    label={entry.state.replace("_", " ")}
+                  />
+                  <span class="text-body text-neutral-900">{entry.title}</span>
+                  <span class="text-supporting text-neutral-500">({entry.severity})</span>
+                </li>
+              ))}
+            </ul>
+          )}
+        </div>
+      </>
+    )
+  }
+</AppLayout>

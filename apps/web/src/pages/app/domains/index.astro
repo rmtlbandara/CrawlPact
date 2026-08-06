@@ -6,6 +6,7 @@ import { createDb } from "@crawlpact/database";
 import { getEnv } from "../../../lib/env";
 import { getPageSession } from "../../../lib/auth/page-session";
 import { getPlan } from "../../../lib/plan";
+import { trackEvent } from "../../../lib/analytics";
 
 const db = createDb(getEnv().DB);
 const result = await getPageSession(db, Astro.request);
@@ -13,6 +14,7 @@ if (!result) return Astro.redirect("/sign-in");
 const { user } = result;
 
 const plan = await getPlan(db, user.planId);
+await trackEvent(db, "saved_domains_viewed", { userId: user.id });
 ---
 
 <AppLayout title="Domains" displayName={user.displayName}>
@@ -35,6 +37,10 @@ const plan = await getPlan(db, user.planId);
     }
   </div>
   <div class="mt-6">
-    <DomainsManager client:load batchImportLimit={plan.batchImportLimit} />
+    <DomainsManager
+      client:load
+      batchImportLimit={plan.batchImportLimit}
+      savedDomainLimit={plan.savedDomainLimit}
+    />
   </div>
 </AppLayout>

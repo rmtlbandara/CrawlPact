@@ -1,41 +1,11 @@
 import { useState } from "react";
-import type {
-  AgencyBranding,
-  AuditReportResponse,
-  AuditStatus,
-  LlmsTxtSignal,
-} from "@crawlpact/core";
+import type { AgencyBranding, AuditReportResponse, LlmsTxtSignal } from "@crawlpact/core";
 import { Alert, DiffViewer, ProvenanceHeader, ScoreComponent, StatusChip } from "@crawlpact/ui";
 import type { StatusTone } from "@crawlpact/ui";
 import { computePolicySummary, deriveConversionCtaCopy } from "../lib/policy-summary";
 import type { PolicySummaryLabel } from "../lib/policy-summary";
+import { STATUS_LABEL, STATUS_TONE } from "../lib/scan-status-labels";
 import { AuditConversionCta } from "./AuditConversionCta";
-
-const STATUS_TONE: Record<AuditStatus, StatusTone> = {
-  queued: "info",
-  running: "info",
-  completed: "success",
-  completed_with_warnings: "warning",
-  incomplete: "unknown",
-  target_unavailable: "error",
-  blocked_for_safety: "error",
-  rate_limited: "warning",
-  internal_failure: "error",
-  engine_disabled: "unknown",
-};
-
-const STATUS_LABEL: Record<AuditStatus, string> = {
-  queued: "Queued",
-  running: "Running",
-  completed: "Complete",
-  completed_with_warnings: "Complete with warnings",
-  incomplete: "Incomplete",
-  target_unavailable: "Target unavailable",
-  blocked_for_safety: "Blocked for safety",
-  rate_limited: "Rate limited",
-  internal_failure: "Internal error",
-  engine_disabled: "Engine disabled",
-};
 
 const RESULT_TONE: Record<string, StatusTone> = {
   allowed: "success",
@@ -70,6 +40,7 @@ const SUMMARY_TONE: Record<PolicySummaryLabel, StatusTone> = {
   "Conflict detected": "error",
   "Incomplete evidence": "warning",
   "Not enabled": "unknown",
+  Active: "success",
 };
 
 const SEVERITY_TONE: Record<string, StatusTone> = {
@@ -146,6 +117,7 @@ export function AuditReportView({
   agencyBranding,
   focus,
   conversionCta,
+  headingLevel = "h1",
 }: {
   report: AuditReportResponse;
   proposedRobotsText: string | null;
@@ -156,7 +128,15 @@ export function AuditReportView({
    * or sample-report pages, where "save this domain" either doesn't apply or isn't real. Omitting
    * it (the default) renders no CTA at all, matching every existing caller unchanged. */
   conversionCta?: { isAuthenticated: boolean; ownedDomain: { domainId: string } | null };
+  /** Phase 8: the saved-domain detail page already has its own page-level
+   * `<h1>` (the domain name) and embeds this component as one section among
+   * several — passing "h2" there keeps the page to exactly one real `<h1>`.
+   * Every existing caller (the standalone `/audit/:auditId` report page,
+   * where this heading *is* the page's only `<h1>`) is unaffected by the
+   * default. */
+  headingLevel?: "h1" | "h2";
 }) {
+  const ReportHeading = headingLevel;
   const [copied, setCopied] = useState(false);
   const policySummary = computePolicySummary(report);
 
@@ -443,7 +423,9 @@ export function AuditReportView({
               <path d="M12 16h11" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" />
               <rect x="23.2" y="14.4" width="3.2" height="3.2" rx="0.8" fill="currentColor" />
             </svg>
-            <h1 className="text-h2 text-neutral-950">AI crawler policy report</h1>
+            <ReportHeading className="text-h2 text-neutral-950">
+              AI crawler policy report
+            </ReportHeading>
           </div>
           <button
             type="button"

@@ -14,8 +14,39 @@ the "Production deployment" entries below for the established pattern).
 
 ## Unreleased
 
-Nothing pending — see "Production deployment (2026-08-06) — Public Status and Changelog Trust
-Correction" below for the most recent release.
+### Phase 8: Saved-Domain Experience and Change Timeline
+
+Full detail: `docs/reports/PHASE_08_SAVED_DOMAIN_CHANGE_TIMELINE_COMPLETION_REPORT.md`.
+
+#### Added
+
+- A deterministic, versioned change-attribution model
+  (`website_policy | registry_driven | mixed | operational | uncertain | baseline`), built on
+  `scan_resources.resourceHash` (populated by Phase 11, now actually used).
+- A materialised, paginated, idempotent policy-change timeline (`domain_change_events`, migration
+  `0026`), generated on every scheduled sweep, manual rescan, and the Phase 5 conversion flow's
+  first scan.
+- A real before/after scan-comparison view (`/app/domains/:id/compare/:prev/:curr`) with escaped
+  evidence and finding-lifecycle classification (appeared/persisting/changed/resolved).
+- `findings.fingerprint` as a first-class, indexed column (migration `0027`), backfilled from
+  existing rows.
+- A real duplicate-simultaneous-scan lock (`domains.scan_lock_until`, migration `0028`) — a manual
+  rescan and a concurrent request (or the scheduled sweep) can no longer both run against the same
+  domain at once; a new `SCAN_ALREADY_RUNNING` error code.
+- A redesigned saved-domain list (plan-limit indicator, monitoring status chip, recent-change
+  column, search, sorting) and domain-detail page (current-policy summary, what-changed, real
+  monitoring status including `nextScanAt` for the first time, the new timeline, reused
+  full-report rendering, paginated/filterable scan history, retention messaging).
+
+#### Fixed
+
+- `computePolicySummary()`'s `monitoring` field was hardcoded to `"Not enabled"` regardless of the
+  domain's real monitoring state.
+- The saved-domain scan-history list rendered raw status-enum text (`"completed_with_warnings"`)
+  instead of a human label — `STATUS_LABEL`/`STATUS_TONE` extracted into a shared module and
+  reused by both the report view and the new scan-history list (closes messaging-audit item C3).
+- `scan_diffs`/`domain_change_events`-equivalent data had no customer-facing UI at all before this
+  phase — `scan_diffs` was write-only (closes messaging-audit item C5).
 
 ## Production deployment (2026-08-06) — Public Status and Changelog Trust Correction
 

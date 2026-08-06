@@ -1,0 +1,16 @@
+-- Phase 8 (Saved-Domain Experience and Change Timeline).
+--
+-- Manual rescans (apps/web/src/pages/api/domains/[domainId]/scan.ts) had no
+-- duplicate-simultaneous-scan prevention: two concurrent rescan requests, or
+-- a manual rescan racing the scheduled sweep's own claim of the same
+-- domain, could both pass the monthly quota check and both run `runAudit`
+-- against the same target at once -- a real, confirmed gap found during
+-- Phase 8 baseline research (docs/product/PHASE_08_SAVED_DOMAIN_EXPERIENCE_BASELINE.md).
+--
+-- The scheduled sweep already has its own claim mechanism (claimDueDomains,
+-- apps/web/src/lib/monitoring.ts) built on next_scan_at -- this column adds
+-- the equivalent short-lived claim for the manual-scan path, and is also
+-- checked by claimDueDomains so the scheduled sweep never grabs a domain a
+-- manual scan currently holds. Nullable; NULL means "not locked" (every
+-- existing row).
+ALTER TABLE domains ADD COLUMN scan_lock_until TEXT;

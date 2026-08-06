@@ -14,6 +14,13 @@ export const savedDomainSchema = z.object({
   nextScanAt: z.string().datetime().nullable(),
   currentScore: z.number().min(0).max(100).nullable(),
   openFindingsCount: z.number().int().min(0),
+  // Phase 8 (Saved-Domain Experience and Change Timeline): the most recent
+  // policy-change-timeline event for this domain, if any — powers the
+  // saved-domain list's "Recent change" column without a per-row detail
+  // fetch. `null` means no timeline event exists yet (a fresh baseline or a
+  // domain that has never had a comparable second scan).
+  recentChangeOrigin: z.string().nullable(),
+  recentChangeSummary: z.string().nullable(),
 });
 export type SavedDomain = z.infer<typeof savedDomainSchema>;
 
