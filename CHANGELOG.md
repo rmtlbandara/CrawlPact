@@ -14,8 +14,45 @@ the "Production deployment" entries below for the established pattern).
 
 ## Unreleased
 
-Nothing pending — see "Production deployment (2026-08-05) — Phase 11: Database, Storage,
-Retention and Performance Hardening" below for the most recent release.
+### Public Status and Changelog Trust Correction
+
+Full detail: `docs/reports/PUBLIC_STATUS_AND_CHANGELOG_TRUST_CORRECTION_REPORT.md`.
+
+#### Fixed
+
+- The public `/status` page's "Billing and checkout" component (and, consequently, the public
+  overall status) could be shown as "Degraded performance" based on a stale, unbounded (no time
+  window) count of historical webhook-processing failures, with zero real recent user impact —
+  confirmed live in production before this fix. `getComponentHealth` now uses a real 1-hour window
+  for that check, and a new `publicImpact` field on every internal health signal means an
+  internal-only concern (a background job, a resolved historical batch of failures) can never
+  again automatically escalate the public page on its own.
+- The public status page linked `docs/status/IMPLEMENTATION_STATUS.md`, a path that no longer
+  exists (the file was correctly archived to `docs/archive/implementation-history/` back in Phase
+  1. — a dead link exposing an internal-history reference publicly. Removed.
+
+#### Changed
+
+- Removed the "CrawlPact does not yet have reliable historical uptime measurement..." sentence
+  from `/status` — a trust-reducing negative admission, not replaced with another one; no uptime
+  percentage was invented.
+- `/status` now shows a plain-language summary sentence for the current overall status (e.g. "All
+  public CrawlPact services are operating normally."), not just the raw status label.
+- `/admin/health` now shows the public status alongside internal diagnostics, clearly labelled
+  ("Public:" / "Internal:"), plus public-impact flags, an internal-warning count, and active
+  public incident count — previously internal-only.
+- `/changelog`'s introduction now leads with a production-appropriate framing sentence; one
+  changelog entry's stale "(Part 3, in progress)" title (Part 3 has long been complete) corrected
+  to "(Part 3)".
+
+#### Added
+
+- `pnpm status:validate` — a new dedicated validator for status/changelog trust regressions
+  (the removed sentence and its close variants, a fabricated uptime percentage, the archived doc
+  link, internal-only fields leaking into public source), wired into CI alongside
+  `trust:validate`/`docs:validate`/`brand:validate`.
+
+Nothing deployed yet — see "Production deployment" entries below for what's actually live.
 
 ## Production deployment (2026-08-05) — Phase 11: Database, Storage, Retention and Performance Hardening
 

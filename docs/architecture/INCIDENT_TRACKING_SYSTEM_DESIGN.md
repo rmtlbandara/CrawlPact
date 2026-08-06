@@ -21,8 +21,14 @@ never a hardcoded "Operational."
 ## 2. Non-goals
 
 - **No uptime percentage.** No reliable historical uptime measurement exists yet (confirmed in the
-  original audit). The public page states this honestly rather than publishing a fabricated
-  number — see §7.
+  original audit). Never publish a fabricated number. **Updated (Public Status and Changelog Trust
+  Correction)**: the public page previously explained this absence with a sentence explicitly
+  naming it as a gap ("CrawlPact does not yet have reliable historical uptime measurement in
+  place...") — found, on review, to itself read as trust-reducing rather than reassuring, and
+  removed without a replacement negative explanation. The page's existing "Recently resolved"
+  section already serves the neutral service-history role a visitor needs; it does not need its
+  own explanation for why a percentage is absent — see §7 and
+  `docs/reports/PUBLIC_STATUS_AND_CHANGELOG_TRUST_CORRECTION_REPORT.md`.
 - **No paging/alerting integration.** Creating an incident does not send email/SMS/Slack — that
   would reintroduce exactly the external-notification-provider dependency SRS §6.2 prohibits.
   Incident visibility is the public status page itself, plus the optional Atom feed (§7).

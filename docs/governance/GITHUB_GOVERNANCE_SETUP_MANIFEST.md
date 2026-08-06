@@ -2,6 +2,25 @@
 
 **Status: verification-blocked (by user decision, not access failure).**
 
+## Public Status and Changelog Trust Correction update (2026-08-06)
+
+Same manifest-only decision carried forward — no live GitHub issue created. When this manifest is
+applied, create:
+
+- **"Correct public status and changelog trust presentation"** (the recommended title from the
+  correction's own prompt) — already **resolved** by this pass; record as closed-on-creation with
+  a link to `docs/reports/PUBLIC_STATUS_AND_CHANGELOG_TRUST_CORRECTION_REPORT.md` and the merge
+  commit, per this repo's existing precedent for issues opened in the same pass that closes them
+  (see the Phase 7 entry below for the same pattern).
+- Real content: a stale, unbounded (no time window) failed-webhook count was found live in
+  production degrading the public "Billing and checkout" component and overall status based on a
+  week-old, already-resolved batch of failures — fixed with a real time-windowed check plus a new
+  `publicImpact` gate so an internal-only concern can never again escalate the public page on its
+  own. Also removed the trust-reducing uptime-absence sentence and a dead link to the (already
+  correctly archived, since Phase 1) `IMPLEMENTATION_STATUS.md` doc. No follow-up issue is
+  required — everything this correction found was fixed within the same pass, evidenced by real
+  tests against real D1, not deferred.
+
 ## Phase 7 update (2026-08-04)
 
 Phase 6 (PR #80, docs-only deployment record PR #81) merged to `main` and deployed to production.

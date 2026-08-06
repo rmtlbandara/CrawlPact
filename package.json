@@ -40,6 +40,7 @@
     "docs:validate": "node scripts/docs-validate.mjs",
     "brand:validate": "node scripts/brand-validate.mjs",
     "trust:validate": "node scripts/trust-validate.mjs",
+    "status:validate": "node scripts/status-validate.mjs",
     "content:validate": "node scripts/content-validate.mjs",
     "content:links:check": "node scripts/content-links-check.mjs",
     "quality": "pnpm run format:check && pnpm run lint && pnpm run typecheck && pnpm run test:unit && pnpm run test:integration && pnpm run db:validate && pnpm run content:validate && pnpm run build",
