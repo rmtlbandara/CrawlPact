@@ -1,0 +1,49 @@
+---
+export const prerender = false;
+import AppLayout from "../../../layouts/AppLayout.astro";
+import { ImportWizard } from "../../../components/app/ImportWizard";
+import { createDb } from "@crawlpact/database";
+import { getEnv } from "../../../lib/env";
+import { getPageSession } from "../../../lib/auth/page-session";
+import { getPlan } from "../../../lib/plan";
+
+const db = createDb(getEnv().DB);
+const result = await getPageSession(db, Astro.request);
+if (!result) return Astro.redirect("/sign-in");
+const { user } = result;
+const plan = await getPlan(db, user.planId);
+const importAvailable = plan.batchImportLimit > 0;
+---
+
+<AppLayout title="Import domains" displayName={user.displayName}>
+  <div class="flex flex-wrap items-start justify-between gap-4">
+    <div>
+      <h1 class="text-h1 text-neutral-950">Import domains</h1>
+      <p class="mt-2 text-body text-neutral-700">
+        Upload a CSV file to save up to {plan.batchImportLimit} domains at once.
+      </p>
+    </div>
+    <a href="/app/workspace" class="text-supporting text-brand-700 underline">Back to workspace</a>
+  </div>
+
+  {
+    !importAvailable ? (
+      <div class="mt-6 rounded-card border border-dashed border-neutral-300 px-6 py-12 text-center">
+        <h2 class="text-h3 text-neutral-900">Batch import isn't included on your plan</h2>
+        <p class="mx-auto mt-2 max-w-sm text-body text-neutral-600">
+          Upgrade to Pro or Agency to import multiple domains at once.
+        </p>
+        <a
+          href="/pricing"
+          class="mt-4 inline-block rounded-control bg-brand-600 px-5 py-3 text-body font-medium text-white hover:bg-brand-700"
+        >
+          View plans
+        </a>
+      </div>
+    ) : (
+      <div class="mt-6">
+        <ImportWizard client:load domainGroupsEnabled={plan.domainGroupsEnabled} />
+      </div>
+    )
+  }
+</AppLayout>

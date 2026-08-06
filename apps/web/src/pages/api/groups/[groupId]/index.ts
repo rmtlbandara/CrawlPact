@@ -1,9 +1,9 @@
 import type { APIRoute } from "astro";
-import { ApiError, ok, updateGroupRequestSchema } from "@crawlpact/core";
+import { ApiError, deleteGroupRequestSchema, ok, updateGroupRequestSchema } from "@crawlpact/core";
 import { createDb } from "@crawlpact/database";
 import { getEnv } from "../../../../lib/env";
 import { requireSession } from "../../../../lib/auth/require-session";
-import { deleteGroupIfEmpty, renameGroup } from "../../../../lib/groups";
+import { deleteGroupWithReassignment, renameGroup } from "../../../../lib/groups";
 import { jsonErrorResponse, jsonResponse } from "../../../../lib/json-response";
 
 export const prerender = false;
@@ -28,7 +28,13 @@ export const PATCH: APIRoute = async ({ request, params }) => {
       });
     }
 
-    const renamed = await renameGroup(db, user.id, groupId, parsed.data.name);
+    const renamed = await renameGroup(
+      db,
+      user.id,
+      groupId,
+      parsed.data.name,
+      parsed.data.description,
+    );
     if (!renamed) throw new ApiError("NOT_FOUND", "This group does not exist.");
 
     return jsonResponse(ok({ renamed: true }, requestId), 200);
@@ -37,7 +43,12 @@ export const PATCH: APIRoute = async ({ request, params }) => {
   }
 };
 
-/** DELETE /api/groups/:groupId — only allowed when the group has no domains left in it. */
+/**
+ * DELETE /api/groups/:groupId — deletes the group. Any member domains move
+ * to the given `destinationGroupId`, or to Ungrouped when omitted/null
+ * (docs/product/DOMAIN_GROUP_MODEL.md §2) — domain history and monitoring
+ * are never affected.
+ */
 export const DELETE: APIRoute = async ({ request, params }) => {
   const requestId = crypto.randomUUID();
   try {
@@ -47,17 +58,30 @@ export const DELETE: APIRoute = async ({ request, params }) => {
     const groupId = params.groupId;
     if (!groupId) throw new ApiError("VALIDATION_FAILED", "Missing group id.");
 
-    const result = await deleteGroupIfEmpty(db, user.id, groupId);
+    const rawBody = await request.text();
+    const parsed = deleteGroupRequestSchema.safeParse(rawBody ? JSON.parse(rawBody) : {});
+    if (!parsed.success) {
+      throw new ApiError("VALIDATION_FAILED", "Invalid request body.", {
+        issues: parsed.error.issues,
+      });
+    }
+
+    const result = await deleteGroupWithReassignment(
+      db,
+      user.id,
+      groupId,
+      parsed.data.destinationGroupId ?? null,
+    );
     if (!result.ok) {
       throw new ApiError(
-        result.reason === "not_found" ? "NOT_FOUND" : "GROUP_NOT_EMPTY",
+        result.reason === "not_found" ? "NOT_FOUND" : "VALIDATION_FAILED",
         result.reason === "not_found"
           ? "This group does not exist."
-          : "Move or remove the domains in this group before deleting it.",
+          : "The destination group is not valid.",
       );
     }
 
-    return jsonResponse(ok({ deleted: true }, requestId), 200);
+    return jsonResponse(ok({ deleted: true, movedCount: result.movedCount }, requestId), 200);
   } catch (error) {
     return jsonErrorResponse(error, requestId);
   }

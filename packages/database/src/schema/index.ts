@@ -7,3 +7,4 @@ export * from "./notifications-sharing";
 export * from "./admin-security";
 export * from "./preferences";
 export * from "./incidents";
+export * from "./workspace";

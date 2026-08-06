@@ -5,3 +5,4 @@ export * from "./groups";
 export * from "./notifications";
 export * from "./sharing";
 export * from "./admin";
+export * from "./portfolio";

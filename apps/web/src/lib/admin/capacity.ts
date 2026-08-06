@@ -64,6 +64,16 @@ export type OperationalCapacitySnapshot = {
     bundleSizeBytes: null;
     d1SizeBytes: null;
   };
+  /** Phase 9 (§39): aggregate-only, no per-account or per-domain detail. */
+  agencyWorkspace: {
+    accountsUsingDomainGroups: number;
+    accountsWithAgencyBranding: number;
+    importJobsLast30d: number;
+    importJobFailuresLast30d: number;
+    bulkActionJobsLast30d: number;
+    bulkActionJobFailuresLast30d: number;
+    domainCountsByPlan: Record<string, number>;
+  };
 };
 
 export async function getOperationalCapacitySnapshot(
@@ -74,6 +84,7 @@ export async function getOperationalCapacitySnapshot(
   const now = new Date();
   const nowIso = now.toISOString();
   const last24hIso = new Date(now.getTime() - 24 * 60 * 60 * 1000).toISOString();
+  const last30dIso = new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000).toISOString();
 
   const [
     tableCountRow,
@@ -87,6 +98,13 @@ export async function getOperationalCapacitySnapshot(
     findingsCountRow,
     dueNowRows,
     lastRetentionRow,
+    accountsUsingDomainGroupsRow,
+    accountsWithAgencyBrandingRow,
+    importJobsLast30dRow,
+    importJobFailuresLast30dRow,
+    bulkActionJobsLast30dRow,
+    bulkActionJobFailuresLast30dRow,
+    domainCountsByPlanRows,
   ] = await Promise.all([
     // Raw D1 binding, not the Drizzle wrapper — sqlite_master queries
     // aren't expressible through Drizzle's query builder, and this is the
@@ -134,6 +152,37 @@ export async function getOperationalCapacitySnapshot(
       .where(eq(schema.scheduledJobRuns.jobName, "data_retention_purge"))
       .orderBy(sql`${schema.scheduledJobRuns.startedAt} desc`)
       .limit(1),
+    db
+      .select({ n: sql<number>`count(distinct ${schema.domains.ownerUserId})` })
+      .from(schema.domains)
+      .where(sql`${schema.domains.groupId} is not null`),
+    db.select({ n: sql<number>`count(*)` }).from(schema.agencyBrandProfiles),
+    db
+      .select({ n: sql<number>`count(*)` })
+      .from(schema.portfolioImportJobs)
+      .where(sql`${schema.portfolioImportJobs.createdAt} >= ${last30dIso}`),
+    db
+      .select({ n: sql<number>`count(*)` })
+      .from(schema.portfolioImportJobs)
+      .where(
+        sql`${schema.portfolioImportJobs.createdAt} >= ${last30dIso} and ${schema.portfolioImportJobs.status} != 'completed'`,
+      ),
+    db
+      .select({ n: sql<number>`count(*)` })
+      .from(schema.bulkActionJobs)
+      .where(sql`${schema.bulkActionJobs.createdAt} >= ${last30dIso}`),
+    db
+      .select({ n: sql<number>`count(*)` })
+      .from(schema.bulkActionJobs)
+      .where(
+        sql`${schema.bulkActionJobs.createdAt} >= ${last30dIso} and ${schema.bulkActionJobs.status} != 'completed'`,
+      ),
+    db
+      .select({ planId: schema.users.planId, n: sql<number>`count(*)` })
+      .from(schema.domains)
+      .innerJoin(schema.users, eq(schema.domains.ownerUserId, schema.users.id))
+      .where(isNull(schema.domains.deletedAt))
+      .groupBy(schema.users.planId),
   ]);
 
   const scanCount = Number(scanCountRow[0]?.n ?? 0);
@@ -176,6 +225,17 @@ export async function getOperationalCapacitySnapshot(
       workerCpuLimitErrors: null,
       bundleSizeBytes: null,
       d1SizeBytes: null,
+    },
+    agencyWorkspace: {
+      accountsUsingDomainGroups: Number(accountsUsingDomainGroupsRow[0]?.n ?? 0),
+      accountsWithAgencyBranding: Number(accountsWithAgencyBrandingRow[0]?.n ?? 0),
+      importJobsLast30d: Number(importJobsLast30dRow[0]?.n ?? 0),
+      importJobFailuresLast30d: Number(importJobFailuresLast30dRow[0]?.n ?? 0),
+      bulkActionJobsLast30d: Number(bulkActionJobsLast30dRow[0]?.n ?? 0),
+      bulkActionJobFailuresLast30d: Number(bulkActionJobFailuresLast30dRow[0]?.n ?? 0),
+      domainCountsByPlan: Object.fromEntries(
+        domainCountsByPlanRows.map((r) => [r.planId, Number(r.n)]),
+      ),
     },
   };
 }

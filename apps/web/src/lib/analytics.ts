@@ -95,6 +95,35 @@ export const PRODUCT_EVENT_NAMES = [
   "domain_share_started",
   "domain_report_printed",
   "domain_retention_info_viewed",
+  // Agency Workspace and Portfolio Workflows (Phase 9). No domain name,
+  // client/group name, notes, uploaded row content, file name, import-job
+  // ID, share token, user email, Paddle identifier, evidence, or report
+  // finding is ever sent as a property — see
+  // docs/analytics/PHASE_09_AGENCY_WORKSPACE_EVENT_MODEL.md.
+  "agency_workspace_viewed",
+  "portfolio_summary_viewed",
+  "portfolio_attention_filter_applied",
+  "portfolio_change_feed_viewed",
+  "portfolio_domain_opened",
+  "domain_group_created",
+  "domain_group_updated",
+  "domain_group_deleted",
+  "domain_group_assignment_changed",
+  "saved_view_created",
+  "portfolio_import_previewed",
+  "portfolio_import_confirmed",
+  "portfolio_import_completed",
+  "portfolio_import_failed",
+  "portfolio_export_started",
+  "portfolio_export_completed",
+  "bulk_action_started",
+  "bulk_action_completed",
+  "agency_branding_updated",
+  "agency_logo_uploaded",
+  "agency_logo_removed",
+  "agency_report_share_created",
+  "agency_report_share_revoked",
+  "plan_limit_reached_from_portfolio",
 ] as const;
 
 export type ProductEventName = (typeof PRODUCT_EVENT_NAMES)[number];

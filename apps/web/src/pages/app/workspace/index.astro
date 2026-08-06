@@ -1,0 +1,143 @@
+---
+export const prerender = false;
+import AppLayout from "../../../layouts/AppLayout.astro";
+import { AgencyWorkspace } from "../../../components/app/AgencyWorkspace";
+import { createDb } from "@crawlpact/database";
+import { getEnv } from "../../../lib/env";
+import { getPageSession } from "../../../lib/auth/page-session";
+import { getPlan } from "../../../lib/plan";
+import { countActiveDomains } from "../../../lib/domains";
+import { countActiveMonitoring } from "../../../lib/portfolio";
+import { trackEvent } from "../../../lib/analytics";
+
+const db = createDb(getEnv().DB);
+const result = await getPageSession(db, Astro.request);
+if (!result) return Astro.redirect("/sign-in");
+const { user } = result;
+
+const plan = await getPlan(db, user.planId);
+const [domainCount, monitoringCount] = await Promise.all([
+  countActiveDomains(db, user.id),
+  countActiveMonitoring(db, user.id),
+]);
+await trackEvent(db, "agency_workspace_viewed", { userId: user.id, properties: { plan: plan.id } });
+---
+
+<AppLayout title="Workspace" displayName={user.displayName}>
+  <div class="flex flex-wrap items-start justify-between gap-4">
+    <div>
+      <h1 class="text-h1 text-neutral-950">Agency workspace</h1>
+      <p class="mt-2 text-body text-neutral-700">
+        {user.displayName}'s portfolio — {plan.name} plan · {domainCount} of {plan.savedDomainLimit} saved
+        domains · {monitoringCount} monitored
+      </p>
+    </div>
+    <div class="flex flex-wrap gap-2">
+      <a
+        href="/app/domains"
+        class="inline-block rounded-control border border-neutral-300 bg-white px-4 py-2 text-body font-medium text-neutral-800 hover:bg-neutral-50"
+      >
+        Add domain
+      </a>
+      {
+        plan.batchImportLimit > 0 && (
+          <a
+            href="/app/workspace/import"
+            class="inline-block rounded-control border border-neutral-300 bg-white px-4 py-2 text-body font-medium text-neutral-800 hover:bg-neutral-50"
+          >
+            Import domains
+          </a>
+        )
+      }
+      {
+        plan.domainGroupsEnabled && (
+          <a
+            href="/app/groups"
+            class="inline-block rounded-control border border-neutral-300 bg-white px-4 py-2 text-body font-medium text-neutral-800 hover:bg-neutral-50"
+          >
+            Create group
+          </a>
+        )
+      }
+      {
+        plan.csvExportEnabled && (
+          <a
+            href="/api/domains/export.csv"
+            class="inline-block rounded-control border border-neutral-300 bg-white px-4 py-2 text-body font-medium text-neutral-800 hover:bg-neutral-50"
+          >
+            Export domains
+          </a>
+        )
+      }
+      <a
+        href="/pricing"
+        class="inline-block rounded-control border border-neutral-300 bg-white px-4 py-2 text-body font-medium text-neutral-800 hover:bg-neutral-50"
+      >
+        Review pricing
+      </a>
+    </div>
+  </div>
+
+  <div class="mt-8">
+    <AgencyWorkspace client:load />
+  </div>
+
+  <div class="mt-8 rounded-card border border-neutral-200 bg-white p-5">
+    <h2 class="text-h3 text-neutral-950">Agency report branding</h2>
+    <p class="mt-1 text-supporting text-neutral-600">
+      {
+        plan.agencyBrandingEnabled
+          ? "Set your agency name and logo once so it's ready every time you share a report."
+          : "Agency-branded shared reports are available on the Agency plan."
+      }
+    </p>
+    <a
+      href="/app/agency-branding"
+      class="mt-3 inline-block text-supporting text-brand-700 underline"
+    >
+      {plan.agencyBrandingEnabled ? "Manage branding" : "Review the Agency plan"}
+    </a>
+  </div>
+
+  <div class="mt-8 rounded-card border border-neutral-200 bg-white p-5">
+    <h2 class="text-h3 text-neutral-950">Plan usage and limits</h2>
+    <dl class="mt-3 grid grid-cols-2 gap-4 sm:grid-cols-4">
+      <div>
+        <dt class="text-supporting text-neutral-600">Saved domains</dt>
+        <dd class="text-body text-neutral-900">{domainCount} / {plan.savedDomainLimit}</dd>
+      </div>
+      <div>
+        <dt class="text-supporting text-neutral-600">Batch import</dt>
+        <dd class="text-body text-neutral-900">
+          {plan.batchImportLimit > 0 ? `Up to ${plan.batchImportLimit} per batch` : "Not included"}
+        </dd>
+      </div>
+      <div>
+        <dt class="text-supporting text-neutral-600">Domain groups</dt>
+        <dd class="text-body text-neutral-900">
+          {plan.domainGroupsEnabled ? "Included" : "Not included"}
+        </dd>
+      </div>
+      <div>
+        <dt class="text-supporting text-neutral-600">CSV export</dt>
+        <dd class="text-body text-neutral-900">
+          {plan.csvExportEnabled ? "Included" : "Not included"}
+        </dd>
+      </div>
+      <div>
+        <dt class="text-supporting text-neutral-600">Agency branding</dt>
+        <dd class="text-body text-neutral-900">
+          {plan.agencyBrandingEnabled ? "Included" : "Not included"}
+        </dd>
+      </div>
+      <div>
+        <dt class="text-supporting text-neutral-600">Monitoring frequency</dt>
+        <dd class="text-body text-neutral-900">{plan.monitoringFrequency}</dd>
+      </div>
+      <div>
+        <dt class="text-supporting text-neutral-600">History retention</dt>
+        <dd class="text-body text-neutral-900">{plan.historyRetentionDays} days</dd>
+      </div>
+    </dl>
+  </div>
+</AppLayout>

@@ -106,17 +106,6 @@ extended platform guides), RISK-032 (no Search Console property connected), and 
 - **Status**: monitoring
 - **Acceptance criteria for closure**: Either tightening measures are implemented and re-modeled (done this phase), or a Workers Paid upgrade is made ahead of the trigger thresholds. Kept open (not closed) since the structural exposure at commercial scale is unchanged by mitigation alone.
 
-### RISK-010 — Agency-branding logo objects in R2 can become orphaned
-
-- **Category**: Database, Product · **Severity**: P2 · **Probability**: Low volume today
-- **Impact**: Bulk share revocation and account/domain-deletion retention purge both delete/revoke `shared_reports` rows without deleting the underlying R2 logo object (only the single-share admin-revoke path cleans up R2).
-- **Evidence**: `docs/data/D1_R2_DATA_PLACEMENT_POLICY.md`, `docs/status/KNOWN_RISKS.md`
-- **Current mitigation**: None — low practical impact today (small images, low volume feature).
-- **Owner**: Engineering owner · **Trigger**: Agency-branding adoption growth
-- **Review date**: Phase 9 · **Target phase**: Phase 9
-- **Status**: monitoring
-- **Acceptance criteria for closure**: An orphan-object sweep is added to the daily retention cron, or R2 cleanup is added to bulk revocation and account/domain purge.
-
 ### RISK-011 — No registered business address, registration number, or tax information exists anywhere in the repository
 
 - **Category**: Legal · **Severity**: P2 · **Probability**: N/A (explicitly deferred)

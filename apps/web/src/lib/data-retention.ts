@@ -4,6 +4,7 @@ import type { Database } from "@crawlpact/database";
 import { ACCOUNT_DELETION_GRACE_PERIOD_DAYS } from "./account";
 import { resolveRealEntitledPlan } from "./admin/subscriptions";
 import { getIntConfig } from "./runtime-config";
+import { findAndCleanupOrphanedLogos } from "./r2-orphan-cleanup";
 
 /**
  * Data retention purge (docs/data/DATA_RETENTION.md, SRS §34, Part 2 Step
@@ -347,12 +348,37 @@ async function revertExpiredEntitlements(
   return { ...emptyCategoryResult(), affected: expired.length, backlogRemaining };
 }
 
+/**
+ * Phase 9 (RISK-010 closure): daily-cron orphan sweep for `AGENCY_LOGOS` R2
+ * objects — the acceptance criteria the risk itself defined ("An
+ * orphan-object sweep is added to the daily retention cron") rather than
+ * adding cleanup to every individual revocation/deletion call site.
+ * `bucket` is optional so existing callers/tests that don't set up an R2
+ * binding keep working unchanged — the category is simply skipped (0
+ * affected, no error) rather than the whole job failing when it's absent.
+ */
+async function purgeOrphanedAgencyLogos(
+  db: Database,
+  bucket: R2Bucket | undefined,
+  dryRun: boolean,
+): Promise<CategoryResult> {
+  if (!bucket) return emptyCategoryResult();
+  const result = await findAndCleanupOrphanedLogos(db, bucket, { dryRun });
+  return {
+    affected: result.orphansDeleted,
+    wouldAffect: dryRun ? result.orphansFound.length : null,
+    backlogRemaining: result.truncated,
+    error: null,
+  };
+}
+
 const CATEGORIES = [
   "expired_audit_continuations",
   "anonymous_scans",
   "domain_scans",
   "deleted_accounts",
   "expired_entitlements",
+  "orphaned_agency_logos",
 ] as const;
 type Category = (typeof CATEGORIES)[number];
 
@@ -363,6 +389,7 @@ export type DataRetentionResult = {
   accountsPurged: number;
   entitlementsExpired: number;
   expiredContinuationsDeleted: number;
+  orphanedAgencyLogosDeleted: number;
   dryRun: boolean;
   /** True if any category threw — the run still completed the categories that didn't fail. */
   hasErrors: boolean;
@@ -380,6 +407,9 @@ export type DataRetentionOptions = {
   chunkSize?: number;
   /** Overrides RETENTION_MAX_CHUNKS — same purpose as chunkSize above. */
   maxChunks?: number;
+  /** The AGENCY_LOGOS R2 bucket — enables the orphaned_agency_logos category (Phase 9,
+   * RISK-010). Omitted in most test harnesses; the category is then a no-op. */
+  agencyLogosBucket?: R2Bucket;
 };
 
 export async function runDataRetentionPurge(
@@ -402,6 +432,7 @@ export async function runDataRetentionPurge(
     domain_scans: () => purgeExpiredDomainScans(db, now, dryRun, chunkSize, maxChunks),
     deleted_accounts: () => purgeDeletedAccounts(db, now, dryRun, chunkSize, maxChunks),
     expired_entitlements: () => revertExpiredEntitlements(db, now, dryRun, chunkSize, maxChunks),
+    orphaned_agency_logos: () => purgeOrphanedAgencyLogos(db, options.agencyLogosBucket, dryRun),
   };
 
   const categories = {} as Record<Category, CategoryResult>;
@@ -422,6 +453,7 @@ export async function runDataRetentionPurge(
     domainScansDeleted: categories.domain_scans.affected,
     accountsPurged: categories.deleted_accounts.affected,
     entitlementsExpired: categories.expired_entitlements.affected,
+    orphanedAgencyLogosDeleted: categories.orphaned_agency_logos.affected,
     dryRun,
     hasErrors: CATEGORIES.some((c) => categories[c].error !== null),
     hasBacklog: CATEGORIES.some((c) => categories[c].backlogRemaining),

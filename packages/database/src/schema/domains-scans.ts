@@ -10,6 +10,10 @@ export const domainGroups = sqliteTable("domain_groups", {
     .notNull()
     .references(() => users.id),
   name: text("name").notNull(),
+  // Phase 9: optional internal note, never shown to anyone but the owner and
+  // never included in CSV export by default. See migration 0029 and
+  // docs/product/DOMAIN_GROUP_MODEL.md.
+  description: text("description"),
   createdAt: text("created_at").notNull(),
   updatedAt: text("updated_at").notNull(),
   deletedAt: text("deleted_at"),
