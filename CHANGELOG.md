@@ -14,22 +14,47 @@ the "Production deployment" entries below for the established pattern).
 
 ## Unreleased
 
-### Added — Phase 9: Agency Workspace and Portfolio Workflows
+Nothing pending — see "Production deployment (2026-08-07) — Phase 9: Agency Workspace and
+Portfolio Workflows" below for the most recent release.
 
-Merged to `main`, not yet deployed to production — see the "Production deployment" entry above
-this one once deployed. Adds an authenticated agency/portfolio workspace (`/app/workspace`), an
-explainable portfolio summary and deterministic attention queue, an account-wide cursor-paginated
-portfolio change feed, safe non-empty domain-group deletion (domains move to Ungrouped, history
-preserved), a server-side-paginated portfolio table, a genuine CSV file batch-import workflow
-(hand-written RFC 4180 parser, preview/confirm, idempotent), an extended CSV export
-(group/selection scope, more columns), bounded bulk actions (group assignment, monitoring state),
-a persistent Agency-branding profile, and wiring for the previously-unused
-`saved_filters`/`table_preferences` schema into real saved views. Closes RISK-010 (R2 agency-logo
-orphan cleanup) via a new category in the existing daily retention cron. One additive migration
-(`0029_agency_workspace_portfolio.sql`, 47 tables total). Team roles, a client portal, bulk
-rescan, a multi-domain portfolio-report product, and cross-domain comparison were evaluated
-against the SRS and explicitly not implemented. Full detail:
+## Production deployment (2026-08-07) — Phase 9: Agency Workspace and Portfolio Workflows
+
+PR #93 (squash-merged as `3ee3b2f`) deployed to production via `deploy-production.yml`, run
+against commit `3ee3b2f0bd25ff050b7f592e0b057a1b2db7c144`. One new additive D1 migration applied
+(`0029_agency_workspace_portfolio.sql` — `domain_groups.description` column,
+`agency_brand_profiles`/`portfolio_import_jobs`/`portfolio_import_rows`/`bulk_action_jobs` tables,
+5 new indexes; 29/29 migrations applied, 47 tables total). Deployed Worker version:
+`7ce60f6d-5ed9-4cf2-b9ff-a2b5ac31e44c`. Full detail:
 `docs/reports/PHASE_09_AGENCY_WORKSPACE_PORTFOLIO_COMPLETION_REPORT.md`.
+
+Adds an authenticated agency/portfolio workspace (`/app/workspace`), an explainable portfolio
+summary and deterministic attention queue, an account-wide cursor-paginated portfolio change feed,
+safe non-empty domain-group deletion (domains move to Ungrouped, history preserved), a
+server-side-paginated portfolio table, a genuine CSV file batch-import workflow (hand-written RFC
+4180 parser, preview/confirm, idempotent), an extended CSV export (group/selection scope, more
+columns), bounded bulk actions (group assignment, monitoring state), a persistent Agency-branding
+profile, and wiring for the previously-unused `saved_filters`/`table_preferences` schema into real
+saved views. Closes RISK-010 (R2 agency-logo orphan cleanup) via a new category in the existing
+daily retention cron. Team roles, a client portal, bulk rescan, a multi-domain portfolio-report
+product, and cross-domain comparison were evaluated against the SRS and explicitly not
+implemented — see the six `docs/product/PHASE_09_*_DECISION.md` documents.
+
+Found and fixed two real defects during this phase's own testing: a D1 bound-parameter limit
+(~100) that would have broken any CSV import over ~14 rows in production (fixed by chunking the
+row-insert statement); and a pre-existing accessibility defect (an unlabelled group-rename input
+in `GroupsManager.tsx`, present before this phase) caught by a new a11y scan of a populated groups
+list.
+
+**Independent post-deploy verification**: direct production D1 queries confirm all four new
+tables (`agency_brand_profiles`, `portfolio_import_jobs`, `portfolio_import_rows`,
+`bulk_action_jobs`) and the `domain_groups.description` column exist, and
+`wrangler d1 migrations list --remote` reports "No migrations to apply!" (29/29 applied). Direct
+`curl` checks confirm every new route (`/app/workspace`, `/app/workspace/domains`,
+`/app/workspace/import`, `/app/agency-branding`, `/api/workspace/summary`,
+`/api/workspace/import/template.csv`) correctly requires authentication (302 redirect for pages,
+401 `UNAUTHENTICATED` for APIs) and carries `Cache-Control: private, no-store` and
+`X-Robots-Tag: noindex, nofollow, noarchive`. The public homepage (200) and `/pricing` (200) were
+also checked, confirming no regression to unrelated public routes.
 
 ## Production deployment (2026-08-06) — Phase 8: Saved-Domain Experience and Change Timeline
 
