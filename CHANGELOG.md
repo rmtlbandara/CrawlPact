@@ -14,8 +14,22 @@ the "Production deployment" entries below for the established pattern).
 
 ## Unreleased
 
-Nothing pending — see "Production deployment (2026-08-06) — Phase 8: Saved-Domain Experience and
-Change Timeline" below for the most recent release.
+### Added — Phase 9: Agency Workspace and Portfolio Workflows
+
+Merged to `main`, not yet deployed to production — see the "Production deployment" entry above
+this one once deployed. Adds an authenticated agency/portfolio workspace (`/app/workspace`), an
+explainable portfolio summary and deterministic attention queue, an account-wide cursor-paginated
+portfolio change feed, safe non-empty domain-group deletion (domains move to Ungrouped, history
+preserved), a server-side-paginated portfolio table, a genuine CSV file batch-import workflow
+(hand-written RFC 4180 parser, preview/confirm, idempotent), an extended CSV export
+(group/selection scope, more columns), bounded bulk actions (group assignment, monitoring state),
+a persistent Agency-branding profile, and wiring for the previously-unused
+`saved_filters`/`table_preferences` schema into real saved views. Closes RISK-010 (R2 agency-logo
+orphan cleanup) via a new category in the existing daily retention cron. One additive migration
+(`0029_agency_workspace_portfolio.sql`, 47 tables total). Team roles, a client portal, bulk
+rescan, a multi-domain portfolio-report product, and cross-domain comparison were evaluated
+against the SRS and explicitly not implemented. Full detail:
+`docs/reports/PHASE_09_AGENCY_WORKSPACE_PORTFOLIO_COMPLETION_REPORT.md`.
 
 ## Production deployment (2026-08-06) — Phase 8: Saved-Domain Experience and Change Timeline
 

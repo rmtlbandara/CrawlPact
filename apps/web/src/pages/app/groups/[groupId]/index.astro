@@ -1,0 +1,33 @@
+---
+export const prerender = false;
+import AppLayout from "../../../../layouts/AppLayout.astro";
+import { GroupOverview } from "../../../../components/app/GroupOverview";
+import { createDb } from "@crawlpact/database";
+import { getEnv } from "../../../../lib/env";
+import { getPageSession } from "../../../../lib/auth/page-session";
+import { getPlan } from "../../../../lib/plan";
+import { getOwnedGroup } from "../../../../lib/groups";
+
+const db = createDb(getEnv().DB);
+const result = await getPageSession(db, Astro.request);
+if (!result) return Astro.redirect("/sign-in");
+const { user } = result;
+
+const plan = await getPlan(db, user.planId);
+if (!plan.domainGroupsEnabled) return Astro.redirect("/app/groups");
+
+const { groupId } = Astro.params;
+if (!groupId) return Astro.redirect("/app/groups");
+const group = await getOwnedGroup(db, user.id, groupId);
+if (!group) return Astro.redirect("/app/groups");
+---
+
+<AppLayout title={group.name} displayName={user.displayName}>
+  <div class="flex flex-wrap items-start justify-between gap-4">
+    <h1 class="text-h1 text-neutral-950">{group.name}</h1>
+    <a href="/app/groups" class="text-supporting text-brand-700 underline">Back to groups</a>
+  </div>
+  <div class="mt-6">
+    <GroupOverview client:load groupId={groupId} />
+  </div>
+</AppLayout>

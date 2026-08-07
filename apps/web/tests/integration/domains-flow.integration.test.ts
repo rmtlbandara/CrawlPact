@@ -211,7 +211,7 @@ describe("saved domains, groups, and account management (real D1)", () => {
     if (!body.ok) expect(body.error.code).toBe("FORBIDDEN");
   });
 
-  it("allows group creation once on a plan with domainGroupsEnabled, and enforces GROUP_NOT_EMPTY on delete", async () => {
+  it("allows group creation once on a plan with domainGroupsEnabled, and deleting a non-empty group moves its domains to Ungrouped (Phase 9)", async () => {
     // Simulate a plan upgrade directly against the harness DB (Paddle billing wiring is Step 17).
     await mockEnv.DB.prepare(
       "UPDATE users SET plan_id = 'pro' WHERE id = (SELECT owner_user_id FROM domains WHERE id = ?)",
@@ -232,25 +232,27 @@ describe("saved domains, groups, and account management (real D1)", () => {
     );
     expect(attachResponse.status).toBe(200);
 
-    const blockedDelete = await deleteGroupRoute(
-      ctx(mutatingRequest("http://x/groups/x", "DELETE", cookie), { groupId }),
-    );
-    expect(blockedDelete.status).toBe(409);
-    const blockedBody = await readJson(blockedDelete);
-    if (!blockedBody.ok) expect(blockedBody.error.code).toBe("GROUP_NOT_EMPTY");
-
     const renameResponse = await renameGroupRoute(
       ctx(jsonRequest("http://x/groups/x", "PATCH", { name: "VIP Clients" }, cookie), { groupId }),
     );
     expect(renameResponse.status).toBe(200);
 
-    await updateDomainRoute(
-      ctx(jsonRequest("http://x/domains/x", "PATCH", { groupId: null }, cookie), { domainId }),
-    );
-    const okDelete = await deleteGroupRoute(
+    // Phase 9 (docs/product/DOMAIN_GROUP_MODEL.md §2): deleting a non-empty group no longer
+    // fails — it moves the domain to Ungrouped and preserves its own history/monitoring.
+    const deleteResponse = await deleteGroupRoute(
       ctx(mutatingRequest("http://x/groups/x", "DELETE", cookie), { groupId }),
     );
-    expect(okDelete.status).toBe(200);
+    expect(deleteResponse.status).toBe(200);
+    const deleteBody = await readJson<{ movedCount: number }>(deleteResponse);
+    if (!deleteBody.ok) throw new Error("delete failed");
+    expect(deleteBody.data.movedCount).toBe(1);
+
+    const domainResponse = await getDomainRoute(
+      ctx(getRequest("http://x/domains/x", cookie), { domainId }),
+    );
+    const domainBody = await readJson<{ groupId: string | null }>(domainResponse);
+    if (!domainBody.ok) throw new Error("get domain failed");
+    expect(domainBody.data.groupId).toBeNull();
 
     const list = await readJson<unknown[]>(
       await listGroupsRoute(ctx(getRequest("http://x/groups", cookie))),

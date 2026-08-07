@@ -30,7 +30,7 @@ not itself implement anything.
 | 6   | Pricing, Plan Architecture and Checkout Continuity         | P1       | Phase 4      | **complete** (see `docs/reports/PHASE_06_PRICING_PADDLE_CHECKOUT_COMPLETION_REPORT.md`)                                                               |
 | 7   | Vertical Landing Pages and Platform SEO Architecture       | P2       | Phases 2–4   | **substantially complete** (PR #82, merged `4637e1a`, deployed to production; see `docs/reports/PHASE_07_VERTICAL_PLATFORM_SEO_COMPLETION_REPORT.md`) |
 | 8   | Saved-Domain Experience and Change Timeline                | P1       | Phase 5      | **complete** (see `docs/reports/PHASE_08_SAVED_DOMAIN_CHANGE_TIMELINE_COMPLETION_REPORT.md`)                                                          |
-| 9   | Agency Workspace and Portfolio Workflows                   | P2       | Phase 8      | not started                                                                                                                                           |
+| 9   | Agency Workspace and Portfolio Workflows                   | P2       | Phase 8      | **complete** (see `docs/reports/PHASE_09_AGENCY_WORKSPACE_PORTFOLIO_COMPLETION_REPORT.md`)                                                            |
 | 10  | Notification Channels and Monitoring Reliability           | P1       | Phase 8      | not started                                                                                                                                           |
 | 11  | Database, Storage, Retention and Performance Hardening     | P0       | Phase 1      | **complete** (PR #86, merged `36166a4`, deployed to production; see `docs/reports/PHASE_11_DATABASE_STORAGE_PERFORMANCE_COMPLETION_REPORT.md`)        |
 | 12  | Security, CI, Dependency and Quality-Gate Improvements     | P0       | Phase 1      | not started                                                                                                                                           |
@@ -238,7 +238,15 @@ PRODUCT_TERMINOLOGY_GLOSSARY,CLAIMS_AND_MESSAGING_GUIDE,MESSAGING_SURFACE_INVENT
   share revocation and account/domain-deletion purge (`BASELINE_RISKS_AND_UNKNOWNS.md`, existing
   risk).
 - **Dependencies**: Phase 8.
-- **Status**: not started.
+- **Status**: complete — merged and deployed to production; see
+  `docs/reports/PHASE_09_AGENCY_WORKSPACE_PORTFOLIO_COMPLETION_REPORT.md`. Added an agency/portfolio
+  workspace, explainable portfolio summary and attention queue, account-wide change feed, safe
+  non-empty group deletion, server-side-paginated portfolio table, CSV file batch import, extended
+  CSV export, bounded bulk actions, a persistent agency-branding profile, and saved views. Closed
+  RISK-010 (R2 logo orphan cleanup) via a new daily-cron sweep category, exactly per that risk's own
+  stated closure criterion — archived as ARC-027. Team roles, a client portal, bulk rescan, a
+  multi-domain portfolio-report product, and cross-domain comparison were evaluated against the SRS
+  and explicitly not implemented — see the six `docs/product/PHASE_09_*_DECISION.md` documents.
 
 ### Phase 10 — Notification Channels and Monitoring Reliability
 

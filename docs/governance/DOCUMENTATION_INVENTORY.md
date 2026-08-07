@@ -266,3 +266,26 @@ these three, so implementation is deferred pending explicit approval, per the ph
 "implement only approved retention periods" scope boundary — not an oversight). See the completion
 report for the full change list. Total documentation-file count is now ~171 (153 post-Phase-7 + 18
 new).
+
+## Phase 9 update (2026-08-06)
+
+16 new files, all `retain-current`/`current-authoritative` at creation, merged to `main` on branch
+`phase-09-agency-workspace-portfolio`:
+`docs/product/{PHASE_09_AGENCY_WORKSPACE_BASELINE,PHASE_09_WORKSPACE_MODEL_DECISION,
+PHASE_09_TEAM_AND_MEMBERSHIP_DECISION,PHASE_09_CLIENT_ENTITY_DECISION,
+AGENCY_WORKSPACE_INFORMATION_ARCHITECTURE,PORTFOLIO_SUMMARY_MODEL,PORTFOLIO_ATTENTION_MODEL,
+DOMAIN_GROUP_MODEL,CSV_IMPORT_WORKFLOW,CSV_EXPORT_WORKFLOW,BULK_ACTION_MODEL,
+PHASE_09_BULK_RESCAN_DECISION,AGENCY_BRANDING_MODEL,PHASE_09_PORTFOLIO_REPORT_DECISION,
+PHASE_09_CROSS_DOMAIN_COMPARISON_DECISION}.md`,
+`docs/data/{PHASE_09_IMPORT_AND_BULK_JOB_RETENTION,PHASE_09_PORTFOLIO_QUERY_AND_INDEX_AUDIT}.md`,
+`docs/analytics/PHASE_09_AGENCY_WORKSPACE_EVENT_MODEL.md`,
+`docs/security/PHASE_09_AGENCY_WORKSPACE_THREAT_REVIEW.md`, and
+`docs/reports/PHASE_09_AGENCY_WORKSPACE_PORTFOLIO_COMPLETION_REPORT.md` (`evidence`) — 20 files
+total. A headline finding from this phase's own baseline doc: domain groups, CSV export, and
+Agency-branded shared reports already existed as shipped, tested features before this phase began
+(confirmed by direct code inspection, not assumed) — this phase's real new-build surface was
+narrower than its own prompt's phrasing implied (portfolio workspace UI, CSV _file_ import,
+bulk actions, saved views, and six decision-gate documents resolving to "not authorised" for
+team roles, a client portal, bulk rescan, a portfolio-report product, and cross-domain comparison).
+No existing file was superseded. Total documentation-file count is now ~187 (171 post-Phase-11 +
+16 new).

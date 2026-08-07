@@ -76,3 +76,16 @@ export async function clearRecoveryCodeRateLimit(page: Page): Promise<void> {
 export async function seedFailedWebhookEvent(page: Page): Promise<void> {
   await postTestOnly(page, "/api/test-only/seed-failed-webhook");
 }
+
+/**
+ * Phase 9: sets the currently signed-in account's plan directly, so agency
+ * workspace journeys can reach Pro/Agency-gated UI without a real Paddle
+ * checkout (checkout-continuity.spec.ts already covers the real billing
+ * flow separately).
+ */
+export async function setPlan(
+  page: Page,
+  planId: "free" | "solo" | "pro" | "agency",
+): Promise<void> {
+  await postTestOnly(page, "/api/test-only/set-plan", { planId });
+}

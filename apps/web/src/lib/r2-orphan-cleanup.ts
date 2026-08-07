@@ -26,11 +26,16 @@ import { objectKeyFromLogoUrl } from "./agency-logo";
  *   this phase's admin-triggered use is manual/bounded, not a cron job).
  * - **D1-reference confirmation, not assumption**: an object is only
  *   classified as orphaned after checking every real `shared_reports` row
- *   with non-null `agency_branding` and confirming none of them reference
- *   this key. `shared_reports` is small (single digits in production, per
- *   the Stage 11A baseline) — a full in-memory scan of its own branding
- *   values is simpler and more auditable than a fragile `LIKE` match on
- *   the JSON text, and no less accurate.
+ *   with non-null `agency_branding`, and (Phase 9) every
+ *   `agency_brand_profiles.logo_url`, confirming none of them reference
+ *   this key. Both tables are small (single digits to low hundreds in
+ *   production) — a full in-memory scan of their own branding/logo values
+ *   is simpler and more auditable than a fragile `LIKE` match on JSON
+ *   text, and no less accurate. A profile logo can exist with no share
+ *   referencing it yet (a user sets up branding before their first
+ *   share) — without this second reference source it would be wrongly
+ *   flagged as orphaned. See docs/product/AGENCY_BRANDING_MODEL.md's "R2
+ *   lifecycle correction."
  * - **Grace period**: an object uploaded within the last `graceMinutes` is
  *   never treated as orphaned even if no D1 row references it yet — the
  *   real upload route writes the R2 object and the D1 row in that order
@@ -71,10 +76,16 @@ export async function findAndCleanupOrphanedLogos(
 
   const page = await bucket.list({ limit: maxObjects, cursor: options.cursor });
 
-  const brandedShares = await db
-    .select({ agencyBranding: schema.sharedReports.agencyBranding })
-    .from(schema.sharedReports)
-    .where(isNotNull(schema.sharedReports.agencyBranding));
+  const [brandedShares, brandProfiles] = await Promise.all([
+    db
+      .select({ agencyBranding: schema.sharedReports.agencyBranding })
+      .from(schema.sharedReports)
+      .where(isNotNull(schema.sharedReports.agencyBranding)),
+    db
+      .select({ logoUrl: schema.agencyBrandProfiles.logoUrl })
+      .from(schema.agencyBrandProfiles)
+      .where(isNotNull(schema.agencyBrandProfiles.logoUrl)),
+  ]);
 
   const referencedKeys = new Set<string>();
   for (const row of brandedShares) {
@@ -87,6 +98,11 @@ export async function findAndCleanupOrphanedLogos(
     }
     if (!branding.logoUrl) continue;
     const key = objectKeyFromLogoUrl(branding.logoUrl);
+    if (key) referencedKeys.add(key);
+  }
+  for (const row of brandProfiles) {
+    if (!row.logoUrl) continue;
+    const key = objectKeyFromLogoUrl(row.logoUrl);
     if (key) referencedKeys.add(key);
   }
 

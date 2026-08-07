@@ -121,7 +121,9 @@ async function runRetentionJob(
 ): Promise<void> {
   const startedAt = new Date().toISOString();
   try {
-    const result = await runDataRetentionPurge(db);
+    const result = await runDataRetentionPurge(db, new Date(), {
+      agencyLogosBucket: env.AGENCY_LOGOS,
+    });
     // Phase 11 (Stage 11D): a per-category failure no longer aborts the
     // whole job (see data-retention.ts's failure-isolation doc comment) —
     // reflect that honestly rather than always recording "completed". A
@@ -139,7 +141,7 @@ async function runRetentionJob(
         "data_retention_purge",
         cronExpression,
         result.hasErrors ? "completed_with_errors" : "completed",
-        `anonymous_scans=${result.anonymousScansDeleted} domain_scans=${result.domainScansDeleted} accounts=${result.accountsPurged} entitlements_expired=${result.entitlementsExpired} expired_continuations=${result.expiredContinuationsDeleted}` +
+        `anonymous_scans=${result.anonymousScansDeleted} domain_scans=${result.domainScansDeleted} accounts=${result.accountsPurged} entitlements_expired=${result.entitlementsExpired} expired_continuations=${result.expiredContinuationsDeleted} orphaned_agency_logos=${result.orphanedAgencyLogosDeleted}` +
           (result.hasBacklog ? " backlog_remaining=true" : "") +
           (errorDetail ? ` errors=[${errorDetail}]` : ""),
         startedAt,
@@ -191,4 +193,5 @@ type Env = {
   BILLING_ENABLED: string;
   PADDLE_API_KEY: string;
   PADDLE_ENVIRONMENT: "sandbox" | "production";
+  AGENCY_LOGOS: R2Bucket;
 };

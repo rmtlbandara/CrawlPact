@@ -1,4 +1,4 @@
-import { useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { Alert, Button, Checkbox, FormField, Input, Modal, Textarea } from "@crawlpact/ui";
 import type { ShareSummary } from "@crawlpact/core";
 
@@ -30,6 +30,23 @@ export function ShareReportDialog({ auditId, agencyBrandingAllowed }: Props) {
   const [clientName, setClientName] = useState("");
   const [introText, setIntroText] = useState("");
   const fileInputRef = useRef<HTMLInputElement>(null);
+
+  // Phase 9: pre-fill from the persistent agency branding profile
+  // (docs/product/AGENCY_BRANDING_MODEL.md) — still fully editable per-share.
+  useEffect(() => {
+    if (!agencyBrandingAllowed) return;
+    async function loadProfile() {
+      const response = await fetch("/api/agency-branding/profile");
+      const body = (await response.json()) as {
+        ok: boolean;
+        data?: { agencyName: string | null; logoUrl: string | null };
+      };
+      if (!body.ok || !body.data) return;
+      if (body.data.agencyName) setAgencyName(body.data.agencyName);
+      if (body.data.logoUrl) setLogoPath(body.data.logoUrl);
+    }
+    void loadProfile();
+  }, [agencyBrandingAllowed]);
 
   function reset() {
     setError(null);

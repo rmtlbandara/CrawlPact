@@ -2,6 +2,39 @@
 
 **Status: verification-blocked (by user decision, not access failure).**
 
+## Phase 9 update (2026-08-06)
+
+Phase 9 (Agency Workspace and Portfolio Workflows) is **complete** — see
+`docs/reports/PHASE_09_AGENCY_WORKSPACE_PORTFOLIO_COMPLETION_REPORT.md`. Same manifest-only
+decision carried forward — no live GitHub issue created. When this manifest is applied, create:
+
+- **"Add portfolio workspace and multi-domain workflows"** — already **resolved** by this pass;
+  record as closed-on-creation with a link to the completion report and the merge commit, matching
+  this repo's established precedent.
+- Real content: an authenticated agency/portfolio workspace, an explainable portfolio summary and
+  deterministic attention queue, an account-wide cursor-paginated change feed, safe non-empty
+  domain-group deletion, a server-side-paginated portfolio table, a genuine CSV file batch-import
+  workflow (hand-written RFC 4180 parser, preview/confirm, idempotent), an extended CSV export,
+  bounded bulk actions, a persistent Agency-branding profile, and real saved views (wiring up
+  previously-unused `saved_filters`/`table_preferences`). Closed RISK-010 (R2 agency-logo orphan
+  cleanup) via a new daily-cron category. Found and fixed two real defects along the way: a D1
+  bound-parameter limit that would have broken any CSV import over ~14 rows (chunked inserts fix
+  it), and a pre-existing accessibility defect (an unlabelled group-rename input) newly caught by a
+  Phase 9 a11y scan of a populated groups list.
+- **Separate issues explicitly not created** — six decision-gate documents
+  (`docs/product/PHASE_09_*_DECISION.md`) each conclude the underlying capability is not currently
+  authorised, not merely deferred for later implementation: team roles/invitations (SRS §38
+  explicitly places this in post-MVP future scope), a client portal, bulk rescan (no SRS
+  authorisation and Phase 11's own capacity evidence argues against it), a multi-domain
+  portfolio-report product, and cross-domain policy comparison. Each document records its own
+  re-evaluation trigger — revisit only if a future SRS revision authorises the capability.
+- **Carried forward, unchanged, from Phase 8** (not addressed by this phase, out of its own scope):
+  RISK-028 tagline reconciliation; `package.json` descriptions; the export/report-export
+  test-coverage gap; RISK-001 (real paid Paddle checkout); RISK-012 (flaky webhook test);
+  `pnpm paddle:catalog:sync`; sandbox Paddle prices; RISK-034 (`listDomains()` N+1, still bounded
+  and low-risk — this phase's own new portfolio queries were written N+1-free from the start rather
+  than reusing or extending the affected function).
+
 ## Phase 8 update (2026-08-06)
 
 Phase 8 (Saved-Domain Experience and Change Timeline) is **complete** — see

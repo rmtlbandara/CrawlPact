@@ -44,8 +44,11 @@ export const POST: APIRoute = async ({ request }) => {
       });
     }
 
-    const group = await createGroup(db, user.id, parsed.data.name);
-    return jsonResponse(ok({ groupId: group.id, name: group.name }, requestId), 201);
+    const group = await createGroup(db, user.id, parsed.data.name, parsed.data.description ?? null);
+    return jsonResponse(
+      ok({ groupId: group.id, name: group.name, description: group.description }, requestId),
+      201,
+    );
   } catch (error) {
     return jsonErrorResponse(error, requestId);
   }
