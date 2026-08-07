@@ -3,6 +3,7 @@ import { createDb } from "@crawlpact/database";
 import { runMonitoringSweep } from "./lib/monitoring";
 import { runDataRetentionPurge } from "./lib/data-retention";
 import { applyDueScheduledDowngrades } from "./lib/billing/scheduled-downgrades";
+import { reconcileMissingPolicyChangeNotifications } from "./lib/notification-reconciliation";
 
 /**
  * Custom Worker entry point (ADR-0001). Delegates ordinary requests to
@@ -56,6 +57,17 @@ export default {
       } else {
         ctx.waitUntil(runMonitoringJob(env, controller.cron, db));
       }
+
+      // Phase 10: a bounded, independent recovery pass for any policy-change
+      // notification that failed to be created after its underlying
+      // domain_change_event already committed (§16, §28). Deliberately its
+      // own job/try/catch/scheduled_job_runs row, and deliberately NOT
+      // gated behind schedulerPaused/maintenanceMode — it only reads
+      // already-committed history and repairs missing notifications, it
+      // never triggers a scan, so a notification-reconciliation failure can
+      // never stop monitoring and a monitoring pause can never stop
+      // reconciliation.
+      ctx.waitUntil(runNotificationReconciliationJob(env, controller.cron, db));
     }
   },
 } satisfies ExportedHandler<Env>;
@@ -84,6 +96,30 @@ async function runMonitoringJob(
       .run();
   } catch (error) {
     await recordFailedJob(env, "monitoring_sweep", cronExpression, startedAt, error);
+  }
+}
+
+async function runNotificationReconciliationJob(
+  env: Env,
+  cronExpression: string,
+  db: ReturnType<typeof createDb>,
+): Promise<void> {
+  const startedAt = new Date().toISOString();
+  try {
+    const result = await reconcileMissingPolicyChangeNotifications(db, new Date());
+    await env.DB.prepare(
+      "INSERT INTO scheduled_job_runs (job_name, cron_expression, status, error_summary, started_at, completed_at) VALUES (?, ?, 'completed', ?, ?, ?)",
+    )
+      .bind(
+        "notification_reconciliation",
+        cronExpression,
+        `scanned=${result.scanned} created=${result.created}`,
+        startedAt,
+        new Date().toISOString(),
+      )
+      .run();
+  } catch (error) {
+    await recordFailedJob(env, "notification_reconciliation", cronExpression, startedAt, error);
   }
 }
 

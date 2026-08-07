@@ -133,7 +133,7 @@ export type GenerateTimelineEventParams = {
 export async function generateTimelineEvent(
   db: Database,
   params: GenerateTimelineEventParams,
-): Promise<{ id: string } | null> {
+): Promise<GeneratedTimelineEvent | null> {
   const [currentScan] = await db
     .select()
     .from(schema.scans)
@@ -241,7 +241,7 @@ export async function generateTimelineEvent(
 export async function generatePresetChangeEvent(
   db: Database,
   params: { domainId: string; fromPreset: string; toPreset: string; observedAt: string },
-): Promise<{ id: string } | null> {
+): Promise<GeneratedTimelineEvent | null> {
   if (params.fromPreset === params.toPreset) return null;
   const minuteBucket = params.observedAt.slice(0, 16); // ISO up to minute precision
   return insertEvent(db, {
@@ -287,7 +287,18 @@ type InsertEventParams = {
   fingerprintParts: string[];
 };
 
-async function insertEvent(db: Database, params: InsertEventParams): Promise<{ id: string }> {
+/**
+ * Phase 10: the full inserted (or, on a fingerprint conflict, already-existing)
+ * row — not just its id — so callers can drive notification generation
+ * directly from the authoritative attribution result (changeOrigin,
+ * attentionLevel, summary) without a second query or re-deriving it.
+ */
+export type GeneratedTimelineEvent = typeof schema.domainChangeEvents.$inferSelect;
+
+async function insertEvent(
+  db: Database,
+  params: InsertEventParams,
+): Promise<GeneratedTimelineEvent> {
   const fingerprint = await computeFingerprint(params.fingerprintParts);
   const id = crypto.randomUUID();
   await db
@@ -314,15 +325,23 @@ async function insertEvent(db: Database, params: InsertEventParams): Promise<{ i
     })
     .onConflictDoNothing();
 
-  // onConflictDoNothing means `id` may not be the row that actually exists
-  // if this fingerprint was already inserted by a concurrent/retried call —
-  // look the real row up by fingerprint so callers always get a valid id.
+  // onConflictDoNothing means the row just inserted may not be the row that
+  // actually exists if this fingerprint was already inserted by a
+  // concurrent/retried call — look the real row up by fingerprint so callers
+  // always get the authoritative one (id included).
   const [row] = await db
-    .select({ id: schema.domainChangeEvents.id })
+    .select()
     .from(schema.domainChangeEvents)
     .where(eq(schema.domainChangeEvents.fingerprint, fingerprint))
     .limit(1);
-  return row ?? { id };
+  if (!row) {
+    // Unreachable in practice: the insert either created this row or a
+    // conflicting one with the same fingerprint already exists — either way
+    // a row must be findable immediately after. Fail loud rather than
+    // fabricate one if that invariant is ever violated.
+    throw new Error(`domain_change_events row missing after insert for fingerprint ${fingerprint}`);
+  }
+  return row;
 }
 
 /**

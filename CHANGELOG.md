@@ -14,8 +14,27 @@ the "Production deployment" entries below for the established pattern).
 
 ## Unreleased
 
-Nothing pending — see "Production deployment (2026-08-07) — Phase 9: Agency Workspace and
-Portfolio Workflows" below for the most recent release.
+### Added — Phase 10: Notification Channels and Monitoring Reliability
+
+Merged to `main`, not yet deployed to production — see the "Production deployment" entry above
+this one once deployed. Hardens the existing two first-party notification channels (in-app centre,
+private Atom feed) and the scheduled-monitoring pipeline — no third-party notification service was
+added. Notification generation now commits monitoring truth first and is fully failure-isolated (a
+notification-write error can no longer corrupt an otherwise-successful scan's recorded outcome —
+a real, previously undiscovered bug, fixed); notification type selection now reads Phase 8's own
+change-attribution model directly instead of an independent, cruder drift check (fixing a second
+real bug: a mixed website+registry change could be mislabelled as purely registry-driven). Adds
+database-level notification idempotency, incident-level grouping for repeated target-side scan
+failures, a target-vs-platform failure taxonomy (a CrawlPact-side processing error never counts
+toward a domain's pause threshold — a third real bug, fixed), a bounded independent notification-
+reconciliation job, and private Atom feed hardening (entitlement re-checked on every read, not
+just at issuance; `Cache-Control`/`Referrer-Policy`/`X-Content-Type-Options` headers added; feed
+metadata minimised). One additive migration (`0030_notification_monitoring_reliability.sql` — new columns and
+indexes only, no new tables, 47 tables total). Closes RISK-024 (Atom feed test coverage) — archived as ARC-028. Notification
+preferences, `new_crawler`/`crawler_purpose_change`/`subscription_issue`/`shared_report_expiry`/
+`platform_notice` producers, and a proactive monitoring-state repair job were all evaluated against
+real code evidence and explicitly not implemented. Full detail:
+`docs/reports/PHASE_10_NOTIFICATION_MONITORING_COMPLETION_REPORT.md`.
 
 ## Production deployment (2026-08-07) — Phase 9: Agency Workspace and Portfolio Workflows
 

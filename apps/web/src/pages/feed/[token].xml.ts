@@ -1,10 +1,12 @@
 import type { APIRoute } from "astro";
-import { createDb, schema } from "@crawlpact/database";
-import { eq } from "drizzle-orm";
+import { createDb } from "@crawlpact/database";
 import { getEnv } from "../../lib/env";
-import { getUserIdByFeedToken, listNotifications } from "../../lib/notifications";
+import { getFeedAccessByToken, listNotifications } from "../../lib/notifications";
+import { sha256Hex } from "../../lib/persist-scan";
 
 export const prerender = false;
+
+const FEED_ITEM_LIMIT = 50;
 
 function escapeXml(value: string): string {
   return value
@@ -15,26 +17,29 @@ function escapeXml(value: string): string {
     .replace(/'/g, "&apos;");
 }
 
+const NOT_FOUND_HEADERS = {
+  "Cache-Control": "private, no-store",
+  "X-Robots-Tag": "noindex, nofollow",
+};
+
 /**
  * GET /feed/:token.xml — a private, per-user Atom feed of notifications
- * (SRS §26). The high-entropy token in the URL *is* the credential — there
- * is no session cookie here, since feed readers can't do a WebAuthn
- * ceremony. An invalid/revoked token gets a generic 404, never a message
- * distinguishing "wrong token" from "right token, wrong shape", so the
- * response itself can't be used to probe for valid tokens.
+ * (SRS §26; Phase 10 hardening). The high-entropy token in the URL *is* the
+ * credential — there is no session cookie here, since feed readers can't do
+ * a WebAuthn ceremony. An invalid token, a revoked token, a deleted/suspended
+ * account, and a downgraded-off-entitlement account all produce the exact
+ * same generic 404 (`getFeedAccessByToken` collapses every denial reason)
+ * so the response itself can never be used to probe which reason applied.
  */
 export const GET: APIRoute = async ({ params, site }) => {
   const token = params.token;
-  if (!token) return new Response("Not found", { status: 404 });
+  if (!token) return new Response("Not found", { status: 404, headers: NOT_FOUND_HEADERS });
 
   const db = createDb(getEnv().DB);
-  const userId = await getUserIdByFeedToken(db, token);
-  if (!userId) return new Response("Not found", { status: 404 });
+  const access = await getFeedAccessByToken(db, token);
+  if (!access) return new Response("Not found", { status: 404, headers: NOT_FOUND_HEADERS });
 
-  const [user] = await db.select().from(schema.users).where(eq(schema.users.id, userId)).limit(1);
-  if (!user) return new Response("Not found", { status: 404 });
-
-  const { items } = await listNotifications(db, userId, { limit: 50 });
+  const { items } = await listNotifications(db, access.userId, { limit: FEED_ITEM_LIMIT });
   const base = site ?? new URL(getEnv().PUBLIC_SITE_URL);
   const feedUrl = new URL(`/feed/${token}.xml`, base).toString();
   const updated = items[0]?.createdAt ?? new Date().toISOString();
@@ -59,11 +64,17 @@ export const GET: APIRoute = async ({ params, site }) => {
     })
     .join("\n");
 
+  // Phase 10 (§37): minimise feed metadata — no personal display name, no
+  // raw internal user id. The feed <id> must stay stable across token
+  // regeneration (it identifies the *feed*, not the *credential*), so it's a
+  // one-way hash of the user id rather than the token itself.
+  const opaqueFeedId = await sha256Hex(access.userId);
+
   const xml = [
     '<?xml version="1.0" encoding="utf-8"?>',
     '<feed xmlns="http://www.w3.org/2005/Atom">',
-    `  <title>CrawlPact notifications for ${escapeXml(user.displayName)}</title>`,
-    `  <id>urn:crawlpact:feed:${escapeXml(userId)}</id>`,
+    "  <title>CrawlPact notifications</title>",
+    `  <id>urn:crawlpact:feed:${opaqueFeedId.slice(0, 32)}</id>`,
     `  <updated>${updated}</updated>`,
     `  <link href="${escapeXml(feedUrl)}" rel="self" />`,
     entries,
@@ -73,6 +84,12 @@ export const GET: APIRoute = async ({ params, site }) => {
     .join("\n");
 
   return new Response(xml, {
-    headers: { "Content-Type": "application/atom+xml; charset=utf-8", "X-Robots-Tag": "noindex" },
+    headers: {
+      "Content-Type": "application/atom+xml; charset=utf-8",
+      "X-Robots-Tag": "noindex, nofollow",
+      "Cache-Control": "private, no-store",
+      "Referrer-Policy": "no-referrer",
+      "X-Content-Type-Options": "nosniff",
+    },
   });
 };

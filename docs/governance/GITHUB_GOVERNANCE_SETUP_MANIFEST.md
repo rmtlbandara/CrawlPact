@@ -2,6 +2,39 @@
 
 **Status: verification-blocked (by user decision, not access failure).**
 
+## Phase 10 update (2026-08-07)
+
+Phase 10 (Notification Channels and Monitoring Reliability) is **complete** — see
+`docs/reports/PHASE_10_NOTIFICATION_MONITORING_COMPLETION_REPORT.md`. Same manifest-only decision
+carried forward — no live GitHub issue created. When this manifest is applied, create:
+
+- **"Harden monitoring reliability and notification delivery"** — already **resolved** by this
+  pass; record as closed-on-creation with a link to the completion report and the merge commit.
+- Real content: notification generation reordered to commit monitoring truth first and isolated
+  from failure (a thrown notification-write error can no longer corrupt an otherwise-successful
+  scan's state); notification dedupe/idempotency enforced at the D1 level; incident-level grouping
+  for repeated target-side scan failures; a target-vs-platform failure taxonomy (a CrawlPact-side
+  processing error never counts toward a domain's consecutive-failure pause threshold); a bounded,
+  independent notification-reconciliation job; private Atom feed entitlement now re-checked on
+  every read (not just at token issuance), plus response-header and feed-metadata hardening. Closed
+  RISK-024 (Atom feed test coverage) — archived as ARC-028. Found and fixed two real, previously
+  undiscovered defects along the way: the notification-failure state-corruption bug above, and a
+  mixed website+registry policy change that could be mislabelled as purely registry-driven
+  (notification generation now reads Phase 8's own attribution model directly instead of an
+  independent, cruder drift check).
+- **Separate issues explicitly not created** — every reserved notification type
+  (`new_crawler`, `crawler_purpose_change`, `subscription_issue`, `shared_report_expiry`,
+  `platform_notice`) and the notification-preferences question were evaluated against real code
+  evidence and found not currently authorised or not yet justified, each with its own documented
+  re-evaluation trigger (`docs/product/PHASE_10_*_DECISION.md`,
+  `NOTIFICATION_TYPE_AND_PRODUCER_MATRIX.md`). No third-party notification channel (email, SMS,
+  push, webhook, Slack/Teams/Discord/WhatsApp/Telegram) was added or evaluated for addition — out of
+  scope by explicit instruction, not merely deferred.
+- **Carried forward, unchanged, from Phase 9** (not addressed by this phase, out of its own scope):
+  RISK-001 (real paid Paddle checkout); RISK-006 (notification/analytics/security-event retention,
+  recommendation still not implemented — this phase's additive schema changes do not affect that
+  open question); RISK-034 (`listDomains()` N+1, still bounded and low-risk).
+
 ## Phase 9 update (2026-08-06)
 
 Phase 9 (Agency Workspace and Portfolio Workflows) is **complete** — see

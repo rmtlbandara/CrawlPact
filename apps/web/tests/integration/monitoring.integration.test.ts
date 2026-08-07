@@ -23,6 +23,16 @@ function fakeAuditResult(options: {
   score: number | null;
   crawlerResult: "allowed" | "blocked";
 }): AuditResult {
+  // Phase 10: the Phase 8 attribution model (computeChangeOrigin) determines
+  // "did the website change" from comparable *resource content hashes*, not
+  // from the evaluated crawler result alone — a blocked/allowed flag with no
+  // corresponding robots.txt change would (correctly) attribute as
+  // "no_change"/uncertain, matching real deterministic evaluation (identical
+  // input always produces identical output). So a "blocked" fixture here
+  // must carry different robots.txt body text, not just a different result
+  // flag, to look like a real website-side change to domain_change_events.
+  const robotsTxtBody =
+    options.crawlerResult === "blocked" ? "User-agent: *\nDisallow: /" : "User-agent: *\nAllow: /";
   const crawlerEvaluations: AuditResult["crawlerEvaluations"] = [
     {
       crawlerId: "crawler_test",
@@ -83,8 +93,8 @@ function fakeAuditResult(options: {
           },
     recommendation: { proposedAdditions: [], warnings: [] },
     diff: [],
-    originalRobotsText: "User-agent: *\nAllow: /",
-    proposedRobotsText: "User-agent: *\nAllow: /",
+    originalRobotsText: robotsTxtBody,
+    proposedRobotsText: robotsTxtBody,
     externalRequestCount: 1,
     scanSignals: {
       canonicalOrigin: "https://monitoring-test.example",
@@ -103,7 +113,7 @@ function fakeAuditResult(options: {
                 redirectCount: 0,
                 durationMs: 5,
                 truncated: false,
-                body: "User-agent: *\nAllow: /",
+                body: robotsTxtBody,
               },
         parsed: null,
       },
@@ -292,11 +302,16 @@ describe("scheduled monitoring sweep (real D1)", () => {
       .from(schema.notifications)
       .where(eq(schema.notifications.userId, userId));
     expect(notifications.some((n) => n.type === "monitoring_paused")).toBe(true);
-    expect(notifications.some((n) => n.type === "resource_failure")).toBe(true);
-    // No notification for the very first (transient) failure.
-    expect(notifications.filter((n) => n.type === "resource_failure")).toHaveLength(
-      FAILURE_PAUSE_THRESHOLD - 2,
-    );
+    // Phase 10 (§21, incident-level grouping): repeated resource_failure
+    // notifications for the same failure episode collapse onto ONE row —
+    // not one row per failure — with occurrenceCount tracking the count.
+    // No notification for the very first (transient) failure, so the final
+    // occurrenceCount equals the failure count at the moment it stopped
+    // being grouped (one failure short of the pause threshold, since the
+    // threshold-crossing failure gets `monitoring_paused` instead).
+    const resourceFailureRows = notifications.filter((n) => n.type === "resource_failure");
+    expect(resourceFailureRows).toHaveLength(1);
+    expect(resourceFailureRows[0]!.occurrenceCount).toBe(FAILURE_PAUSE_THRESHOLD - 1);
 
     // Paused domains are never selected again.
     const nextSweep = await runMonitoringSweep(

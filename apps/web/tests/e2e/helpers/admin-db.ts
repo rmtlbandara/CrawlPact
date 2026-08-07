@@ -89,3 +89,22 @@ export async function setPlan(
 ): Promise<void> {
   await postTestOnly(page, "/api/test-only/set-plan", { planId });
 }
+
+/**
+ * Phase 10: materialises a realistic monitoring/notification outcome for a
+ * domain the signed-in session owns — calling the exact same production
+ * notification-generation functions monitoring.ts uses (see
+ * seed-notification-state.ts) — without waiting for a real scheduled scan.
+ */
+export async function seedNotificationState(
+  page: Page,
+  params: {
+    action: "policy_change" | "resource_failure_episode" | "monitoring_paused";
+    domainId: string;
+    origin?: "website_policy" | "registry_driven" | "mixed";
+    hasCritical?: boolean;
+    occurrenceCount?: number;
+  },
+): Promise<void> {
+  await postTestOnly(page, "/api/test-only/seed-notification-state", params);
+}

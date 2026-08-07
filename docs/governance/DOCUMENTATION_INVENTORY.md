@@ -267,6 +267,31 @@ these three, so implementation is deferred pending explicit approval, per the ph
 report for the full change list. Total documentation-file count is now ~171 (153 post-Phase-7 + 18
 new).
 
+## Phase 10 update (2026-08-07)
+
+18 new files, all `retain-current`/`current-authoritative` at creation, merged to `main` on branch
+`phase-10-notifications-monitoring-reliability`:
+`docs/product/{PHASE_10_NOTIFICATION_MONITORING_BASELINE,NOTIFICATION_TYPE_AND_PRODUCER_MATRIX,
+NOTIFICATION_CONTENT_STANDARD,NOTIFICATION_FATIGUE_AND_GROUPING_POLICY,
+MONITORING_HEALTH_STATE_MODEL,PHASE_10_NOTIFICATION_PREFERENCES_DECISION,
+PHASE_10_NEW_CRAWLER_NOTIFICATION_DECISION,PHASE_10_NOTIFICATION_RECONCILIATION_BACKFILL_POLICY,
+PRIVATE_ATOM_FEED_POLICY}.md`,
+`docs/architecture/NOTIFICATION_RELIABILITY_ARCHITECTURE.md`,
+`docs/operations/{MONITORING_STATE_RECONCILIATION,PHASE_10_MONITORING_RELIABILITY_THRESHOLDS,
+PHASE_10_NOTIFICATION_RECONCILIATION_RUNBOOK,PHASE_10_MONITORING_RELIABILITY_RUNBOOK}.md`,
+`docs/data/PHASE_10_NOTIFICATION_QUERY_AND_INDEX_AUDIT.md`,
+`docs/analytics/PHASE_10_NOTIFICATION_EVENT_MODEL.md`,
+`docs/security/PHASE_10_NOTIFICATION_MONITORING_THREAT_REVIEW.md`, and
+`docs/reports/PHASE_10_NOTIFICATION_MONITORING_COMPLETION_REPORT.md` (`evidence`) — 18 files total.
+A headline finding from this phase's own baseline doc: notification creation ran _before_ the
+domain's monitoring state was committed and was not failure-isolated at all — a real, provable bug
+(not previously risk-tracked) that a thrown notification-write error would corrupt an
+otherwise-successful scan's recorded outcome. `docs/operations/MONITORING_STATE_RECONCILIATION.md`
+is a real "not needed" finding, not a skipped requirement: it documents why this codebase's atomic
+single-UPDATE mutation pattern already makes the domain-state repair job the phase anticipated
+structurally unnecessary. No existing file was superseded. Total documentation-file count is now
+~205 (187 post-Phase-9 + 18 new).
+
 ## Phase 9 update (2026-08-06)
 
 16 new files, all `retain-current`/`current-authoritative` at creation, merged to `main` on branch

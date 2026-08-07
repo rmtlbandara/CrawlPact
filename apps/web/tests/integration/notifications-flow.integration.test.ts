@@ -3,6 +3,7 @@ import { createDb, schema } from "@crawlpact/database";
 import type { Database } from "@crawlpact/database";
 import { createD1TestHarness } from "./d1-harness";
 import { createFakeR2Bucket } from "./fake-r2-bucket";
+import { upsertGroupedNotification } from "../../src/lib/notifications";
 import { createVirtualCredential, simulateRegistration } from "./virtual-authenticator";
 import {
   cookieFromResponse,
@@ -110,7 +111,7 @@ describe("notification centre and private Atom feed (real D1)", () => {
   let userId: string;
   const domainId = crypto.randomUUID();
 
-  it("groups repeated resource_failure notifications for the same domain", async () => {
+  it("groups repeated resource_failure notifications for the same domain into one row (Phase 10 write-time grouping)", async () => {
     ({ cookie, userId } = await signUpTestUser("Ada"));
 
     const now = new Date().toISOString();
@@ -128,27 +129,35 @@ describe("notification centre and private Atom feed (real D1)", () => {
       updatedAt: now,
     });
 
-    const base = Date.parse("2026-01-01T00:00:00.000Z");
-    await insertNotification(db, userId, {
-      type: "resource_failure",
-      domainId,
-      title: "example.com could not be scanned",
-      body: "Attempt 2 of 5",
-      createdAt: new Date(base + 1000).toISOString(),
-    });
-    await insertNotification(db, userId, {
-      type: "resource_failure",
-      domainId,
-      title: "example.com could not be scanned",
-      body: "Attempt 3 of 5",
-      createdAt: new Date(base + 2000).toISOString(),
-    });
+    // Two occurrences of the same failure episode — as monitoring.ts's
+    // safeNotifyTargetFailure would call it on failure #2 then #3 — collapse
+    // onto one row via upsertGroupedNotification's dedupeKey, not two rows.
+    const failureEpisodeId = "episode-1";
+    for (const occurrenceCount of [2, 3]) {
+      await upsertGroupedNotification(db, {
+        userId,
+        domainId,
+        type: "resource_failure",
+        category: "monitoring_health",
+        priority: "normal",
+        title: "example.com could not be scanned",
+        body: `Attempt ${occurrenceCount} of 5`,
+        sourceType: "scan_failure_episode",
+        sourceId: failureEpisodeId,
+        dedupeKey: `resource_failure:${failureEpisodeId}`,
+        occurrenceCount,
+      });
+    }
+    // upsertGroupedNotification stamps its own rows with the real current
+    // time, so this must sort after them to land first in the (newest-first)
+    // list — a fixed 2026 `base` timestamp would otherwise sort as the
+    // oldest row, not the newest.
     await insertNotification(db, userId, {
       type: "critical_policy_change",
       domainId,
       title: "example.com: AI crawler policy changed <script>alert(1)</script>",
       body: "Something changed & matters",
-      createdAt: new Date(base + 3000).toISOString(),
+      createdAt: new Date(Date.now() + 60_000).toISOString(),
     });
 
     const response = await listNotificationsRoute(
@@ -159,7 +168,7 @@ describe("notification centre and private Atom feed (real D1)", () => {
     expect(body.data.items).toHaveLength(2);
     expect(body.data.items[0]!.type).toBe("critical_policy_change");
     expect(body.data.items[1]!.type).toBe("resource_failure");
-    expect(body.data.items[1]!.groupCount).toBe(2);
+    expect(body.data.items[1]!.groupCount).toBe(3);
   });
 
   it("reports an accurate unread count and supports marking read / read-all", async () => {
@@ -167,7 +176,7 @@ describe("notification centre and private Atom feed (real D1)", () => {
       await unreadCountRoute(ctx(getRequest("http://x/api/notifications/unread-count", cookie))),
     );
     if (!before.ok) throw new Error("count failed");
-    expect(before.data.count).toBe(3);
+    expect(before.data.count).toBe(2);
 
     const list = await readJson<{ items: { notificationId: string; type: string }[] }>(
       await listNotificationsRoute(ctx(getRequest("http://x/api/notifications", cookie))),
@@ -190,7 +199,7 @@ describe("notification centre and private Atom feed (real D1)", () => {
     const afterOne = await readJson<{ count: number }>(
       await unreadCountRoute(ctx(getRequest("http://x/api/notifications/unread-count", cookie))),
     );
-    if (afterOne.ok) expect(afterOne.data.count).toBe(2);
+    if (afterOne.ok) expect(afterOne.data.count).toBe(1);
 
     await markAllReadRoute(
       ctx(mutatingRequest("http://x/api/notifications/read-all", "POST", cookie)),

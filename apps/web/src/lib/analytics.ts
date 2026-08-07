@@ -124,6 +124,23 @@ export const PRODUCT_EVENT_NAMES = [
   "agency_report_share_created",
   "agency_report_share_revoked",
   "plan_limit_reached_from_portfolio",
+  // Notification Channels and Monitoring Reliability (Phase 10). No
+  // notification body, title, domain name, feed token, feed URL,
+  // notification ID, scan ID, timeline-event ID, user email, or Paddle
+  // identifier is ever sent as a property — see
+  // docs/analytics/PHASE_10_NOTIFICATION_EVENT_MODEL.md.
+  "notifications_viewed",
+  "notification_marked_read",
+  "notifications_marked_all_read",
+  "notification_filter_applied",
+  "notification_deep_link_opened",
+  "atom_feed_created",
+  "atom_feed_regenerated",
+  "atom_feed_revoked",
+  "atom_feed_entitlement_blocked",
+  "monitoring_paused_viewed",
+  "monitoring_resume_started",
+  "monitoring_resume_completed",
 ] as const;
 
 export type ProductEventName = (typeof PRODUCT_EVENT_NAMES)[number];

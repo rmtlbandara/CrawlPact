@@ -52,6 +52,12 @@ export const domains = sqliteTable(
     // sweep (or two concurrent manual rescans) from both scanning this
     // domain at once. See migration 0028 and lib/scan-lock.ts.
     scanLockUntil: text("scan_lock_until"),
+    // Phase 10: stable id for the domain's current consecutive target-failure
+    // streak, letting repeated resource_failure notifications collapse onto
+    // one row instead of creating a new one per failure. NULL when the
+    // domain is not currently mid-streak. See migration 0030 and
+    // apps/web/src/lib/domains.ts's recordScheduledScanOutcome.
+    failureEpisodeId: text("failure_episode_id"),
     createdAt: text("created_at").notNull(),
     updatedAt: text("updated_at").notNull(),
     deletedAt: text("deleted_at"),

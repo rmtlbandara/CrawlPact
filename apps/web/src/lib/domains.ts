@@ -340,12 +340,33 @@ export async function recordScanOnDomain(
  * consecutive failures pauses monitoring outright rather than retrying
  * forever against a target that's gone.
  */
+/**
+ * Phase 10: three outcome shapes, not two. `platformFailure: true` is a new
+ * third case — CrawlPact's own processing failed before the target was
+ * meaningfully attempted (an uncaught exception, a D1 error), as opposed to
+ * a completed audit run that legitimately couldn't reach/parse the target.
+ * A platform failure deliberately does NOT touch `consecutiveFailureCount`,
+ * `failureEpisodeId`, `nextScanAt`, or `monitoringState` — it must never
+ * count toward the target-failure pause threshold or advance/delay the
+ * user's actual monitoring schedule (SRS/Phase 10 §23). The domain simply
+ * becomes due again once its still-in-place claim lock
+ * (`apps/web/src/lib/monitoring.ts`'s `claimDueDomains`) expires, which
+ * self-heals within one claim-lock window without any explicit reschedule —
+ * see docs/operations/MONITORING_STATE_RECONCILIATION.md.
+ */
 export async function recordScheduledScanOutcome(
   db: Database,
   domainId: string,
   fields:
     | { succeeded: true; scanId: string; score: number | null; nextScanAt: string | null }
-    | { succeeded: false; scanId: string; nextScanAt: string | null; pause: boolean },
+    | {
+        succeeded: false;
+        scanId: string;
+        nextScanAt: string | null;
+        pause: boolean;
+        failureEpisodeId: string;
+      }
+    | { succeeded: false; scanId: string; platformFailure: true },
 ): Promise<void> {
   const now = new Date().toISOString();
   if (fields.succeeded) {
@@ -357,8 +378,18 @@ export async function recordScheduledScanOutcome(
         currentScore: fields.score,
         nextScanAt: fields.nextScanAt,
         consecutiveFailureCount: 0,
+        // A success ends any in-progress target-failure episode.
+        failureEpisodeId: null,
         updatedAt: now,
       })
+      .where(eq(schema.domains.id, domainId));
+    return;
+  }
+
+  if ("platformFailure" in fields) {
+    await db
+      .update(schema.domains)
+      .set({ lastScanId: fields.scanId, lastScanAt: now, updatedAt: now })
       .where(eq(schema.domains.id, domainId));
     return;
   }
@@ -370,6 +401,7 @@ export async function recordScheduledScanOutcome(
       lastScanAt: now,
       nextScanAt: fields.nextScanAt,
       consecutiveFailureCount: sql<number>`${schema.domains.consecutiveFailureCount} + 1`,
+      failureEpisodeId: fields.failureEpisodeId,
       updatedAt: now,
       ...(fields.pause ? { monitoringState: "paused" as const } : {}),
     })
