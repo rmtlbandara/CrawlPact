@@ -46,6 +46,21 @@ export type OperationalCapacitySnapshot = {
     dueNowCount: number;
     /** Null if nothing is currently overdue. */
     oldestOverdueNextScanAt: string | null;
+    /** Phase 10: `domains.monitoring_state = 'paused'` — reached the consecutive target-failure pause threshold. */
+    pausedDomainCount: number;
+    /** Phase 10 (§22-23): `scans.status = 'internal_failure'` in the last 24h — CrawlPact's own processing failed, never counted toward a domain's failure streak. */
+    platformFailureCountLast24h: number;
+    /** Phase 10: a completed audit run that legitimately couldn't reach/parse the target in the last 24h (`target_unavailable`/`incomplete`). */
+    targetFailureCountLast24h: number;
+    /** Phase 10 (§26): active domains whose `next_scan_at` is more than 48h in the past — if this is ever nonzero, the claim-lock self-heal isn't keeping up (see docs/operations/MONITORING_STATE_RECONCILIATION.md). */
+    longOverdueActiveDomainCount: number;
+  };
+  notifications: {
+    /** Phase 10 (§55): created in the last 24h, across every source. */
+    createdLast24h: number;
+    /** Phase 10: currently active (unrevoked) private Atom feed tokens, in aggregate — never a raw token or a per-user breakdown. */
+    activeAtomTokenCount: number;
+    reconciliationLastRun: { status: string; startedAt: string; completedAt: string | null } | null;
   };
   retention: {
     lastRun: { status: string; startedAt: string; completedAt: string | null } | null;
@@ -98,6 +113,13 @@ export async function getOperationalCapacitySnapshot(
     findingsCountRow,
     dueNowRows,
     lastRetentionRow,
+    pausedDomainCountRow,
+    platformFailureCountRow,
+    targetFailureCountRow,
+    longOverdueActiveDomainCountRow,
+    notificationsCreatedLast24hRow,
+    activeAtomTokenCountRow,
+    lastReconciliationRow,
     accountsUsingDomainGroupsRow,
     accountsWithAgencyBrandingRow,
     importJobsLast30dRow,
@@ -150,6 +172,53 @@ export async function getOperationalCapacitySnapshot(
       })
       .from(schema.scheduledJobRuns)
       .where(eq(schema.scheduledJobRuns.jobName, "data_retention_purge"))
+      .orderBy(sql`${schema.scheduledJobRuns.startedAt} desc`)
+      .limit(1),
+    db
+      .select({ n: sql<number>`count(*)` })
+      .from(schema.domains)
+      .where(and(eq(schema.domains.monitoringState, "paused"), isNull(schema.domains.deletedAt))),
+    db
+      .select({ n: sql<number>`count(*)` })
+      .from(schema.scans)
+      .where(
+        sql`${schema.scans.status} = 'internal_failure' and ${schema.scans.startedAt} >= ${last24hIso}`,
+      ),
+    db
+      .select({ n: sql<number>`count(*)` })
+      .from(schema.scans)
+      .where(
+        sql`${schema.scans.status} in ('target_unavailable', 'incomplete') and ${schema.scans.startedAt} >= ${last24hIso}`,
+      ),
+    db
+      .select({ n: sql<number>`count(*)` })
+      .from(schema.domains)
+      .where(
+        and(
+          eq(schema.domains.monitoringState, "active"),
+          isNull(schema.domains.deletedAt),
+          lte(
+            schema.domains.nextScanAt,
+            new Date(now.getTime() - 48 * 60 * 60 * 1000).toISOString(),
+          ),
+        ),
+      ),
+    db
+      .select({ n: sql<number>`count(*)` })
+      .from(schema.notifications)
+      .where(sql`${schema.notifications.createdAt} >= ${last24hIso}`),
+    db
+      .select({ n: sql<number>`count(*)` })
+      .from(schema.feedTokens)
+      .where(isNull(schema.feedTokens.revokedAt)),
+    db
+      .select({
+        status: schema.scheduledJobRuns.status,
+        startedAt: schema.scheduledJobRuns.startedAt,
+        completedAt: schema.scheduledJobRuns.completedAt,
+      })
+      .from(schema.scheduledJobRuns)
+      .where(eq(schema.scheduledJobRuns.jobName, "notification_reconciliation"))
       .orderBy(sql`${schema.scheduledJobRuns.startedAt} desc`)
       .limit(1),
     db
@@ -216,6 +285,15 @@ export async function getOperationalCapacitySnapshot(
     monitoring: {
       dueNowCount: dueNowRows.length,
       oldestOverdueNextScanAt: overdueTimestamps[0] ?? null,
+      pausedDomainCount: Number(pausedDomainCountRow[0]?.n ?? 0),
+      platformFailureCountLast24h: Number(platformFailureCountRow[0]?.n ?? 0),
+      targetFailureCountLast24h: Number(targetFailureCountRow[0]?.n ?? 0),
+      longOverdueActiveDomainCount: Number(longOverdueActiveDomainCountRow[0]?.n ?? 0),
+    },
+    notifications: {
+      createdLast24h: Number(notificationsCreatedLast24hRow[0]?.n ?? 0),
+      activeAtomTokenCount: Number(activeAtomTokenCountRow[0]?.n ?? 0),
+      reconciliationLastRun: lastReconciliationRow[0] ?? null,
     },
     retention: {
       lastRun: lastRetentionRow[0] ?? null,

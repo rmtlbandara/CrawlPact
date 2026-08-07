@@ -238,17 +238,6 @@ extended platform guides), RISK-032 (no Search Console property connected), and 
 - **Status**: accepted
 - **Acceptance criteria for closure**: Per-request nonce plumbing implemented and `'unsafe-inline'` removed.
 
-### RISK-024 — Atom feed route (`/feed/[token].xml`) has no dedicated test file by name
-
-- **Category**: Test coverage · **Severity**: P2 · **Probability**: Unknown
-- **Impact**: A real regression in feed-token validation or content could ship undetected by any named test.
-- **Evidence**: `docs/baseline/2026-08-03/CAPABILITY_MATRIX.md`
-- **Current mitigation**: Possibly covered incidentally; not confirmed either way.
-- **Owner**: Engineering owner · **Trigger**: Next notifications-area change
-- **Review date**: Phase 10 · **Target phase**: Phase 10
-- **Status**: open
-- **Acceptance criteria for closure**: A dedicated test file confirmed to exist and cover this route, or one is added.
-
 ### RISK-025 — Duplicate-token protection gap: case-sensitive DB unique index vs. case-insensitive CLI validator
 
 - **Category**: Registry governance, Security · **Severity**: P2 · **Probability**: Low (no current occurrence)
