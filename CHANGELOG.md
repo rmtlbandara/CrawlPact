@@ -14,27 +14,45 @@ the "Production deployment" entries below for the established pattern).
 
 ## Unreleased
 
-### Added — Phase 10: Notification Channels and Monitoring Reliability
+Nothing pending — see "Production deployment (2026-08-07) — Phase 10: Notification Channels and
+Monitoring Reliability" below for the most recent release.
 
-Merged to `main`, not yet deployed to production — see the "Production deployment" entry above
-this one once deployed. Hardens the existing two first-party notification channels (in-app centre,
-private Atom feed) and the scheduled-monitoring pipeline — no third-party notification service was
-added. Notification generation now commits monitoring truth first and is fully failure-isolated (a
-notification-write error can no longer corrupt an otherwise-successful scan's recorded outcome —
-a real, previously undiscovered bug, fixed); notification type selection now reads Phase 8's own
-change-attribution model directly instead of an independent, cruder drift check (fixing a second
-real bug: a mixed website+registry change could be mislabelled as purely registry-driven). Adds
-database-level notification idempotency, incident-level grouping for repeated target-side scan
-failures, a target-vs-platform failure taxonomy (a CrawlPact-side processing error never counts
-toward a domain's pause threshold — a third real bug, fixed), a bounded independent notification-
-reconciliation job, and private Atom feed hardening (entitlement re-checked on every read, not
-just at issuance; `Cache-Control`/`Referrer-Policy`/`X-Content-Type-Options` headers added; feed
-metadata minimised). One additive migration (`0030_notification_monitoring_reliability.sql` — new columns and
-indexes only, no new tables, 47 tables total). Closes RISK-024 (Atom feed test coverage) — archived as ARC-028. Notification
-preferences, `new_crawler`/`crawler_purpose_change`/`subscription_issue`/`shared_report_expiry`/
-`platform_notice` producers, and a proactive monitoring-state repair job were all evaluated against
-real code evidence and explicitly not implemented. Full detail:
+## Production deployment (2026-08-07) — Phase 10: Notification Channels and Monitoring Reliability
+
+PR #95 (squash-merged as `5699a89`) deployed to production via `deploy-production.yml`, run against
+commit `5699a899b30e751a9e96ce7a42970f82464f1b14`. One new additive D1 migration applied
+(`0030_notification_monitoring_reliability.sql` — 9 new `notifications` columns, 1 new `domains`
+column (`failure_episode_id`), 3 new indexes; 30/30 migrations applied, no new tables, 47 tables
+total). Deployed Worker version: `5bee35c9-d16d-43c2-95c1-385d91be1a2a`. Full detail:
 `docs/reports/PHASE_10_NOTIFICATION_MONITORING_COMPLETION_REPORT.md`.
+
+Hardens the existing two first-party notification channels (in-app centre, private Atom feed) and
+the scheduled-monitoring pipeline — no third-party notification service added. Notification
+generation now commits monitoring truth first and is fully failure-isolated (a notification-write
+error can no longer corrupt an otherwise-successful scan's recorded outcome — a real, previously
+undiscovered bug, fixed); notification type selection now reads Phase 8's own change-attribution
+model directly instead of an independent, cruder drift check (fixing a second real bug: a mixed
+website+registry change could be mislabelled as purely registry-driven). Adds database-level
+notification idempotency, incident-level grouping for repeated target-side scan failures, a
+target-vs-platform failure taxonomy (a CrawlPact-side processing error never counts toward a
+domain's pause threshold — a third real bug, fixed), a bounded independent
+notification-reconciliation job, and private Atom feed hardening (entitlement re-checked on every
+read, not just at issuance; `Cache-Control`/`Referrer-Policy`/`X-Content-Type-Options` headers
+added; feed metadata minimised). Closes RISK-024 (Atom feed test coverage) — archived as ARC-028.
+Notification preferences,
+`new_crawler`/`crawler_purpose_change`/`subscription_issue`/`shared_report_expiry`/`platform_notice`
+producers, and a proactive monitoring-state repair job were all evaluated against real code evidence
+and explicitly not implemented.
+
+**Independent post-deploy verification**: direct production D1 queries confirm migration `0030` is
+the latest applied (`d1_migrations` table), all 9 new `notifications` columns exist
+(`category`, `priority`, `source_type`, `source_id`, `dedupe_key`, `action_path`,
+`occurrence_count`, `last_occurred_at`, `model_version`), `domains.failure_episode_id` exists, and
+all 3 new indexes exist — with the table count unchanged at 47 (additive columns/indexes only, no
+new tables). Direct `curl` checks confirm the homepage (200), `/app/notifications` (302 to
+sign-in), and `/api/notifications` (401 `UNAUTHENTICATED`) all behave correctly, and that a live
+invalid-token request to the private Atom feed (`/feed/:token.xml`) returns a generic 404 carrying
+`Cache-Control: private, no-store` and `X-Robots-Tag: noindex, nofollow`.
 
 ## Production deployment (2026-08-07) — Phase 9: Agency Workspace and Portfolio Workflows
 
