@@ -2,9 +2,9 @@
 Document owner: Engineering owner
 Status: current-authoritative
 Last verified: 2026-08-07
-Repository commit: 3ee3b2f0bd25ff050b7f592e0b057a1b2db7c144 (main, post-Phase-9 merge, deployed)
-Production deployment identifier: crawlpact-web (Cloudflare Worker), https://crawlpact.com — Worker version 7ce60f6d-5ed9-4cf2-b9ff-a2b5ac31e44c
-Database migration version: 0029_agency_workspace_portfolio.sql (29/29 applied to production, confirmed via `wrangler d1 migrations list --remote` reporting "No migrations to apply!" and direct `sqlite_master` queries 2026-08-07 — `agency_brand_profiles`, `portfolio_import_jobs`, `portfolio_import_rows`, `bulk_action_jobs` tables and the `domain_groups.description` column all independently verified present)
+Repository commit: 5699a899b30e751a9e96ce7a42970f82464f1b14 (main, post-Phase-10 merge, deployed)
+Production deployment identifier: crawlpact-web (Cloudflare Worker), https://crawlpact.com — Worker version 5bee35c9-d16d-43c2-95c1-385d91be1a2a
+Database migration version: 0030_notification_monitoring_reliability.sql (30/30 applied to production, confirmed via a direct D1 query against `d1_migrations` 2026-08-07 — 9 new `notifications` columns (`category`, `priority`, `source_type`, `source_id`, `dedupe_key`, `action_path`, `occurrence_count`, `last_occurred_at`, `model_version`), the `domains.failure_episode_id` column, and all 3 new indexes independently verified present; table count unchanged at 47 (additive columns/indexes only, no new tables))
 Crawler registry version: 2026.07.3 (active release; 23 crawlers seeded, correction pending publication as a new release — see docs/registry/CRAWLER_REGISTRY_GOVERNANCE.md)
 Phase 0 baseline reference: docs/baseline/2026-08-03/ (superseded on billing/migration facts by Phases 5–6 below; not re-run this pass)
 Review frequency: Every release, or monthly
@@ -32,7 +32,7 @@ verified platform guides (`/platforms/*`) — content-only, no product-behavior 
 production 2026-08-04, Worker version `630258b4-c020-4105-9ca3-550897f7c0e3`; all 10 new routes
 independently confirmed live (see the Phase 7 completion report).
 **Production and the default branch (`main`) are aligned** — no known drift as of the last
-deployed commit (`3ee3b2f`).
+deployed commit (`5699a89`).
 
 Major limitations: a real **paid** Paddle checkout lifecycle has never been run (webhook
 processing itself is verified live — RISK-001, still open); the Workers Free CPU budget constrains
@@ -99,6 +99,32 @@ the `domain_groups.description` column; direct `curl` checks confirming every ne
 authentication and carries `private, no-store` + `noindex, nofollow, noarchive`). See
 `docs/reports/PHASE_09_AGENCY_WORKSPACE_PORTFOLIO_COMPLETION_REPORT.md` and `CHANGELOG.md`'s
 2026-08-07 Phase 9 entry for full deployment evidence.
+
+**Phase 10 (Notification Channels and Monitoring Reliability) status**: merged and deployed to
+production 2026-08-07, Worker version `5bee35c9-d16d-43c2-95c1-385d91be1a2a` (PR #95). Hardens the
+two existing first-party notification channels (in-app centre, private Atom feed) and the
+scheduled-monitoring pipeline — no third-party notification service added. Found and fixed three
+real, previously undiscovered defects: notification-write failure could corrupt an
+otherwise-successful scan's recorded monitoring state (notification generation now commits after
+monitoring truth, fully failure-isolated); a mixed website+registry policy change could be
+mislabelled as purely registry-driven (notification type selection now reads Phase 8's own
+attribution model directly); and a CrawlPact-side (platform) scan failure counted toward the same
+consecutive-failure pause threshold as a genuine target-side failure (a new failure taxonomy fixes
+this). Adds database-level notification idempotency, incident-level failure-episode grouping, a
+bounded independent notification-reconciliation job, and Atom feed entitlement re-checked on every
+read (previously only at token issuance) plus response-header/metadata hardening. Closed RISK-024
+(Atom feed test coverage) — archived as ARC-028. One additive migration (`0030`, 30/30 applied — new
+columns/indexes only, no new tables). Notification preferences and five reserved notification-type
+producers were evaluated against real code evidence and explicitly not implemented — see the
+`docs/product/PHASE_10_*_DECISION.md` documents and `NOTIFICATION_TYPE_AND_PRODUCER_MATRIX.md`. All
+new/changed routes and the migration independently re-verified live (direct production D1 queries
+confirming the 9 new `notifications` columns, the `domains.failure_episode_id` column, and all 3 new
+indexes, with the table count unchanged at 47; direct `curl` checks confirming `/app/notifications`
+and `/api/notifications` correctly require authentication, and that the private Atom feed's
+`Cache-Control: private, no-store` and `X-Robots-Tag: noindex, nofollow` headers are present on a
+live invalid-token 404 response). See
+`docs/reports/PHASE_10_NOTIFICATION_MONITORING_COMPLETION_REPORT.md` and `CHANGELOG.md`'s 2026-08-07
+Phase 10 entry for full deployment evidence.
 
 ## Capability table
 
@@ -201,6 +227,7 @@ re-run (RISK-018); no cookie-consent mechanism for the GA deviation (RISK-021).
 - Phase 7 completion report: `docs/reports/PHASE_07_VERTICAL_PLATFORM_SEO_COMPLETION_REPORT.md`
 - Phase 8 completion report: `docs/reports/PHASE_08_SAVED_DOMAIN_CHANGE_TIMELINE_COMPLETION_REPORT.md`
 - Phase 9 completion report: `docs/reports/PHASE_09_AGENCY_WORKSPACE_PORTFOLIO_COMPLETION_REPORT.md`
+- Phase 10 completion report: `docs/reports/PHASE_10_NOTIFICATION_MONITORING_COMPLETION_REPORT.md`
 - Phase 11 completion report: `docs/reports/PHASE_11_DATABASE_STORAGE_PERFORMANCE_COMPLETION_REPORT.md`
 - Current risk register: `docs/risks/ACTIVE_RISKS.md`
 - Changelog: `CHANGELOG.md`
