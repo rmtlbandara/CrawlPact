@@ -34,12 +34,12 @@
     "zod": "4.4.3"
   },
   "devDependencies": {
-    "@astrojs/check": "0.9.9",
-    "@cloudflare/workers-types": "5.20260727.1",
-    "@types/react": "19.2.17",
-    "@types/react-dom": "19.2.3",
-    "miniflare": "4.20260722.0",
+    "@astrojs/check": "0.9.10",
+    "@cloudflare/workers-types": "5.20260801.1",
+    "@types/react": "19.2.18",
+    "@types/react-dom": "19.2.4",
+    "miniflare": "4.20260730.0",
     "typescript": "6.0.3",
-    "wrangler": "4.114.0"
+    "wrangler": "4.118.0"
   }
 }
