@@ -46,8 +46,16 @@ integration test — see `apps/web/tests/integration/*.integration.test.ts`.
   real **paid** checkout lifecycle (actual payment, plan grant) has still never been run —
   deliberately, requires separate explicit authorization before any real charge. See
   `docs/status/CURRENT_STATE.md` and `docs/risks/ACTIVE_RISKS.md`.
-- CSP still allows `'unsafe-inline'` for scripts/styles (no per-request nonce plumbing yet).
-- No cross-request _target_-frequency abuse monitoring (only per-caller rate limits).
+- CSP still allows `'unsafe-inline'` for scripts/styles. Investigated in depth in Phase 12
+  (2026-08-09) and deliberately not implemented: the installed Astro version has no built-in
+  nonce/hash CSP support, and inline `<script>` content exists even on fully prerendered,
+  edge-cached marketing pages, where a per-request nonce is architecturally inapplicable (no
+  per-request code path exists for static assets). See `docs/risks/ACTIVE_RISKS.md` RISK-023 for
+  the full evidence and what a real fix would require (a hash-based CSP build step, a separate
+  initiative).
+- ~~No cross-request _target_-frequency abuse monitoring~~ **Fixed, Phase 12 (2026-08-09)**: see
+  `docs/security/TARGET_ABUSE_MONITORING_DESIGN.md` — detection-only, surfaced via the Super Admin
+  operational capacity snapshot, never auto-blocking.
 - `apps/web/wrangler.jsonc`'s preview `PUBLIC_SITE_URL`/`WEBAUTHN_RP_ID`/`WEBAUTHN_RP_ORIGIN`
   values are structurally correct but still placeholders (`preview.crawlpact.com`) — must be
   updated to the real preview domain the moment one exists, or WebAuthn ceremonies will fail on

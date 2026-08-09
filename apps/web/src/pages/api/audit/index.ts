@@ -10,6 +10,7 @@ import { getBlockedTargetPatterns } from "../../../lib/blocked-targets";
 import { getBoolConfig, getIntConfig } from "../../../lib/runtime-config";
 import { hashIp } from "../../../lib/ip-hash";
 import { isRateLimited, recordSecurityEvent } from "../../../lib/auth/rate-limit";
+import { hashTarget, recordTargetAbuseObservation } from "../../../lib/target-abuse";
 
 export const prerender = false;
 
@@ -136,6 +137,14 @@ export const POST: APIRoute = async ({ request }) => {
         );
       }
       await recordSecurityEvent(db, "rate_limit", { ipHash, target: normalized.normalizedOrigin });
+
+      // RISK-022: detection-only cross-request target-frequency observation
+      // — never blocks this request, only feeds the admin capacity view's
+      // high-frequency-target count. Recorded even when this specific
+      // caller is well within their own per-IP daily limit, since the gap
+      // this closes is many different callers each individually in-bounds.
+      const targetKey = await hashTarget(normalized.normalizedOrigin);
+      await recordTargetAbuseObservation(db, targetKey, ipHash);
     }
 
     await trackEvent(db, "audit_started", {

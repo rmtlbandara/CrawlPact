@@ -29,6 +29,10 @@ export const envSchema = z
     PUBLIC_SITE_URL: z.string().url(),
 
     SESSION_SIGNING_SECRET: z.string().min(16),
+    // Phase 12 (RISK-022): dedicated key for target-frequency abuse-detection
+    // HMACs, deliberately separate from SESSION_SIGNING_SECRET -- see
+    // docs/security/TARGET_ABUSE_MONITORING_DESIGN.md.
+    ABUSE_MONITORING_SECRET: z.string().min(16),
     WEBAUTHN_RP_ID: z.string().min(1),
     WEBAUTHN_RP_ORIGIN: z.string().url(),
 

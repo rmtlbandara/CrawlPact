@@ -71,8 +71,29 @@ pnpm run test:unit
 echo "==> Integration tests"
 pnpm run test:integration
 
+echo "==> Security regression suite"
+pnpm run test:security
+
 echo "==> Validate D1 migrations against Drizzle schema"
 pnpm run db:validate
+
+echo "==> Validate documentation governance"
+pnpm run docs:validate
+
+echo "==> Validate brand and messaging governance"
+pnpm run brand:validate
+
+echo "==> Validate legal, trust, and contact governance"
+pnpm run trust:validate
+
+echo "==> Validate status and changelog trust presentation"
+pnpm run status:validate
+
+echo "==> Validate content-collection quality"
+pnpm run content:validate
+
+echo "==> Dependency vulnerability check (blocking on critical)"
+pnpm audit --audit-level=critical
 
 echo "==> Production build"
 pnpm run build
@@ -82,6 +103,7 @@ cat > "$DEV_VARS_PATH" << 'DEVVARS'
 PUBLIC_APP_ENV=local
 PUBLIC_SITE_URL=http://localhost:4321
 SESSION_SIGNING_SECRET=ci-placeholder-secret-value-not-real-00000000
+ABUSE_MONITORING_SECRET=ci-placeholder-abuse-secret-value-not-real-0000
 WEBAUTHN_RP_ID=localhost
 WEBAUTHN_RP_ORIGIN=http://localhost:4321
 PADDLE_API_KEY=ci-placeholder

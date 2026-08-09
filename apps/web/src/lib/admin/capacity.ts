@@ -1,6 +1,11 @@
 import { and, eq, isNull, lte, or, sql } from "drizzle-orm";
 import { schema } from "@crawlpact/database";
 import type { Database } from "@crawlpact/database";
+import {
+  DEFAULT_ABUSE_DETECTION_MIN_DISTINCT_CALLERS,
+  DEFAULT_ABUSE_DETECTION_WINDOW_MS,
+  getHighFrequencyTargets,
+} from "../target-abuse";
 
 /**
  * Operational capacity snapshot (Phase 11, Stage 11H). A read-only admin
@@ -61,6 +66,14 @@ export type OperationalCapacitySnapshot = {
     /** Phase 10: currently active (unrevoked) private Atom feed tokens, in aggregate — never a raw token or a per-user breakdown. */
     activeAtomTokenCount: number;
     reconciliationLastRun: { status: string; startedAt: string; completedAt: string | null } | null;
+  };
+  /** Phase 12 (RISK-022): detection-only, never auto-blocking. Both fields
+   * are counts derived from opaque HMAC digests — no raw target domain or
+   * caller IP is surfaced here. */
+  abuseMonitoring: {
+    highFrequencyTargetCount: number;
+    detectionWindowMinutes: number;
+    minDistinctCallersThreshold: number;
   };
   retention: {
     lastRun: { status: string; startedAt: string; completedAt: string | null } | null;
@@ -127,6 +140,7 @@ export async function getOperationalCapacitySnapshot(
     bulkActionJobsLast30dRow,
     bulkActionJobFailuresLast30dRow,
     domainCountsByPlanRows,
+    highFrequencyTargets,
   ] = await Promise.all([
     // Raw D1 binding, not the Drizzle wrapper — sqlite_master queries
     // aren't expressible through Drizzle's query builder, and this is the
@@ -252,6 +266,10 @@ export async function getOperationalCapacitySnapshot(
       .innerJoin(schema.users, eq(schema.domains.ownerUserId, schema.users.id))
       .where(isNull(schema.domains.deletedAt))
       .groupBy(schema.users.planId),
+    getHighFrequencyTargets(db, {
+      windowMs: DEFAULT_ABUSE_DETECTION_WINDOW_MS,
+      minDistinctCallers: DEFAULT_ABUSE_DETECTION_MIN_DISTINCT_CALLERS,
+    }),
   ]);
 
   const scanCount = Number(scanCountRow[0]?.n ?? 0);
@@ -294,6 +312,11 @@ export async function getOperationalCapacitySnapshot(
       createdLast24h: Number(notificationsCreatedLast24hRow[0]?.n ?? 0),
       activeAtomTokenCount: Number(activeAtomTokenCountRow[0]?.n ?? 0),
       reconciliationLastRun: lastReconciliationRow[0] ?? null,
+    },
+    abuseMonitoring: {
+      highFrequencyTargetCount: highFrequencyTargets.length,
+      detectionWindowMinutes: DEFAULT_ABUSE_DETECTION_WINDOW_MS / 60_000,
+      minDistinctCallersThreshold: DEFAULT_ABUSE_DETECTION_MIN_DISTINCT_CALLERS,
     },
     retention: {
       lastRun: lastRetentionRow[0] ?? null,

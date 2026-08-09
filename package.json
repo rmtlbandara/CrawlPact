@@ -21,6 +21,7 @@
     "test": "pnpm run test:unit && pnpm run test:integration",
     "test:unit": "vitest run --project unit",
     "test:integration": "vitest run --project integration",
+    "test:security": "vitest run --project security",
     "test:e2e": "playwright test",
     "test:a11y": "playwright test --config=playwright.a11y.config.ts",
     "test:e2e:chromium": "playwright test --project=chromium",
@@ -43,7 +44,8 @@
     "status:validate": "node scripts/status-validate.mjs",
     "content:validate": "node scripts/content-validate.mjs",
     "content:links:check": "node scripts/content-links-check.mjs",
-    "quality": "pnpm run format:check && pnpm run lint && pnpm run typecheck && pnpm run test:unit && pnpm run test:integration && pnpm run db:validate && pnpm run content:validate && pnpm run build",
+    "quality:gate": "pnpm run format:check && pnpm run lint && pnpm run typecheck && pnpm run test:unit && pnpm run test:integration && pnpm run test:security && pnpm run db:validate && pnpm run docs:validate && pnpm run brand:validate && pnpm run trust:validate && pnpm run status:validate && pnpm run content:validate && pnpm audit --audit-level=critical && pnpm run build",
+    "quality": "pnpm run quality:gate",
     "check:fast": "pnpm run format:check && pnpm run lint && pnpm run typecheck && pnpm run test:unit",
     "verify:push": "bash scripts/verify-push.sh",
     "secrets:scan": "bash scripts/secret-scan.sh",
@@ -82,7 +84,7 @@
     "prettier-plugin-astro": "0.14.1",
     "typescript": "6.0.3",
     "vitest": "4.1.10",
-    "wrangler": "4.114.0",
+    "wrangler": "4.120.0",
     "yaml": "2.9.0"
   }
 }

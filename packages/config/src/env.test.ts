@@ -5,6 +5,7 @@ const validEnv = {
   PUBLIC_APP_ENV: "local",
   PUBLIC_SITE_URL: "http://localhost:4321",
   SESSION_SIGNING_SECRET: "a".repeat(32),
+  ABUSE_MONITORING_SECRET: "b".repeat(32),
   WEBAUTHN_RP_ID: "localhost",
   WEBAUTHN_RP_ORIGIN: "http://localhost:4321",
   PADDLE_API_KEY: "sandbox_key",
@@ -45,6 +46,10 @@ describe("parseEnv", () => {
 
   it("rejects a weak session signing secret", () => {
     expect(() => parseEnv({ ...validEnv, SESSION_SIGNING_SECRET: "short" })).toThrow();
+  });
+
+  it("rejects a weak abuse monitoring secret", () => {
+    expect(() => parseEnv({ ...validEnv, ABUSE_MONITORING_SECRET: "short" })).toThrow();
   });
 
   it("rejects an invalid PUBLIC_SITE_URL", () => {

@@ -64,6 +64,7 @@ describe("Super Admin webhook operations (real D1)", () => {
       PUBLIC_APP_ENV: "local",
       PUBLIC_SITE_URL: ORIGIN,
       SESSION_SIGNING_SECRET: "integration-test-secret-value-long-enough",
+      ABUSE_MONITORING_SECRET: "integration-test-abuse-secret-value-long-enough",
       WEBAUTHN_RP_ID: RP_ID,
       WEBAUTHN_RP_ORIGIN: ORIGIN,
       PADDLE_API_KEY: "test",
