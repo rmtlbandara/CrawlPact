@@ -14,8 +14,35 @@ the "Production deployment" entries below for the established pattern).
 
 ## Unreleased
 
-Nothing pending — see "Production deployment (2026-08-07) — Phase 10: Notification Channels and
-Monitoring Reliability" below for the most recent release.
+### Security
+
+Phase 12 (Security, CI, Dependency and Quality-Gate Improvements) — full detail:
+`docs/reports/PHASE_12_SECURITY_CI_DEPENDENCY_QUALITY_COMPLETION_REPORT.md`.
+
+- SHA-pinned every third-party GitHub Action across all 4 workflows (was mutable tags); added a
+  missing workflow-level `permissions: { contents: read }` default to `ci.yml`; fixed a real
+  script-injection shape in `merge-when-green.yml` (PR title now passed via `env:`, not
+  interpolated directly into a shell command).
+- Made the dependency-vulnerability CI gate (`pnpm audit --audit-level=critical`) actually
+  blocking — `continue-on-error: true` removed.
+- Added `target_abuse_observations` (migration `0031`) and a new Super Admin capacity view for
+  cross-request target-frequency abuse detection — detection-only, privacy-minimized (opaque HMAC
+  digests only, keyed by a new dedicated `ABUSE_MONITORING_SECRET`), never auto-blocking.
+- Added `pnpm test:security` (curated regression suite) and a canonical `pnpm quality:gate`,
+  closing a real gap where the local `quality` script and `verify-push.sh` silently skipped 4
+  governance checks (`docs:validate`/`brand:validate`/`trust:validate`/`status:validate`) that CI
+  itself already ran, and where `content:validate` had never run in CI at all.
+
+### Fixed
+
+- Root-caused and fixed the persistent `deploy-preview.yml` failure (failing on every run since at
+  least 2026-08-04): the documented "GitHub secret naming mismatch" diagnosis was wrong — the real
+  cause was two missing `secret_text` bindings on the live preview Worker itself.
+- Bumped Wrangler `4.114.0` → `4.120.0` (aligning `@cloudflare/workers-types` across every
+  workspace package), fixing the root cause of a blocked Dependabot PR and clearing a version
+  blocker for future built-server E2E work.
+- Closed a stale risk-register entry: the billing-webhook race-test flake was already fixed
+  2026-08-04; the docs just hadn't been updated to match.
 
 ## Production deployment (2026-08-07) — Phase 10: Notification Channels and Monitoring Reliability
 

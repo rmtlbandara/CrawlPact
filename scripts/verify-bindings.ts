@@ -28,7 +28,12 @@ type Binding =
 
 const repoRoot = fileURLToPath(new URL("..", import.meta.url));
 
-const SECRET_NAMES = ["PADDLE_API_KEY", "PADDLE_WEBHOOK_SECRET", "SESSION_SIGNING_SECRET"];
+const SECRET_NAMES = [
+  "PADDLE_API_KEY",
+  "PADDLE_WEBHOOK_SECRET",
+  "SESSION_SIGNING_SECRET",
+  "ABUSE_MONITORING_SECRET",
+];
 
 function loadExpected(target: Target): {
   scriptName: string;

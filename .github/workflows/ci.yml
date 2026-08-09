@@ -23,6 +23,14 @@ concurrency:
   group: ci-${{ github.ref }}
   cancel-in-progress: true
 
+# Repo-wide default: every job gets read-only contents unless it explicitly
+# needs more (quality further narrows nothing, since pull-requests: read is
+# additive for gitleaks). Without this, jobs with no job-level permissions:
+# block (browser-smoke, ci-gate) inherit whatever the org/repo default
+# GITHUB_TOKEN policy is, which can be broader than needed.
+permissions:
+  contents: read
+
 env:
   # Safe, non-secret placeholder values so CI can boot the app's env
   # validation without any real credential (see docs/deployment/ENVIRONMENTS.md).
@@ -30,6 +38,7 @@ env:
   PUBLIC_APP_ENV: local
   PUBLIC_SITE_URL: http://localhost:4321
   SESSION_SIGNING_SECRET: ci-placeholder-secret-value-not-real-00000000
+  ABUSE_MONITORING_SECRET: ci-placeholder-abuse-secret-value-not-real-0000
   WEBAUTHN_RP_ID: localhost
   WEBAUTHN_RP_ORIGIN: http://localhost:4321
   PADDLE_API_KEY: ci-placeholder
@@ -53,20 +62,20 @@ jobs:
       contents: read
       pull-requests: read
     steps:
-      - uses: actions/checkout@v7
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           fetch-depth: 0
 
       - name: Secret scan (gitleaks)
-        uses: gitleaks/gitleaks-action@v3
+        uses: gitleaks/gitleaks-action@e0c47f4f8be36e29cdc102c57e68cb5cbf0e8d1e # v3.0.0
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
-      - uses: pnpm/action-setup@v6
+      - uses: pnpm/action-setup@0977fd99725f1db4007ccb2928dbb4e90d06cc86 # v6.0.10
         with:
           version: 9.15.0
 
-      - uses: actions/setup-node@v7
+      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
         with:
           node-version: "22.12.0"
           cache: pnpm
@@ -89,6 +98,9 @@ jobs:
       - name: Integration tests
         run: pnpm test:integration
 
+      - name: Security regression suite
+        run: pnpm test:security
+
       - name: Validate D1 migrations against Drizzle schema
         run: pnpm db:validate
 
@@ -104,17 +116,29 @@ jobs:
       - name: Validate status and changelog trust presentation
         run: pnpm status:validate
 
-      - name: Dependency vulnerability check
+      - name: Validate content-collection quality
+        # Phase 12: this script already existed (Phase 7) and was already
+        # wired into `pnpm quality`/`pnpm run quality:gate`, but had never
+        # actually been run in CI itself — a real, confirmed gap found while
+        # reconciling `quality:gate`'s step list against what CI actually
+        # gates on. Read-only, no network access, so safe to run on every PR.
+        run: pnpm content:validate
+
+      - name: Dependency vulnerability check (blocking on critical)
+        # Phase 12 (2026-08-09): continue-on-error removed — this is now a
+        # real gate. `--audit-level=critical` (plain text, not --json — pnpm's
+        # --json output exits 1 whenever *any* advisory exists regardless of
+        # severity, a known quirk that would make a --json-based gate fail on
+        # every non-critical advisory too) only fails the step when a
+        # critical-severity advisory exists; 0 exist as of this review.
+        # High/moderate advisories still print in the log for visibility but
+        # no longer block CI — current count (re-verified this phase): 8
+        # high + 4 moderate, all in dev-only tooling (sharp/libvips and
+        # undici/fast-uri via wrangler's miniflare, brace-expansion via
+        # @typescript-eslint's minimatch, js-yaml/nanoid via dev tooling
+        # chains) — never a production runtime dependency, never reachable by
+        # attacker-controlled input. See docs/security/DEPENDENCY_VULNERABILITY_POLICY.md.
         run: pnpm audit --audit-level=critical
-        # Reviewed 2026-07-29 (re-reviewed during the release-flow
-        # remediation): still 3 high advisories, all in dev-only tooling
-        # (sharp/libvips via wrangler's miniflare, brace-expansion via
-        # @typescript-eslint's minimatch) — never in a production runtime
-        # dependency, never reachable by attacker-controlled input. Kept
-        # informational deliberately, not by default; see
-        # docs/status/KNOWN_RISKS.md for the specific advisories accepted
-        # and re-review whenever this step's output changes.
-        continue-on-error: true
 
       - name: Build
         run: pnpm build
@@ -123,13 +147,13 @@ jobs:
     name: Chromium E2E + accessibility smoke
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v7
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
 
-      - uses: pnpm/action-setup@v6
+      - uses: pnpm/action-setup@0977fd99725f1db4007ccb2928dbb4e90d06cc86 # v6.0.10
         with:
           version: 9.15.0
 
-      - uses: actions/setup-node@v7
+      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
         with:
           node-version: "22.12.0"
           cache: pnpm
@@ -153,6 +177,7 @@ jobs:
           PUBLIC_APP_ENV=local
           PUBLIC_SITE_URL=http://localhost:4321
           SESSION_SIGNING_SECRET=ci-placeholder-secret-value-not-real-00000000
+          ABUSE_MONITORING_SECRET=ci-placeholder-abuse-secret-value-not-real-0000
           WEBAUTHN_RP_ID=localhost
           WEBAUTHN_RP_ORIGIN=http://localhost:4321
           PADDLE_API_KEY=ci-placeholder
@@ -203,7 +228,7 @@ jobs:
 
       - name: Upload failure diagnostics
         if: failure()
-        uses: actions/upload-artifact@v7
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
         with:
           name: browser-smoke-failure-diagnostics
           path: |

@@ -37,6 +37,7 @@ describe("audit abuse prevention (real D1)", () => {
       PUBLIC_APP_ENV: "local",
       PUBLIC_SITE_URL: ORIGIN,
       SESSION_SIGNING_SECRET: "integration-test-secret-value-long-enough",
+      ABUSE_MONITORING_SECRET: "integration-test-abuse-secret-value-long-enough",
       WEBAUTHN_RP_ID: "localhost",
       WEBAUTHN_RP_ORIGIN: ORIGIN,
       PADDLE_API_KEY: "test",
@@ -125,5 +126,34 @@ describe("audit abuse prevention (real D1)", () => {
     expect(second.status).toBe(429);
     const body = await readJson(second);
     if (!body.ok) expect(body.error.code).toBe("RATE_LIMITED");
+  }, 30_000);
+
+  it("records a target-abuse observation (opaque HMACs only) for an allowed request, not the rejected one", async () => {
+    await db
+      .update(schema.runtimeConfiguration)
+      .set({ value: "100" })
+      .where(eq(schema.runtimeConfiguration.key, "anonymous_audit_daily_limit"));
+
+    const before = await db.select().from(schema.targetAbuseObservations);
+
+    await auditRoute(
+      ctx(
+        new Request("http://x/api/audit", {
+          method: "POST",
+          headers: { "Content-Type": "application/json", "CF-Connecting-IP": "203.0.113.9" },
+          body: JSON.stringify({ target: "example.com" }),
+        }),
+      ),
+    );
+
+    const after = await db.select().from(schema.targetAbuseObservations);
+    expect(after.length).toBe(before.length + 1);
+    const newRow = after[after.length - 1];
+    if (!newRow) throw new Error("expected a new target_abuse_observations row");
+    // Never a raw IP or raw domain — both must be opaque HMAC output.
+    expect(newRow.targetKey).not.toContain("example.com");
+    expect(newRow.callerKey).not.toContain("203.0.113.9");
+    expect(newRow.targetKey.length).toBeGreaterThan(20);
+    expect(newRow.callerKey.length).toBeGreaterThan(20);
   }, 30_000);
 });

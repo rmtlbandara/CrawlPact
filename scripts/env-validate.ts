@@ -61,6 +61,7 @@ function secretShapePlaceholders(): Record<string, string> {
     PADDLE_API_KEY: "cloudflare-worker-secret-not-checked-by-this-script",
     PADDLE_WEBHOOK_SECRET: "cloudflare-worker-secret-not-checked-by-this-script",
     SESSION_SIGNING_SECRET: "cloudflare-worker-secret-not-checked-by-this-script-min16",
+    ABUSE_MONITORING_SECRET: "cloudflare-worker-secret-not-checked-by-this-script-min16",
   };
 }
 

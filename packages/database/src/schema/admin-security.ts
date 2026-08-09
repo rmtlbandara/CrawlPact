@@ -101,3 +101,14 @@ export const productEvents = sqliteTable("product_events", {
   properties: text("properties"),
   createdAt: text("created_at").notNull(),
 });
+
+// Phase 12: cross-request target-frequency abuse detection (RISK-022).
+// Mirrors packages/database/migrations/0031_target_abuse_observations.sql.
+// Detection-only -- nothing reads this table to auto-block. Both columns
+// are opaque HMAC digests, never a raw IP or raw target domain.
+export const targetAbuseObservations = sqliteTable("target_abuse_observations", {
+  id: integer("id").primaryKey({ autoIncrement: true }),
+  targetKey: text("target_key").notNull(),
+  callerKey: text("caller_key").notNull(),
+  observedAt: text("observed_at").notNull(),
+});

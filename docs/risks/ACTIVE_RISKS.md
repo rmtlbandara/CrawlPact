@@ -8,7 +8,12 @@ below rather than duplicated. Do not maintain a third active-risk list anywhere 
 
 Statuses: `open` · `mitigating` · `accepted` · `blocked` · `monitoring`.
 
-Last reviewed: 2026-08-06 (Phase 8, Saved-Domain Experience and Change Timeline). Phase 8 closed a
+Last reviewed: 2026-08-09 (Phase 12, Security, CI, Dependency and Quality-Gate Improvements). Phase
+12 closed RISK-012 (see `docs/risks/RISK_ARCHIVE.md` ARC-029 — found already fixed 2026-08-04, docs
+just hadn't caught up), re-confirmed RISK-027 unchanged (private-repo Free-plan branch-protection
+403 re-verified live), and de-risked RISK-015 (Wrangler bumped past both candidate-fix versions,
+built-server CI swap itself deliberately deferred — see that risk's own entry for why). Prior
+review: 2026-08-06 (Phase 8, Saved-Domain Experience and Change Timeline). Phase 8 closed a
 real duplicate-simultaneous-scan gap (not previously tracked as a numbered risk — found and fixed
 in the same pass, see `docs/reports/PHASE_08_SAVED_DOMAIN_CHANGE_TIMELINE_COMPLETION_REPORT.md`)
 and added RISK-034 (a pre-existing N+1 query pattern found, deliberately left unfixed to keep the
@@ -56,9 +61,9 @@ extended platform guides), RISK-032 (no Search Console property connected), and 
 - **Category**: Infrastructure, Security · **Severity**: P2 · **Probability**: N/A (permanent until credential rescoped)
 - **Impact**: SSL/TLS mode, HSTS, DNSSEC, Page Rules, Rate Limiting Rules, Cache Rules, redirect-ruleset detail, and AI Crawl Control settings cannot be verified programmatically — only via manual dashboard check.
 - **Evidence**: `docs/status/KNOWN_RISKS.md` ("connected Cloudflare API credential cannot read several zone-level settings")
-- **Current mitigation**: Broader endpoints (zone list, DNS, ruleset list) confirm no custom WAF/rate-limit rules beyond Free-plan managed defaults.
+- **Current mitigation**: Broader endpoints (zone list, DNS, ruleset list) confirm no custom WAF/rate-limit rules beyond Free-plan managed defaults. **Re-verified Phase 12 (2026-08-09)** via the Cloudflare MCP API tool (a different, broader-scoped credential than Phase 0's): `GET /zones/{id}/settings/ssl`, `/settings/always_use_https`, `/settings/min_tls_version`, `/settings/security_header` (HSTS), `/dnssec`, `/pagerules`, and `/rate_limits` all still return `401`/`403` ("Unauthorized to access requested resource" / "Authentication error") — the restriction is confirmed unchanged, not credential-specific. **New finding this pass**: `GET /zones/{id}/rulesets` (list-only, which IS readable) shows two zone-level custom rulesets beyond the Free-plan managed defaults — `http_request_dynamic_redirect` (v19, updated 2026-07-26) and **`http_request_firewall_custom`** (v18, updated 2026-07-31) — but their actual rule contents are not readable via this credential either (`GET /zones/{id}/rulesets/{id}` 403s). This means the prior "no custom WAF rules" claim cannot be fully confirmed — a custom firewall ruleset genuinely exists at the zone level; its contents need manual dashboard verification, not just its existence.
 - **Owner**: Operations owner · **Trigger**: Any security review requiring zone-settings verification
-- **Review date**: Next infrastructure phase · **Target phase**: Phase 12
+- **Review date**: Next infrastructure phase (re-confirmed Phase 12, new custom-ruleset-contents gap found) · **Target phase**: Phase 12
 - **Status**: accepted
 - **Acceptance criteria for closure**: A broader-scoped Cloudflare API token is issued, or manual dashboard verification is performed and recorded.
 
@@ -117,17 +122,6 @@ extended platform guides), RISK-032 (no Search Console property connected), and 
 - **Status**: accepted
 - **Acceptance criteria for closure**: Real, verified registered address, registration number, and tax information are published, or the deferral is re-confirmed at each review.
 
-### RISK-012 — `billing-webhook.integration.test.ts`'s concurrent-race test flakes under load
-
-- **Category**: Test coverage, Billing · **Severity**: P2 · **Probability**: Confirmed to occur under load
-- **Impact**: The test's own concurrency simulation doesn't guarantee write order, so the (correct) out-of-order protection can legitimately classify the "later" request differently than the test assumes.
-- **Evidence**: `docs/status/BILLING_WEBHOOK_RACE_TEST_FLAKE.md`
-- **Current mitigation**: Deliberately not fixed — touches billing-critical ordering logic, needs dedicated review. **Updated Phase 6 (2026-08-04)**: this phase touched the same test file (added 2 new webhook resolution tests, all passing including the existing race test) but deliberately did not attempt a fix — a rushed change to billing-critical ordering logic under this phase's already-substantial scope was judged riskier than carrying the flake forward for dedicated review.
-- **Owner**: Billing owner · **Trigger**: Next billing-webhook-adjacent change
-- **Review date**: Phase 7 · **Target phase**: Phase 7
-- **Status**: open
-- **Acceptance criteria for closure**: Test rewritten to assert on either valid outcome, or made deterministic.
-
 ### RISK-013 — `mobile-safari` a11y test failure: skip-link keyboard focus
 
 - **Category**: Accessibility, Test coverage · **Severity**: P2 · **Probability**: Confirmed, reproducible
@@ -139,25 +133,25 @@ extended platform guides), RISK-032 (no Search Console property connected), and 
 - **Status**: accepted
 - **Acceptance criteria for closure**: Either Playwright fixes the underlying WebKit `Tab` behavior, or the test is rewritten to avoid depending on it.
 
-### RISK-014 — `deploy-preview.yml` fails at the D1-migration step due to a secret-naming mismatch in the `preview` GitHub Environment
+### RISK-014 — `deploy-preview.yml` fails at the deployed-bindings verification step, not a GitHub secret-naming mismatch (corrected Phase 12)
 
-- **Category**: CI/CD, Operations · **Severity**: P2 · **Probability**: Certain until fixed
-- **Impact**: Preview deploys cannot run migrations until the repository owner renames/adds the correctly-named secrets.
-- **Evidence**: `docs/status/KNOWN_RISKS.md`
-- **Current mitigation**: None — requires the repository owner to run `gh secret set` commands (cannot be fixed by an agent session without handling a live credential).
-- **Owner**: Operations owner · **Trigger**: Next preview deploy attempt
-- **Review date**: Phase 12 · **Target phase**: Phase 12
-- **Status**: blocked
-- **Acceptance criteria for closure**: `CLOUDFLARE_ACCOUNT_ID`/`CLOUDFLARE_API_TOKEN` secrets set correctly in the `preview` GitHub Environment, verified by a successful preview deploy.
+- **Category**: CI/CD, Operations · **Severity**: P2 · **Probability**: Was certain until fixed this phase
+- **Impact**: Preview deploys failed on every run from at least 2026-08-04 through 2026-08-08 (20/20 runs checked).
+- **Evidence**: `docs/status/KNOWN_RISKS.md` (original, since-corrected diagnosis); Phase 12 re-investigation: `gh run view <id> --log-failed` on run `31244429508` (commit `a5f1580`) showed the actual failure at the `deploy:verify-bindings:preview` step: `"deployed Worker \"crawlpact-web-preview\" drifted from apps/web/wrangler.jsonc: PADDLE_API_KEY: expected a secret_text binding but found nothing; PADDLE_WEBHOOK_SECRET: expected a secret_text binding but found nothing"`.
+- **Current mitigation**: **Corrected and fixed, Phase 12 (2026-08-09)**. The original diagnosis was wrong: `gh api repos/.../environments/preview/secrets` confirms `CLOUDFLARE_ACCOUNT_ID`/`CLOUDFLARE_API_TOKEN` were already present and correctly named in the `preview` GitHub Environment the whole time — the build/migrate/seed/deploy steps all succeeded on every failing run. The real gap, confirmed via the Cloudflare API's live bindings list for `crawlpact-web-preview`, was that the Worker itself was missing two `secret_text` bindings (`PADDLE_API_KEY`, `PADDLE_WEBHOOK_SECRET`) that were simply never set, unlike every other Paddle preview value which already used clearly-labeled sandbox placeholders (e.g. `pri_sandbox_placeholder`). Set both to matching clearly-labeled placeholders (`paddle_sandbox_paddle_api_key_placeholder`, `paddle_sandbox_paddle_webhook_secret_placeholder`) via a direct Cloudflare API call, with the user's explicit confirmation first. Not real credentials, and `BILLING_ENABLED=false` on preview means they're never used for an actual Paddle call — this only satisfies the deploy-time binding-drift check. Verification of the next real `deploy-preview.yml` run is pending (it only triggers via `workflow_run` after a CI pass on `main`, so it will run naturally once this phase's PR merges).
+- **Owner**: Operations owner · **Trigger**: Next preview deploy attempt (pending, post-merge)
+- **Review date**: Phase 12 (fixed, pending live verification) · **Target phase**: Confirm on next post-merge preview deploy
+- **Status**: mitigating
+- **Acceptance criteria for closure**: A `deploy-preview.yml` run completes successfully end-to-end, including `deploy:verify-bindings:preview`, after this phase's PR merges to `main`.
 
 ### RISK-015 — Built-server E2E (real `wrangler dev --local` against the built Worker) still not achieved
 
 - **Category**: Test coverage, CI/CD · **Severity**: P2 · **Probability**: N/A — currently reverted to `astro dev`
 - **Impact**: E2E/a11y suites test against Astro's dev server, not a genuinely production-like built Worker — a narrower but still real gap.
 - **Evidence**: `docs/status/KNOWN_RISKS.md` ("Built-server E2E" entries)
-- **Current mitigation**: `astro dev` target is stable and passing; the built-server approach caused two distinct real-CI-only crashes, both reverted after investigation.
-- **Owner**: Engineering owner · **Trigger**: A Wrangler version upgrade (4.115.0+ flagged as a next step) or renewed investigation
-- **Review date**: Phase 12 · **Target phase**: Phase 12
+- **Current mitigation**: `astro dev` target is stable and passing; the built-server approach caused two distinct real-CI-only crashes, both reverted after investigation. **Updated Phase 12 (2026-08-09)**: the documented next step (`docs/status/KNOWN_RISKS.md`'s "try the wrangler 4.115.0 upgrade first") is done — Wrangler bumped 4.114.0 → 4.120.0 (also clearing a second, newly-discovered peer-version floor: `@astrojs/cloudflare`'s bundled `@cloudflare/vite-plugin` requires Wrangler `^4.118.0`, the same root cause as RISK-026), `@cloudflare/workers-types` aligned to `5.20260809.1` across every workspace package to avoid a split drizzle-orm install, and the full quality gate (format/lint/typecheck/unit/integration/build) re-verified clean on the new version. The built-server CI swap itself was deliberately **not** re-attempted this phase: its own acceptance criteria requires 3 consecutive real-CI passes (not local — the prior two crashes never reproduced locally, only in real GitHub Actions runs), which cannot be satisfied inside one session, and attempting it inside this phase's own PR would risk destabilizing the CI gate this large a security/CI hardening change depends on to merge. Recommended next step: a small, dedicated follow-up PR that only swaps `astro dev` → `wrangler dev --local` in `ci.yml`'s `browser-smoke` job and `scripts/verify-push.sh`, run 3 times for real before trusting it.
+- **Owner**: Engineering owner · **Trigger**: A dedicated follow-up attempt now that the Wrangler version blocker is cleared
+- **Review date**: Phase 12 (de-risked, not closed) · **Target phase**: Next phase with budget for a dedicated 3-CI-run verification cycle
 - **Status**: open
 - **Acceptance criteria for closure**: 3 consecutive real-CI runs pass against the built-server target before it's trusted as the primary gate again.
 
@@ -221,22 +215,22 @@ extended platform guides), RISK-032 (no Search Console property connected), and 
 - **Category**: Security · **Severity**: P2 · **Probability**: Low
 - **Impact**: A distributed set of anonymous callers (many IPs) could still direct many small in-bounds scans at one target — only per-caller limits exist today.
 - **Evidence**: `docs/security/SECURITY_CHECKLIST.md`, `docs/status/REQUIREMENTS_TRACEABILITY.md` §33
-- **Current mitigation**: Per-caller rate limits exist; no cross-caller aggregation.
+- **Current mitigation**: **Fixed, Phase 12 (2026-08-09)**. Added `target_abuse_observations` (migration 0031) — a dedicated, detection-only table storing two opaque HMAC digests per allowed anonymous-audit request: `target_key` (canonical origin, keyed by a NEW dedicated `ABUSE_MONITORING_SECRET` — never `SESSION_SIGNING_SECRET`) and `caller_key` (reuses the existing `hashIp()` value). `getHighFrequencyTargets()` (`apps/web/src/lib/target-abuse.ts`) flags a target seen by ≥10 distinct callers within a 60-minute window; nothing reads this table to block a request — it only feeds a new `abuseMonitoring` block in the Super Admin operational capacity snapshot (`GET /api/admin/capacity`), giving the tooling this risk's acceptance criteria named. 8 new integration tests confirm: correct hashing, no false-positive on low caller diversity, correct detection at threshold, window exclusion, and that neither raw target nor raw IP ever appears in the capacity snapshot.
 - **Owner**: Security owner · **Trigger**: Any observed abuse pattern
-- **Review date**: Phase 12 · **Target phase**: Phase 12
-- **Status**: monitoring
-- **Acceptance criteria for closure**: Super Admin tooling for cross-request target-frequency alerting is built (already tracked as Part 3 follow-up).
+- **Review date**: Phase 12 (fixed) · **Target phase**: N/A — closed
+- **Status**: mitigating
+- **Acceptance criteria for closure**: Super Admin tooling for cross-request target-frequency alerting is built (done — `abuseMonitoring.highFrequencyTargetCount` in the capacity snapshot); kept `mitigating` rather than moved to the archive since the detection thresholds (60min / 10 callers) are a first, conservative default not yet tuned against real production abuse patterns.
 
 ### RISK-023 — CSP allows `'unsafe-inline'` for scripts/styles
 
 - **Category**: Security · **Severity**: P2 · **Probability**: N/A (structural, ongoing)
 - **Impact**: Reduces (doesn't eliminate) CSP's XSS mitigation value.
 - **Evidence**: `docs/security/SECURITY_CHECKLIST.md`, `docs/security/THREAT_MODEL.md`
-- **Current mitigation**: Astro island hydration + Tailwind's runtime both need it today; per-request nonce plumbing is unbuilt.
-- **Owner**: Security owner · **Trigger**: Any CSP-hardening initiative
-- **Review date**: Phase 12 · **Target phase**: Phase 12
+- **Current mitigation**: Astro island hydration + Tailwind's runtime both need it today; per-request nonce plumbing is unbuilt. **Investigated in depth, Phase 12 (2026-08-09) — deliberately not implemented, with concrete evidence why**: (1) the installed Astro version (7.1.3) has no built-in CSP nonce/hash support (`grep`'d its config schema — nothing) — implementing nonces would require either upgrading Astro (a separate, out-of-scope risk) or manually threading a nonce through every framework-injected inline `<script>`, which this codebase doesn't control. (2) Direct inspection of the built static output (`apps/web/dist/client/index.html`) confirms genuinely inline `<script>` content (a Google Analytics inline config script, JSON-LD structured data) exists even on fully prerendered, edge-cached marketing pages — these are static HTML served straight off the Workers Assets binding with **no per-request code path at all**, so a nonce (which must be unique per response) is architecturally inapplicable there regardless of framework support; the same is true for the 4 SSR routes that explicitly opt into `Cache-Control: public, max-age=N` (`changelog.astro`, `scanner.astro`, `for/[slug].astro`, `status.astro` — Phase 11's `PUBLIC_CACHE_POLICY.md`), where a nonce baked into one cached response would be replayed to every subsequent cache-hit visitor, defeating its purpose and risking exactly the cached-HTML/header divergence this phase was warned against. A hash-based CSP (allowlisting the exact SHA-256 of each static inline script/style at build time) is the architecturally correct fix for that static/cached surface, but is a genuinely separate, non-trivial build-pipeline initiative (deterministic content required, including GA's parameterized inline script) not safely attempted inside this already-large phase. Nonces remain theoretically viable for the private/no-store SSR surface only (admin/app routes, which never cache) but implementing that alone, while leaving every cached/static page unchanged, was judged not worth the split-CSP complexity and residual confusion it would add without the static-page half also being solved.
+- **Owner**: Security owner · **Trigger**: A dedicated CSP-hardening initiative (Astro upgrade evaluation + hash-based CSP build step for static/cached pages)
+- **Review date**: Phase 12 (investigated, not closed) · **Target phase**: Unscheduled — needs its own dedicated phase, not a sub-task of a broader security pass
 - **Status**: accepted
-- **Acceptance criteria for closure**: Per-request nonce plumbing implemented and `'unsafe-inline'` removed.
+- **Acceptance criteria for closure**: Either a hash-based CSP covers every static/cached page and per-request nonces cover every private SSR page (both, not one), or `'unsafe-inline'` is otherwise provably eliminated without weakening real functionality.
 
 ### RISK-025 — Duplicate-token protection gap: case-sensitive DB unique index vs. case-insensitive CLI validator
 
@@ -265,9 +259,9 @@ extended platform guides), RISK-032 (no Search Console property connected), and 
 - **Category**: Operations, Security · **Severity**: P2 · **Probability**: N/A (known platform constraint)
 - **Impact**: Merge safety depends entirely on the custom `merge-when-green.yml` workflow rather than a platform-enforced rule.
 - **Evidence**: `docs/baseline/2026-08-03/PRODUCTION_INFRASTRUCTURE_INVENTORY.md`
-- **Current mitigation**: `merge-when-green.yml` substitutes for native protection — private-repo GitHub Free-plan constraint, not a gap this repo introduced.
+- **Current mitigation**: `merge-when-green.yml` substitutes for native protection — private-repo GitHub Free-plan constraint, not a gap this repo introduced. **Re-confirmed live, Phase 12 (2026-08-09)**: `GET /repos/rmtlbandara/CrawlPact/branches/main/protection` still returns `403 "Upgrade to GitHub Pro or make this repository public to enable this feature"` — the constraint is unchanged.
 - **Owner**: Operations owner · **Trigger**: A GitHub plan upgrade
-- **Review date**: Phase 12 · **Target phase**: Phase 12
+- **Review date**: Phase 12 (re-confirmed, unchanged) · **Target phase**: Next GitHub plan upgrade
 - **Status**: accepted
 - **Acceptance criteria for closure**: GitHub plan upgraded and native branch protection configured, or this acceptance is re-confirmed.
 

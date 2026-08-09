@@ -14,6 +14,7 @@ type CloudflareRuntimeEnv = {
   PUBLIC_APP_ENV: "local" | "preview" | "production";
   PUBLIC_SITE_URL: string;
   SESSION_SIGNING_SECRET: string;
+  ABUSE_MONITORING_SECRET: string;
   WEBAUTHN_RP_ID: string;
   WEBAUTHN_RP_ORIGIN: string;
   PADDLE_API_KEY: string;

@@ -32,6 +32,31 @@ export default defineConfig({
           exclude: ["**/node_modules/**"],
         },
       },
+      {
+        // Phase 12: `pnpm test:security` — an explicit, curated allowlist
+        // (not a glob by naming convention) so this project stays a
+        // deliberate, reviewed set of security-relevant regression tests
+        // rather than silently growing/shrinking with unrelated file
+        // renames. Overlaps with "unit"/"integration" by design (same test
+        // files, different, faster-to-run selection) — see
+        // docs/security/SECURITY_TEST_SUITE.md for what's covered and why
+        // each file is included.
+        test: {
+          name: "security",
+          environment: "node",
+          include: [
+            "apps/web/src/lib/security-headers.test.ts",
+            "apps/web/src/pages/.well-known/security.txt.test.ts",
+            "packages/scanner/src/safe-fetch.test.ts",
+            "apps/web/tests/integration/csrf.integration.test.ts",
+            "apps/web/tests/integration/audit-abuse-prevention.integration.test.ts",
+            "apps/web/tests/integration/target-abuse-monitoring.integration.test.ts",
+            "apps/web/tests/integration/admin-security.integration.test.ts",
+            "apps/web/tests/integration/atom-feed-hardening.integration.test.ts",
+          ],
+          exclude: ["**/node_modules/**"],
+        },
+      },
     ],
   },
 });

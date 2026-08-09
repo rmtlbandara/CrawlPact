@@ -92,13 +92,22 @@ jobs:
           echo "should_merge=$should_merge" >> "$GITHUB_OUTPUT"
 
       - name: Squash-merge
+        # PR_TITLE is passed as an env var, not interpolated directly into the
+        # run: shell via ${{ }} — the title comes from the PR itself (line 63
+        # above) and a malicious title could otherwise break out of the
+        # --subject argument (e.g. a title containing `"; rm -rf ...`). This
+        # step is only reachable for owner-authored PRs today (see the guard
+        # above), so it isn't currently exploitable by an external attacker,
+        # but the safe pattern costs nothing and removes the shape entirely.
         if: steps.guard.outputs.should_merge == 'true'
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          PR_NUMBER: ${{ steps.guard.outputs.number }}
+          PR_TITLE: ${{ steps.guard.outputs.title }}
         run: |
-          gh pr merge "${{ steps.guard.outputs.number }}" --repo "${{ github.repository }}" \
+          gh pr merge "$PR_NUMBER" --repo "${{ github.repository }}" \
             --squash --delete-branch \
-            --subject "${{ steps.guard.outputs.title }} (#${{ steps.guard.outputs.number }})"
+            --subject "$PR_TITLE (#$PR_NUMBER)"
 
       - name: Record merge evidence
         if: steps.guard.outputs.should_merge == 'true'
