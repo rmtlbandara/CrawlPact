@@ -101,8 +101,15 @@ async function run(): Promise<void> {
   );
   if (target === "preview") {
     record(
+      // Phase 12: this never actually ran before — the deploy-time
+      // binding-drift check always failed first (RISK-014), so this
+      // string-mismatch bug (checked "Not configured..." capitalized, but
+      // status.astro's `billing_checkout` detail text is a mid-sentence
+      // continuation — "Paddle billing not configured in this
+      // environment." — correctly lowercase) was never exposed. Fixed to
+      // match the real, correctly-grammared rendered text.
       "Status page: billing correctly reports not configured in preview",
-      statusBody.includes("Not configured in this environment"),
+      statusBody.includes("not configured in this environment"),
     );
     const homeBody = await checkPage("Home page (env banner)", `${base}/`, 200);
     record(
