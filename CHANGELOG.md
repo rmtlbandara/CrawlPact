@@ -14,6 +14,18 @@ the "Production deployment" entries below for the established pattern).
 
 ## Unreleased
 
+Nothing pending — see "Production deployment (2026-08-10) — Phase 12: Security, CI, Dependency
+and Quality-Gate Improvements" below for the most recent release.
+
+## Production deployment (2026-08-10) — Phase 12: Security, CI, Dependency and Quality-Gate Improvements
+
+PRs #97/#99/#100 (squash-merged as `acacc47`/`8b22251`/`0c566c6`) deployed to production via
+`deploy-production.yml`, run against commit `0c566c67869a3ce7d4254d96ad04bbec400fd726`. One new
+additive D1 migration applied (`0031_target_abuse_observations.sql` — new `target_abuse_observations`
+table; 31/31 migrations applied, 48 tables total, independently confirmed via a direct D1 query).
+Deployed Worker version: `8c45a299-342e-4a1f-aabe-9627845bb4e8`. Full detail:
+`docs/reports/PHASE_12_SECURITY_CI_DEPENDENCY_QUALITY_COMPLETION_REPORT.md`.
+
 ### Security
 
 Phase 12 (Security, CI, Dependency and Quality-Gate Improvements) — full detail:

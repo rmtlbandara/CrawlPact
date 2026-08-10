@@ -1,14 +1,14 @@
 ---
 Document owner: Engineering owner
 Status: current-authoritative
-Last verified: 2026-08-07
-Repository commit: 5699a899b30e751a9e96ce7a42970f82464f1b14 (main, post-Phase-10 merge, deployed)
-Production deployment identifier: crawlpact-web (Cloudflare Worker), https://crawlpact.com — Worker version 5bee35c9-d16d-43c2-95c1-385d91be1a2a
-Database migration version: 0030_notification_monitoring_reliability.sql (30/30 applied to production, confirmed via a direct D1 query against `d1_migrations` 2026-08-07 — 9 new `notifications` columns (`category`, `priority`, `source_type`, `source_id`, `dedupe_key`, `action_path`, `occurrence_count`, `last_occurred_at`, `model_version`), the `domains.failure_episode_id` column, and all 3 new indexes independently verified present; table count unchanged at 47 (additive columns/indexes only, no new tables))
+Last verified: 2026-08-10
+Repository commit: 0c566c67869a3ce7d4254d96ad04bbec400fd726 (main, post-Phase-12 merge, deployed)
+Production deployment identifier: crawlpact-web (Cloudflare Worker), https://crawlpact.com — Worker version 8c45a299-342e-4a1f-aabe-9627845bb4e8
+Database migration version: 0031_target_abuse_observations.sql (31/31 applied to production, confirmed via a direct D1 query against `d1_migrations` 2026-08-10 — new `target_abuse_observations` table, `target_key`/`caller_key` opaque-HMAC columns; table count now 48, independently confirmed via `sqlite_master`)
 Crawler registry version: 2026.07.3 (active release; 23 crawlers seeded, correction pending publication as a new release — see docs/registry/CRAWLER_REGISTRY_GOVERNANCE.md)
 Phase 0 baseline reference: docs/baseline/2026-08-03/ (superseded on billing/migration facts by Phases 5–6 below; not re-run this pass)
 Review frequency: Every release, or monthly
-Next review date: 2026-09-07 (or sooner, at the next release)
+Next review date: 2026-09-10 (or sooner, at the next release)
 ---
 
 # Current State
@@ -32,7 +32,16 @@ verified platform guides (`/platforms/*`) — content-only, no product-behavior 
 production 2026-08-04, Worker version `630258b4-c020-4105-9ca3-550897f7c0e3`; all 10 new routes
 independently confirmed live (see the Phase 7 completion report).
 **Production and the default branch (`main`) are aligned** — no known drift as of the last
-deployed commit (`5699a89`).
+deployed commit (`0c566c6`).
+
+Phase 12 (Security, CI, Dependency and Quality-Gate Improvements, deployed 2026-08-10) hardened
+CI/CD supply-chain integrity (SHA-pinned GitHub Actions, fixed a real script-injection shape, made
+the dependency-vulnerability gate actually blocking), added a new privacy-minimized cross-request
+target-frequency abuse-detection feature (detection-only, never auto-blocking), and root-caused
+and fixed two real, previously-misdiagnosed operational gaps: the persistent `deploy-preview.yml`
+failure (was missing Cloudflare Worker secrets, not a GitHub secret-naming mismatch as originally
+documented) and a blocked Dependabot PR (a Wrangler version floor). Full detail:
+`docs/reports/PHASE_12_SECURITY_CI_DEPENDENCY_QUALITY_COMPLETION_REPORT.md`.
 
 Major limitations: a real **paid** Paddle checkout lifecycle has never been run (webhook
 processing itself is verified live — RISK-001, still open); the Workers Free CPU budget constrains
