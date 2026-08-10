@@ -2,8 +2,8 @@
 Document owner: Engineering owner
 Status: current-authoritative
 Last verified: 2026-08-10
-Repository commit: 0c566c67869a3ce7d4254d96ad04bbec400fd726 (main, post-Phase-12 merge, deployed)
-Production deployment identifier: crawlpact-web (Cloudflare Worker), https://crawlpact.com — Worker version 8c45a299-342e-4a1f-aabe-9627845bb4e8
+Repository commit: 421fd71e9f337e7df2b16fb642ab7f69b8bae8ba (main, post-Phase-13 merge, deployed)
+Production deployment identifier: crawlpact-web (Cloudflare Worker), https://crawlpact.com — Worker version f0943c65-159c-47fe-9402-88beb2cc25e9
 Database migration version: 0031_target_abuse_observations.sql (31/31 applied to production, confirmed via a direct D1 query against `d1_migrations` 2026-08-10 — new `target_abuse_observations` table, `target_key`/`caller_key` opaque-HMAC columns; table count now 48, independently confirmed via `sqlite_master`)
 Crawler registry version: 2026.07.3 (active release; 23 crawlers seeded, correction pending publication as a new release — see docs/registry/CRAWLER_REGISTRY_GOVERNANCE.md)
 Phase 0 baseline reference: docs/baseline/2026-08-03/ (superseded on billing/migration facts by Phases 5–6 below; not re-run this pass)
@@ -32,7 +32,7 @@ verified platform guides (`/platforms/*`) — content-only, no product-behavior 
 production 2026-08-04, Worker version `630258b4-c020-4105-9ca3-550897f7c0e3`; all 10 new routes
 independently confirmed live (see the Phase 7 completion report).
 **Production and the default branch (`main`) are aligned** — no known drift as of the last
-deployed commit (`0c566c6`).
+deployed commit (`421fd71`).
 
 Phase 12 (Security, CI, Dependency and Quality-Gate Improvements, deployed 2026-08-10) hardened
 CI/CD supply-chain integrity (SHA-pinned GitHub Actions, fixed a real script-injection shape, made
@@ -42,6 +42,24 @@ and fixed two real, previously-misdiagnosed operational gaps: the persistent `de
 failure (was missing Cloudflare Worker secrets, not a GitHub secret-naming mismatch as originally
 documented) and a blocked Dependabot PR (a Wrangler version floor). Full detail:
 `docs/reports/PHASE_12_SECURITY_CI_DEPENDENCY_QUALITY_COMPLETION_REPORT.md`.
+
+Phase 13 (Analytics, Consent, Product Measurement and Private-Repository Exposure Governance,
+deployed 2026-08-10) gated Google Analytics behind a real, first-party consent mechanism (no GA
+script exists pre-consent, route-allowlisted), built the first-party Super Admin product-
+measurement dashboard (`/admin/analytics`) SRS §28.13 has always named, added a PII-shaped
+property guard and bounded `product_events` retention, fixed a production error-message leak, and
+established repository-confidentiality governance (classification docs, surface inventories, two
+new CI-gated validators — `repo-privacy:validate`, `analytics:validate`). No new D1 migration
+(31/31 unchanged). **First deploy attempt** (run `31397059938`) reported a **transient smoke-test
+failure**: Cloudflare's edge cache served a stale, pre-consent-gating copy of the homepage to the
+CI runner for a brief window immediately after deploy (a known, pre-existing `must-revalidate`
+caching quirk documented earlier in `docs/status/KNOWN_RISKS.md`; this session's Cloudflare API
+credential cannot force a cache purge). The Worker itself deployed correctly on that first attempt
+— only the automated smoke-test step, run seconds after deploy, hit stale content. A manual
+`scripts/smoke-test.ts` re-run 3 minutes later showed 34/34 passing. The deploy was re-dispatched
+(run `31398172686`) once the edge cache had settled and completed cleanly end-to-end, including
+its own smoke-test step (34/34). Full detail:
+`docs/reports/PHASE_13_ANALYTICS_CONSENT_PRODUCT_MEASUREMENT_COMPLETION_REPORT.md`.
 
 Major limitations: a real **paid** Paddle checkout lifecycle has never been run (webhook
 processing itself is verified live — RISK-001, still open); the Workers Free CPU budget constrains

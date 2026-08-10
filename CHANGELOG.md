@@ -14,8 +14,20 @@ the "Production deployment" entries below for the established pattern).
 
 ## Unreleased
 
-Phase 13 (Analytics, Consent, Product Measurement and Private-Repository Exposure Governance) —
-not yet deployed to production. Full detail:
+Nothing pending — see "Production deployment (2026-08-10) — Phase 13: Analytics, Consent, Product
+Measurement and Private-Repository Exposure Governance" below for the most recent release.
+
+## Production deployment (2026-08-10) — Phase 13: Analytics, Consent, Product Measurement and Private-Repository Exposure Governance
+
+PR #105 (squash-merged as `421fd71`) deployed to production via `deploy-production.yml`, run
+against commit `421fd71e9f337e7df2b16fb642ab7f69b8bae8ba`. No new D1 migration (31/31 unchanged).
+Deployed Worker version: `f0943c65-159c-47fe-9402-88beb2cc25e9`. The **first** deploy attempt (run
+`31397059938`) completed the actual deploy correctly but its own automated smoke-test step failed
+transiently — Cloudflare's edge cache served a stale, pre-consent-gating copy of the homepage to
+the CI runner for a few minutes immediately after deploy (a known `must-revalidate` caching quirk,
+not a code defect — see `docs/risks/ACTIVE_RISKS.md` RISK-003). A manual `scripts/smoke-test.ts`
+re-run 3 minutes later showed 34/34 passing; the deploy was re-dispatched (run `31398172686`) and
+completed cleanly end-to-end, including its own smoke test (34/34). Full detail:
 `docs/reports/PHASE_13_ANALYTICS_CONSENT_PRODUCT_MEASUREMENT_COMPLETION_REPORT.md`.
 
 ### Added
