@@ -124,6 +124,12 @@ jobs:
         # gates on. Read-only, no network access, so safe to run on every PR.
         run: pnpm content:validate
 
+      - name: Validate repository privacy posture
+        run: pnpm repo-privacy:validate
+
+      - name: Validate analytics/consent architecture
+        run: pnpm analytics:validate
+
       - name: Dependency vulnerability check (blocking on critical)
         # Phase 12 (2026-08-09): continue-on-error removed — this is now a
         # real gate. `--audit-level=critical` (plain text, not --json — pnpm's
@@ -142,6 +148,9 @@ jobs:
 
       - name: Build
         run: pnpm build
+
+      - name: Validate repository privacy posture (post-build source-map check)
+        run: pnpm repo-privacy:validate
 
   browser-smoke:
     name: Chromium E2E + accessibility smoke

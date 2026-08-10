@@ -92,11 +92,20 @@ pnpm run status:validate
 echo "==> Validate content-collection quality"
 pnpm run content:validate
 
+echo "==> Validate repository privacy posture"
+pnpm run repo-privacy:validate
+
+echo "==> Validate analytics/consent architecture"
+pnpm run analytics:validate
+
 echo "==> Dependency vulnerability check (blocking on critical)"
 pnpm audit --audit-level=critical
 
 echo "==> Production build"
 pnpm run build
+
+echo "==> Validate repository privacy posture (post-build source-map check)"
+pnpm run repo-privacy:validate
 
 echo "==> Writing temporary CI-local .dev.vars (restored to what was there before, on exit)"
 cat > "$DEV_VARS_PATH" << 'DEVVARS'

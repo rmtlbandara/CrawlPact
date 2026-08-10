@@ -4,7 +4,13 @@ import type { Breadcrumb } from "./BaseLayout.astro";
 import SiteHeader from "../components/SiteHeader.astro";
 import SiteFooter from "../components/SiteFooter.astro";
 import GoogleAnalytics from "../components/GoogleAnalytics.astro";
+import { AnalyticsConsent } from "../components/AnalyticsConsent";
 import { getEnv } from "../lib/env";
+import {
+  ANALYTICS_CONSENT_COOKIE,
+  isGaEligibleRoute,
+  parseConsentCookieValue,
+} from "../lib/consent";
 
 export type Props = {
   title: string;
@@ -35,6 +41,12 @@ const {
 // Marketing-only, explicit SRS §6.2 deviation (see docs/status/KNOWN_RISKS.md).
 // Gated to production so local/preview traffic never reaches Google Analytics.
 const isProduction = getEnv().PUBLIC_APP_ENV === "production";
+// Phase 13 (RISK-021): GA additionally requires granted, current-version
+// consent AND this exact route to be on the allowlist — see
+// apps/web/src/lib/consent.ts and docs/analytics/GOOGLE_ANALYTICS_SCOPE_POLICY.md.
+const gaEligible = isGaEligibleRoute(Astro.url.pathname);
+const consentState = parseConsentCookieValue(Astro.cookies.get(ANALYTICS_CONSENT_COOKIE)?.value);
+const shouldRenderGa = isProduction && gaEligible && consentState === "granted";
 ---
 
 <BaseLayout
@@ -49,7 +61,7 @@ const isProduction = getEnv().PUBLIC_APP_ENV === "production";
   extraJsonLd={extraJsonLd}
   ogImage={ogImage}
 >
-  {isProduction && <GoogleAnalytics />}
+  {shouldRenderGa && <GoogleAnalytics />}
   <div class="flex min-h-screen flex-col">
     <SiteHeader />
     <main id="main-content" tabindex="-1" class="flex-1">
@@ -79,4 +91,5 @@ const isProduction = getEnv().PUBLIC_APP_ENV === "production";
     </main>
     <SiteFooter />
   </div>
+  {isProduction && <AnalyticsConsent client:load gaEligible={gaEligible} />}
 </BaseLayout>

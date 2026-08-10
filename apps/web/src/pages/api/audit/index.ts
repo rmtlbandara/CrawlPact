@@ -209,11 +209,18 @@ export const POST: APIRoute = async ({ request }) => {
       200,
     );
   } catch (error) {
+    // Phase 13: raw exception text only included outside production — see
+    // docs/security/PHASE_13_REPOSITORY_SOURCE_EXPOSURE_THREAT_REVIEW.md.
+    const isProduction = getEnv().PUBLIC_APP_ENV === "production";
     return jsonResponse(
       fail(
-        new ApiError("INTERNAL_ERROR", "The audit could not be completed.", {
-          message: error instanceof Error ? error.message : String(error),
-        }),
+        new ApiError(
+          "INTERNAL_ERROR",
+          "The audit could not be completed.",
+          isProduction
+            ? undefined
+            : { message: error instanceof Error ? error.message : String(error) },
+        ),
         requestId,
       ),
       500,

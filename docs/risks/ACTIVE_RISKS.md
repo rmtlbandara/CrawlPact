@@ -8,7 +8,15 @@ below rather than duplicated. Do not maintain a third active-risk list anywhere 
 
 Statuses: `open` · `mitigating` · `accepted` · `blocked` · `monitoring`.
 
-Last reviewed: 2026-08-09 (Phase 12, Security, CI, Dependency and Quality-Gate Improvements). Phase
+Last reviewed: 2026-08-10 (Phase 13, Analytics, Consent, Product Measurement and Private-Repository
+Exposure Governance). Phase 13 closed RISK-021 (see `docs/risks/RISK_ARCHIVE.md` ARC-031 — a real
+consent mechanism now gates Google Analytics), closed RISK-004 (see ARC-030 — a deliberate product
+decision to leave both Cloudflare Web Analytics and AI Crawl Control disabled/unchanged, documented
+rather than silently accepted), and partially resolved RISK-006 (`product_events` now has a bounded
+18-month purge job; `security_events`/`notifications` remain open), and closed RISK-020 (see
+ARC-032 — `ga-boundary.test.ts` and `consent.test.ts`, 16 tests, now assert GA structurally cannot
+reach authenticated/admin output). Prior review:
+2026-08-09 (Phase 12, Security, CI, Dependency and Quality-Gate Improvements). Phase
 12 closed RISK-012 (see `docs/risks/RISK_ARCHIVE.md` ARC-029 — found already fixed 2026-08-04, docs
 just hadn't caught up), re-confirmed RISK-027 unchanged (private-repo Free-plan branch-protection
 403 re-verified live), and de-risked RISK-015 (Wrangler bumped past both candidate-fix versions,
@@ -67,27 +75,16 @@ extended platform guides), RISK-032 (no Search Console property connected), and 
 - **Status**: accepted
 - **Acceptance criteria for closure**: A broader-scoped Cloudflare API token is issued, or manual dashboard verification is performed and recorded.
 
-### RISK-004 — Cloudflare Web Analytics beacon and AI Crawl Control robots.txt injection are undecided product questions
-
-- **Category**: Product, SEO · **Severity**: P2 · **Probability**: N/A (ongoing until decided)
-- **Impact**: (a) Cloudflare's own RUM beacon is silently blocked by CSP, so if Web Analytics is enabled in the dashboard, no data is actually collected. (b) Cloudflare's AI Crawl Control unpromptedly injects AI-crawler-blocking rules into CrawlPact's own `robots.txt` — notable since the product audits exactly this signal for other sites.
-- **Evidence**: `docs/status/KNOWN_RISKS.md`, `docs/baseline/2026-08-03/PRODUCTION_INFRASTRUCTURE_INVENTORY.md`
-- **Current mitigation**: Disclosed, not silently accepted or silently fixed either direction.
-- **Owner**: Product owner · **Trigger**: Next homepage/trust-page review
-- **Review date**: Phase 13 · **Target phase**: Phase 13 (re-routed from Phase 3, 2026-08-03 — Phase 3's Legal Identity, Contact, Security and Trust Foundation scope explicitly excludes changing analytics behaviour; this is an analytics/consent architecture decision, which Phase 13 owns)
-- **Status**: open
-- **Acceptance criteria for closure**: A deliberate product decision is made and implemented (enable+allow-list, or leave disabled) for each.
-
-### RISK-006 — `product_events`, `security_events`, and `notifications` have no purge job
+### RISK-006 — `security_events` and `notifications` have no purge job
 
 - **Category**: Database, Privacy · **Severity**: P2 · **Probability**: Low at current volume, structural
-- **Impact**: Unlike scan-related tables (bounded by plan-tier retention), these three grow indefinitely regardless of plan or account lifetime.
+- **Impact**: Unlike scan-related tables (bounded by plan-tier retention), these two grow indefinitely regardless of plan or account lifetime.
 - **Evidence**: `docs/data/DATA_RETENTION.md`, `docs/data/PHASE_11_RETENTION_DECISION_MATRIX.md`
-- **Current mitigation**: Assessed, not implemented — Phase 11 found the SRS's own retention table (§34) is silent on these three categories specifically (only "Administrative logs: at least 24 months" and "Billing: as legally/operationally required" are specified), so per the phase's "implement only approved retention periods" scope boundary, a recommendation (18mo/24mo/90-days-after-read respectively) is recorded but not implemented without explicit approval.
-- **Owner**: Engineering owner · **Trigger**: Volume growth past current assumptions, or explicit approval of the Phase 11 recommendation
-- **Review date**: Phase 11 (reviewed, kept open) · **Target phase**: Next phase touching retention, pending approval
+- **Current mitigation**: **Partially resolved, Phase 13 (2026-08-10)** — `product_events` (the third category this risk originally covered) now has a bounded 18-month purge job (`purgeExpiredProductEvents()`, `apps/web/src/lib/data-retention.ts`, `PRODUCT_EVENT_RETENTION_DAYS = 548`), following the Phase 11 recommendation with explicit Phase 13-prompt approval — see `docs/analytics/PHASE_13_PRODUCT_EVENT_RETENTION_DECISION.md`. `security_events` and `notifications` remain assessed-but-not-implemented: Phase 11 found the SRS's own retention table (§34) is silent on these two categories specifically, so a recommendation (24mo/90-days-after-read respectively) is recorded but not implemented without explicit approval — the Phase 13 prompt did not extend approval to these two.
+- **Owner**: Engineering owner · **Trigger**: Volume growth past current assumptions, or explicit approval of the Phase 11 recommendation for the remaining two categories
+- **Review date**: Phase 13 (product_events closed) · **Target phase**: Next phase touching retention, pending approval for `security_events`/`notifications`
 - **Status**: monitoring
-- **Acceptance criteria for closure**: A retention decision is made and a purge job implemented, or the decision to leave unbounded is explicitly and permanently accepted with a documented reason.
+- **Acceptance criteria for closure**: A retention decision is made and a purge job implemented for `security_events` and `notifications`, or the decision to leave them unbounded is explicitly and permanently accepted with a documented reason. (`product_events` — met, Phase 13.)
 
 ### RISK-007 — `scan_resources.snapshot_text` (`html_meta` type) stores the full truncated HTML body
 
@@ -187,28 +184,6 @@ extended platform guides), RISK-032 (no Search Console property connected), and 
 - **Review date**: Phase 11 · **Target phase**: Phase 11
 - **Status**: open
 - **Acceptance criteria for closure**: Root cause identified and either count corrected or the discrepancy explained and documented as expected.
-
-### RISK-020 — No automated test asserts Google Analytics never loads outside `MarketingLayout`
-
-- **Category**: Analytics, Test coverage · **Severity**: P2 · **Probability**: Low today (currently correct by code inspection)
-- **Impact**: A future change could accidentally import the GA component into `AppLayout`/`AdminLayout`, shipping real customer-activity data to Google with no test catching it.
-- **Evidence**: `docs/baseline/2026-08-03/ANALYTICS_AND_CONSENT_BASELINE.md`
-- **Current mitigation**: Manual code review only.
-- **Owner**: Security owner · **Trigger**: Any layout/analytics-adjacent change
-- **Review date**: Phase 13 · **Target phase**: Phase 13
-- **Status**: open
-- **Acceptance criteria for closure**: A test asserts `GoogleAnalytics`/`gtag` never appears in authenticated-app/admin server output.
-
-### RISK-021 — No cookie-consent mechanism exists while Google Analytics sets tracking cookies on marketing pages
-
-- **Category**: Privacy, Legal · **Severity**: P1 · **Probability**: Certain (confirmed)
-- **Impact**: Relevant to EU/UK visitor exposure; GA sets `_ga`/`_ga_*` cookies with zero consent gating anywhere in the codebase.
-- **Evidence**: `docs/baseline/2026-08-03/ANALYTICS_AND_CONSENT_BASELINE.md`, `docs/status/KNOWN_RISKS.md`
-- **Current mitigation**: Disclosed in `docs/risks/ACTIVE_RISKS.md` (this entry) and `privacy.astro`'s third-party section; not otherwise mitigated.
-- **Owner**: Legal/business owner · **Trigger**: Real EU/UK traffic volume, or any consent-law review
-- **Review date**: Phase 13 · **Target phase**: Phase 13
-- **Status**: open
-- **Acceptance criteria for closure**: A consent mechanism is implemented, or a documented risk-acceptance decision is made by the product owner.
 
 ### RISK-022 — No cross-request target-frequency abuse monitoring
 

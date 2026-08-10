@@ -70,7 +70,33 @@ async function run(): Promise<void> {
   }
   const base = baseUrl.replace(/\/$/, "");
 
-  await checkPage("Home page", `${base}/`, 200);
+  const initialHomeBody = await checkPage("Home page", `${base}/`, 200);
+  // Phase 13 (RISK-020/RISK-021): a fresh, cookie-less request must never
+  // receive a GA script tag on either target — on preview because
+  // isProduction is false, on production because no consent cookie exists
+  // yet. This is the one place in this suite that observes GA's real
+  // pre-consent state against a genuinely deployed origin, which the local
+  // e2e harness (apps/web/tests/e2e/analytics-consent.spec.ts) structurally
+  // cannot (see docs/analytics/CONSENT_AND_ANALYTICS_PREFERENCE_MODEL.md
+  // "Verification").
+  record(
+    "Home page: no googletagmanager.com script tag on a cookie-less first visit",
+    !initialHomeBody.includes("googletagmanager.com"),
+  );
+  if (target === "production") {
+    // AnalyticsConsent defaults its `hasDecided` state to true on first
+    // paint (avoids an SSR/hydration flash of the full panel for a
+    // returning, already-decided visitor) and only shows the full
+    // Accept/Decline panel after a client-side effect confirms no consent
+    // cookie exists — so a raw HTTP fetch (no JS execution) only ever sees
+    // the persistent "Analytics preferences" reopen control, never the
+    // Accept/Decline buttons themselves. This check confirms the island
+    // mounted at all, not the post-hydration panel state.
+    record(
+      "Home page: AnalyticsConsent island markup is present (production only)",
+      initialHomeBody.includes("Analytics preferences"),
+    );
+  }
   // /pricing is SSR (Phase 6: it reads the live plan_prices catalog per-request, so it can't be
   // prerendered — see docs/billing/CHECKOUT_CONTINUITY_ARCHITECTURE.md). Astro's route pattern
   // for it (`^\/pricing\/?$`, trailingSlash: "ignore") matches with or without the trailing
