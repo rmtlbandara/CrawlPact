@@ -14,8 +14,34 @@ the "Production deployment" entries below for the established pattern).
 
 ## Unreleased
 
-Nothing pending — see "Production deployment (2026-08-10) — Phase 12: Security, CI, Dependency
-and Quality-Gate Improvements" below for the most recent release.
+Phase 13 (Analytics, Consent, Product Measurement and Private-Repository Exposure Governance) —
+not yet deployed to production. Full detail:
+`docs/reports/PHASE_13_ANALYTICS_CONSENT_PRODUCT_MEASUREMENT_COMPLETION_REPORT.md`.
+
+### Added
+
+- Real consent gating for Google Analytics: a global opt-in banner (`AnalyticsConsent.tsx`), a
+  versioned consent cookie, an explicit GA route allowlist (`isGaEligibleRoute`), and
+  consent-mode-style signals sent to `gtag` (advertising storage always denied). No GA `<script>`
+  exists in the DOM until a visitor explicitly accepts.
+- First-party product-measurement Super Admin dashboard (`/admin/analytics`) — North Star,
+  acquisition, audit funnel, activation, engagement, WAU/MAU, simplified retention proxy,
+  conversion, revenue, and agency-adoption metrics, all `requireAdminSession`-gated.
+- Bounded 18-month `product_events` retention purge (`purgeExpiredProductEvents`).
+- `pnpm repo-privacy:validate` and `pnpm analytics:validate` — new CI-gated regression checks,
+  wired into `quality:gate`, `ci.yml`, and `verify-push.sh`.
+
+### Fixed
+
+- `jsonErrorResponse` (and two duplicate inline call sites) no longer leaks the raw exception
+  message to clients in production.
+- A misleading "public documentation" reference in `privacy.astro` reworded — nothing in this
+  private repository is publicly accessible.
+
+### Security
+
+- PII-shaped property keys are now rejected at the `trackEvent()` call boundary
+  (`PROHIBITED_PROPERTY_KEY_PATTERN`), server-side, regardless of caller.
 
 ## Production deployment (2026-08-10) — Phase 12: Security, CI, Dependency and Quality-Gate Improvements
 

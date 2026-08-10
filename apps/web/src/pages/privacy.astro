@@ -107,29 +107,49 @@ const effectiveDate = new Date(TRUST_CONFIG.policyEffectiveDate).toLocaleDateStr
     </ul>
 
     <h2 class="mt-8 text-h2 text-neutral-950">6. Cookies and local storage</h2>
+    <p class="mt-3 text-body text-neutral-700">CrawlPact sets two first-party cookies:</p>
+    <ul class="mt-3 ml-5 list-disc space-y-2 text-body text-neutral-700">
+      <li>
+        An essential, <code>HttpOnly</code>, <code>Secure</code>, <code>SameSite=Lax</code> session cookie
+        used for authentication. It is required for the service to function and cannot be disabled while
+        signed in.
+      </li>
+      <li>
+        A non-essential <code>crawlpact_analytics_consent</code> cookie recording your accept/decline
+        choice for {TRUST_CONFIG.analyticsProvider} on public marketing pages, and the policy version
+        that choice applies to. It contains only that preference and a version number — never an identifier,
+        email, or IP address. It is set for around six months and is not required to use CrawlPact.
+      </li>
+    </ul>
     <p class="mt-3 text-body text-neutral-700">
-      CrawlPact sets exactly one first-party cookie: an essential, <code>HttpOnly</code>, <code
-        >Secure</code
-      >, <code>SameSite=Lax</code> session cookie used for authentication. It is required for the service
-      to function and cannot be disabled while signed in. CrawlPact does not use local storage or session
-      storage.
-    </p>
-    <p class="mt-3 text-body text-neutral-700">
-      {TRUST_CONFIG.analyticsProvider} sets its own analytics cookies (e.g. <code>_ga</code>) on
-      public marketing pages only — never on the authenticated app or admin areas. These are not
-      essential to using CrawlPact. CrawlPact does not currently offer a cookie-consent or
-      preference-management control for these analytics cookies — this is a known, disclosed gap,
-      not an unstated omission.
+      CrawlPact does not use local storage or session storage. {TRUST_CONFIG.analyticsProvider} sets its
+      own analytics cookies (e.g. <code>_ga</code>) on public marketing pages, and only after you
+      accept — never before, and never on the authenticated app or admin areas.
     </p>
 
-    <h2 class="mt-8 text-h2 text-neutral-950">7. Analytics</h2>
+    <h2 class="mt-8 text-h2 text-neutral-950">7. Analytics and your choice</h2>
     <p class="mt-3 text-body text-neutral-700">
-      {TRUST_CONFIG.analyticsProvider} is active and is restricted to public marketing pages (this page,
-      the homepage, pricing, and similar pages) to measure visits; it is not loaded on the authenticated
-      app or admin areas, and not in local or preview environments. This is a disclosed, deliberate deviation
-      from a general no-external-analytics preference — see the project's public documentation for the
-      underlying decision record. CrawlPact does not change its analytics implementation as part of publishing
-      this policy.
+      {TRUST_CONFIG.analyticsProvider} is optional and off by default. It only loads on a public marketing
+      page (this page, the homepage, pricing, guides, and similar content pages — never the authenticated
+      app, admin, billing, private shared reports, or a specific audit result page) after you explicitly
+      accept it, and never in local or preview environments. You can accept, decline, or change your choice
+      at any time using the "Analytics preferences" control available on every public page — declining
+      has no effect on your ability to use CrawlPact. When accepted, the page address sent to {
+        TRUST_CONFIG.analyticsProvider
+      } excludes query strings and any token; no account, domain, or report identifier is ever sent. This
+      is a disclosed, deliberate deviation from a general no-external-analytics preference, made by CrawlPact's
+      product owner. CrawlPact's own first-party product analytics (see the next section) remains the
+      authoritative measurement of how the product itself is used, independent of this choice.
+    </p>
+    <p class="mt-3 text-body text-neutral-700">
+      Separately, CrawlPact records a small number of first-party product-usage events (e.g. that an
+      audit started, or that monitoring was enabled) to understand and improve the product. These
+      never include your full domain, full URL, email, IP address, or any authentication or report
+      token — see CrawlPact's <a
+        href="/security"
+        class="text-brand-700 underline underline-offset-2">security page</a
+      > for more detail. This first-party analytics is not affected by your
+      {TRUST_CONFIG.analyticsProvider} preference above.
     </p>
 
     <h2 class="mt-8 text-h2 text-neutral-950">8. Billing and Paddle</h2>

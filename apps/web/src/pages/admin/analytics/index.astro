@@ -1,0 +1,23 @@
+---
+export const prerender = false;
+import AdminLayout from "../../../layouts/AdminLayout.astro";
+import AdminPageHeader from "../../../components/admin/AdminPageHeader.astro";
+import { ProductAnalyticsDashboard } from "../../../components/admin/ProductAnalyticsDashboard";
+import { createDb } from "@crawlpact/database";
+import { getEnv } from "../../../lib/env";
+import { getAdminPageSession } from "../../../lib/auth/require-admin";
+
+const db = createDb(getEnv().DB);
+const admin = await getAdminPageSession(Astro.request, db);
+if (!admin) return Astro.redirect("/sign-in");
+---
+
+<AdminLayout title="Product analytics" displayName={admin.user.displayName}>
+  <AdminPageHeader
+    title="Product analytics"
+    description="First-party product measurement (docs/analytics/CRAWLPACT_PRODUCT_MEASUREMENT_STRATEGY.md) — every number below is a real, bounded query against product_events and authoritative billing/domain state, never Google Analytics or fabricated data."
+  />
+  <div class="mt-6">
+    <ProductAnalyticsDashboard client:load />
+  </div>
+</AdminLayout>

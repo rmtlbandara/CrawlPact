@@ -14,6 +14,13 @@ traffic logs (which CrawlPact does not ingest). See
 [`docs/product/CRAWLPACT_FINAL_SRS.md`](docs/product/CRAWLPACT_FINAL_SRS.md) for the authoritative
 specification.
 
+**This is a private repository.** Source code, documentation, and internal architecture are not
+publicly available — nothing in this repository is intended to be discoverable, forkable, or
+citable outside the authorized team. See
+[`docs/governance/REPOSITORY_CONFIDENTIALITY_POLICY.md`](docs/governance/REPOSITORY_CONFIDENTIALITY_POLICY.md)
+for the governing policy and [`docs/governance/PHASE_13_REPOSITORY_EXPOSURE_AUDIT.md`](docs/governance/PHASE_13_REPOSITORY_EXPOSURE_AUDIT.md)
+for the current exposure audit.
+
 ## Current production status
 
 - **Production**: [https://crawlpact.com](https://crawlpact.com)

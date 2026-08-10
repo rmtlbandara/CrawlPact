@@ -141,12 +141,41 @@ export const PRODUCT_EVENT_NAMES = [
   "monitoring_paused_viewed",
   "monitoring_resume_started",
   "monitoring_resume_completed",
+  // Analytics, Consent, Product Measurement and Private-Repository Exposure
+  // Governance (Phase 13). Aggregate consent-choice counters only — no
+  // cookie value, IP, user-agent, or any visitor identifier is ever sent as
+  // a property. See docs/analytics/PRODUCT_EVENT_REGISTRY.md.
+  "analytics_consent_granted",
+  "analytics_consent_declined",
+  "analytics_consent_changed",
 ] as const;
 
 export type ProductEventName = (typeof PRODUCT_EVENT_NAMES)[number];
 
 export function isProductEventName(value: string): value is ProductEventName {
   return (PRODUCT_EVENT_NAMES as readonly string[]).includes(value);
+}
+
+/**
+ * Phase 13 (docs/analytics/PRODUCT_EVENT_REGISTRY.md "Prohibited
+ * properties"): a property KEY matching one of these patterns is rejected
+ * regardless of event or value — a cheap, event-independent safety net that
+ * doesn't require a bespoke schema per event (84 events exist; retrofitting
+ * a full typed-contract system for all of them was judged a much larger,
+ * separately-scoped effort — see the registry doc's "Typed properties"
+ * section for what's covered today and what a full migration would need).
+ * This catches the shape of a mistake (someone naming a property `email`,
+ * `domain`, `url`, `token`, `ip`, etc.) even though it can't catch every
+ * value that merely happens to look like PII in an otherwise-innocuous key.
+ */
+const PROHIBITED_PROPERTY_KEY_PATTERN =
+  /email|domain|url|token|ip$|ipaddress|useragent|user_agent|password|secret|ssn|credit ?card/i;
+
+export class ProhibitedAnalyticsPropertyError extends Error {
+  constructor(readonly propertyKey: string) {
+    super(`Analytics property "${propertyKey}" looks like it may contain PII and was rejected.`);
+    this.name = "ProhibitedAnalyticsPropertyError";
+  }
 }
 
 export async function trackEvent(
@@ -158,6 +187,13 @@ export async function trackEvent(
     properties?: Record<string, string | number | boolean>;
   } = {},
 ): Promise<void> {
+  if (fields.properties) {
+    for (const key of Object.keys(fields.properties)) {
+      if (PROHIBITED_PROPERTY_KEY_PATTERN.test(key)) {
+        throw new ProhibitedAnalyticsPropertyError(key);
+      }
+    }
+  }
   await db.insert(schema.productEvents).values({
     eventName,
     userId: fields.userId ?? null,

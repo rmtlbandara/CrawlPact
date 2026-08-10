@@ -32,6 +32,14 @@ import { findAndCleanupOrphanedLogos } from "./r2-orphan-cleanup";
 
 const ANONYMOUS_SCAN_RETENTION_DAYS = 7;
 
+/** Phase 13 (RISK-006, docs/analytics/PHASE_13_PRODUCT_EVENT_RETENTION_DECISION.md):
+ * adopts Phase 11's own 18-month recommendation for `product_events` — long
+ * enough for year-over-year product/cohort analysis, short enough to bound
+ * growth. Deliberately does NOT touch `security_events`, `notifications`,
+ * or billing retention — those are different data categories with their
+ * own (still-open, RISK-006) decisions pending separately. */
+const PRODUCT_EVENT_RETENTION_DAYS = 548; // ~18 months
+
 /** Rows deleted per DELETE statement — confirmed via a real Miniflare D1
  * integration probe that `DELETE ... LIMIT` is supported by this D1
  * dialect before relying on it here. Bounds both the single-statement cost
@@ -372,6 +380,42 @@ async function purgeOrphanedAgencyLogos(
   };
 }
 
+/** Phase 13: `product_events` older than PRODUCT_EVENT_RETENTION_DAYS. Plain
+ * age-based cutoff — unlike domain_scans there is no "keep the baseline"
+ * exception to apply, every row is equally eligible once it ages out. */
+async function purgeExpiredProductEvents(
+  db: Database,
+  now: Date,
+  dryRun: boolean,
+  chunkSize: number,
+  maxChunks: number,
+): Promise<CategoryResult> {
+  const cutoff = daysAgo(PRODUCT_EVENT_RETENTION_DAYS, now);
+  const where = lt(schema.productEvents.createdAt, cutoff);
+
+  if (dryRun) {
+    const [row] = await db.select({ n: count() }).from(schema.productEvents).where(where);
+    return { affected: 0, wouldAffect: row?.n ?? 0, backlogRemaining: false, error: null };
+  }
+
+  let affected = 0;
+  let lastChunkFull = false;
+  for (let i = 0; i < maxChunks; i++) {
+    const result = await db
+      .delete(schema.productEvents)
+      .where(where)
+      .limit(chunkSize)
+      .returning({ id: schema.productEvents.id });
+    affected += result.length;
+    lastChunkFull = result.length === chunkSize;
+    if (!lastChunkFull) break;
+  }
+  const backlogRemaining = lastChunkFull
+    ? await hasRowsMatching(db.select({ n: count() }).from(schema.productEvents).where(where))
+    : false;
+  return { affected, wouldAffect: null, backlogRemaining, error: null };
+}
+
 const CATEGORIES = [
   "expired_audit_continuations",
   "anonymous_scans",
@@ -379,6 +423,7 @@ const CATEGORIES = [
   "deleted_accounts",
   "expired_entitlements",
   "orphaned_agency_logos",
+  "expired_product_events",
 ] as const;
 type Category = (typeof CATEGORIES)[number];
 
@@ -390,6 +435,7 @@ export type DataRetentionResult = {
   entitlementsExpired: number;
   expiredContinuationsDeleted: number;
   orphanedAgencyLogosDeleted: number;
+  productEventsDeleted: number;
   dryRun: boolean;
   /** True if any category threw — the run still completed the categories that didn't fail. */
   hasErrors: boolean;
@@ -433,6 +479,7 @@ export async function runDataRetentionPurge(
     deleted_accounts: () => purgeDeletedAccounts(db, now, dryRun, chunkSize, maxChunks),
     expired_entitlements: () => revertExpiredEntitlements(db, now, dryRun, chunkSize, maxChunks),
     orphaned_agency_logos: () => purgeOrphanedAgencyLogos(db, options.agencyLogosBucket, dryRun),
+    expired_product_events: () => purgeExpiredProductEvents(db, now, dryRun, chunkSize, maxChunks),
   };
 
   const categories = {} as Record<Category, CategoryResult>;
@@ -454,6 +501,7 @@ export async function runDataRetentionPurge(
     accountsPurged: categories.deleted_accounts.affected,
     entitlementsExpired: categories.expired_entitlements.affected,
     orphanedAgencyLogosDeleted: categories.orphaned_agency_logos.affected,
+    productEventsDeleted: categories.expired_product_events.affected,
     dryRun,
     hasErrors: CATEGORIES.some((c) => categories[c].error !== null),
     hasBacklog: CATEGORIES.some((c) => categories[c].backlogRemaining),

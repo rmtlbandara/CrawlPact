@@ -510,4 +510,47 @@ describe("data retention purge (real D1)", () => {
       }
     },
   );
+
+  it("purges product_events older than 18 months but keeps recent ones (Phase 13, RISK-006)", async () => {
+    await db.insert(schema.productEvents).values([
+      {
+        eventName: "audit_started",
+        createdAt: daysAgo(548 + 10),
+        properties: null,
+        userId: null,
+        anonymousId: null,
+      },
+      {
+        eventName: "audit_completed",
+        createdAt: daysAgo(30),
+        properties: null,
+        userId: null,
+        anonymousId: null,
+      },
+    ]);
+
+    const result = await runDataRetentionPurge(db);
+    expect(result.productEventsDeleted).toBe(1);
+
+    const remaining = await db
+      .select({ eventName: schema.productEvents.eventName })
+      .from(schema.productEvents);
+    const names = remaining.map((r) => r.eventName);
+    expect(names).not.toContain("audit_started");
+    expect(names).toContain("audit_completed");
+  });
+
+  it("product_events dry run reports an exact count without deleting", async () => {
+    await db.insert(schema.productEvents).values({
+      eventName: "domain_saved",
+      createdAt: daysAgo(548 + 5),
+      properties: null,
+      userId: null,
+      anonymousId: null,
+    });
+
+    const result = await runDataRetentionPurge(db, new Date(), { dryRun: true });
+    expect(result.categories.expired_product_events.wouldAffect).toBeGreaterThanOrEqual(1);
+    expect(result.categories.expired_product_events.affected).toBe(0);
+  });
 });
