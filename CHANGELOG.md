@@ -14,6 +14,26 @@ the "Production deployment" entries below for the established pattern).
 
 ## Unreleased
 
+Nothing pending — see "Production deployment (2026-08-11) — Phase 14: Status, Operations and
+Service Reliability" below for the most recent release.
+
+## Production deployment (2026-08-11) — Phase 14: Status, Operations and Service Reliability
+
+PR #107 (squash-merged as `19092af`) deployed to production via `deploy-production.yml`, run
+`31452008949`, against commit `19092af70111dff03cfa6cbc48aae95a931e397c`. Two new D1 migrations
+(`0032_operational_alerts.sql`, `0033_scheduled_job_runs_started_at_index.sql`; 33/33 applied,
+independently re-confirmed via a live read-only `d1_migrations` query). Deployed Worker version:
+`087236e1-35fe-477d-a370-d226a4a67fbe`. An earlier dispatch against the same commit was blocked
+(not failed) by the deploy workflow's own "CI must have already succeeded for this exact commit"
+guard, because the post-merge CI run on `main` hadn't finished yet at that instant; waiting for
+that run and re-dispatching completed cleanly end-to-end on the first attempt after that,
+including its own smoke-test step — no Cloudflare edge-cache-staleness issue this time (unlike
+Phase 13's first attempt). Independently re-verified post-deploy: `https://crawlpact.com/`,
+`/status`, and `/status/feed.xml` (correct `application/atom+xml`, `X-Robots-Tag: noindex`,
+`Cache-Control: public, max-age=30` headers, valid feed body) all returned `200`; an
+unauthenticated `/admin/operations` request correctly redirected to `/sign-in`. Full detail:
+`docs/reports/PHASE_14_STATUS_OPERATIONS_RELIABILITY_COMPLETION_REPORT.md`.
+
 ### Added (Phase 14: Status, Operations and Service Reliability)
 
 - First-party, deduplicated internal operational alerting: `operational_alerts` table (migration
@@ -63,9 +83,6 @@ the "Production deployment" entries below for the established pattern).
   `docs/operations/PHASE_14_INDEPENDENT_STATUS_PLANE_DECISION.md`.
 - Pricing/Paddle, crawler classification/registry, monitoring frequency, notification channels,
   and Phase 13's consent/analytics architecture are all unchanged.
-
-See "Production deployment (2026-08-10) — Phase 13: Analytics, Consent, Product
-Measurement and Private-Repository Exposure Governance" below for the previous release.
 
 ## Production deployment (2026-08-10) — Phase 13: Analytics, Consent, Product Measurement and Private-Repository Exposure Governance
 
