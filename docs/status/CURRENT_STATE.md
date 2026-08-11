@@ -1,10 +1,10 @@
 ---
 Document owner: Engineering owner
 Status: current-authoritative
-Last verified: 2026-08-10
-Repository commit: 421fd71e9f337e7df2b16fb642ab7f69b8bae8ba (main, post-Phase-13 merge, deployed)
-Production deployment identifier: crawlpact-web (Cloudflare Worker), https://crawlpact.com — Worker version f0943c65-159c-47fe-9402-88beb2cc25e9
-Database migration version: 0031_target_abuse_observations.sql (31/31 applied to production, confirmed via a direct D1 query against `d1_migrations` 2026-08-10 — new `target_abuse_observations` table, `target_key`/`caller_key` opaque-HMAC columns; table count now 48, independently confirmed via `sqlite_master`)
+Last verified: 2026-08-11
+Repository commit: 19092af70111dff03cfa6cbc48aae95a931e397c (main, post-Phase-14 merge, deployed)
+Production deployment identifier: crawlpact-web (Cloudflare Worker), https://crawlpact.com — Worker version 087236e1-35fe-477d-a370-d226a4a67fbe
+Database migration version: 0033_scheduled_job_runs_started_at_index.sql (33/33 applied to production, confirmed via a direct read-only D1 query against `d1_migrations` 2026-08-11 — new `operational_alerts` table and `idx_scheduled_job_runs_started_at` index; table count now 49, independently confirmed via `db:validate`)
 Crawler registry version: 2026.07.3 (active release; 23 crawlers seeded, correction pending publication as a new release — see docs/registry/CRAWLER_REGISTRY_GOVERNANCE.md)
 Phase 0 baseline reference: docs/baseline/2026-08-03/ (superseded on billing/migration facts by Phases 5–6 below; not re-run this pass)
 Review frequency: Every release, or monthly
@@ -32,7 +32,33 @@ verified platform guides (`/platforms/*`) — content-only, no product-behavior 
 production 2026-08-04, Worker version `630258b4-c020-4105-9ca3-550897f7c0e3`; all 10 new routes
 independently confirmed live (see the Phase 7 completion report).
 **Production and the default branch (`main`) are aligned** — no known drift as of the last
-deployed commit (`421fd71`).
+deployed commit (`19092af`).
+
+Phase 14 (Status, Operations and Service Reliability, deployed 2026-08-11) strengthened the
+existing status/incident/monitoring architecture rather than rebuilding it. Fixed two real,
+previously-latent bugs: a status-query N+1 in `loadPublicIncidents`, and a scheduled-maintenance
+incident escalating its public component before its actual `startsAt` time. Fixed a structural gap
+that made the scheduler's stuck/overlapping-job detection unreachable (no code path ever wrote a
+`running` row before job completion) and added a missing index on `scheduled_job_runs` found via
+real `EXPLAIN QUERY PLAN` evidence. Added first-party, deduplicated internal operational alerting
+(`operational_alerts`, pull-based, no third-party paging integration) and a Super Admin operations
+control plane at `/admin/operations`. Defined internal SLIs/SLOs — **no public uptime percentage
+is published** (the 7-condition gate is not met). Added a public status Atom feed
+(`/status/feed.xml`). Evaluated and declined an independent status-plane Worker (kept `/status` in
+the main Worker/D1). Two new D1 migrations (`0032`, `0033`; 33/33 applied). RISK-006's
+`security_events`/`notifications` retention remains open — no explicit approval was given this
+phase. The public 6-state status vocabulary and 7 canonical public components are unchanged. No
+pricing/Paddle, crawler-classification/registry, monitoring-frequency, or notification-channel
+change. Deploy run `31452008949` completed cleanly end-to-end on the first fully-green attempt for
+this exact commit, including its own smoke-test step (a prior dispatch against the same commit was
+blocked, not failed, by the deploy workflow's own "CI must have already succeeded for this exact
+commit" guard, before the post-merge CI run on `main` had finished — resolved by waiting and
+re-dispatching, not a deploy defect). Independently re-verified after deploy: a live read-only D1
+query against `d1_migrations` confirms both migrations applied; `/status`, `/status/feed.xml`
+(correct `atom+xml`/`noindex`/`cache-control` headers, valid empty feed), and an unauthenticated
+`/admin/operations` request (redirects to `/sign-in`) were all checked directly against
+`https://crawlpact.com`. Full detail:
+`docs/reports/PHASE_14_STATUS_OPERATIONS_RELIABILITY_COMPLETION_REPORT.md`.
 
 Phase 12 (Security, CI, Dependency and Quality-Gate Improvements, deployed 2026-08-10) hardened
 CI/CD supply-chain integrity (SHA-pinned GitHub Actions, fixed a real script-injection shape, made
@@ -256,6 +282,9 @@ re-run (RISK-018); no cookie-consent mechanism for the GA deviation (RISK-021).
 - Phase 9 completion report: `docs/reports/PHASE_09_AGENCY_WORKSPACE_PORTFOLIO_COMPLETION_REPORT.md`
 - Phase 10 completion report: `docs/reports/PHASE_10_NOTIFICATION_MONITORING_COMPLETION_REPORT.md`
 - Phase 11 completion report: `docs/reports/PHASE_11_DATABASE_STORAGE_PERFORMANCE_COMPLETION_REPORT.md`
+- Phase 12 completion report: `docs/reports/PHASE_12_SECURITY_CI_DEPENDENCY_QUALITY_COMPLETION_REPORT.md`
+- Phase 13 completion report: `docs/reports/PHASE_13_ANALYTICS_CONSENT_PRODUCT_MEASUREMENT_COMPLETION_REPORT.md`
+- Phase 14 completion report: `docs/reports/PHASE_14_STATUS_OPERATIONS_RELIABILITY_COMPLETION_REPORT.md`
 - Current risk register: `docs/risks/ACTIVE_RISKS.md`
 - Changelog: `CHANGELOG.md`
 - Requirements traceability: `docs/status/REQUIREMENTS_TRACEABILITY.md`
