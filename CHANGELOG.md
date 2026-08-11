@@ -12,7 +12,23 @@ Phase 1's rule against fabricating or restructuring verifiable history. Add new 
 this distinguishes a code merge from a production deployment, which are not the same event (see
 the "Production deployment" entries below for the established pattern).
 
-## Unreleased
+## Production deployment (2026-08-11) — Phase 16: Policy Observatory and Research Authority
+
+PR #111 (squash-merged as `883728b`, full commit `883728b08cfd085b3c25584ef18b79f8b356325a`)
+deployed to production via `deploy-production.yml`, run `31512948445`. One new D1 migration
+(`0035_research_publications.sql` — new `research_publications` table; 35/35 migrations applied,
+independently re-confirmed via a live read-only `d1_migrations` query). Deployed Worker version:
+`e5cf03ea-7cd4-4970-b331-2f6879a84035`. A first dispatch (run `31512041616`) was blocked (not
+failed) by the deploy workflow's own "CI must have already succeeded for this exact commit" guard,
+because the post-merge CI run on `main` hadn't finished yet at that instant; waiting for that run
+and re-dispatching completed cleanly end-to-end, including its own smoke-test step. Independently
+re-verified post-deploy: a direct D1 query confirmed migration `0035` applied and the active
+registry release unchanged at `2026.07.3`; `https://crawlpact.com/`, `/observatory`,
+`/observatory/registry`, `/observatory/methodology`, `/research`, a nonexistent
+`/research/<slug>` (correctly `404`), and an unauthenticated `/admin/research` request (correctly
+redirected to `/sign-in`) were all checked directly. No research publication exists in production
+— `/observatory` and `/research` correctly render "nothing published yet." Full detail:
+`docs/reports/PHASE_16_POLICY_OBSERVATORY_RESEARCH_AUTHORITY_COMPLETION_REPORT.md`.
 
 ### Added (Phase 16: Policy Observatory and Research Authority)
 
