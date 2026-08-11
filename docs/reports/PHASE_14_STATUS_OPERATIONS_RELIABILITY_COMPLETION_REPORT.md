@@ -244,11 +244,15 @@ operations dashboard has no automatically detectable WCAG 2.2 AA violations" tes
 One pre-existing, unrelated integration flake was observed and is expected to recur:
 `apps/web/tests/integration/audit-report-signals.integration.test.ts`'s "still reads a
 pre-Phase-11 html_meta row..." test (a real network call to `example.co`) consistently times out
-in this sandboxed environment (re-ran in isolation twice, failed both times); confirmed via direct
-`curl` (302 in 122ms) that raw network access itself is not blocked, so this is scanner-internal
-latency, not environment unavailability. This file is unrelated to any Phase 14 code (it tests
-`scan_resources.snapshot_text`/`html_meta` backward compatibility, and `git diff main` against it
-on this branch is empty).
+in this sandboxed development environment (re-ran in isolation twice, failed both times);
+confirmed via direct `curl` (302 in 122ms) that raw network access itself is not blocked, so this
+is scanner-internal latency, not environment unavailability. This file is unrelated to any Phase
+14 code (it tests `scan_resources.snapshot_text`/`html_meta` backward compatibility, and
+`git diff main` against it on this branch is empty). This same test also failed once in real
+GitHub Actions CI on PR #107's first run (same timeout, same test) — re-running only that failed
+job cleared it on the second attempt (all 3 CI checks green,
+`mergeStateStatus: CLEAN`), confirming it is a genuine, occasional network flake rather than a
+deterministic break, in both environments.
 
 ## Files created/modified
 
