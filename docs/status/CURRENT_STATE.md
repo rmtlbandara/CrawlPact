@@ -2,10 +2,10 @@
 Document owner: Engineering owner
 Status: current-authoritative
 Last verified: 2026-08-11
-Repository commit: 19092af70111dff03cfa6cbc48aae95a931e397c (main, post-Phase-14 merge, deployed)
-Production deployment identifier: crawlpact-web (Cloudflare Worker), https://crawlpact.com — Worker version 087236e1-35fe-477d-a370-d226a4a67fbe
-Database migration version: 0033_scheduled_job_runs_started_at_index.sql (33/33 applied to production, confirmed via a direct read-only D1 query against `d1_migrations` 2026-08-11 — new `operational_alerts` table and `idx_scheduled_job_runs_started_at` index; table count now 49, independently confirmed via `db:validate`)
-Crawler registry version: 2026.07.3 (active release; 23 crawlers seeded, correction pending publication as a new release — see docs/registry/CRAWLER_REGISTRY_GOVERNANCE.md)
+Repository commit: 09427238a9c644c8d745abc2b71a91a0e2f3e57b (main, post-Phase-15 merge, deployed)
+Production deployment identifier: crawlpact-web (Cloudflare Worker), https://crawlpact.com — Worker version 686987b8-3dd6-44b8-9f32-8b877d8e4655
+Database migration version: 0034_registry_release_integrity.sql (34/34 applied to production, confirmed via a direct read-only D1 query against `d1_migrations` 2026-08-11 — new `registry_versions.checksum`/`registry_version_entries.snapshot_schema_version` columns and `registry_version_activations` table; table count now 50, independently confirmed via `db:validate`)
+Crawler registry version: 2026.07.3 (active release, unchanged by Phase 15's deploy — the Amazon/Google/Bingbot corrections are independently re-verified and ready in `packages/database/seed/reference-data.sql`, but publishing them as the new active release requires a real Super Admin session, which was not available this pass; see docs/registry/CRAWLER_REGISTRY_GOVERNANCE.md and the Phase 15 completion report)
 Phase 0 baseline reference: docs/baseline/2026-08-03/ (superseded on billing/migration facts by Phases 5–6 below; not re-run this pass)
 Review frequency: Every release, or monthly
 Next review date: 2026-09-10 (or sooner, at the next release)
@@ -32,7 +32,29 @@ verified platform guides (`/platforms/*`) — content-only, no product-behavior 
 production 2026-08-04, Worker version `630258b4-c020-4105-9ca3-550897f7c0e3`; all 10 new routes
 independently confirmed live (see the Phase 7 completion report).
 **Production and the default branch (`main`) are aligned** — no known drift as of the last
-deployed commit (`19092af`).
+deployed commit (`0942723`).
+
+Phase 15 (Crawler Registry Governance and Public Changelog, deployed 2026-08-11) found and fixed
+a real, critical bug: `getActiveRegistry()` and historical scan rendering read the live, mutable
+`crawlers` table instead of the immutable `registry_version_entries` release snapshot, meaning
+editing a crawler's row after a release was published could silently change what an already-active
+release evaluated and how a historical scan displayed that crawler. Both paths now resolve
+exclusively from the frozen release snapshot. Also fixed a second bug where any crawler edit —
+including a source-URL move — counted identically to a real token/purpose change for
+re-evaluation purposes; replaced with a field-level semantic diff so only evaluation-semantic
+changes ever schedule customer re-evaluation. Made publish/rollback (registry and ruleset) atomic
+and idempotent, added release checksums and candidate validation, gave rollback the same
+re-evaluation parity as forward publish, and independently re-verified all 23 crawlers across 9
+operators against live official documentation. **The active registry release is unchanged by this
+deployment** (still `2026.07.3`) — publishing the reverified Amazon/Google/Bingbot corrections as
+a new release requires a real, authenticated Super Admin session, which was not available during
+this pass; the corrected data and the full validate/publish workflow are ready for whoever holds
+production admin access. Deploy run `31483728804` completed cleanly on the first attempt,
+including its own smoke-test step. Independently re-verified after deploy: a live read-only D1
+query confirms migration `0034` applied and the active release still `2026.07.3`;
+`https://crawlpact.com/`, `/crawlers`, `/changelog`, and an unauthenticated `/admin/operations`
+request (redirects to `/sign-in`) were all checked directly. Full detail:
+`docs/reports/PHASE_15_CRAWLER_REGISTRY_GOVERNANCE_COMPLETION_REPORT.md`.
 
 Phase 14 (Status, Operations and Service Reliability, deployed 2026-08-11) strengthened the
 existing status/incident/monitoring architecture rather than rebuilding it. Fixed two real,
@@ -285,6 +307,7 @@ re-run (RISK-018); no cookie-consent mechanism for the GA deviation (RISK-021).
 - Phase 12 completion report: `docs/reports/PHASE_12_SECURITY_CI_DEPENDENCY_QUALITY_COMPLETION_REPORT.md`
 - Phase 13 completion report: `docs/reports/PHASE_13_ANALYTICS_CONSENT_PRODUCT_MEASUREMENT_COMPLETION_REPORT.md`
 - Phase 14 completion report: `docs/reports/PHASE_14_STATUS_OPERATIONS_RELIABILITY_COMPLETION_REPORT.md`
+- Phase 15 completion report: `docs/reports/PHASE_15_CRAWLER_REGISTRY_GOVERNANCE_COMPLETION_REPORT.md`
 - Current risk register: `docs/risks/ACTIVE_RISKS.md`
 - Changelog: `CHANGELOG.md`
 - Requirements traceability: `docs/status/REQUIREMENTS_TRACEABILITY.md`

@@ -12,7 +12,21 @@ Phase 1's rule against fabricating or restructuring verifiable history. Add new 
 this distinguishes a code merge from a production deployment, which are not the same event (see
 the "Production deployment" entries below for the established pattern).
 
-## Unreleased
+## Production deployment (2026-08-11) — Phase 15: Crawler Registry Governance and Public Changelog
+
+PR #109 (squash-merged as `0942723`, full commit `09427238a9c644c8d745abc2b71a91a0e2f3e57b`) deployed
+to production via `deploy-production.yml`, run `31483728804`. One new D1 migration
+(`0034_registry_release_integrity.sql` — `registry_versions.checksum`,
+`registry_version_entries.snapshot_schema_version`, new `registry_version_activations` table; 34/34
+migrations applied, 50 tables total, independently confirmed via a live read-only D1 query).
+Deployed Worker version: `686987b8-3dd6-44b8-9f32-8b877d8e4655`. Independently re-verified
+post-deploy: a direct D1 query confirmed migration `0034` applied and the active registry release
+unchanged; `https://crawlpact.com/`, `/crawlers`, `/changelog`, and an unauthenticated
+`/admin/operations` request (correctly redirected to `/sign-in`) were all checked directly. The
+Google-Extended and Bingbot source-URL corrections found during this phase's live reverification
+are independently re-verified and ready in `packages/database/seed/reference-data.sql`, but were
+**not** published as a new active registry release this session — see "Not changed (Phase 15)"
+below and `docs/reports/PHASE_15_CRAWLER_REGISTRY_GOVERNANCE_COMPLETION_REPORT.md`.
 
 ### Added (Phase 15: Crawler Registry Governance and Public Changelog)
 
@@ -75,9 +89,6 @@ the "Production deployment" entries below for the established pattern).
   all unchanged.
 - No new production registry release was activated as part of this phase's code/documentation
   work — see the completion report for the separate registry-activation decision.
-
-See "Production deployment (2026-08-11) — Phase 14: Status, Operations and
-Service Reliability" below for the previous release.
 
 ## Production deployment (2026-08-11) — Phase 14: Status, Operations and Service Reliability
 
