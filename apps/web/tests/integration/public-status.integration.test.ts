@@ -203,4 +203,111 @@ describe("public vs internal status separation (real D1)", () => {
       }
     },
   );
+
+  it(
+    "Phase 14: the batched incident-updates query (was N+1) attaches each incident's updates to the correct incident, never cross-contaminated, and preserves per-incident chronological order",
+    { timeout: 20_000 },
+    async () => {
+      const harness = await createD1TestHarness();
+      const isolatedDb = createDb(harness.db);
+      try {
+        const now = Date.now();
+        const iso = (offsetMs: number) => new Date(now + offsetMs).toISOString();
+
+        await isolatedDb.insert(schema.incidents).values([
+          {
+            id: "inc_a",
+            title: "Incident A",
+            publicSummary: "Summary A",
+            severity: "minor",
+            status: "investigating",
+            isPublic: true,
+            isScheduledMaintenance: false,
+            affectedComponents: JSON.stringify(["website"]),
+            startsAt: iso(0),
+            resolvedAt: null,
+            createdAt: iso(0),
+            updatedAt: iso(0),
+          },
+          {
+            id: "inc_b",
+            title: "Incident B",
+            publicSummary: "Summary B",
+            severity: "minor",
+            status: "investigating",
+            isPublic: true,
+            isScheduledMaintenance: false,
+            affectedComponents: JSON.stringify(["reports_sharing"]),
+            startsAt: iso(1),
+            resolvedAt: null,
+            createdAt: iso(1),
+            updatedAt: iso(1),
+          },
+        ]);
+
+        await isolatedDb.insert(schema.incidentUpdates).values([
+          { incidentId: "inc_a", status: "investigating", message: "A first", createdAt: iso(10) },
+          { incidentId: "inc_b", status: "investigating", message: "B first", createdAt: iso(11) },
+          { incidentId: "inc_a", status: "identified", message: "A second", createdAt: iso(12) },
+          { incidentId: "inc_b", status: "identified", message: "B second", createdAt: iso(13) },
+        ]);
+
+        const publicStatus = await getPublicStatus(isolatedDb);
+        const incidentA = publicStatus.currentIncidents.find((i) => i.id === "inc_a");
+        const incidentB = publicStatus.currentIncidents.find((i) => i.id === "inc_b");
+
+        expect(incidentA?.updates.map((u) => u.message)).toEqual(["A first", "A second"]);
+        expect(incidentB?.updates.map((u) => u.message)).toEqual(["B first", "B second"]);
+      } finally {
+        await harness.dispose();
+      }
+    },
+  );
+
+  it(
+    "Phase 14 §48: a scheduled-maintenance record with a future startsAt does not escalate the affected component to maintenance before that time, but does once it arrives",
+    { timeout: 20_000 },
+    async () => {
+      const harness = await createD1TestHarness();
+      const isolatedDb = createDb(harness.db);
+      try {
+        const now = new Date().toISOString();
+        const futureStart = new Date(Date.now() + 60 * 60 * 1000).toISOString();
+
+        await isolatedDb.insert(schema.incidents).values({
+          id: "inc_future_maintenance",
+          title: "Planned database maintenance",
+          publicSummary: "Brief planned maintenance window.",
+          severity: "minor",
+          status: "investigating",
+          isPublic: true,
+          isScheduledMaintenance: true,
+          affectedComponents: JSON.stringify(["dashboard_domains"]),
+          startsAt: futureStart,
+          resolvedAt: null,
+          createdAt: now,
+          updatedAt: now,
+        });
+
+        const beforeStart = await getPublicStatus(isolatedDb);
+        expect(beforeStart.scheduledMaintenance).toHaveLength(1);
+        const dashboardBefore = beforeStart.components.find((c) => c.key === "dashboard_domains");
+        expect(dashboardBefore?.status).toBe("operational");
+        expect(beforeStart.overall).toBe("operational");
+
+        // Move the maintenance window's start into the past — simulates
+        // its start time actually arriving.
+        await isolatedDb
+          .update(schema.incidents)
+          .set({ startsAt: new Date(Date.now() - 60 * 1000).toISOString() });
+
+        const afterStart = await getPublicStatus(isolatedDb);
+        const dashboardAfter = afterStart.components.find((c) => c.key === "dashboard_domains");
+        expect(dashboardAfter?.status).toBe("maintenance");
+        expect(afterStart.overall).toBe("maintenance");
+      } finally {
+        await harness.dispose();
+      }
+    },
+  );
 });

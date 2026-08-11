@@ -61,3 +61,29 @@ describe("MarketingLayout.astro gates GoogleAnalytics on route eligibility and g
     expect(content).toMatch(/const gaEligible\s*=\s*isGaEligibleRoute\(/);
   });
 });
+
+describe("Phase 14: Google Analytics never reaches /status or its Atom feed", () => {
+  function readPage(relativePath: string): string {
+    return readFileSync(fileURLToPath(new URL(relativePath, import.meta.url)), "utf-8");
+  }
+
+  it("status.astro never references gtag/googletagmanager, and /status is excluded from the GA allowlist", () => {
+    const statusPage = readPage("../pages/status.astro");
+    expect(statusPage).not.toMatch(/gtag/i);
+    expect(statusPage).not.toMatch(/googletagmanager\.com/);
+
+    const consentLib = readPage("../lib/consent.ts");
+    // /status must not be in the exact-match allowlist (it renders inside
+    // MarketingLayout, so the only thing keeping GA off it is this
+    // allowlist — see docs/analytics/GOOGLE_ANALYTICS_SCOPE_POLICY.md).
+    const allowedExactMatch = /GA_ALLOWED_EXACT\s*=\s*new Set\(\[([\s\S]*?)\]\)/.exec(consentLib);
+    expect(allowedExactMatch).not.toBeNull();
+    expect(allowedExactMatch?.[1]).not.toMatch(/"\/status"/);
+  });
+
+  it("the public status Atom feed never references gtag/googletagmanager (it's a raw XML route, not rendered inside any layout at all)", () => {
+    const feedRoute = readPage("../pages/status/feed.xml.ts");
+    expect(feedRoute).not.toMatch(/gtag/i);
+    expect(feedRoute).not.toMatch(/googletagmanager\.com/);
+  });
+});

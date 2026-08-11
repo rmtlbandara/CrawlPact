@@ -14,8 +14,58 @@ the "Production deployment" entries below for the established pattern).
 
 ## Unreleased
 
-Nothing pending — see "Production deployment (2026-08-10) — Phase 13: Analytics, Consent, Product
-Measurement and Private-Repository Exposure Governance" below for the most recent release.
+### Added (Phase 14: Status, Operations and Service Reliability)
+
+- First-party, deduplicated internal operational alerting: `operational_alerts` table (migration
+  `0032`, partial unique index enforcing one open row per `alert_key`), `evaluateOperationalAlerts`
+  evaluated once daily from the existing `scheduled()` handler (no new Cron trigger), deriving
+  candidates only from existing signals (scheduler anomalies, webhook/auth failure counts,
+  capacity snapshot). No third-party paging integration added, by design.
+- Super Admin operations control plane at `/admin/operations` (`OperationsOverview.tsx`): public
+  and internal status summary, active alerts with acknowledge action, capacity/monitoring metrics,
+  scheduler anomalies, reliability trend tables (1h/24h/7d/30d), and four `requireAdminAction`-
+  gated manual actions (re-evaluate health, re-run notification reconciliation, retention dry-run,
+  acknowledge alert) — chosen over extending `/admin/health`, since `/admin/capacity` (Phase 11)
+  had a working backend with no consuming UI anywhere in the codebase.
+- Internal SLIs/service objectives (`docs/operations/SERVICE_LEVEL_INDICATORS.md`,
+  `docs/operations/INTERNAL_SERVICE_OBJECTIVES.md`) — internal-only; no public SLA or uptime
+  percentage published (the 7-condition publication gate is not yet met — see
+  `docs/product/PHASE_14_PUBLIC_UPTIME_PERCENTAGE_DECISION.md`).
+- Public status Atom feed at `/status/feed.xml` (`apps/web/src/pages/status/feed.xml.ts`), reusing
+  `getPublicStatus()` directly, bounded to 30 items, `noindex`, sanitized.
+- New `operations:validate` script, wired into `quality:gate`, CI, and `scripts/verify-push.sh`.
+- ~21 new operations/reliability docs under `docs/operations/`, `docs/product/`, `docs/data/`, and
+  `docs/security/` (public/internal status boundary, health signal model, component-signal
+  mapping, alert model, maintenance-mode decision matrix, disaster-recovery runbook, operational
+  readiness checklist, reliability game-day record, independent-status-plane decision, and more).
+
+### Fixed (Phase 14)
+
+- `getPublicStatus()`'s incident-updates lookup was N+1 (one query per incident); now a single
+  batched query.
+- A scheduled-maintenance incident with a future `startsAt` was escalating its public component to
+  "Maintenance" immediately on creation instead of at its actual start time.
+- `scheduled_job_runs` never had a `status='running'` row written before job completion, making
+  the existing stuck/overlapping-job detection structurally unreachable; `worker.ts` now inserts a
+  running row via new `startJobRun`/`finishJobRun` helpers and updates it in place on completion.
+- `scheduled_job_runs` had no index supporting its `ORDER BY started_at DESC` access pattern
+  (confirmed via `EXPLAIN QUERY PLAN`: full table scan plus a temp b-tree sort); migration `0033`
+  adds `idx_scheduled_job_runs_started_at`.
+
+### Not changed (Phase 14)
+
+- `security_events`/`notifications` retention (RISK-006) remains open — the Phase 14 prompt's own
+  conditional language required an explicit product-owner acceptance of the Phase 11 recommended
+  periods before implementation, and none was given this phase.
+- No independent status-plane Worker was built (Option A retained: `/status` stays in the main
+  Worker/D1) — building Option B would require new production infrastructure requiring separate
+  approval never sought this phase. See
+  `docs/operations/PHASE_14_INDEPENDENT_STATUS_PLANE_DECISION.md`.
+- Pricing/Paddle, crawler classification/registry, monitoring frequency, notification channels,
+  and Phase 13's consent/analytics architecture are all unchanged.
+
+See "Production deployment (2026-08-10) — Phase 13: Analytics, Consent, Product
+Measurement and Private-Repository Exposure Governance" below for the previous release.
 
 ## Production deployment (2026-08-10) — Phase 13: Analytics, Consent, Product Measurement and Private-Repository Exposure Governance
 

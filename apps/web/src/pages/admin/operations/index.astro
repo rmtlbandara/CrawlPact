@@ -1,0 +1,23 @@
+---
+export const prerender = false;
+import AdminLayout from "../../../layouts/AdminLayout.astro";
+import AdminPageHeader from "../../../components/admin/AdminPageHeader.astro";
+import { OperationsOverview } from "../../../components/admin/OperationsOverview";
+import { createDb } from "@crawlpact/database";
+import { getEnv } from "../../../lib/env";
+import { getAdminPageSession } from "../../../lib/auth/require-admin";
+
+const db = createDb(getEnv().DB);
+const admin = await getAdminPageSession(Astro.request, db);
+if (!admin) return Astro.redirect("/sign-in");
+---
+
+<AdminLayout title="Operations" displayName={admin.user.displayName}>
+  <AdminPageHeader
+    title="Operations"
+    description="The unified operations control plane (Phase 14): public/internal status, capacity, scheduler health, deduplicated operational alerts, reliability trends, and safe manual re-run actions — composed from existing Phase 10/11 modules, never a second monitoring engine."
+  />
+  <div class="mt-6">
+    <OperationsOverview client:load />
+  </div>
+</AdminLayout>

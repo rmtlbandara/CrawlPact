@@ -1,33 +1,76 @@
 # Incident Response
 
-No production deployment exists yet, so this is a rehearsed process built against real,
-tested admin mechanisms — not a tested-in-production one. Update the History section with real
-learnings the first time it is actually used. Updated Part 3 Step 20: added specific procedures
-below, and corrected references to admin tooling that didn't exist when this was first written.
+**Rewritten Phase 14 (2026-08-10)** to describe the actual current production system — CrawlPact
+has been live in production at `https://crawlpact.com` since 2026-07-26, with real customer-facing
+Paddle billing, real anonymous audits, and real scheduled monitoring. Earlier revisions of this
+document incorrectly claimed that no production deployment or live environment existed at all —
+false as of this rewrite; `pnpm operations:validate` now checks for that specific class of
+staleness going forward. Update the History section with real learnings the first time this
+process is actually used against a real incident.
 
-## Severity guide
+## Incident lifecycle
 
-| Severity | Example                                                                | Target response                      |
-| -------- | ---------------------------------------------------------------------- | ------------------------------------ |
-| Critical | Public site down; data-loss risk; SSRF containment bypassed            | Immediate; activate maintenance mode |
-| High     | Scanner producing incorrect results at scale; billing webhook failures | Same business day                    |
-| Medium   | Isolated scan failures; non-critical UI regression                     | Next working day                     |
-| Low      | Cosmetic issue; documentation gap                                      | Normal backlog                       |
+```
+detected → investigating → identified → monitoring → resolved → post-incident review
+```
 
-## First steps for any incident
+`detected` is an internal-only state (an administrator or an operational alert noticing something,
+before it's confirmed as a real incident) — it has no representation in the `incidents` table's own
+`status` column, which starts at `investigating` the moment a real incident record is created. The
+four stored states (`investigating`, `identified`, `monitoring`, `resolved`) match the existing
+`incidents`/`incident_updates` schema exactly (`packages/database/migrations/0018_incidents.sql`) —
+unchanged this phase. `post-incident review` happens after `resolved`, using
+`docs/operations/POST_INCIDENT_REVIEW_TEMPLATE.md`, and is not itself a stored incident state.
 
-1. Confirm scope: check `/status` (public) and `/admin/health` (Super Admin system/component
-   health — `lib/admin/health.ts`'s `getSystemStatusSummary`/`getComponentHealth`, real as of
-   Part 3 Step 7) for affected surfaces.
-2. Check `/admin/jobs` and `/admin/security` (or raw `scheduled_job_runs`/`security_events` via
-   `wrangler d1 execute`) for anomalies around the incident window.
-3. If the cause is a bad deploy, redeploy the previous commit (see `docs/operations/RUNBOOK.md`).
-4. If the cause is a bad migration, write a forward-fix migration — never edit an applied one.
-5. If the cause is a bad registry/ruleset release, roll it back (see `RUNBOOK.md`).
-6. For anything customer-facing and ongoing, consider activating maintenance mode (`RUNBOOK.md`)
-   so the dashboard goes read-only while you work, without taking the public site down.
-7. Record what happened, even briefly, in this file's "History" section below once it has
-   entries.
+## Severity matrix (internal — see `docs/operations/PUBLIC_INCIDENT_COMMUNICATION_STANDARD.md` for how this maps to public incident severity)
+
+| Severity             | Examples                                                                                                                                                                                                  | Target response                                                                |
+| -------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------ |
+| **SEV-1 / Critical** | Broad production unavailable; confirmed data-loss risk; security containment event (SSRF bypass, compromised admin account); incorrect crawler-policy results at broad scale; billing corruption at scale | Immediate; activate maintenance mode if customer-facing mutation needs to stop |
+| **SEV-2 / High**     | Major customer workflow degraded; monitoring cadence broadly failing; billing webhook processing failing; authentication broadly failing                                                                  | Same business day                                                              |
+| **SEV-3 / Medium**   | Partial, isolated degradation; a limited platform error; one operational subsystem impaired (e.g. notification reconciliation backlog, not monitoring itself)                                             | Next working day                                                               |
+| **SEV-4 / Low**      | Cosmetic issue; an internal warning with no customer impact; documentation gap                                                                                                                            | Normal backlog                                                                 |
+
+This internal matrix is distinct from the public incident `severity` column (`minor`/`major`/
+`critical`) — map carefully when publishing (a SEV-2 internal issue might be `major` publicly, or
+might have zero public component if it has no `publicImpact`; see
+`docs/operations/PUBLIC_INTERNAL_STATUS_BOUNDARY.md`).
+
+## First 15 minutes
+
+1. **Confirm the issue** — is this real, and still happening?
+2. **Determine public impact** — check `/status` (what customers currently see).
+3. **Check `/admin/operations`** (Phase 14 — the unified operations view: public/internal status,
+   active operational alerts, scheduler anomalies, capacity) or `/admin/health` for the
+   per-component breakdown.
+4. **Check the latest deployment** — GitHub Actions' `deploy-production.yml` run history (commit
+   SHA, Worker version, migration count are not obtainable from inside the Worker itself — see
+   `docs/operations/PHASE_14_STATUS_OPERATIONS_BASELINE.md`).
+5. **Check Worker errors** — Cloudflare dashboard (not obtainable from inside the app).
+6. **Check D1** — `/admin/operations`'s capacity section, or `wrangler d1 execute` directly.
+7. **Check the scheduler** — `/admin/jobs`, `/admin/operations`'s scheduler-anomalies section.
+8. **Check scans** — `/admin/scans`, `capacity.monitoring.*` in `/admin/operations`.
+9. **Check webhooks** — `/admin/webhooks`.
+10. **Check authentication** — `/admin/security`.
+11. **Identify blast radius** — which public component(s), how many customers.
+12. **Decide severity** — using the matrix above.
+13. **Decide whether a public incident is warranted** — real customer impact required (never
+    auto-published from a single failed health check).
+14. **Decide whether to activate maintenance mode** — see
+    `docs/operations/MAINTENANCE_MODE_DECISION_MATRIX.md` for what remains available.
+15. **Begin the timeline** — detection time, first entry, in preparation for
+    `docs/operations/POST_INCIDENT_REVIEW_TEMPLATE.md` if this becomes SEV-1/2.
+
+## Ongoing response
+
+- If the cause is a bad deploy, redeploy the previous commit (see `docs/operations/RUNBOOK.md`).
+- If the cause is a bad migration, write a forward-fix migration — never edit an applied one.
+- If the cause is a bad registry/ruleset release, roll it back (see `RUNBOOK.md`).
+- For anything customer-facing and ongoing, consider activating maintenance mode (`RUNBOOK.md`) so
+  the dashboard goes read-only while you work, without taking the public site down.
+- Post public updates per `docs/operations/PUBLIC_INCIDENT_COMMUNICATION_STANDARD.md`.
+- Record what happened, even briefly, in this file's "History" section below once it has entries.
+- For SEV-1/SEV-2, complete `docs/operations/POST_INCIDENT_REVIEW_TEMPLATE.md` after resolution.
 
 ## Compromised-session response
 
@@ -103,4 +146,8 @@ If a customer reports a finding that appears wrong:
 
 ## History
 
-_No incidents recorded yet — nothing has been deployed to any live environment._
+No real production incident requiring this runbook has occurred yet as of this rewrite
+(2026-08-10) — production has been live since 2026-07-26 with no SEV-1/SEV-2 event recorded in
+`docs/risks/RISK_ARCHIVE.md` or `docs/reports/`. This is a factual absence-of-incidents statement,
+distinct from the earlier, incorrect "nothing has been deployed" framing this rewrite replaces.
+Add a real entry, linking its post-incident review, the first time this runbook is actually used.

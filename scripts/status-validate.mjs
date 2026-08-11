@@ -87,7 +87,13 @@ const IMPLEMENTATION_STATUS_REFERENCE_PATTERN = /docs\/status\/IMPLEMENTATION_ST
 // `getComponentHealth`/`getStatusOverview` carry internal detail (`detail`, `internalReason`,
 // `verificationSource`); public pages must only ever consume `getPublicStatus`'s own
 // `PublicStatusReport`/`PublicComponentStatus` types, which structurally have no such fields.
-const PUBLIC_STATUS_FILES = ["apps/web/src/pages/status.astro"];
+const PUBLIC_STATUS_FILES = [
+  "apps/web/src/pages/status.astro",
+  // Phase 14: the public status Atom feed reuses getPublicStatus() directly
+  // (see docs/operations/PUBLIC_INTERNAL_STATUS_BOUNDARY.md), so it must be
+  // held to the exact same internal-leak boundary as the HTML page.
+  "apps/web/src/pages/status/feed.xml.ts",
+];
 const INTERNAL_LEAK_PATTERNS = [
   { name: "getComponentHealth import", pattern: /getComponentHealth/ },
   { name: "getStatusOverview import", pattern: /getStatusOverview/ },
