@@ -119,6 +119,28 @@ jobs:
       - name: Validate operations documentation
         run: pnpm operations:validate
 
+      - name: Apply D1 migrations and seed data (for registry validators)
+        # Phase 15: registry:validate/registry:integrity:verify/
+        # registry:public:validate query a real local D1 via the wrangler
+        # CLI (same mechanism scripts/registry-tools.mjs always used) —
+        # unlike the other *:validate steps above, which are static
+        # file-only checks, these need real applied migrations + reference
+        # data first. This job never ran db:migrate/db:seed before Phase 15
+        # (only the separate browser-smoke job did) — a real, confirmed gap
+        # closed here, matching Phase 12's identical "already wired into
+        # quality:gate but never actually run in CI" finding for
+        # content:validate above.
+        run: pnpm db:migrate && pnpm db:seed
+
+      - name: Validate crawler registry integrity
+        run: pnpm registry:validate
+
+      - name: Verify active registry release integrity (checksum, snapshot parsing, no unverified evaluation entries)
+        run: pnpm registry:integrity:verify
+
+      - name: Validate public crawler directory against the registry
+        run: pnpm registry:public:validate
+
       - name: Validate content-collection quality
         # Phase 12: this script already existed (Phase 7) and was already
         # wired into `pnpm quality`/`pnpm run quality:gate`, but had never

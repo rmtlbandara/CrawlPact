@@ -12,8 +12,26 @@ type ReleaseRow = {
   createdAt: string;
 };
 
+type FieldChange = { field: string; changeClass: string };
+type CrawlerDiffEntry = {
+  crawlerId: string;
+  fieldChanges: FieldChange[];
+  isEvaluationSemantic: boolean;
+};
+type SemanticDiff = {
+  added: { id: string }[];
+  removed: { id: string }[];
+  changed: CrawlerDiffEntry[];
+  evaluationSemanticCrawlerIds: string[];
+};
+type ValidationResult = {
+  errors: { code: string; message: string }[];
+  warnings: { code: string; message: string }[];
+  checksum: string;
+};
 type Comparison = {
-  comparison: { added: string[]; removed: string[]; changed: { crawlerId: string }[] };
+  diff: SemanticDiff;
+  validation: ValidationResult;
   affectedDomains: { domainId: string; canonicalOrigin: string }[];
 };
 
@@ -226,13 +244,41 @@ export function RegistryReleasesManager() {
         {comparison && (
           <div className="mt-4 rounded-card border border-neutral-200 bg-white p-4">
             <p className="text-supporting text-neutral-700">
-              Added: {comparison.comparison.added.length} · Removed:{" "}
-              {comparison.comparison.removed.length} · Changed:{" "}
-              {comparison.comparison.changed.length}
+              Added: {comparison.diff.added.length} · Removed: {comparison.diff.removed.length} ·
+              Changed: {comparison.diff.changed.length} (
+              {comparison.diff.changed.filter((c) => c.isEvaluationSemantic).length}{" "}
+              evaluation-semantic, remainder evidence/editorial-only)
             </p>
             <p className="mt-2 text-supporting text-neutral-700">
-              {comparison.affectedDomains.length} saved domain(s) would see a different evaluation.
+              {comparison.affectedDomains.length} saved domain(s) would see a different evaluation
+              (computed only from evaluation-semantic changes — a source-URL refresh or wording edit
+              never counts).
             </p>
+            <p className="mt-2 break-all font-mono text-caption text-neutral-600">
+              Candidate checksum (SHA-256): {comparison.validation.checksum}
+            </p>
+            {comparison.validation.errors.length > 0 && (
+              <div className="mt-2 rounded-card border border-red-300 bg-red-50 p-2">
+                <p className="text-supporting font-semibold text-red-800">
+                  Blocking validation errors — this candidate cannot be published:
+                </p>
+                <ul className="mt-1 list-inside list-disc text-supporting text-red-800">
+                  {comparison.validation.errors.map((e) => (
+                    <li key={e.code}>{e.message}</li>
+                  ))}
+                </ul>
+              </div>
+            )}
+            {comparison.validation.warnings.length > 0 && (
+              <div className="mt-2 rounded-card border border-amber-300 bg-amber-50 p-2">
+                <p className="text-supporting font-semibold text-amber-800">Warnings:</p>
+                <ul className="mt-1 list-inside list-disc text-supporting text-amber-800">
+                  {comparison.validation.warnings.map((w) => (
+                    <li key={w.code}>{w.message}</li>
+                  ))}
+                </ul>
+              </div>
+            )}
           </div>
         )}
       </section>

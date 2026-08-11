@@ -65,6 +65,17 @@ type OperationsSummary = {
   activeAlerts: OperationalAlert[];
   trends: ReliabilityTrends[];
   deployment: null;
+  registryHealth: {
+    activeReleaseId: string | null;
+    activeReleaseVersionLabel: string | null;
+    activeReleasePublished: boolean;
+    activeRulesetExists: boolean;
+    checksumValid: boolean | null;
+    entriesParseCleanly: boolean;
+    duplicateEvaluationTokens: string[];
+    unverifiedEvaluationEntries: string[];
+    reviewDueCount: number;
+  };
 };
 
 const SEVERITY_TONE: Record<AlertSeverity, StatusTone> = {
@@ -278,6 +289,47 @@ export function OperationsOverview() {
             value={summary.capacity.notifications.createdLast24h}
           />
         </div>
+      </section>
+
+      <section aria-labelledby="ops-registry-heading">
+        <h2 id="ops-registry-heading" className="text-card-heading text-neutral-950">
+          Registry health
+        </h2>
+        <div className="mt-4 grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
+          <MetricCard
+            label="Active release"
+            value={summary.registryHealth.activeReleaseVersionLabel ?? "None active"}
+          />
+          <MetricCard
+            label="Checksum"
+            value={
+              summary.registryHealth.checksumValid === null
+                ? "Not computed"
+                : summary.registryHealth.checksumValid
+                  ? "Valid"
+                  : "MISMATCH"
+            }
+          />
+          <MetricCard
+            label="Sources due for review"
+            value={summary.registryHealth.reviewDueCount}
+          />
+          <MetricCard
+            label="Unverified evaluation entries"
+            value={summary.registryHealth.unverifiedEvaluationEntries.length}
+          />
+        </div>
+        {(summary.registryHealth.duplicateEvaluationTokens.length > 0 ||
+          !summary.registryHealth.entriesParseCleanly ||
+          !summary.registryHealth.activeRulesetExists) && (
+          <p className="mt-2 text-supporting text-red-700">
+            {!summary.registryHealth.activeRulesetExists && "No active ruleset. "}
+            {!summary.registryHealth.entriesParseCleanly &&
+              "Active release entries failed to parse. "}
+            {summary.registryHealth.duplicateEvaluationTokens.length > 0 &&
+              `Duplicate evaluation tokens: ${summary.registryHealth.duplicateEvaluationTokens.join(", ")}.`}
+          </p>
+        )}
       </section>
 
       <section aria-labelledby="ops-scheduler-heading">

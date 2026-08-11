@@ -411,6 +411,36 @@ extended platform guides), RISK-032 (no Search Console property connected), and 
 
 ---
 
+### RISK-035 — Public crawler directory is statically generated, not read live from the registry (Phase 15)
+
+- **Category**: Data integrity, Trust · **Severity**: P3 · **Probability**: Low at current release
+  cadence
+- **Impact**: `/crawlers` and `/crawlers/:slug` are generated from a Markdown content collection
+  (`apps/web/src/content/crawlers/*.md`), independent of the D1 `crawlers`/`registry_versions`
+  tables. Publishing a new registry release does not automatically update these public pages — a
+  human must separately edit the Markdown files and redeploy. If that step is missed, the public
+  directory could describe a crawler's purpose/lifecycle/token differently than the actual active
+  registry release evaluates against.
+- **Evidence**: `docs/registry/PUBLIC_REGISTRY_RENDERING_ARCHITECTURE.md` (Phase 15 evaluation of
+  Option A/B, both deferred).
+- **Current mitigation**: `pnpm registry:public:validate` (Phase 15, wired into
+  `quality:gate`/CI/`verify-push.sh`) fails the build if a content page's token doesn't exist in
+  the registry, describes an unverified crawler as confirmed, or contains a prohibited
+  public/internal field — and warns (non-blocking) on purpose/lifecycle drift between the content
+  page and the current registry state. This catches drift at build/CI time for whatever is
+  currently committed; it does not continuously monitor already-deployed production pages against
+  a later registry release published without a corresponding content-collection commit.
+- **Owner**: Engineering owner · **Trigger**: Registry releases become more frequent than roughly
+  monthly, or a real customer-facing incident traces back to public-page staleness.
+- **Review date**: Next phase touching the public crawler directory · **Target phase**:
+  Unscheduled — build Option A (runtime release-backed directory) if the trigger above occurs.
+- **Status**: accepted
+- **Acceptance criteria for closure**: The public crawler directory reads its factual core
+  (token/purpose/lifecycle/source/verification date) directly from the active registry release at
+  request or build time, making drift structurally impossible rather than CI-detected.
+
+---
+
 ## How to update this document
 
 Add a new risk here the moment it's found, using the next sequential `RISK-NNN` ID. Move a risk to

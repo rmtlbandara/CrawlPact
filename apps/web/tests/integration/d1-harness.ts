@@ -116,16 +116,47 @@ export async function createD1TestHarness(): Promise<D1TestHarness> {
     .prepare(
       `INSERT INTO crawlers (
         id, operator_id, name, user_agent_token, purpose, description,
-        official_source_url, lifecycle_status, created_at, updated_at
-      ) VALUES ('crawler_test', 'op_test', 'TestBot', 'TestBot', 'search', 'Test crawler', 'https://example.test/testbot', 'active', ?, ?)`,
+        official_source_url, lifecycle_status, first_verified_at, last_verified_at,
+        created_at, updated_at
+      ) VALUES ('crawler_test', 'op_test', 'TestBot', 'TestBot', 'search', 'Test crawler', 'https://example.test/testbot', 'active', ?, ?, ?, ?)`,
     )
-    .bind(now, now)
+    .bind(now, now, now, now)
     .run();
   await db
     .prepare(
-      "INSERT INTO registry_versions (id, version_label, changelog, is_active, created_at) VALUES ('reg_test', 'test-1', 'Initial test registry.', 1, ?)",
+      "INSERT INTO registry_versions (id, version_label, changelog, is_active, published_at, checksum, created_at) VALUES ('reg_test', 'test-1', 'Initial test registry.', 1, ?, 'test-fixture-checksum', ?)",
     )
-    .bind(now)
+    .bind(now, now)
+    .run();
+  // Phase 15: getActiveRegistry() resolves crawlers from
+  // registry_version_entries' frozen snapshot, not a live join — this
+  // fixture's active release needs a matching entry for `crawler_test` or
+  // every test relying on getActiveRegistry()/runAudit() would silently
+  // see an empty registry.
+  await db
+    .prepare(
+      `INSERT INTO registry_version_entries (id, registry_version_id, crawler_id, snapshot, snapshot_schema_version)
+       VALUES ('rve_test', 'reg_test', 'crawler_test', ?, 2)`,
+    )
+    .bind(
+      JSON.stringify({
+        schemaVersion: 2,
+        id: "crawler_test",
+        operatorId: "op_test",
+        operatorName: "Test Operator",
+        name: "TestBot",
+        userAgentToken: "TestBot",
+        alternativeTokens: [],
+        purpose: "search",
+        description: "Test crawler",
+        officialSourceUrl: "https://example.test/testbot",
+        lifecycleStatus: "active",
+        replacementCrawlerId: null,
+        publishedIpInfo: null,
+        firstVerifiedAt: now,
+        lastVerifiedAt: now,
+      }),
+    )
     .run();
   await db
     .prepare(

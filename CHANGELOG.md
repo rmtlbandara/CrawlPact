@@ -14,8 +14,70 @@ the "Production deployment" entries below for the established pattern).
 
 ## Unreleased
 
-Nothing pending — see "Production deployment (2026-08-11) — Phase 14: Status, Operations and
-Service Reliability" below for the most recent release.
+### Added (Phase 15: Crawler Registry Governance and Public Changelog)
+
+- Canonical, versioned crawler snapshot schema (`registry-snapshot.ts`), release checksums
+  (SHA-256 over canonicalised entries, `registry-checksum.ts`), release-candidate validation
+  (`validateReleaseCandidate`), and a field-level semantic diff (`registry-semantic-diff.ts`)
+  distinguishing evaluation-semantic / evidence / editorial / internal changes.
+- `registry_version_activations` (migration `0034`) — durable, append-only publish/rollback
+  history, separate from a release's own publication record.
+- New registry validators: `pnpm registry:checksum:verify`, `pnpm registry:integrity:verify`,
+  `pnpm registry:public:validate` — all wired into `quality:gate`, CI, and `verify-push.sh`
+  (which had never run `registry:validate` in CI at all before this phase, a real, confirmed gap).
+- Registry health surfaced internally in `/admin/operations` (active release validity, checksum
+  status, stale-review count, unverified-evaluation-entry count).
+- 21 new registry/product/data/operations/security docs (governance, lifecycle model,
+  reverification/versioning policy, semantic diff model, provenance data model decision, public
+  rendering architecture decision, correction workflow, publication/rollback runbooks, full
+  source reverification report, entitlement decision, query/index audit, operational health,
+  threat review, baseline).
+
+### Fixed (Phase 15)
+
+- **Critical**: `getActiveRegistry()` and historical scan rendering (`getScanReport`,
+  `domain-timeline.ts`) read the live, mutable `crawlers` table instead of the immutable
+  `registry_version_entries` snapshot — meaning editing a crawler's row after a release was
+  published could silently change what an already-active release evaluated, and how a historical
+  scan displayed that crawler. Both paths now resolve exclusively from the frozen release
+  snapshot; regression-tested in `registry-reproducibility.integration.test.ts`.
+- `compareRegistryVersions`'s raw full-snapshot JSON-string diff treated any crawler edit —
+  including a source-URL move or a wording change — identically to a real token/purpose change,
+  which could trigger customer re-evaluation for a non-semantic edit. Replaced with the semantic
+  diff; only evaluation-semantic changes ever schedule re-evaluation.
+- `publishRegistryVersion`/`rollbackRegistryVersion` (and the equivalent ruleset functions) used
+  two sequential, non-atomic `UPDATE` statements to flip the active-release pointer, leaving a
+  real window where a mid-request failure could result in zero active releases. Now a single
+  `db.batch()`, and both are idempotent (repeating an already-applied publish/rollback is a
+  harmless no-op).
+- Registry rollback previously only moved the active pointer, leaving affected saved domains
+  evaluated against the superseded release indefinitely. Rollback now computes the same semantic
+  diff and schedules the same bounded re-evaluation as a forward publish.
+- Bingbot's official source URL (`bing.com/bingbot.htm`) now redirects twice; corrected to the
+  current canonical URL (evidence-only change, independently discovered during this phase's live
+  reverification pass).
+
+### Reverified, not changed (Phase 15)
+
+- All 23 crawlers across 9 operators were independently re-verified against each operator's
+  current official documentation (not third-party sources) — see
+  `docs/registry/PHASE_15_FULL_SOURCE_REVERIFICATION_REPORT.md`. The previously-pending Amazon
+  (`Amzn-SearchBot`/`Amzn-User`) and Google (`Google-Extended` source-URL move) corrections were
+  independently reconfirmed, not blindly trusted from prior notes.
+- No crawler count was increased for its own sake — several candidate tokens found during
+  research (Google's `GoogleOther-Image`/`GoogleOther-Video`/indexing variants, Meta's
+  `FacebookExternalHit`) were deliberately rejected as out of AI-crawler-governance scope.
+
+### Not changed (Phase 15)
+
+- Purpose/lifecycle vocabularies, policy scoring/ruleset semantics, pricing, Paddle, plan limits,
+  monitoring frequencies, notification channels, and Phase 13's analytics/consent architecture are
+  all unchanged.
+- No new production registry release was activated as part of this phase's code/documentation
+  work — see the completion report for the separate registry-activation decision.
+
+See "Production deployment (2026-08-11) — Phase 14: Status, Operations and
+Service Reliability" below for the previous release.
 
 ## Production deployment (2026-08-11) — Phase 14: Status, Operations and Service Reliability
 

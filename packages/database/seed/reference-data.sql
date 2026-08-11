@@ -190,7 +190,12 @@ INSERT OR IGNORE INTO crawlers (
    'active', '2026-07-22', '2026-07-22', NULL),
   ('crw_bingbot', 'op_microsoft', 'Bingbot', 'bingbot', 'search',
    'Microsoft''s primary web crawler for Bing Search indexing.',
-   'https://www.bing.com/bingbot.htm', 'active', '2026-07-22', '2026-07-22', NULL),
+   -- Phase 15 (2026-08-11): the old bingbot.htm URL now redirects
+   -- (bing.com/bingbot.htm -> aka.ms/bingbot -> this URL). Evidence-only
+   -- correction -- the source moved, the classification did not change.
+   -- The destination remains JS-rendered (manual_review_required per
+   -- docs/registry/SOURCE_VERIFICATION_POLICY.md), same as before.
+   'https://www.bing.com/webmaster/help/which-crawlers-does-bing-use-8c184ec0', 'active', '2026-07-22', '2026-08-11', NULL),
   ('crw_meta_web_indexer', 'op_meta', 'Meta-WebIndexer', 'Meta-WebIndexer', 'search',
    'Navigates the web to improve Meta AI search result quality.',
    'https://developers.facebook.com/docs/sharing/webmasters/web-crawlers/', 'active', '2026-07-22', '2026-07-22', NULL),

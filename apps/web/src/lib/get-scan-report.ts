@@ -1,6 +1,7 @@
-import { eq } from "drizzle-orm";
+import { eq, inArray } from "drizzle-orm";
 import { schema } from "@crawlpact/database";
 import type { Database } from "@crawlpact/database";
+import { getRegistryVersionSnapshotMap, type CanonicalCrawlerSnapshot } from "./registry-snapshot";
 import type {
   AuditReportResponse,
   AuditStateResponse,
@@ -149,22 +150,80 @@ export async function getScanReport(
   const [scan] = await db.select().from(schema.scans).where(eq(schema.scans.id, scanId)).limit(1);
   if (!scan) return null;
 
-  const crawlerResults = await db
+  const crawlerResultRows = await db
     .select({
       crawlerId: schema.scanCrawlerResults.crawlerId,
       result: schema.scanCrawlerResults.result,
       matchedRule: schema.scanCrawlerResults.matchedRule,
       matchedLineNumber: schema.scanCrawlerResults.matchedLineNumber,
-      crawlerName: schema.crawlers.name,
-      operatorName: schema.crawlerOperators.name,
-      purpose: schema.crawlers.purpose,
-      lastVerifiedAt: schema.crawlers.lastVerifiedAt,
-      officialSourceUrl: schema.crawlers.officialSourceUrl,
     })
     .from(schema.scanCrawlerResults)
-    .innerJoin(schema.crawlers, eq(schema.scanCrawlerResults.crawlerId, schema.crawlers.id))
-    .innerJoin(schema.crawlerOperators, eq(schema.crawlers.operatorId, schema.crawlerOperators.id))
     .where(eq(schema.scanCrawlerResults.scanId, scanId));
+
+  // Phase 15 fix: a historical scan must display the crawler identity
+  // (name/operator/purpose/last-verified) exactly as it existed in the
+  // registry release the scan actually recorded (`scan.registryVersionId`),
+  // not whatever the live, mutable `crawlers` row says today — otherwise
+  // correcting a crawler's classification retroactively rewrites every past
+  // report that ever mentioned it. Scans recorded before `registryVersionId`
+  // existed (pre-Phase-6) have no frozen release to resolve against; those
+  // fall back to a live join, a disclosed pre-existing compatibility gap
+  // rather than a new one.
+  const snapshotMap: Map<string, CanonicalCrawlerSnapshot> = scan.registryVersionId
+    ? await getRegistryVersionSnapshotMap(db, scan.registryVersionId)
+    : new Map();
+
+  const unresolvedCrawlerIds = crawlerResultRows
+    .filter((row) => !snapshotMap.has(row.crawlerId))
+    .map((row) => row.crawlerId);
+  const liveFallback = new Map<
+    string,
+    {
+      name: string;
+      operatorName: string;
+      purpose: CanonicalCrawlerSnapshot["purpose"];
+      lastVerifiedAt: string | null;
+    }
+  >();
+  if (unresolvedCrawlerIds.length > 0) {
+    const liveRows = await db
+      .select({
+        crawlerId: schema.crawlers.id,
+        crawlerName: schema.crawlers.name,
+        operatorName: schema.crawlerOperators.name,
+        purpose: schema.crawlers.purpose,
+        lastVerifiedAt: schema.crawlers.lastVerifiedAt,
+      })
+      .from(schema.crawlers)
+      .innerJoin(
+        schema.crawlerOperators,
+        eq(schema.crawlers.operatorId, schema.crawlerOperators.id),
+      )
+      .where(inArray(schema.crawlers.id, unresolvedCrawlerIds));
+    for (const row of liveRows) {
+      liveFallback.set(row.crawlerId, {
+        name: row.crawlerName,
+        operatorName: row.operatorName,
+        purpose: row.purpose,
+        lastVerifiedAt: row.lastVerifiedAt,
+      });
+    }
+  }
+
+  const crawlerResults = crawlerResultRows.map((row) => {
+    const snapshot = snapshotMap.get(row.crawlerId);
+    const fallback = liveFallback.get(row.crawlerId);
+    return {
+      crawlerId: row.crawlerId,
+      result: row.result,
+      matchedRule: row.matchedRule,
+      matchedLineNumber: row.matchedLineNumber,
+      crawlerName: snapshot?.name ?? fallback?.name ?? "Unknown crawler",
+      operatorName: snapshot?.operatorName ?? fallback?.operatorName ?? "Unknown operator",
+      purpose: snapshot?.purpose ?? fallback?.purpose ?? "unknown",
+      lastVerifiedAt: snapshot?.lastVerifiedAt ?? fallback?.lastVerifiedAt ?? null,
+    };
+  });
 
   const findingRows = await db
     .select()

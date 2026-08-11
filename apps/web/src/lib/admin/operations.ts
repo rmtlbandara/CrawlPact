@@ -5,6 +5,7 @@ import { getStatusOverview, type StatusOverview } from "../status/public-status"
 import { getOperationalCapacitySnapshot, type OperationalCapacitySnapshot } from "./capacity";
 import { detectSchedulerAnomalies, type SchedulerAnomaly } from "./scheduler";
 import { listActiveOperationalAlerts, type OperationalAlertRow } from "./operational-alerts";
+import { getRegistryHealth, type RegistryHealthCheck } from "./registry-health";
 
 /**
  * Composes the Super Admin operations control plane (Phase 14 §29-31) from
@@ -118,6 +119,8 @@ export type OperationsSummary = {
   schedulerAnomalies: SchedulerAnomaly[];
   activeAlerts: OperationalAlertRow[];
   trends: ReliabilityTrends[];
+  /** Phase 15 §125 — read-only, internal-only (see registry-health.ts). */
+  registryHealth: RegistryHealthCheck;
   /**
    * Deliberately null — a Worker binding has no way to read its own
    * deployment commit SHA / Worker version at runtime (same "genuinely
@@ -145,6 +148,7 @@ export async function getOperationsSummary(
     trends24h,
     trends7d,
     trends30d,
+    registryHealth,
   ] = await Promise.all([
     getStatusOverview(db),
     getOperationalCapacitySnapshot(db, rawDb, agencyLogos),
@@ -154,6 +158,7 @@ export async function getOperationsSummary(
     getReliabilityTrends(db, 24, now),
     getReliabilityTrends(db, 168, now),
     getReliabilityTrends(db, 720, now),
+    getRegistryHealth(db),
   ]);
 
   return {
@@ -164,5 +169,6 @@ export async function getOperationsSummary(
     activeAlerts,
     trends: [trends1h, trends24h, trends7d, trends30d],
     deployment: null,
+    registryHealth,
   };
 }
