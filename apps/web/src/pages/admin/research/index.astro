@@ -1,0 +1,23 @@
+---
+export const prerender = false;
+import AdminLayout from "../../../layouts/AdminLayout.astro";
+import AdminPageHeader from "../../../components/admin/AdminPageHeader.astro";
+import { ResearchManager } from "../../../components/admin/ResearchManager";
+import { createDb } from "@crawlpact/database";
+import { getEnv } from "../../../lib/env";
+import { getAdminPageSession } from "../../../lib/auth/require-admin";
+
+const db = createDb(getEnv().DB);
+const admin = await getAdminPageSession(Astro.request, db);
+if (!admin) return Astro.redirect("/sign-in");
+---
+
+<AdminLayout title="Research" displayName={admin.user.displayName}>
+  <AdminPageHeader
+    title="Research"
+    description="Phase 16 Policy Observatory publication workspace — generate a Registry Landscape draft from the active registry release, submit it for review, and explicitly publish, correct, or withdraw it. Publication is always manual; nothing here auto-publishes."
+  />
+  <div class="mt-6">
+    <ResearchManager client:load />
+  </div>
+</AdminLayout>

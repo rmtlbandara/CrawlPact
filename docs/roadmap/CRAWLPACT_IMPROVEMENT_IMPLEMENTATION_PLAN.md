@@ -327,7 +327,12 @@ PRODUCT_TERMINOLOGY_GLOSSARY,CLAIMS_AND_MESSAGING_GUIDE,MESSAGING_SURFACE_INVENT
 
 - **Objective**: Build research/authority content on top of the now-governance-hardened registry.
 - **Dependencies**: Phase 15.
-- **Status**: not started.
+- **Status**: Registry Observatory (Layer A) shipped — `/observatory`, `/observatory/registry`,
+  `/observatory/methodology`, `/research`, `/research/[slug]`, `/admin/research` publication
+  workflow, full research-governance/methodology documentation. Website Policy Observatory
+  (Layer B) deliberately deferred — see `docs/research/PHASE_16_RESEARCH_CORPUS_DECISION.md`. No
+  publication has been published to production yet — see
+  `docs/research/PHASE_16_FIRST_RESEARCH_PUBLICATION_EVIDENCE.md`.
 
 ### Phase 17 — Customer Pilot and Commercial Validation
 

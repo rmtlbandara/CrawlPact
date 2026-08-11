@@ -31,6 +31,14 @@ const STATIC_ROUTES = [
   "/scoring",
   "/scanner",
   "/changelog",
+  // Phase 16: /research and /research/[slug] are deliberately excluded here
+  // — this file is prerender=true (build-time, no D1 binding available), so
+  // it cannot reflect which publications are actually published, and
+  // nothing is published yet. Revisit once a first publication ships; see
+  // docs/product/PHASE_16_OBSERVATORY_ROUTE_ARCHITECTURE.md.
+  "/observatory",
+  "/observatory/registry",
+  "/observatory/methodology",
   "/status",
   "/security",
   "/privacy",

@@ -8,3 +8,4 @@ export * from "./admin-security";
 export * from "./preferences";
 export * from "./incidents";
 export * from "./workspace";
+export * from "./research";

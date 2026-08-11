@@ -1,0 +1,203 @@
+---
+export const prerender = false;
+import MarketingLayout from "../../layouts/MarketingLayout.astro";
+import { AnalyticsBeacon } from "../../components/AnalyticsBeacon";
+import { createDb } from "@crawlpact/database";
+import { getEnv } from "../../lib/env";
+import {
+  getVisibleResearchPublicationBySlug,
+  parsePublicationContent,
+} from "../../lib/admin/research";
+
+const { slug } = Astro.params;
+const db = createDb(getEnv().DB);
+const row = slug ? await getVisibleResearchPublicationBySlug(db, slug) : null;
+
+if (!row) {
+  Astro.response.status = 404;
+} else {
+  // Published/corrected content is immutable — long public cache is safe.
+  // Never cache a withdrawn page publicly-indefinitely long, in case a
+  // withdrawal itself needs to propagate quickly.
+  Astro.response.headers.set(
+    "Cache-Control",
+    row.status === "withdrawn" ? "public, max-age=60" : "public, max-age=3600",
+  );
+}
+
+const content = row ? parsePublicationContent(row) : null;
+---
+
+<MarketingLayout
+  title={row ? `${row.title} | CrawlPact Research` : "Not found | CrawlPact"}
+  description={content?.summary ?? "This research publication could not be found."}
+  canonicalPath={row ? `/research/${row.slug}` : undefined}
+  noindex={!row || row.status === "withdrawn"}
+  ogType={row ? "article" : "website"}
+  publishedDate={row?.publishedAt ?? undefined}
+  updatedDate={row?.correctedAt ?? row?.publishedAt ?? undefined}
+  breadcrumbs={row
+    ? [
+        { name: "Home", url: "/" },
+        { name: "Observatory", url: "/observatory" },
+        { name: "Research", url: "/research" },
+        { name: row.title, url: `/research/${row.slug}` },
+      ]
+    : [{ name: "Home", url: "/" }]}
+>
+  <article class="mx-auto max-w-reading px-4 py-12 sm:px-6">
+    {
+      !row || !content ? (
+        <>
+          <h1 class="text-h1 text-neutral-950">Not found</h1>
+          <p class="mt-3 text-body text-neutral-700">
+            This research publication doesn't exist, or hasn't been published yet.
+          </p>
+          <a href="/research" class="mt-4 inline-block text-brand-700 underline underline-offset-2">
+            Back to research
+          </a>
+        </>
+      ) : (
+        <>
+          <AnalyticsBeacon
+            client:load
+            eventName="research_publication_viewed"
+            properties={{ slug: row.slug }}
+          />
+          {row.status === "withdrawn" && (
+            <div class="mb-6 rounded-card border border-red-300 bg-red-50 p-4 text-supporting text-red-800">
+              <strong>Withdrawn.</strong> {row.withdrawalReason}
+            </div>
+          )}
+          {row.status === "corrected" && (
+            <div class="mb-6 rounded-card border border-amber-300 bg-amber-50 p-4 text-supporting text-amber-800">
+              This publication has been corrected since it was first published — see Corrections
+              below.
+            </div>
+          )}
+
+          <p class="text-caption font-medium uppercase tracking-wide text-neutral-500">
+            CrawlPact Research
+          </p>
+          <h1 class="mt-1 text-h1 text-neutral-950">{content.title}</h1>
+          <p class="mt-3 text-body text-neutral-700">{content.summary}</p>
+
+          <dl class="mt-6 grid grid-cols-2 gap-4 rounded-card border border-neutral-200 bg-neutral-50 p-4 text-supporting sm:grid-cols-4">
+            <div>
+              <dt class="text-neutral-500">Data collected</dt>
+              <dd class="font-medium text-neutral-950">
+                {new Date(content.generatedAt).toISOString().slice(0, 10)}
+              </dd>
+            </div>
+            <div>
+              <dt class="text-neutral-500">Published</dt>
+              <dd class="font-medium text-neutral-950">
+                {row.publishedAt ? new Date(row.publishedAt).toISOString().slice(0, 10) : "n/a"}
+              </dd>
+            </div>
+            <div>
+              <dt class="text-neutral-500">Registry version</dt>
+              <dd class="font-medium text-neutral-950">{content.registryVersionLabel}</dd>
+            </div>
+            <div>
+              <dt class="text-neutral-500">Methodology</dt>
+              <dd class="font-medium text-neutral-950">{content.methodologyVersion}</dd>
+            </div>
+          </dl>
+
+          <section class="mt-10">
+            <h2 class="text-h3 text-neutral-950">Key findings</h2>
+            <div class="mt-3 overflow-x-auto">
+              <table class="w-full min-w-[560px] border-collapse text-supporting">
+                <caption class="sr-only">
+                  Key findings with numerator, denominator, and scope
+                </caption>
+                <thead>
+                  <tr class="border-b border-neutral-300">
+                    <th scope="col" class="py-2 text-left font-medium text-neutral-700">
+                      Finding
+                    </th>
+                    <th scope="col" class="py-2 text-right font-medium text-neutral-700">
+                      Count
+                    </th>
+                    <th scope="col" class="py-2 text-left font-medium text-neutral-700">
+                      Scope
+                    </th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {content.keyFindings.map((f) => (
+                    <tr class="border-b border-neutral-100">
+                      <td class="py-2 text-neutral-950">{f.label}</td>
+                      <td class="py-2 text-right text-neutral-950">
+                        {f.denominator === 0
+                          ? "Insufficient basis"
+                          : `${f.numerator} / ${f.denominator}`}
+                      </td>
+                      <td class="py-2 text-neutral-700">{f.scope}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          </section>
+
+          {content.sections.map((section) => (
+            <section class="mt-10">
+              <h2 class="text-h3 text-neutral-950">{section.heading}</h2>
+              <p class="mt-2 text-body text-neutral-700">{section.body}</p>
+            </section>
+          ))}
+
+          <section class="mt-10 rounded-card border border-neutral-200 bg-neutral-50 p-4">
+            <h2 class="text-card-heading text-neutral-950">Limitations</h2>
+            <ul class="mt-2 list-inside list-disc text-supporting text-neutral-700">
+              {content.limitations.map((l) => (
+                <li>{l}</li>
+              ))}
+            </ul>
+          </section>
+
+          <section class="mt-10">
+            <h2 class="text-h3 text-neutral-950">Corrections</h2>
+            {content.correctionLog.length === 0 ? (
+              <p class="mt-2 text-supporting text-neutral-500">No corrections have been made.</p>
+            ) : (
+              <ul class="mt-2 flex flex-col gap-3 text-supporting text-neutral-700">
+                {content.correctionLog.map((c) => (
+                  <li class="rounded-card border border-neutral-200 p-3">
+                    <p class="text-caption text-neutral-500">
+                      {new Date(c.date).toLocaleDateString()} ·{" "}
+                      {c.conclusionsChanged ? "conclusions changed" : "conclusions unchanged"}
+                    </p>
+                    <p class="mt-1">
+                      <strong>What changed:</strong> {c.what}
+                    </p>
+                    <p class="mt-1">
+                      <strong>Why:</strong> {c.why}
+                    </p>
+                  </li>
+                ))}
+              </ul>
+            )}
+          </section>
+
+          <section class="mt-10 flex flex-wrap gap-4 text-supporting">
+            <a href="/observatory/methodology" class="text-brand-700 underline underline-offset-2">
+              Methodology
+            </a>
+            <a href="/observatory/registry" class="text-brand-700 underline underline-offset-2">
+              Registry Observatory
+            </a>
+            <a href="/methodology#corrections" class="text-brand-700 underline underline-offset-2">
+              Report a correction
+            </a>
+            <a href="/tools" class="text-brand-700 underline underline-offset-2">
+              Audit a domain free
+            </a>
+          </section>
+        </>
+      )
+    }
+  </article>
+</MarketingLayout>
