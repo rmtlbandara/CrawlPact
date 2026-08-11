@@ -1,0 +1,138 @@
+---
+export const prerender = false;
+import MarketingLayout from "../../layouts/MarketingLayout.astro";
+import { AnalyticsBeacon } from "../../components/AnalyticsBeacon";
+import { createDb } from "@crawlpact/database";
+import { getEnv } from "../../lib/env";
+import { getRegistryObservatorySnapshot } from "../../lib/observatory/registry-observatory";
+import { listPublishedResearchPublications } from "../../lib/admin/research";
+
+// Phase 11 (docs/performance/PUBLIC_CACHE_POLICY.md): identical content for
+// every visitor, no session/cookie-dependent rendering (confirmed by
+// reading this file in full before adding this) — safe to cache. Shorter
+// TTL than /changelog's 300s because this is the Observatory's own summary
+// page a reader may reasonably expect to be current.
+Astro.response.headers.set("Cache-Control", "public, max-age=120");
+
+const db = createDb(getEnv().DB);
+const observatory = await getRegistryObservatorySnapshot(db);
+const publications = await listPublishedResearchPublications(db);
+---
+
+<MarketingLayout
+  title="AI Crawler Policy Observatory | CrawlPact"
+  description="Source-backed research on crawler registries and publicly declared AI crawler policy, with visible methodology, denominators, and limitations."
+  canonicalPath="/observatory"
+  breadcrumbs={[
+    { name: "Home", url: "/" },
+    { name: "Observatory", url: "/observatory" },
+  ]}
+>
+  <AnalyticsBeacon client:load eventName="observatory_viewed" />
+  <article class="mx-auto max-w-reading px-4 py-12 sm:px-6">
+    <h1 class="text-h1 text-neutral-950">AI Crawler Policy Observatory</h1>
+    <p class="mt-3 text-body text-neutral-700">
+      CrawlPact's public, reproducible research and measurement layer for understanding how AI
+      crawler-policy signals and crawler-registry information change over time. This is a different
+      concept from the product's Evidence Observatory UI — see the
+      <a href="/observatory/methodology" class="text-brand-700 underline underline-offset-2"
+        >methodology page</a
+      > for the distinction.
+    </p>
+    <p
+      class="mt-3 rounded-card border border-neutral-200 bg-neutral-50 p-4 text-supporting text-neutral-700"
+    >
+      CrawlPact measures public policy signals websites and crawler operators publish. It does not
+      observe or guarantee how external crawlers actually behave.
+    </p>
+
+    <section class="mt-10">
+      <h2 class="text-h3 text-neutral-950">Registry Observatory</h2>
+      {
+        observatory ? (
+          <>
+            <p class="mt-2 text-body text-neutral-700">
+              {observatory.crawlerCount} tracked crawler records across {observatory.operatorCount}{" "}
+              operators, from registry release {observatory.versionLabel}.
+            </p>
+            <a
+              href="/observatory/registry"
+              class="mt-3 inline-block text-supporting font-medium text-brand-700 underline underline-offset-2"
+            >
+              View full Registry Observatory report
+            </a>
+          </>
+        ) : (
+          <p class="mt-2 text-body text-neutral-700">No active registry release exists.</p>
+        )
+      }
+    </section>
+
+    <section class="mt-10">
+      <h2 class="text-h3 text-neutral-950">Website Policy Observatory</h2>
+      <p class="mt-2 text-body text-neutral-700">
+        Not yet published. A website-level policy benchmark requires a separately governed,
+        versioned research corpus with its own privacy and methodology review — see the{" "}
+        <a href="/observatory/methodology" class="text-brand-700 underline underline-offset-2">
+          methodology page
+        </a>{" "}
+        for the current corpus decision. Publishing a Registry Observatory first, rather than a weak or
+        unrepresentative website-policy statistic, is a deliberate choice.
+      </p>
+    </section>
+
+    <section class="mt-10">
+      <h2 class="text-h3 text-neutral-950">Latest research</h2>
+      {
+        publications.length === 0 ? (
+          <p class="mt-2 text-body text-neutral-700">
+            No Policy Observatory research has been published yet.
+          </p>
+        ) : (
+          <ol class="mt-4 flex flex-col gap-4 border-l border-neutral-200 pl-6">
+            {publications.map((pub) => (
+              <li>
+                <p class="text-supporting text-neutral-500">
+                  {pub.publishedAt && new Date(pub.publishedAt).toLocaleDateString()}
+                  {pub.status === "corrected" && (
+                    <span class="ml-2 text-amber-700">(corrected)</span>
+                  )}
+                </p>
+                <a
+                  href={`/research/${pub.slug}`}
+                  class="mt-1 block text-card-heading text-neutral-950 underline underline-offset-2"
+                >
+                  {pub.title}
+                </a>
+              </li>
+            ))}
+          </ol>
+        )
+      }
+      <a
+        href="/research"
+        class="mt-4 inline-block text-supporting font-medium text-brand-700 underline underline-offset-2"
+      >
+        All research publications
+      </a>
+    </section>
+
+    <section class="mt-10 grid gap-4 sm:grid-cols-3">
+      <a
+        href="/observatory/methodology"
+        class="rounded-card border border-neutral-200 p-4 text-supporting font-medium text-brand-700 underline underline-offset-2"
+        >Methodology &amp; definitions</a
+      >
+      <a
+        href="/changelog"
+        class="rounded-card border border-neutral-200 p-4 text-supporting font-medium text-brand-700 underline underline-offset-2"
+        >Registry releases</a
+      >
+      <a
+        href="/methodology#corrections"
+        class="rounded-card border border-neutral-200 p-4 text-supporting font-medium text-brand-700 underline underline-offset-2"
+        >Correction policy</a
+      >
+    </section>
+  </article>
+</MarketingLayout>

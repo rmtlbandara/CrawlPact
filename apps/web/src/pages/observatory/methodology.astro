@@ -1,0 +1,156 @@
+---
+export const prerender = true;
+import MarketingLayout from "../../layouts/MarketingLayout.astro";
+import { AnalyticsBeacon } from "../../components/AnalyticsBeacon";
+import {
+  POLICY_OBSERVATORY_METHODOLOGY_VERSION,
+  SMALL_CELL_THRESHOLD,
+} from "../../lib/research/methodology";
+---
+
+<MarketingLayout
+  title="Research Methodology | AI Crawler Policy Observatory | CrawlPact"
+  description="How CrawlPact's Policy Observatory measures crawler-registry statistics: sources, versioning, claim classification, missing-data handling, and limitations."
+  canonicalPath="/observatory/methodology"
+  breadcrumbs={[
+    { name: "Home", url: "/" },
+    { name: "Observatory", url: "/observatory" },
+    { name: "Methodology", url: "/observatory/methodology" },
+  ]}
+>
+  <AnalyticsBeacon client:load eventName="observatory_methodology_viewed" />
+  <article class="mx-auto max-w-reading px-4 py-12 sm:px-6">
+    <h1 class="text-h1 text-neutral-950">Policy Observatory research methodology</h1>
+    <p class="mt-3 text-body text-neutral-700">
+      Current methodology version: <strong>{POLICY_OBSERVATORY_METHODOLOGY_VERSION}</strong>. A
+      material methodological change creates a new version; this page always describes the current
+      one. Published research always states which version it used.
+    </p>
+
+    <section class="mt-10">
+      <h2 class="text-h3 text-neutral-950">Two different "Observatory" concepts</h2>
+      <p class="mt-2 text-body text-neutral-700">
+        CrawlPact's product interface uses an "Evidence Observatory" visual language (Observed →
+        Interpretation → Impact → Action → Evidence) to present one domain's audit results. The
+        <strong>Policy Observatory</strong> described on this page is a different, separate concept: a
+        public research and measurement layer about the crawler-policy ecosystem as a whole, not about
+        any one domain's audit.
+      </p>
+    </section>
+
+    <section class="mt-10">
+      <h2 class="text-h3 text-neutral-950">Research authority principle</h2>
+      <p class="mt-2 text-body text-neutral-700">
+        CrawlPact earns research authority by making evidence, methodology, denominators,
+        limitations, provenance, and corrections visible — not by using authoritative-sounding
+        language. Publications avoid unsupported phrasing such as "the definitive AI crawler
+        database," "most websites block AI crawlers," or "industry standard" unless the underlying
+        study design genuinely supports the exact claim.
+      </p>
+    </section>
+
+    <section class="mt-10">
+      <h2 class="text-h3 text-neutral-950">Registry source policy</h2>
+      <p class="mt-2 text-body text-neutral-700">
+        Every Registry Observatory figure is computed from CrawlPact's immutable crawler registry
+        releases, never from the live/mutable crawler table and never from the static crawler
+        directory's Markdown content. See{" "}
+        <a
+          href="/methodology#registry-verification"
+          class="text-brand-700 underline underline-offset-2"
+        >
+          how registry entries are verified
+        </a>{" "}
+        for the underlying source-verification process that populates the registry itself.
+      </p>
+    </section>
+
+    <section class="mt-10">
+      <h2 class="text-h3 text-neutral-950">Claim classes</h2>
+      <p class="mt-2 text-body text-neutral-700">Every publication statement falls into one of:</p>
+      <dl class="mt-3 flex flex-col gap-3 text-supporting text-neutral-700">
+        <div>
+          <dt class="font-medium text-neutral-950">Observed</dt>
+          <dd>
+            Directly measured — e.g. "8 of 23 tracked crawler records are classified as Search."
+          </dd>
+        </div>
+        <div>
+          <dt class="font-medium text-neutral-950">Computed</dt>
+          <dd>Deterministically calculated from observed data — e.g. a percentage.</dd>
+        </div>
+        <div>
+          <dt class="font-medium text-neutral-950">Supported interpretation</dt>
+          <dd>An interpretation consistent with the measured signals, stated as such.</dd>
+        </div>
+        <div>
+          <dt class="font-medium text-neutral-950">Unsupported</dt>
+          <dd>
+            Not published, by definition — see the correction policy if one ever slips through.
+          </dd>
+        </div>
+      </dl>
+    </section>
+
+    <section class="mt-10">
+      <h2 class="text-h3 text-neutral-950">Missing and unavailable data</h2>
+      <p class="mt-2 text-body text-neutral-700">
+        Missing data is never silently treated as "absent" or "false." Where a Registry Observatory
+        figure has no value (for example, a release published before checksums existed), the
+        publication states that explicitly rather than omitting or zero-filling it.
+      </p>
+    </section>
+
+    <section class="mt-10">
+      <h2 class="text-h3 text-neutral-950">Small-cell suppression</h2>
+      <p class="mt-2 text-body text-neutral-700">
+        Registry Observatory counts are exhaustive population counts of CrawlPact's own registry,
+        not a sample — the small-cell threshold does not apply to them. A future website-policy
+        study would suppress any cohort smaller than {SMALL_CELL_THRESHOLD} observations, showing "Insufficient
+        sample" instead of an unstable percentage.
+      </p>
+    </section>
+
+    <section class="mt-10">
+      <h2 class="text-h3 text-neutral-950">Comparability and trends</h2>
+      <p class="mt-2 text-body text-neutral-700">
+        Two release-history points are described as a single "change since previous release," not a
+        "trend," until enough comparable published releases exist. Registry taxonomy changes (a new
+        purpose value, a new lifecycle status) are called out explicitly rather than folded silently
+        into a raw count.
+      </p>
+    </section>
+
+    <section class="mt-10">
+      <h2 class="text-h3 text-neutral-950">Website Policy Observatory — not yet built</h2>
+      <p class="mt-2 text-body text-neutral-700">
+        A website-level policy benchmark (how commonly studied sites address AI training crawlers,
+        and similar questions) requires a separately governed, versioned, bounded research corpus of
+        publicly accessible websites, its own crawling policy, a capacity measurement, and a privacy
+        review — none of that exists yet. Rather than publish a weak or unrepresentative statistic,
+        only the Registry Observatory is published this phase.
+      </p>
+    </section>
+
+    <section class="mt-10">
+      <h2 class="text-h3 text-neutral-950">Reproducibility</h2>
+      <p class="mt-2 text-body text-neutral-700">
+        Every published statistic is generated by code from a pinned registry release — never
+        hand-typed. Each publication carries a SHA-256 checksum over its content, independently
+        recomputable from the same pinned release at any later time.
+      </p>
+    </section>
+
+    <section class="mt-10">
+      <h2 class="text-h3 text-neutral-950">Corrections</h2>
+      <p class="mt-2 text-body text-neutral-700">
+        A published statistic is never silently rewritten. A correction records what changed, why,
+        the date, and whether the publication's conclusions changed, and remains visible on the
+        publication page. See{" "}
+        <a href="/methodology#corrections" class="text-brand-700 underline underline-offset-2">
+          how to report a correction
+        </a>.
+      </p>
+    </section>
+  </article>
+</MarketingLayout>

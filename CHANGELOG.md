@@ -12,6 +12,49 @@ Phase 1's rule against fabricating or restructuring verifiable history. Add new 
 this distinguishes a code merge from a production deployment, which are not the same event (see
 the "Production deployment" entries below for the established pattern).
 
+## Unreleased
+
+### Added (Phase 16: Policy Observatory and Research Authority)
+
+- Registry Observatory (`/observatory`, `/observatory/registry`, `/observatory/methodology`) —
+  crawler/operator counts, purpose and lifecycle distribution, operator-by-purpose matrix,
+  source-verification freshness, and release history with semantic-diff-based change
+  classification, computed exclusively from Phase 15's immutable registry releases
+  (`lib/observatory/registry-observatory.ts`) — never from the live mutable `crawlers` table or the
+  static crawler directory.
+- Governed research-publication workflow: `research_publications` table (migration `0035`),
+  draft → review → published → corrected → withdrawn lifecycle
+  (`lib/admin/research.ts`), automated claim/denominator/unsupported-language validation
+  (`validateResearchPublicationContent`), and a SHA-256 reproducibility checksum
+  (`lib/research/publication-checksum.ts`) excluding non-reproducible metadata
+  (`generatedAt`/`correctionLog`) so reproduction is stable.
+- `/research` and `/research/[slug]` public routes (published/corrected content only; withdrawn
+  publications remain visible with a notice, never 404'd).
+- Super Admin `/admin/research` workspace: generate a "AI Crawler Registry Landscape" draft from
+  the active registry release, submit for review, publish, correct, or withdraw — publication is
+  always a manual, explicit action, never automatic.
+- New validators: `pnpm research:validate`, `pnpm research:integrity:verify` — wired into
+  `quality:gate`, CI, and `verify-push.sh`.
+- 5 new first-party `product_events` (`observatory_viewed` and 4 related page-view events) — no
+  GA allowlist change; GA does not load on any new route this phase.
+- 21 new research/data/security/operations/product/analytics/report docs — see
+  `docs/governance/DOCUMENTATION_INVENTORY.md`.
+
+### Not changed (Phase 16)
+
+- Website Policy Observatory (Layer B — a website-policy benchmark study) was **not built**. No
+  research corpus, no automated research crawling, no `research_corpora`/`research_runs`/
+  `research_observations` tables exist. See `docs/research/PHASE_16_RESEARCH_CORPUS_DECISION.md`.
+- No publication has been published to production — `/observatory` and `/research` correctly show
+  "nothing published yet." See `docs/research/PHASE_16_FIRST_RESEARCH_PUBLICATION_EVIDENCE.md`.
+- Phase 15's prepared registry correction (Bingbot/Google-Extended) remains unactivated — this
+  phase did not activate it merely to have newer research data (§183); the active registry release
+  is unchanged at `2026.07.3`.
+- Crawler classifications, ruleset semantics, pricing, Paddle, plan limits, monitoring frequencies,
+  notification channels, and Phase 13's analytics/consent architecture are all unchanged.
+- The existing `/crawlers` static directory architecture is unchanged (RISK-035 re-evaluated, not
+  closed — see `docs/product/PHASE_16_RISK_035_DECISION.md`).
+
 ## Production deployment (2026-08-11) — Phase 15: Crawler Registry Governance and Public Changelog
 
 PR #109 (squash-merged as `0942723`, full commit `09427238a9c644c8d745abc2b71a91a0e2f3e57b`) deployed

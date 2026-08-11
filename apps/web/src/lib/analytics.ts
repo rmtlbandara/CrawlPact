@@ -148,6 +148,15 @@ export const PRODUCT_EVENT_NAMES = [
   "analytics_consent_granted",
   "analytics_consent_declined",
   "analytics_consent_changed",
+  // Policy Observatory and Research Authority (Phase 16). Only page-view-
+  // style beacons for public research surfaces — no corpus domain, research
+  // study internal ID, or private filter value is ever sent as a property.
+  // See docs/analytics/PHASE_16_OBSERVATORY_EVENT_MODEL.md.
+  "observatory_viewed",
+  "observatory_registry_viewed",
+  "observatory_methodology_viewed",
+  "research_index_viewed",
+  "research_publication_viewed",
 ] as const;
 
 export type ProductEventName = (typeof PRODUCT_EVENT_NAMES)[number];

@@ -1,0 +1,314 @@
+---
+export const prerender = false;
+import MarketingLayout from "../../layouts/MarketingLayout.astro";
+import { AnalyticsBeacon } from "../../components/AnalyticsBeacon";
+import { createDb } from "@crawlpact/database";
+import { getEnv } from "../../lib/env";
+import { getRegistryObservatorySnapshot } from "../../lib/observatory/registry-observatory";
+import { POLICY_OBSERVATORY_METHODOLOGY_VERSION } from "../../lib/research/methodology";
+
+Astro.response.headers.set("Cache-Control", "public, max-age=120");
+
+const db = createDb(getEnv().DB);
+const observatory = await getRegistryObservatorySnapshot(db);
+
+function purposeLabel(purpose: string): string {
+  return purpose.replace(/_/g, " ");
+}
+---
+
+<MarketingLayout
+  title="Registry Observatory | AI Crawler Policy Observatory | CrawlPact"
+  description="Crawler and operator counts, purpose distribution, lifecycle status, source-verification freshness, and release history — computed from CrawlPact's immutable crawler registry."
+  canonicalPath="/observatory/registry"
+  breadcrumbs={[
+    { name: "Home", url: "/" },
+    { name: "Observatory", url: "/observatory" },
+    { name: "Registry", url: "/observatory/registry" },
+  ]}
+>
+  <AnalyticsBeacon client:load eventName="observatory_registry_viewed" />
+  <article class="mx-auto max-w-reading px-4 py-12 sm:px-6">
+    <h1 class="text-h1 text-neutral-950">Registry Observatory</h1>
+    {
+      !observatory ? (
+        <p class="mt-4 text-body text-neutral-700">No active registry release exists.</p>
+      ) : (
+        <>
+          <p class="mt-3 text-body text-neutral-700">
+            Every figure below is computed directly from CrawlPact's immutable registry release{" "}
+            <strong>{observatory.versionLabel}</strong>, resolved from the same frozen release
+            snapshot production evaluation and historical scan rendering use — never from a live,
+            mutable table, and never from the static crawler directory pages.
+          </p>
+
+          <dl class="mt-6 grid grid-cols-2 gap-4 rounded-card border border-neutral-200 bg-neutral-50 p-4 text-supporting sm:grid-cols-4">
+            <div>
+              <dt class="text-neutral-500">Data collected</dt>
+              <dd class="font-medium text-neutral-950">
+                {new Date(observatory.generatedAt).toISOString()}
+              </dd>
+            </div>
+            <div>
+              <dt class="text-neutral-500">Registry release</dt>
+              <dd class="font-medium text-neutral-950">{observatory.versionLabel}</dd>
+            </div>
+            <div>
+              <dt class="text-neutral-500">Checksum</dt>
+              <dd class="break-all font-mono text-caption text-neutral-950">
+                {observatory.checksum ?? "not computed for this release"}
+              </dd>
+            </div>
+            <div>
+              <dt class="text-neutral-500">Methodology</dt>
+              <dd class="font-medium text-neutral-950">{POLICY_OBSERVATORY_METHODOLOGY_VERSION}</dd>
+            </div>
+          </dl>
+
+          <section class="mt-10">
+            <h2 class="text-h3 text-neutral-950">Crawler and operator counts</h2>
+            <table class="mt-4 w-full border-collapse text-supporting">
+              <caption class="sr-only">Crawler and operator summary counts</caption>
+              <tbody>
+                <tr class="border-b border-neutral-200">
+                  <th scope="row" class="py-2 text-left font-medium text-neutral-700">
+                    Tracked crawler records
+                  </th>
+                  <td class="py-2 text-right text-neutral-950">{observatory.crawlerCount}</td>
+                </tr>
+                <tr class="border-b border-neutral-200">
+                  <th scope="row" class="py-2 text-left font-medium text-neutral-700">
+                    Evaluation-eligible (active, deprecated, replaced)
+                  </th>
+                  <td class="py-2 text-right text-neutral-950">
+                    {observatory.evaluationEligibleCount}
+                  </td>
+                </tr>
+                <tr>
+                  <th scope="row" class="py-2 text-left font-medium text-neutral-700">
+                    Distinct operators
+                  </th>
+                  <td class="py-2 text-right text-neutral-950">{observatory.operatorCount}</td>
+                </tr>
+              </tbody>
+            </table>
+          </section>
+
+          <section class="mt-10">
+            <h2 class="text-h3 text-neutral-950">Purpose distribution</h2>
+            <p class="mt-1 text-caption text-neutral-500">
+              Denominator: {observatory.crawlerCount} tracked crawler records.
+            </p>
+            <table class="mt-3 w-full border-collapse text-supporting">
+              <caption class="sr-only">Crawler records by declared purpose</caption>
+              <thead>
+                <tr class="border-b border-neutral-300">
+                  <th scope="col" class="py-2 text-left font-medium text-neutral-700">
+                    Purpose
+                  </th>
+                  <th scope="col" class="py-2 text-right font-medium text-neutral-700">
+                    Records
+                  </th>
+                </tr>
+              </thead>
+              <tbody>
+                {Object.entries(observatory.purposeDistribution)
+                  .sort(([a], [b]) => a.localeCompare(b))
+                  .map(([purpose, count]) => (
+                    <tr class="border-b border-neutral-100">
+                      <td class="py-2 capitalize text-neutral-950">{purposeLabel(purpose)}</td>
+                      <td class="py-2 text-right text-neutral-950">{count}</td>
+                    </tr>
+                  ))}
+              </tbody>
+            </table>
+          </section>
+
+          <section class="mt-10">
+            <h2 class="text-h3 text-neutral-950">Lifecycle distribution</h2>
+            <table class="mt-3 w-full border-collapse text-supporting">
+              <caption class="sr-only">Crawler records by lifecycle status</caption>
+              <thead>
+                <tr class="border-b border-neutral-300">
+                  <th scope="col" class="py-2 text-left font-medium text-neutral-700">
+                    Lifecycle status
+                  </th>
+                  <th scope="col" class="py-2 text-right font-medium text-neutral-700">
+                    Records
+                  </th>
+                </tr>
+              </thead>
+              <tbody>
+                {Object.entries(observatory.lifecycleDistribution)
+                  .sort(([a], [b]) => a.localeCompare(b))
+                  .map(([status, count]) => (
+                    <tr class="border-b border-neutral-100">
+                      <td class="py-2 capitalize text-neutral-950">{status}</td>
+                      <td class="py-2 text-right text-neutral-950">{count}</td>
+                    </tr>
+                  ))}
+              </tbody>
+            </table>
+          </section>
+
+          <section class="mt-10">
+            <h2 class="text-h3 text-neutral-950">Operators by purpose</h2>
+            <table class="mt-3 w-full border-collapse text-supporting">
+              <caption class="sr-only">Which purposes each operator publishes crawlers for</caption>
+              <thead>
+                <tr class="border-b border-neutral-300">
+                  <th scope="col" class="py-2 text-left font-medium text-neutral-700">
+                    Operator
+                  </th>
+                  <th scope="col" class="py-2 text-left font-medium text-neutral-700">
+                    Purposes
+                  </th>
+                </tr>
+              </thead>
+              <tbody>
+                {observatory.operatorByPurpose.map((op) => (
+                  <tr class="border-b border-neutral-100">
+                    <td class="py-2 text-neutral-950">{op.operatorName}</td>
+                    <td class="py-2 capitalize text-neutral-700">
+                      {op.purposes.map(purposeLabel).join(", ")}
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+            <p class="mt-2 text-caption text-neutral-500">
+              This lists which purposes each operator currently documents separate crawlers for — it
+              is not a transparency or trust ranking (no operator quality score exists).
+            </p>
+          </section>
+
+          <section class="mt-10">
+            <h2 class="text-h3 text-neutral-950">Source-verification freshness</h2>
+            <p class="mt-1 text-caption text-neutral-500">
+              Denominator: {observatory.crawlerCount} tracked crawler records.
+            </p>
+            <table class="mt-3 w-full border-collapse text-supporting">
+              <caption class="sr-only">Source-verification freshness summary</caption>
+              <tbody>
+                <tr class="border-b border-neutral-100">
+                  <th scope="row" class="py-2 text-left font-medium text-neutral-700">
+                    Records with a recorded verification date
+                  </th>
+                  <td class="py-2 text-right text-neutral-950">
+                    {observatory.verification.verifiedCount}
+                  </td>
+                </tr>
+                <tr class="border-b border-neutral-100">
+                  <th scope="row" class="py-2 text-left font-medium text-neutral-700">
+                    Never verified
+                  </th>
+                  <td class="py-2 text-right text-neutral-950">
+                    {observatory.verification.neverVerifiedCount}
+                  </td>
+                </tr>
+                <tr class="border-b border-neutral-100">
+                  <th scope="row" class="py-2 text-left font-medium text-neutral-700">
+                    Median verification age (days)
+                  </th>
+                  <td class="py-2 text-right text-neutral-950">
+                    {observatory.verification.medianAgeDays ?? "n/a"}
+                  </td>
+                </tr>
+                <tr>
+                  <th scope="row" class="py-2 text-left font-medium text-neutral-700">
+                    Due for re-verification (evaluation-eligible, &gt;180 days or never)
+                  </th>
+                  <td class="py-2 text-right text-neutral-950">
+                    {observatory.verification.reviewDueCount} of{" "}
+                    {observatory.evaluationEligibleCount}
+                  </td>
+                </tr>
+              </tbody>
+            </table>
+          </section>
+
+          <section class="mt-10">
+            <h2 class="text-h3 text-neutral-950">Release history</h2>
+            <p class="mt-1 text-caption text-neutral-500">
+              {observatory.totalReleases} published release(s). Each row compares that release to
+              the one immediately before it — evidence-only and editorial-only changes never
+              triggered customer re-evaluation (see{" "}
+              <a href="/methodology#registry-verification" class="underline underline-offset-2">
+                methodology
+              </a>
+              ).
+            </p>
+            <div class="mt-3 overflow-x-auto">
+              <table class="w-full min-w-[720px] border-collapse text-supporting">
+                <caption class="sr-only">Registry release history and per-release changes</caption>
+                <thead>
+                  <tr class="border-b border-neutral-300">
+                    <th scope="col" class="py-2 text-left font-medium text-neutral-700">
+                      Release
+                    </th>
+                    <th scope="col" class="py-2 text-left font-medium text-neutral-700">
+                      Published
+                    </th>
+                    <th scope="col" class="py-2 text-right font-medium text-neutral-700">
+                      Added
+                    </th>
+                    <th scope="col" class="py-2 text-right font-medium text-neutral-700">
+                      Removed
+                    </th>
+                    <th scope="col" class="py-2 text-right font-medium text-neutral-700">
+                      Purpose changes
+                    </th>
+                    <th scope="col" class="py-2 text-right font-medium text-neutral-700">
+                      Token changes
+                    </th>
+                    <th scope="col" class="py-2 text-right font-medium text-neutral-700">
+                      Evidence-only
+                    </th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {observatory.releaseHistory.map((r) => (
+                    <tr class="border-b border-neutral-100">
+                      <td class="py-2 text-neutral-950">
+                        {r.versionLabel}
+                        {r.registryVersionId === observatory.registryVersionId && (
+                          <span class="ml-2 text-caption text-success">(active)</span>
+                        )}
+                      </td>
+                      <td class="py-2 text-neutral-700">
+                        {new Date(r.publishedAt).toLocaleDateString()}
+                      </td>
+                      <td class="py-2 text-right text-neutral-950">{r.added}</td>
+                      <td class="py-2 text-right text-neutral-950">{r.removed}</td>
+                      <td class="py-2 text-right text-neutral-950">{r.purposeChanges}</td>
+                      <td class="py-2 text-right text-neutral-950">{r.tokenChanges}</td>
+                      <td class="py-2 text-right text-neutral-950">{r.evidenceOnlyChanges}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          </section>
+
+          <section class="mt-10 rounded-card border border-neutral-200 bg-neutral-50 p-4">
+            <h2 class="text-card-heading text-neutral-950">Limitations</h2>
+            <ul class="mt-2 list-inside list-disc text-supporting text-neutral-700">
+              <li>
+                These figures describe CrawlPact's own crawler-identity registry, not a sample of
+                the web — they do not measure how many websites allow or block any crawler.
+              </li>
+              <li>
+                Purpose classification reflects each operator's published documentation as
+                independently reverified by CrawlPact; it does not measure actual crawler behaviour.
+              </li>
+              <li>
+                An operator may run undocumented or unverified crawlers not yet reflected in this
+                registry.
+              </li>
+            </ul>
+          </section>
+        </>
+      )
+    }
+  </article>
+</MarketingLayout>

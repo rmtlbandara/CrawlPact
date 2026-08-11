@@ -141,6 +141,12 @@ jobs:
       - name: Validate public crawler directory against the registry
         run: pnpm registry:public:validate
 
+      - name: Validate research publications
+        run: pnpm research:validate
+
+      - name: Verify research publication checksum integrity
+        run: pnpm research:integrity:verify
+
       - name: Validate content-collection quality
         # Phase 12: this script already existed (Phase 7) and was already
         # wired into `pnpm quality`/`pnpm run quality:gate`, but had never

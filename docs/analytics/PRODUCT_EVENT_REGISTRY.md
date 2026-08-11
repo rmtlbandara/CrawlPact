@@ -192,3 +192,16 @@ only — never a cookie value, IP, or any visitor identifier as a property.
 | `analytics_consent_granted`  | Visitor accepts analytics for the first time  | Measurement health |
 | `analytics_consent_declined` | Visitor declines analytics for the first time | Measurement health |
 | `analytics_consent_changed`  | Visitor changes an existing choice            | Measurement health |
+
+## Policy Observatory (Phase 16)
+
+See `docs/analytics/PHASE_16_OBSERVATORY_EVENT_MODEL.md` for full detail. Page-view-style beacons
+only — no corpus domain, research study internal ID, or private filter value as a property.
+
+| Event                            | Trigger                               | Purpose    |
+| -------------------------------- | ------------------------------------- | ---------- |
+| `observatory_viewed`             | `/observatory` hub viewed             | Engagement |
+| `observatory_registry_viewed`    | `/observatory/registry` viewed        | Engagement |
+| `observatory_methodology_viewed` | `/observatory/methodology` viewed     | Engagement |
+| `research_index_viewed`          | `/research` index viewed              | Engagement |
+| `research_publication_viewed`    | A published `/research/[slug]` viewed | Engagement |

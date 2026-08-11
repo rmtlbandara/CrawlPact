@@ -101,6 +101,12 @@ pnpm run registry:integrity:verify
 echo "==> Validate public crawler directory against the registry"
 pnpm run registry:public:validate
 
+echo "==> Validate research publications"
+pnpm run research:validate
+
+echo "==> Verify research publication checksum integrity"
+pnpm run research:integrity:verify
+
 echo "==> Validate content-collection quality"
 pnpm run content:validate
 

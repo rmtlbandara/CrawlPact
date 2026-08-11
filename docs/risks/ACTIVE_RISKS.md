@@ -438,6 +438,10 @@ extended platform guides), RISK-032 (no Search Console property connected), and 
 - **Acceptance criteria for closure**: The public crawler directory reads its factual core
   (token/purpose/lifecycle/source/verification date) directly from the active registry release at
   request or build time, making drift structurally impossible rather than CI-detected.
+- **Phase 16 note**: re-evaluated per `docs/product/PHASE_16_RISK_035_DECISION.md` — not closed
+  (`/crawlers` itself is unchanged), but the new Policy Observatory (`/observatory/registry`) was
+  built to read live from `registry_version_entries` from the start, so it carries none of this
+  risk. Option A/B were still not applied to the existing `/crawlers` pages.
 
 ---
 

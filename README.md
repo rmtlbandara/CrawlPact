@@ -61,6 +61,10 @@ presence from production verification:
   [`docs/status/REQUIREMENTS_TRACEABILITY.md`](docs/status/REQUIREMENTS_TRACEABILITY.md) §6)
 - **Security and trust pages, legal pages, SEO content** (22 crawler-reference pages, 20 guides,
   5 free tools)
+- **Policy Observatory** — public Registry Observatory (`/observatory`, `/observatory/registry`)
+  computed from the immutable registry, plus a governed research-publication workflow
+  (`/research`); no publication is live in production yet — see
+  [`docs/research/PHASE_16_FIRST_RESEARCH_PUBLICATION_EVIDENCE.md`](docs/research/PHASE_16_FIRST_RESEARCH_PUBLICATION_EVIDENCE.md)
 
 ## Product boundaries
 
