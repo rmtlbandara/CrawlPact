@@ -1,4 +1,4 @@
-import { desc, eq } from "drizzle-orm";
+import { desc, eq, inArray } from "drizzle-orm";
 import { schema } from "@crawlpact/database";
 import type { Database } from "@crawlpact/database";
 import { getComponentHealth, getSystemStatusSummary, type SystemStatus } from "../admin/health";
@@ -83,31 +83,41 @@ async function loadPublicIncidents(db: Database, statusFilter: "active" | "resol
     statusFilter === "active" ? row.status !== "resolved" : row.status === "resolved",
   );
 
-  const withUpdates: PublicIncident[] = [];
-  for (const row of filtered) {
-    const updates = await db
+  // Phase 14: batched — was one `SELECT ... FROM incident_updates` per
+  // incident (N+1), now a single `IN (...)` query grouped in memory. Same
+  // output shape/ordering as before; see
+  // docs/data/PHASE_14_OPERATIONS_QUERY_AND_INDEX_AUDIT.md.
+  const updatesByIncidentId = new Map<string, PublicIncident["updates"]>();
+  if (filtered.length > 0) {
+    const allUpdates = await db
       .select()
       .from(schema.incidentUpdates)
-      .where(eq(schema.incidentUpdates.incidentId, row.id))
+      .where(
+        inArray(
+          schema.incidentUpdates.incidentId,
+          filtered.map((row) => row.id),
+        ),
+      )
       .orderBy(schema.incidentUpdates.createdAt);
-    withUpdates.push({
-      id: row.id,
-      title: row.title,
-      publicSummary: row.publicSummary,
-      severity: row.severity as "minor" | "major" | "critical",
-      status: row.status as PublicIncident["status"],
-      affectedComponents: JSON.parse(row.affectedComponents) as StatusComponentKey[],
-      isScheduledMaintenance: row.isScheduledMaintenance,
-      startsAt: row.startsAt,
-      resolvedAt: row.resolvedAt,
-      updates: updates.map((u) => ({
-        status: u.status,
-        message: u.message,
-        createdAt: u.createdAt,
-      })),
-    });
+    for (const update of allUpdates) {
+      const list = updatesByIncidentId.get(update.incidentId) ?? [];
+      list.push({ status: update.status, message: update.message, createdAt: update.createdAt });
+      updatesByIncidentId.set(update.incidentId, list);
+    }
   }
-  return withUpdates;
+
+  return filtered.map((row) => ({
+    id: row.id,
+    title: row.title,
+    publicSummary: row.publicSummary,
+    severity: row.severity as "minor" | "major" | "critical",
+    status: row.status as PublicIncident["status"],
+    affectedComponents: JSON.parse(row.affectedComponents) as StatusComponentKey[],
+    isScheduledMaintenance: row.isScheduledMaintenance,
+    startsAt: row.startsAt,
+    resolvedAt: row.resolvedAt,
+    updates: updatesByIncidentId.get(row.id) ?? [],
+  }));
 }
 
 // Internal health checks that map cleanly onto a specific public component.
@@ -178,7 +188,16 @@ export async function getPublicStatus(db: Database): Promise<PublicStatusReport>
   }
 
   const componentLevels = new Map<StatusComponentKey, PublicStatusLevel>(baselineByComponent);
+  const nowMs = Date.parse(checkedAt);
   for (const incident of [...currentIncidents, ...scheduledMaintenance]) {
+    // Phase 14 §48: a scheduled-maintenance record with a future `startsAt`
+    // must not make the affected component appear in maintenance before
+    // that time — it's still shown in the `scheduledMaintenance` list (so
+    // visitors can see it's upcoming), it just doesn't escalate the
+    // component's *status* until its start actually arrives. Ordinary
+    // incidents have no "future" concept (they're always created as they
+    // start happening), so this check only changes maintenance behaviour.
+    if (incident.isScheduledMaintenance && Date.parse(incident.startsAt) > nowMs) continue;
     const incidentLevel = incident.isScheduledMaintenance
       ? "maintenance"
       : SEVERITY_LEVEL[incident.severity];

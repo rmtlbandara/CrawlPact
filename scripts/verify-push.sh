@@ -89,6 +89,9 @@ pnpm run trust:validate
 echo "==> Validate status and changelog trust presentation"
 pnpm run status:validate
 
+echo "==> Validate operations documentation"
+pnpm run operations:validate
+
 echo "==> Validate content-collection quality"
 pnpm run content:validate
 

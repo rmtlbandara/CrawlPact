@@ -116,6 +116,9 @@ jobs:
       - name: Validate status and changelog trust presentation
         run: pnpm status:validate
 
+      - name: Validate operations documentation
+        run: pnpm operations:validate
+
       - name: Validate content-collection quality
         # Phase 12: this script already existed (Phase 7) and was already
         # wired into `pnpm quality`/`pnpm run quality:gate`, but had never

@@ -112,3 +112,20 @@ export const targetAbuseObservations = sqliteTable("target_abuse_observations", 
   callerKey: text("caller_key").notNull(),
   observedAt: text("observed_at").notNull(),
 });
+
+// Phase 14: first-party, deduplicated internal operational alerting.
+// Mirrors packages/database/migrations/0032_operational_alerts.sql. Never
+// publicly readable -- see docs/operations/OPERATIONAL_ALERT_MODEL.md.
+export const operationalAlerts = sqliteTable("operational_alerts", {
+  id: integer("id").primaryKey({ autoIncrement: true }),
+  alertKey: text("alert_key").notNull(),
+  severity: text("severity").notNull().$type<"info" | "warning" | "critical">(),
+  source: text("source").notNull(),
+  detail: text("detail").notNull(),
+  firstSeenAt: text("first_seen_at").notNull(),
+  lastSeenAt: text("last_seen_at").notNull(),
+  occurrenceCount: integer("occurrence_count").notNull().default(1),
+  resolvedAt: text("resolved_at"),
+  acknowledgedAt: text("acknowledged_at"),
+  acknowledgedByUserId: text("acknowledged_by_user_id").references(() => users.id),
+});

@@ -95,10 +95,13 @@ are unaffected.
 ## Scheduled job monitoring
 
 `worker.ts`'s `scheduled()` writes a row to `scheduled_job_runs` on every cron tick, for both the
-monitoring sweep and the daily data-retention purge. Since Part 3 Step 7, this is surfaced in the
-admin UI at `/admin/jobs` (list of runs) and `/admin/health` (missed/overlapping/stuck/
+monitoring sweep and the daily data-retention purge (plus notification reconciliation, scheduled
+plan changes, and — Phase 14 — operational-alert evaluation). Since Part 3 Step 7, this is surfaced
+in the admin UI at `/admin/jobs` (list of runs) and `/admin/health` (missed/overlapping/stuck/
 high-failure-rate anomaly detection — `lib/admin/scheduler.ts`'s `detectSchedulerAnomalies`), not
-just a raw table. Manual query if needed:
+just a raw table. **Phase 14**: `/admin/operations` additionally surfaces the same anomalies
+alongside capacity, deduplicated operational alerts, and reliability trends in one unified view —
+see `docs/operations/OPERATIONAL_ALERT_MODEL.md`. Manual query if needed:
 
 ```bash
 wrangler d1 execute crawlpact-db --remote --config apps/web/wrangler.jsonc \

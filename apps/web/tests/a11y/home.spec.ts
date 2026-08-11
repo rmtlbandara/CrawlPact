@@ -240,6 +240,39 @@ test.describe("authenticated routes", () => {
       .analyze();
     expect(results.violations, JSON.stringify(results.violations, null, 2)).toEqual([]);
   });
+
+  test("Phase 14: Super Admin operations dashboard has no automatically detectable WCAG 2.2 AA violations", async ({
+    page,
+  }) => {
+    await addVirtualAuthenticator(page);
+    const displayName = `A11y Ops ${Date.now()}-${crypto.randomUUID().slice(0, 8)}`;
+    await registerNewAccount(page, displayName);
+    await grantSuperAdminToCurrentUser(page);
+    // isAdminSession is set at sign-in time (require-admin.ts), not
+    // recomputed live — the session created at registration predates the
+    // admin grant above, so it must sign out and back in to actually
+    // become an admin session before /admin/operations will render (same
+    // dance the "Super Admin global dashboard" test above uses).
+    await retryUntilSettled(async () => {
+      await Promise.all([
+        page.waitForResponse((res) => res.url().includes("/api/auth/logout"), {
+          timeout: 1_000,
+        }),
+        page.getByRole("button", { name: "Sign out" }).click(),
+      ]);
+    });
+    await page.waitForURL("**/");
+    await signInWithPasskey(page);
+    await page.goto("/admin/operations");
+    await ensureRealPage(page);
+    await expect(page.getByRole("heading", { name: "Operations summary" })).toBeVisible({
+      timeout: 10_000,
+    });
+    const results = await new AxeBuilder({ page })
+      .withTags(["wcag2a", "wcag2aa", "wcag22aa"])
+      .analyze();
+    expect(results.violations, JSON.stringify(results.violations, null, 2)).toEqual([]);
+  });
 });
 
 test("reduced-motion preference is respected on the home page", async ({ page }) => {

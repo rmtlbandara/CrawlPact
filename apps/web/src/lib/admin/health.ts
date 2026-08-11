@@ -88,10 +88,38 @@ export type ComponentHealth = {
 
 const ONE_HOUR_MS = 60 * 60 * 1000;
 
+// Public-status-and-changelog trust correction: previously had no time
+// window at all, so a single historical batch of failures (e.g. a bug
+// that was found and fixed days ago) kept this component — and therefore
+// the public "Billing and checkout" status — permanently degraded. Scoped
+// to the last hour. Exported (not just inlined in getComponentHealth) so
+// Phase 14's operational-alerts.ts reads the exact same count rather than
+// re-deriving it or parsing it back out of a formatted detail string.
+export async function getRecentWebhookFailureCount(db: Database): Promise<number> {
+  const oneHourAgoIso = new Date(Date.now() - ONE_HOUR_MS).toISOString();
+  const [recentWebhookFailures] = await db
+    .select({ n: sql<number>`count(*)` })
+    .from(schema.webhookEvents)
+    .where(
+      sql`${schema.webhookEvents.status} in ('failed', 'permanently_failed') and ${schema.webhookEvents.receivedAt} >= ${oneHourAgoIso}`,
+    );
+  return recentWebhookFailures?.n ?? 0;
+}
+
+export async function getRecentAuthFailureCount(db: Database): Promise<number> {
+  const oneHourAgoIso = new Date(Date.now() - ONE_HOUR_MS).toISOString();
+  const [recentAuthFailures] = await db
+    .select({ n: sql<number>`count(*)` })
+    .from(schema.securityEvents)
+    .where(
+      sql`${schema.securityEvents.eventType} = 'auth_failure' and ${schema.securityEvents.createdAt} >= ${oneHourAgoIso}`,
+    );
+  return recentAuthFailures?.n ?? 0;
+}
+
 /** Per-component breakdown for the dedicated /admin/health page (SRS §28.10). */
 export async function getComponentHealth(db: Database): Promise<ComponentHealth[]> {
   const summary = await getSystemStatusSummary(db);
-  const oneHourAgoIso = new Date(Date.now() - ONE_HOUR_MS).toISOString();
 
   const [lastMonitoringJob] = await db
     .select()
@@ -107,28 +135,8 @@ export async function getComponentHealth(db: Database): Promise<ComponentHealth[
     .orderBy(desc(schema.scheduledJobRuns.startedAt))
     .limit(1);
 
-  // Public-status-and-changelog trust correction: previously had no time
-  // window at all, so a single historical batch of failures (e.g. a bug
-  // that was found and fixed days ago) kept this component — and therefore
-  // the public "Billing and checkout" status — permanently degraded. Now
-  // scoped to the last hour, matching this file's own existing convention
-  // for `recentAuthFailures`/`recentInvalidSignatures` below.
-  const [recentWebhookFailures] = await db
-    .select({ n: sql<number>`count(*)` })
-    .from(schema.webhookEvents)
-    .where(
-      sql`${schema.webhookEvents.status} in ('failed', 'permanently_failed') and ${schema.webhookEvents.receivedAt} >= ${oneHourAgoIso}`,
-    );
-
-  const [recentAuthFailures] = await db
-    .select({ n: sql<number>`count(*)` })
-    .from(schema.securityEvents)
-    .where(
-      sql`${schema.securityEvents.eventType} = 'auth_failure' and ${schema.securityEvents.createdAt} >= ${oneHourAgoIso}`,
-    );
-
-  const webhookFailureCount = recentWebhookFailures?.n ?? 0;
-  const authFailureCount = recentAuthFailures?.n ?? 0;
+  const webhookFailureCount = await getRecentWebhookFailureCount(db);
+  const authFailureCount = await getRecentAuthFailureCount(db);
 
   return [
     {

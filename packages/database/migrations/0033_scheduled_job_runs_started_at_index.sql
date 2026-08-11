@@ -1,0 +1,11 @@
+-- Phase 14 (Status, Operations and Service Reliability).
+--
+-- docs/data/PHASE_14_OPERATIONS_QUERY_AND_INDEX_AUDIT.md: `EXPLAIN QUERY PLAN`
+-- against real local D1 showed every `scheduled_job_runs` query ordering or
+-- filtering on `started_at` (getSystemStatusSummary's last-20-runs read,
+-- detectSchedulerAnomalies's last-200-runs read, and Phase 14's new
+-- getReliabilityTrends window filter) fell back to a full table scan plus a
+-- temp b-tree sort -- the only existing index (`idx_scheduled_job_runs_job_name`)
+-- doesn't help any of them. Not an urgent fix at today's real row count (a
+-- handful of rows/day), but a real, cheap, evidenced improvement.
+CREATE INDEX idx_scheduled_job_runs_started_at ON scheduled_job_runs(started_at DESC);
