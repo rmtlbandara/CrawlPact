@@ -2,10 +2,10 @@
 Document owner: Engineering owner
 Status: current-authoritative
 Last verified: 2026-08-11
-Repository commit: 09427238a9c644c8d745abc2b71a91a0e2f3e57b (main, post-Phase-15 merge, deployed)
-Production deployment identifier: crawlpact-web (Cloudflare Worker), https://crawlpact.com — Worker version 686987b8-3dd6-44b8-9f32-8b877d8e4655
-Database migration version: 0034_registry_release_integrity.sql (34/34 applied to production, confirmed via a direct read-only D1 query against `d1_migrations` 2026-08-11 — new `registry_versions.checksum`/`registry_version_entries.snapshot_schema_version` columns and `registry_version_activations` table; table count now 50, independently confirmed via `db:validate`)
-Crawler registry version: 2026.07.3 (active release, unchanged by Phase 15's deploy — the Amazon/Google/Bingbot corrections are independently re-verified and ready in `packages/database/seed/reference-data.sql`, but publishing them as the new active release requires a real Super Admin session, which was not available this pass; see docs/registry/CRAWLER_REGISTRY_GOVERNANCE.md and the Phase 15 completion report)
+Repository commit: 883728b08cfd085b3c25584ef18b79f8b356325a (main, post-Phase-16 merge, deployed)
+Production deployment identifier: crawlpact-web (Cloudflare Worker), https://crawlpact.com — Worker version e5cf03ea-7cd4-4970-b331-2f6879a84035
+Database migration version: 0035_research_publications.sql (35/35 applied to production, confirmed via a direct read-only D1 query against `d1_migrations` 2026-08-11 — new `research_publications` table, 0 rows)
+Crawler registry version: 2026.07.3 (active release, unchanged by Phase 16's deploy — the Amazon/Google/Bingbot corrections are independently re-verified and ready in `packages/database/seed/reference-data.sql`, still awaiting a real Super Admin session to publish; see docs/registry/CRAWLER_REGISTRY_GOVERNANCE.md and the Phase 15 completion report)
 Phase 0 baseline reference: docs/baseline/2026-08-03/ (superseded on billing/migration facts by Phases 5–6 below; not re-run this pass)
 Review frequency: Every release, or monthly
 Next review date: 2026-09-10 (or sooner, at the next release)
@@ -32,7 +32,27 @@ verified platform guides (`/platforms/*`) — content-only, no product-behavior 
 production 2026-08-04, Worker version `630258b4-c020-4105-9ca3-550897f7c0e3`; all 10 new routes
 independently confirmed live (see the Phase 7 completion report).
 **Production and the default branch (`main`) are aligned** — no known drift as of the last
-deployed commit (`0942723`).
+deployed commit (`883728b`).
+
+Phase 16 (Policy Observatory and Research Authority, deployed 2026-08-11) added a Registry
+Observatory (`/observatory`, `/observatory/registry`, `/observatory/methodology`) computed
+exclusively from Phase 15's immutable registry releases, plus a governed research-publication
+workflow (`/research`, `/research/[slug]`, Super Admin `/admin/research`) with draft/review/
+publish/correct/withdraw states and a SHA-256 reproducibility checksum. The Website Policy
+Observatory (a website-policy benchmark study) was deliberately not built — no approved research
+corpus exists yet, and the phase explicitly favours a strong Registry Observatory over a weak or
+unrepresentative website statistic; see `docs/research/PHASE_16_RESEARCH_CORPUS_DECISION.md`. No
+research publication has been published to production — `/observatory` and `/research` correctly
+show "nothing published yet," and this remains an open action for a future session with real
+Super Admin credentials (`docs/research/PHASE_16_FIRST_RESEARCH_PUBLICATION_EVIDENCE.md`). Deploy
+run `31512948445` (a first attempt, run `31512041616`, was correctly blocked — not failed — by the
+deploy workflow's own "CI must have already succeeded for this exact commit" guard, since the
+post-merge CI run on `main` hadn't finished at that instant; re-dispatching after CI completed
+deployed cleanly). Independently re-verified post-deploy: a direct D1 query confirmed migration
+`0035` applied and the active registry release unchanged at `2026.07.3`; `/`, `/observatory`,
+`/observatory/registry`, `/observatory/methodology`, `/research`, `/research/<nonexistent-slug>`
+(404), and an unauthenticated `/admin/research` request (redirected to `/sign-in`) were all
+checked directly against `https://crawlpact.com`.
 
 Phase 15 (Crawler Registry Governance and Public Changelog, deployed 2026-08-11) found and fixed
 a real, critical bug: `getActiveRegistry()` and historical scan rendering read the live, mutable
@@ -308,6 +328,7 @@ re-run (RISK-018); no cookie-consent mechanism for the GA deviation (RISK-021).
 - Phase 13 completion report: `docs/reports/PHASE_13_ANALYTICS_CONSENT_PRODUCT_MEASUREMENT_COMPLETION_REPORT.md`
 - Phase 14 completion report: `docs/reports/PHASE_14_STATUS_OPERATIONS_RELIABILITY_COMPLETION_REPORT.md`
 - Phase 15 completion report: `docs/reports/PHASE_15_CRAWLER_REGISTRY_GOVERNANCE_COMPLETION_REPORT.md`
+- Phase 16 completion report: `docs/reports/PHASE_16_POLICY_OBSERVATORY_RESEARCH_AUTHORITY_COMPLETION_REPORT.md`
 - Current risk register: `docs/risks/ACTIVE_RISKS.md`
 - Changelog: `CHANGELOG.md`
 - Requirements traceability: `docs/status/REQUIREMENTS_TRACEABILITY.md`
