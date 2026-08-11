@@ -19,25 +19,57 @@ no soft delete) — a published release is never edited. `registry_version_entri
 JSON snapshot taken at publish time specifically so a historical scan's evidence never changes
 even if the live `crawlers` row is later updated.
 
+**Phase 15 correction (2026-08-11)**: the paragraph above describes the intended design, which
+was correct — but until Phase 15, that design was only half-wired-up. `getActiveRegistry()`
+(live evaluation) and `getScanReport()`/`domain-timeline.ts` (historical rendering) both read
+straight from the live, mutable `crawlers` table, never from `registry_version_entries.snapshot`.
+The snapshot table existed and was genuinely immutable, but nothing in the evaluation or
+rendering path actually consulted it — meaning editing a crawler's live row could silently change
+what an already-active release evaluated, and how a historical scan displayed that crawler's
+name/purpose/source. This is now fixed: both paths resolve exclusively from the frozen release
+snapshot. See `docs/registry/PHASE_15_REGISTRY_BASELINE.md` for the full finding and
+`apps/web/tests/integration/registry-reproducibility.integration.test.ts` for the regression test.
+
 Since Part 2 (migration `0009_registry_active_pointer.sql`), exactly one `registry_versions` row
 and one `ruleset_versions` row may have `is_active = 1` at a time, enforced by a SQLite partial
-unique index — not just application logic. New scans evaluate against whichever release is
-currently active; publishing a release and activating it are distinct actions (SRS §28.11:
-"Roll back the active release pointer" implies activation is reversible independent of
-publication).
+unique index — not just application logic. Phase 15 additionally made the publish/rollback
+pointer-flip itself atomic (`db.batch()`, migration-independent — see
+`docs/registry/PHASE_15_REGISTRY_BASELINE.md`), closing a real (if narrow) window where a
+mid-request failure could previously have left zero releases active. New scans evaluate against
+whichever release is currently active. **Publication and activation are a single combined action
+in this codebase** (`publishRegistryVersion` both stamps `publishedAt` and flips `is_active` in
+one call — freezing already happened earlier, at `createRegistryRelease`) — this document
+previously implied they were separate steps without stating that plainly; corrected here to match
+the actual implementation. See `docs/registry/REGISTRY_RELEASE_PUBLICATION_RUNBOOK.md`.
 
-## Registry tooling (Part 2)
+## Registry tooling (Part 2, extended Phase 15)
 
 `scripts/registry-tools.mjs`, run via `pnpm registry:validate` / `registry:checksum` /
-`registry:changelog` against the local D1 database:
+`registry:checksum:verify` / `registry:integrity:verify` / `registry:changelog` against the local
+D1 database, plus `scripts/registry-public-validate.mjs` (`pnpm registry:public:validate`):
 
 - **validate** — duplicate `user_agent_token` detection, missing-source detection, active
   crawlers lacking a verification date/source, stale-verification report (>180 days since last
-  verification), and a sanity check that at most one registry version is active.
-- **checksum `<versionId>`** — a SHA-256 over the sorted, concatenated snapshots of a release's
-  entries, for verifying a release's integrity hasn't been tampered with.
+  verification), a sanity check that at most one registry version is active, broken replacement
+  references, duplicate version labels/release entries, and malformed active-release snapshots
+  (Phase 15 additions).
+- **checksum `<versionId>`** — a SHA-256 over the canonicalised (sorted-key, crawler-ID-ordered)
+  snapshots of a release's entries. Phase 15: now uses the exact same canonicalisation as the
+  runtime/admin checksum logic (`apps/web/src/lib/registry-checksum.ts`) rather than a
+  differently-computed CLI-only value.
+- **checksum:verify** (Phase 15) — recomputes and compares every _published_ release's checksum
+  against its stored value; fails CI-style if any published release's entries don't match what
+  was checksummed at publish time.
+- **integrity:verify** (Phase 15) — the Section 124 runtime check: exactly one active release,
+  published, checksum valid, entries parse, no unverified crawler in the evaluation set, no
+  duplicate evaluation-eligible tokens, an active ruleset exists.
 - **changelog `<fromId>` `<toId>`** — added/removed/changed crawlers between two releases,
-  the basis for the public `/changelog` registry section (Part 6+).
+  the basis for the public `/changelog` registry section (Part 6+). Superseded internally by the
+  richer semantic diff (`docs/registry/REGISTRY_SEMANTIC_DIFF_MODEL.md`) for anything the
+  application itself does; this CLI command remains for ad-hoc inspection.
+- **`registry:public:validate`** (Phase 15) — compares the static crawler content collection
+  against the D1 registry, catching a public page that describes an unregistered token, an
+  unverified crawler presented as confirmed, or drifted purpose/lifecycle values.
 
 ## Current registry content (Part 2 seed, extended in Part 3 Step 13/14, corrected 2026-07-30)
 
@@ -59,40 +91,65 @@ publication" paragraph below (already stating "23 crawlers total"); see
   and live-verified against each operator's current official documentation while closing the
   SRS §30.4 crawler-reference-page minimum (Part 3 Step 13/14).
 
-See `packages/database/seed/seed.sql` for exact rows and
+See `packages/database/seed/reference-data.sql` for exact rows and
 `docs/registry/SOURCE_VERIFICATION_POLICY.md` for source citations. Public crawler-reference
-pages (`apps/web/src/content/crawlers/*.md`) cover 20 of the 21 as of Part 3 — the sole gap
-(Bingbot) is a deliberate, documented exception (its official source page could not be fetched
-and read during verification), not an oversight; see `SOURCE_VERIFICATION_POLICY.md`.
+pages (`apps/web/src/content/crawlers/*.md`) cover 22 of the 23 — the one gap (Bingbot) is a
+deliberate, documented exception (its official source page requires JavaScript rendering and
+could not be automatically fetched and read during verification), not an oversight; see
+`SOURCE_VERIFICATION_POLICY.md`.
 
-**Correction pending publication as a new release (not yet 2026.07.3's live state):** a
-2026-07-30 re-verification pass against each operator's current documentation found (1)
-`Google-Extended`'s cited source URL had gone stale — Google retired the standalone page and
-folded its content into `.../google-common-crawlers` (also already cited by
-`Google-CloudVertexBot`/`GoogleOther`) — and (2) Amazon's own documentation separately publishes
-two further tokens not yet in the registry: `Amzn-SearchBot` (search) and `Amzn-User`
-(user-triggered), both explicitly excluded from AI training per Amazon's own text, mirroring how
-OpenAI/Anthropic/Perplexity/Meta are already split by purpose rather than folded into one
-"mixed" entry. `packages/database/seed/reference-data.sql` and the corresponding
-`apps/web/src/content/crawlers/*.md` pages have been corrected accordingly (23 crawlers total).
-Because registry releases are immutable, this correction still needs to be published as a new
-registry release (e.g. `2026.07.4`) through the normal registry-manager workflow — reference
-data is safe to re-run into any environment, but making it the _active_ release in a database
-that already has `2026.07.3` active requires an explicit publish action, not just an edit to
-this seed file.
+**Amazon/Google correction — independently reverified Phase 15 (2026-08-11), previously only
+carried as a pending note.** A 2026-07-30 pass found (1) `Google-Extended`'s cited source URL had
+gone stale — Google retired the standalone page and folded its content into
+`.../google-common-crawlers` — and (2) Amazon's own documentation separately publishes two
+further tokens: `Amzn-SearchBot` (search) and `Amzn-User` (user-triggered), both explicitly
+excluded from AI training per Amazon's own text. Phase 15 re-fetched both operators' current
+official documentation live (not trusting the prior note) and confirmed both findings are still
+accurate — see `docs/registry/PHASE_15_FULL_SOURCE_REVERIFICATION_REPORT.md` for the full
+evidence trail, including a further finding from this pass: Bingbot's own source URL has also
+since moved and was corrected the same way. `packages/database/seed/reference-data.sql` and the
+corresponding `apps/web/src/content/crawlers/*.md` pages already reflect these corrections;
+publishing them as the new _active_ production release requires a separate, explicit
+registry-release approval per this repository's standing rule — see the Phase 15 completion
+report for whether that approval was given and what release resulted.
 
 ## Registry drift vs. website drift (FR-REG-009/010)
 
 A change in a crawler's registry record must never be presented as if the _website_ changed.
 `scan_diffs.diff_type` enforces this distinction at the schema level — see
 `docs/data/DATA_MODEL.md`. `packages/policy`'s conflict detector and diff logic read the scan's
-recorded `registry_version_id`, never "whatever is active now," so this distinction holds even
-if the active release changes between two scans of the same domain.
+recorded `registry_version_id`, never "whatever is active now" — this was always true for the
+evaluation _result_ itself (`scan_crawler_results`, computed once at scan time and never
+recomputed). What Phase 15 fixed was a related but distinct gap: _rendering_ a historical scan's
+crawler details (name, purpose, source) had been resolving them from the live `crawlers` table
+rather than the scan's own recorded release — see "Immutability and the active release pointer"
+above.
+
+Phase 15 additionally distinguishes _why_ a registry release changed
+(`docs/registry/REGISTRY_SEMANTIC_DIFF_MODEL.md`): only evaluation-semantic changes (token,
+purpose, lifecycle) drive affected-domain re-evaluation; evidence-only changes (a source URL
+moving) and editorial changes (wording) never do, closing a related bug where any edit at all —
+including a source-URL refresh — could previously trigger customer re-evaluation.
 
 ## What is still not implemented
 
 **Corrected 2026-08-03 (Phase 1)**: registry release creation/publication UI and automatic
 re-evaluation of saved domains on a new release are now built — see the section above and
 `lib/admin/registry.ts`'s `publishRegistryVersion`/`getAffectedDomains`/`scheduleReEvaluation`.
-Nothing is currently known to be missing from this specific capability; if a genuine gap is
-found in a future phase, record it here with evidence rather than reinstating this stale claim.
+
+**Updated Phase 15 (2026-08-11)** — evaluated and deliberately deferred, not silently missing:
+
+- **Richer multi-source provenance model** (`crawler_sources`/`crawler_source_verifications`
+  tables) — no current crawler needs more than one official source URL; see
+  `docs/data/PHASE_15_REGISTRY_PROVENANCE_DATA_MODEL.md`.
+- **Automated source-health fetcher** — evaluated per Section 19, not built this phase; see
+  `docs/registry/REGISTRY_REVERIFICATION_POLICY.md`.
+- **DB-backed public crawler directory** (Option A) — the public `/crawlers` pages remain
+  statically generated from Markdown, not read live from D1; see
+  `docs/registry/PUBLIC_REGISTRY_RENDERING_ARCHITECTURE.md`.
+- **`security_events`/`notifications` retention** (RISK-006) — unrelated to the registry, still
+  open from Phase 14, unaffected by this phase.
+
+Nothing else is currently known to be missing from registry release creation/publication;
+if a genuine gap is found in a future phase, record it here with evidence rather than reinstating
+a stale claim.

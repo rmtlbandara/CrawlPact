@@ -1,7 +1,11 @@
 import { and, desc, eq, inArray, isNull } from "drizzle-orm";
+import type { BatchItem } from "drizzle-orm/batch";
 import { schema } from "@crawlpact/database";
 import type { Database } from "@crawlpact/database";
 import type { CrawlerPurpose, LifecycleStatus } from "@crawlpact/registry";
+import { buildCanonicalSnapshot } from "../registry-snapshot";
+import { computeRegistryChecksum } from "../registry-checksum";
+import { computeSemanticDiff, type RegistrySemanticDiff } from "../registry-semantic-diff";
 
 // --- Operators ---------------------------------------------------------------
 
@@ -131,17 +135,11 @@ export async function createRegistryRelease(
 ): Promise<string> {
   const id = crypto.randomUUID();
   const now = new Date().toISOString();
-  await db.insert(schema.registryVersions).values({
-    id,
-    versionLabel: params.versionLabel,
-    changelog: params.changelog,
-    isActive: false,
-    createdAt: now,
-  });
 
   const crawlers = await db
-    .select()
+    .select({ crawler: schema.crawlers, operatorName: schema.crawlerOperators.name })
     .from(schema.crawlers)
+    .innerJoin(schema.crawlerOperators, eq(schema.crawlers.operatorId, schema.crawlerOperators.id))
     .where(
       inArray(schema.crawlers.lifecycleStatus, [
         "active",
@@ -152,98 +150,262 @@ export async function createRegistryRelease(
       ]),
     );
 
-  for (const crawler of crawlers) {
-    await db.insert(schema.registryVersionEntries).values({
-      id: crypto.randomUUID(),
-      registryVersionId: id,
-      crawlerId: crawler.id,
-      snapshot: JSON.stringify(crawler),
-    });
-  }
+  // A single db.batch() rather than N+1 sequential inserts — see Phase 11's
+  // established pattern (apps/web/src/lib/persist-scan.ts) — and keeps the
+  // release-creation + entry-snapshot writes atomic together.
+  const statements: BatchItem<"sqlite">[] = [
+    db.insert(schema.registryVersions).values({
+      id,
+      versionLabel: params.versionLabel,
+      changelog: params.changelog,
+      isActive: false,
+      createdAt: now,
+    }),
+    ...crawlers.map(({ crawler, operatorName }) =>
+      db.insert(schema.registryVersionEntries).values({
+        id: crypto.randomUUID(),
+        registryVersionId: id,
+        crawlerId: crawler.id,
+        snapshot: JSON.stringify(buildCanonicalSnapshot(crawler, operatorName)),
+        snapshotSchemaVersion: 2,
+      }),
+    ),
+  ];
+  await db.batch(statements as [BatchItem<"sqlite">, ...BatchItem<"sqlite">[]]);
 
   return id;
 }
 
-/** SRS §28.11 "publish releases": the only place `is_active` is ever
- * flipped. Never edits `registry_version_entries` — publishing a release
- * that's already immutable data, just changing which one is "current." */
+export type CandidateValidationIssue = { code: string; message: string; crawlerId?: string };
+export type CandidateValidationResult = {
+  errors: CandidateValidationIssue[];
+  warnings: CandidateValidationIssue[];
+  checksum: string;
+};
+
+const STALE_VERIFICATION_DAYS = 180;
+
+/**
+ * Phase 15 release-candidate validation (Section 41). Run before
+ * publication; blocking errors must prevent `publishRegistryVersion` from
+ * proceeding. Warnings (e.g. stale review) do not block but are surfaced in
+ * the impact preview.
+ */
+export async function validateReleaseCandidate(
+  db: Database,
+  registryVersionId: string,
+): Promise<CandidateValidationResult> {
+  const [version] = await db
+    .select()
+    .from(schema.registryVersions)
+    .where(eq(schema.registryVersions.id, registryVersionId))
+    .limit(1);
+  const errors: CandidateValidationIssue[] = [];
+  const warnings: CandidateValidationIssue[] = [];
+
+  if (!version) {
+    errors.push({ code: "release_not_found", message: "Registry release candidate not found." });
+    return { errors, warnings, checksum: "" };
+  }
+  if (!version.versionLabel.trim()) {
+    errors.push({ code: "missing_version_label", message: "A version label is required." });
+  }
+  if (!version.changelog.trim()) {
+    errors.push({ code: "missing_changelog", message: "Release notes are required." });
+  }
+
+  const entries = await db
+    .select()
+    .from(schema.registryVersionEntries)
+    .where(eq(schema.registryVersionEntries.registryVersionId, registryVersionId));
+
+  const seenTokens = new Map<string, string>();
+  const now = Date.now();
+  for (const entry of entries) {
+    const snapshot = JSON.parse(entry.snapshot) as {
+      lifecycleStatus: LifecycleStatus;
+      userAgentToken: string;
+      officialSourceUrl?: string;
+      lastVerifiedAt?: string | null;
+      replacementCrawlerId?: string | null;
+    };
+    const evaluationEligible =
+      snapshot.lifecycleStatus === "active" ||
+      snapshot.lifecycleStatus === "deprecated" ||
+      snapshot.lifecycleStatus === "replaced";
+
+    if (evaluationEligible) {
+      const existingOwner = seenTokens.get(snapshot.userAgentToken.toLowerCase());
+      if (existingOwner) {
+        errors.push({
+          code: "duplicate_token",
+          message: `Token "${snapshot.userAgentToken}" is used by more than one evaluation-eligible crawler.`,
+          crawlerId: entry.crawlerId,
+        });
+      }
+      seenTokens.set(snapshot.userAgentToken.toLowerCase(), entry.crawlerId);
+
+      if (!snapshot.officialSourceUrl) {
+        errors.push({
+          code: "missing_official_source",
+          message: "An evaluation-eligible crawler is missing an official source URL.",
+          crawlerId: entry.crawlerId,
+        });
+      }
+      if (!snapshot.lastVerifiedAt) {
+        errors.push({
+          code: "missing_verification_date",
+          message: "An evaluation-eligible crawler has never been verified.",
+          crawlerId: entry.crawlerId,
+        });
+      } else {
+        const ageDays = (now - Date.parse(snapshot.lastVerifiedAt)) / 86_400_000;
+        if (ageDays > STALE_VERIFICATION_DAYS) {
+          warnings.push({
+            code: "stale_verification",
+            message: `Verification is ${Math.round(ageDays)} days old (review threshold: ${STALE_VERIFICATION_DAYS}).`,
+            crawlerId: entry.crawlerId,
+          });
+        }
+      }
+    }
+  }
+
+  const checksum = await computeRegistryChecksum(db, registryVersionId);
+  return { errors, warnings, checksum };
+}
+
+/**
+ * SRS §28.11 "publish releases": the only place `is_active` is ever
+ * flipped for a normal forward publication. Never edits
+ * `registry_version_entries` — publishing changes which immutable release
+ * is "current," it never mutates the release itself.
+ *
+ * Phase 15 hardening:
+ * - Blocking candidate validation runs first (Section 41) — an invalid
+ *   candidate (unverified-but-evaluation-eligible, missing source/
+ *   verification, duplicate token) is never published.
+ * - The checksum is computed and stored at publish time, not left as a
+ *   CLI-only on-demand computation.
+ * - Both `UPDATE`s run in a single `db.batch()` so there is never a window
+ *   where zero releases are active (Section 51, "Activation Atomicity").
+ * - Idempotent: publishing an already-active release is a harmless no-op
+ *   (Section 53) — no duplicate activation-history row.
+ */
 export async function publishRegistryVersion(
   db: Database,
   registryVersionId: string,
   publishedByUserId: string,
-): Promise<void> {
+): Promise<{ alreadyActive: boolean; checksum: string }> {
+  const validation = await validateReleaseCandidate(db, registryVersionId);
+  if (validation.errors.length > 0) {
+    throw new Error(
+      `Registry release candidate failed validation: ${validation.errors.map((e) => e.message).join("; ")}`,
+    );
+  }
+
+  const [current] = await db
+    .select({ id: schema.registryVersions.id })
+    .from(schema.registryVersions)
+    .where(eq(schema.registryVersions.isActive, true))
+    .limit(1);
+  if (current?.id === registryVersionId) {
+    return { alreadyActive: true, checksum: validation.checksum };
+  }
+
   const now = new Date().toISOString();
-  await db
-    .update(schema.registryVersions)
-    .set({ isActive: false })
-    .where(eq(schema.registryVersions.isActive, true));
-  await db
-    .update(schema.registryVersions)
-    .set({ isActive: true, publishedByUserId, publishedAt: now })
-    .where(eq(schema.registryVersions.id, registryVersionId));
+  const statements: BatchItem<"sqlite">[] = [
+    db
+      .update(schema.registryVersions)
+      .set({ isActive: false })
+      .where(eq(schema.registryVersions.isActive, true)),
+    db
+      .update(schema.registryVersions)
+      .set({
+        isActive: true,
+        publishedByUserId,
+        publishedAt: now,
+        checksum: validation.checksum,
+      })
+      .where(eq(schema.registryVersions.id, registryVersionId)),
+    db.insert(schema.registryVersionActivations).values({
+      id: crypto.randomUUID(),
+      registryVersionId,
+      action: "published",
+      previousActiveVersionId: current?.id ?? null,
+      performedByUserId: publishedByUserId,
+      reason: null,
+      createdAt: now,
+    }),
+  ];
+  await db.batch(statements as [BatchItem<"sqlite">, ...BatchItem<"sqlite">[]]);
+  return { alreadyActive: false, checksum: validation.checksum };
 }
 
-/** SRS §28.11 "roll back the active release pointer" — repoints `is_active`
- * to an older release. The rolled-back-from release is not deleted. */
+/**
+ * SRS §28.11 "roll back the active release pointer" — repoints `is_active`
+ * to an older, already-published release. The rolled-back-from release is
+ * never deleted or edited (Section 67).
+ *
+ * Phase 15 hardening: atomic (single `db.batch()`), idempotent (rolling
+ * back to the already-active release is a no-op), records activation
+ * history, and refuses to activate a release that was never published
+ * (Section 145: "an unpublished draft must not become active through
+ * rollback").
+ */
 export async function rollbackRegistryVersion(
   db: Database,
   targetVersionId: string,
-): Promise<void> {
-  await db
-    .update(schema.registryVersions)
-    .set({ isActive: false })
-    .where(eq(schema.registryVersions.isActive, true));
-  await db
-    .update(schema.registryVersions)
-    .set({ isActive: true })
-    .where(eq(schema.registryVersions.id, targetVersionId));
+  performedByUserId: string,
+  reason: string,
+): Promise<{ alreadyActive: boolean }> {
+  const [target] = await db
+    .select({ id: schema.registryVersions.id, publishedAt: schema.registryVersions.publishedAt })
+    .from(schema.registryVersions)
+    .where(eq(schema.registryVersions.id, targetVersionId))
+    .limit(1);
+  if (!target) throw new Error("Rollback target registry release does not exist.");
+  if (!target.publishedAt) {
+    throw new Error("Rollback target has never been published — cannot roll back to a draft.");
+  }
+
+  const [current] = await db
+    .select({ id: schema.registryVersions.id })
+    .from(schema.registryVersions)
+    .where(eq(schema.registryVersions.isActive, true))
+    .limit(1);
+  if (current?.id === targetVersionId) {
+    return { alreadyActive: true };
+  }
+
+  const now = new Date().toISOString();
+  const statements: BatchItem<"sqlite">[] = [
+    db
+      .update(schema.registryVersions)
+      .set({ isActive: false })
+      .where(eq(schema.registryVersions.isActive, true)),
+    db
+      .update(schema.registryVersions)
+      .set({ isActive: true })
+      .where(eq(schema.registryVersions.id, targetVersionId)),
+    db.insert(schema.registryVersionActivations).values({
+      id: crypto.randomUUID(),
+      registryVersionId: targetVersionId,
+      action: "rolled_back_to",
+      previousActiveVersionId: current?.id ?? null,
+      performedByUserId,
+      reason,
+      createdAt: now,
+    }),
+  ];
+  await db.batch(statements as [BatchItem<"sqlite">, ...BatchItem<"sqlite">[]]);
+  return { alreadyActive: false };
 }
 
-export type RegistryComparison = {
-  added: string[];
-  removed: string[];
-  changed: { crawlerId: string; before: unknown; after: unknown }[];
-};
-
-/** SRS §28.11 "compare releases" — same diff logic as scripts/registry-tools.mjs's
- * CLI `changelog` command, ported so the admin UI doesn't need a shell-out. */
-export async function compareRegistryVersions(
-  db: Database,
-  fromId: string,
-  toId: string,
-): Promise<RegistryComparison> {
-  const [fromRows, toRows] = await Promise.all([
-    db
-      .select({
-        crawlerId: schema.registryVersionEntries.crawlerId,
-        snapshot: schema.registryVersionEntries.snapshot,
-      })
-      .from(schema.registryVersionEntries)
-      .where(eq(schema.registryVersionEntries.registryVersionId, fromId)),
-    db
-      .select({
-        crawlerId: schema.registryVersionEntries.crawlerId,
-        snapshot: schema.registryVersionEntries.snapshot,
-      })
-      .from(schema.registryVersionEntries)
-      .where(eq(schema.registryVersionEntries.registryVersionId, toId)),
-  ]);
-
-  const fromMap = new Map(fromRows.map((r) => [r.crawlerId, r.snapshot]));
-  const toMap = new Map(toRows.map((r) => [r.crawlerId, r.snapshot]));
-
-  const added = [...toMap.keys()].filter((id) => !fromMap.has(id));
-  const removed = [...fromMap.keys()].filter((id) => !toMap.has(id));
-  const changed = [...toMap.keys()]
-    .filter((id) => fromMap.has(id) && fromMap.get(id) !== toMap.get(id))
-    .map((id) => ({
-      crawlerId: id,
-      before: JSON.parse(fromMap.get(id)!),
-      after: JSON.parse(toMap.get(id)!),
-    }));
-
-  return { added, removed, changed };
-}
+/** Re-exported for callers that need the semantic diff without importing
+ * from `../registry-semantic-diff` directly (keeps the admin-registry
+ * surface as the one module Admin routes depend on). */
+export { computeSemanticDiff, type RegistrySemanticDiff };
 
 /**
  * SRS §28.11 "affected-domain preview": which saved domains have a scan
@@ -314,29 +476,39 @@ export async function createRulesetVersion(
   return id;
 }
 
+/** Phase 15: same atomicity fix as `publishRegistryVersion` — a single
+ * `db.batch()` rather than two sequential `UPDATE`s, so there is never a
+ * window with zero active rulesets. Ruleset *semantics* are unchanged;
+ * this only hardens the activation-pointer mechanism itself. */
 export async function publishRulesetVersion(
   db: Database,
   rulesetVersionId: string,
   publishedByUserId: string,
 ): Promise<void> {
   const now = new Date().toISOString();
-  await db
-    .update(schema.rulesetVersions)
-    .set({ isActive: false })
-    .where(eq(schema.rulesetVersions.isActive, true));
-  await db
-    .update(schema.rulesetVersions)
-    .set({ isActive: true, publishedByUserId, publishedAt: now })
-    .where(eq(schema.rulesetVersions.id, rulesetVersionId));
+  const statements: BatchItem<"sqlite">[] = [
+    db
+      .update(schema.rulesetVersions)
+      .set({ isActive: false })
+      .where(eq(schema.rulesetVersions.isActive, true)),
+    db
+      .update(schema.rulesetVersions)
+      .set({ isActive: true, publishedByUserId, publishedAt: now })
+      .where(eq(schema.rulesetVersions.id, rulesetVersionId)),
+  ];
+  await db.batch(statements as [BatchItem<"sqlite">, ...BatchItem<"sqlite">[]]);
 }
 
 export async function rollbackRulesetVersion(db: Database, targetVersionId: string): Promise<void> {
-  await db
-    .update(schema.rulesetVersions)
-    .set({ isActive: false })
-    .where(eq(schema.rulesetVersions.isActive, true));
-  await db
-    .update(schema.rulesetVersions)
-    .set({ isActive: true })
-    .where(eq(schema.rulesetVersions.id, targetVersionId));
+  const statements: BatchItem<"sqlite">[] = [
+    db
+      .update(schema.rulesetVersions)
+      .set({ isActive: false })
+      .where(eq(schema.rulesetVersions.isActive, true)),
+    db
+      .update(schema.rulesetVersions)
+      .set({ isActive: true })
+      .where(eq(schema.rulesetVersions.id, targetVersionId)),
+  ];
+  await db.batch(statements as [BatchItem<"sqlite">, ...BatchItem<"sqlite">[]]);
 }

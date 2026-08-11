@@ -56,6 +56,9 @@ export const registryVersions = sqliteTable("registry_versions", {
   publishedByUserId: text("published_by_user_id").references(() => users.id),
   publishedAt: text("published_at"),
   isActive: integer("is_active", { mode: "boolean" }).notNull().default(false),
+  /** SHA-256 over the canonical entry set, computed at publish time — see
+   * migration 0034 and `apps/web/src/lib/registry-checksum.ts`. */
+  checksum: text("checksum"),
   createdAt: text("created_at").notNull(),
 });
 
@@ -68,6 +71,24 @@ export const registryVersionEntries = sqliteTable("registry_version_entries", {
     .notNull()
     .references(() => crawlers.id),
   snapshot: text("snapshot").notNull(),
+  /** 1 = pre-Phase-15 snapshots (no `operatorName`, no field-order
+   * canonicalisation). 2 = current canonical shape. Never rewritten on old
+   * rows — see migration 0034. */
+  snapshotSchemaVersion: integer("snapshot_schema_version").notNull().default(1),
+});
+
+/** Append-only activation-pointer history, separate from `publishedAt` —
+ * see migration 0034. */
+export const registryVersionActivations = sqliteTable("registry_version_activations", {
+  id: text("id").primaryKey(),
+  registryVersionId: text("registry_version_id")
+    .notNull()
+    .references(() => registryVersions.id),
+  action: text("action").notNull().$type<"published" | "rolled_back_to" | "reactivated">(),
+  previousActiveVersionId: text("previous_active_version_id").references(() => registryVersions.id),
+  performedByUserId: text("performed_by_user_id").references(() => users.id),
+  reason: text("reason"),
+  createdAt: text("created_at").notNull(),
 });
 
 export const rulesetVersions = sqliteTable("ruleset_versions", {

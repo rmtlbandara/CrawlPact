@@ -337,10 +337,10 @@ describe("Super Admin registry and ruleset administration (real D1)", () => {
       ),
     );
     const compareBody = await readJson<{
-      comparison: { added: string[]; changed: { crawlerId: string }[] };
+      diff: { added: unknown[]; changed: { crawlerId: string }[] };
     }>(compareResponse);
     if (!compareBody.ok) throw new Error("compare failed");
-    expect(compareBody.data.comparison.changed.some((c) => c.crawlerId === crawlerId)).toBe(true);
+    expect(compareBody.data.diff.changed.some((c) => c.crawlerId === crawlerId)).toBe(true);
   });
 
   it("publishing a new release schedules affected domains for re-evaluation", async () => {

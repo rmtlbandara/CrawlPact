@@ -8,6 +8,7 @@ import {
 } from "./change-attribution";
 import { classifyFindingLifecycle, type FindingCounts } from "./finding-lifecycle";
 import { sha256Hex } from "./persist-scan";
+import { getRegistryVersionSnapshotMap, type CanonicalCrawlerSnapshot } from "./registry-snapshot";
 
 /**
  * Materialised domain-change-event generation and querying (Phase 8). See
@@ -39,6 +40,7 @@ async function getCrawlerResultChanges(
   db: Database,
   previousScanId: string,
   currentScanId: string,
+  currentScanRegistryVersionId: string | null,
 ): Promise<CrawlerResultChange[]> {
   const [previousRows, currentRows] = await Promise.all([
     db
@@ -52,12 +54,19 @@ async function getCrawlerResultChanges(
       .select({
         crawlerId: schema.scanCrawlerResults.crawlerId,
         result: schema.scanCrawlerResults.result,
-        purpose: schema.crawlers.purpose,
       })
       .from(schema.scanCrawlerResults)
-      .innerJoin(schema.crawlers, eq(schema.scanCrawlerResults.crawlerId, schema.crawlers.id))
       .where(eq(schema.scanCrawlerResults.scanId, currentScanId)),
   ]);
+
+  // Phase 15 fix: `purpose` must reflect the crawler exactly as it existed
+  // in the registry release the current scan actually recorded, not
+  // whichever value the live `crawlers` row holds today — otherwise a
+  // later purpose correction would retroactively relabel this attribution
+  // event's `affectedPurposes`.
+  const snapshotMap: Map<string, CanonicalCrawlerSnapshot> = currentScanRegistryVersionId
+    ? await getRegistryVersionSnapshotMap(db, currentScanRegistryVersionId)
+    : new Map();
 
   const previousByCrawler = new Map(previousRows.map((r) => [r.crawlerId, r.result]));
   const changes: CrawlerResultChange[] = [];
@@ -66,7 +75,7 @@ async function getCrawlerResultChanges(
     if (previous !== undefined && previous !== current.result) {
       changes.push({
         crawlerId: current.crawlerId,
-        purpose: current.purpose,
+        purpose: snapshotMap.get(current.crawlerId)?.purpose ?? "unknown",
         from: previous,
         to: current.result,
       });
@@ -193,7 +202,12 @@ export async function generateTimelineEvent(
 
   let crawlerChanges: CrawlerResultChange[] = [];
   if (attribution.origin !== "operational" && attribution.origin !== "uncertain") {
-    crawlerChanges = await getCrawlerResultChanges(db, params.previousScanId, params.currentScanId);
+    crawlerChanges = await getCrawlerResultChanges(
+      db,
+      params.previousScanId,
+      params.currentScanId,
+      currentScan.registryVersionId,
+    );
   }
   const affectedPurposes = [...new Set(crawlerChanges.map((c) => c.purpose))];
   const hasHighSeverityAppeared = entries.some(

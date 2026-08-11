@@ -92,6 +92,15 @@ pnpm run status:validate
 echo "==> Validate operations documentation"
 pnpm run operations:validate
 
+echo "==> Validate crawler registry integrity"
+pnpm run registry:validate
+
+echo "==> Verify active registry release integrity"
+pnpm run registry:integrity:verify
+
+echo "==> Validate public crawler directory against the registry"
+pnpm run registry:public:validate
+
 echo "==> Validate content-collection quality"
 pnpm run content:validate
 

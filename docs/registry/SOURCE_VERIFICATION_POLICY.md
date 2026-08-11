@@ -4,7 +4,7 @@
 
 Every crawler record cites `official_source_url` pointing at documentation published by the
 crawler's own operator (not a third-party aggregator). The seed data
-(`packages/database/seed/seed.sql`) and content collection
+(`packages/database/seed/reference-data.sql`) and content collection
 (`apps/web/src/content/crawlers/*.md`) were re-verified by live-fetching each cited
 `official_source_url` on 2026-07-24, closing the gap between the registry and the content
 collection (22 of 23 registry crawlers now have a public page, corrected from a prior stale
@@ -22,14 +22,29 @@ purpose Google's own documentation deliberately does not specify — recorded as
 guessed). This also closes SRS §30.4's "20 crawler-reference pages" launch minimum with real,
 individually-verified pages rather than an arbitrary count.
 
-**Bingbot exception**: `crw_bingbot` remains in the registry (seeded prior to this pass) but has
-no public content page. Its official source (`bing.com`/`aka.ms/bingbot`) is a JavaScript-rendered
-page that could not be fetched and read during this verification pass — rather than publish a
-page asserting a freshly-verified source that was not actually confirmed, the content page was
-withheld pending a verification method that can actually read that page (e.g. a headless
-browser, or a different Microsoft-published source).
+**Bingbot exception**: `crw_bingbot` remains in the registry but has no public content page. Its
+official source is a JavaScript-rendered page that could not be fetched and read during
+verification — rather than publish a page asserting a freshly-verified source that was not
+actually confirmed, the content page was withheld pending a verification method that can actually
+read that page (e.g. a headless browser, or a different Microsoft-published source).
+
+**Phase 15 update (2026-08-11)**: a full live reverification pass was run against all 9
+operators' current official documentation — see
+`docs/registry/PHASE_15_FULL_SOURCE_REVERIFICATION_REPORT.md` for the complete evidence trail.
+All 23 crawlers were reconfirmed as documented, with two real findings: (1) the previously-noted
+Amazon/Google correction (see `docs/registry/CRAWLER_REGISTRY_GOVERNANCE.md`) was independently
+re-verified rather than blindly trusted, and (2) Bingbot's own source URL had also moved
+(`bing.com/bingbot.htm` → `aka.ms/bingbot` → the current URL below) — corrected in
+`packages/database/seed/reference-data.sql`. The final destination remains JavaScript-rendered;
+the Bingbot content-page exception above still applies, now against the current URL:
+`https://www.bing.com/webmaster/help/which-crawlers-does-bing-use-8c184ec0`.
 
 ## Re-verification cadence
+
+See `docs/registry/REGISTRY_REVERIFICATION_POLICY.md` (Phase 15) for the full cadence, thresholds,
+and triggers. In summary: 180 days is the standard review interval; a crawler missing a
+verification date or official source blocks publication of any release that includes it as an
+evaluation-eligible entry.
 
 Crawler documentation can change without notice. Before relying on any specific record for a
 production decision:
@@ -37,8 +52,9 @@ production decision:
 1. Re-check the cited `official_source_url` directly.
 2. If the token, purpose, or behaviour has changed, this is exactly what "registry drift"
    (`docs/registry/CRAWLER_REGISTRY_GOVERNANCE.md`) is for — update the record through a new
-   registry version once the Super Admin registry workflow exists (Part 6), never by silently
-   editing a published release.
+   registry version via the Super Admin registry workflow
+   (`docs/registry/REGISTRY_CORRECTION_WORKFLOW.md`), never by silently editing a published
+   release.
 
 ## What "verified" means in the seed data
 

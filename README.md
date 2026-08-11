@@ -128,6 +128,8 @@ values throughout. Full setup and troubleshooting:
 | `pnpm test:integration`                        | Integration tests against real local D1                                                                                                 |
 | `pnpm db:validate`                             | Migration/schema-drift check                                                                                                            |
 | `pnpm registry:validate`                       | Crawler registry integrity checks (local D1 only)                                                                                       |
+| `pnpm registry:integrity:verify`               | Active release checksum/snapshot/evaluation-set integrity check (local D1 only)                                                         |
+| `pnpm registry:public:validate`                | Public crawler directory vs. D1 registry drift check                                                                                    |
 | `pnpm build`                                   | Type-check (`astro check`) and build                                                                                                    |
 | `pnpm quality`                                 | The full non-destructive local quality gate (format, lint, typecheck, unit+integration tests, db:validate, build)                       |
 | `pnpm test:e2e` / `pnpm test:e2e:chromium`     | End-to-end tests (Playwright)                                                                                                           |
