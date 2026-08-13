@@ -107,6 +107,9 @@ pnpm run research:validate
 echo "==> Verify research publication checksum integrity"
 pnpm run research:integrity:verify
 
+echo "==> Validate customer-pilot cohort data and governance docs"
+pnpm run pilot:validate
+
 echo "==> Validate content-collection quality"
 pnpm run content:validate
 

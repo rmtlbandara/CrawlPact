@@ -43,15 +43,16 @@ extended platform guides), RISK-032 (no Search Console property connected), and 
 
 ### RISK-001 — Real paid Paddle checkout lifecycle has never been run
 
-- **Category**: Billing · **Severity**: P1 · **Probability**: Certain (known gap, not yet attempted)
-- **Impact**: Whether a real payment correctly links `custom_data.userId` and grants the plan has never been observed, only inferred from webhook simulation and code review.
-- **Evidence**: `docs/status/KNOWN_RISKS.md` (webhook resolution entries), `docs/baseline/2026-08-03/BILLING_AND_PLAN_BASELINE.md`
-- **Current mitigation**: Webhook delivery mechanism independently verified live 2026-07-28 (8 real signed events). Signature/idempotency/state-machine logic proven. **Updated Phase 6 (2026-08-04)**: the live Paddle catalog itself is now real (6 new production prices created and read back — `docs/billing/PADDLE_LIVE_CATALOG_MAP.md`), server-side checkout price resolution is verified against real catalog data, and the webhook processor's price→plan resolution was re-verified against the new DB-backed model (`docs/billing/PADDLE_WEBHOOK_EVENT_MATRIX.md`). What remains genuinely unverified is unchanged: a real customer paying real money and the resulting `custom_data.userId` linkage → plan grant.
+- **Category**: Billing · **Severity**: P1 (technical sub-question), commercial validation tracked separately · **Probability**: N/A — technical sub-question resolved by direct evidence this phase
+- **Impact**: Whether a real payment correctly links `custom_data.userId` and grants the plan had never been directly observed, only inferred from webhook simulation and code review — **until Phase 17**.
+- **Evidence**: `docs/status/KNOWN_RISKS.md` (webhook resolution entries), `docs/baseline/2026-08-03/BILLING_AND_PLAN_BASELINE.md`, **`docs/pilot/REAL_PAID_CHECKOUT_VALIDATION_PROTOCOL.md` (Phase 17, 2026-08-11)**.
+- **Current mitigation**: Webhook delivery mechanism independently verified live 2026-07-28 (8 real signed events). Signature/idempotency/state-machine logic proven. Phase 6 (2026-08-04): the live Paddle catalog itself is real, server-side checkout price resolution verified against it. **Phase 17 (2026-08-11)**: two pre-existing, real (non-sandbox) production Paddle subscriptions were found and independently re-verified read-only against the live Paddle API — real checkout, real payment (`first_billed_at` populated), a linked webhook event, correct plan grant, correct billing period. **This satisfies the technical acceptance criteria** (real checkout → real payment → real webhook → correct user linkage → subscription created → plan granted). Both subscriptions belong to the product owner's own Super Admin account, however — per Phase 17's own doctrine (an owner-funded/owner-held transaction never proves commercial demand), this evidence closes the _technical_ sub-question only. Genuine commercial validation (an independent external customer voluntarily paying) remains open — tracked in `docs/pilot/PHASE_17_COMMERCIAL_VALIDATION_DECISION.md`, currently "insufficient evidence" (0 external participants).
 - **Owner**: Billing owner · **Trigger**: Before any commercial launch or real customer onboarding
-- **Review date**: Before Gate B (Conversion-ready) · **Target phase**: Phase 7
+- **Review date**: Before Gate B (Conversion-ready) · **Target phase**: Phase 7 (technical), Phase 17 (commercial)
 - **GitHub issue**: not yet created (see `docs/governance/GITHUB_GOVERNANCE_SETUP_MANIFEST.md`)
-- **Status**: open
-- **Acceptance criteria for closure**: One real, authorized, small-value paid checkout completes end-to-end (payment → webhook → plan grant), verified and then reverted/refunded per a documented test protocol.
+- **Status**: **technical sub-question closed (2026-08-11); commercial validation remains open**
+- **Acceptance criteria for closure (technical)**: ✅ met — one real, live paid checkout completed end-to-end (payment → webhook → plan grant), independently re-verified read-only via the Paddle API and D1.
+- **Acceptance criteria for closure (commercial)**: still open — requires ≥2 independent external customers voluntarily purchasing at the current public price (`docs/pilot/PHASE_17_SUCCESS_CRITERIA.md`), not yet met.
 
 ### RISK-002 — Paddle webhook signing secret was returned in plaintext by a read-only API call, not rotated
 

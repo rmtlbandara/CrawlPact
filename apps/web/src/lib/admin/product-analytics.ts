@@ -51,10 +51,11 @@ async function distinctUsersInRange(db: Database, sinceIso: string): Promise<num
 }
 
 /** Present as "N / D — P%", never a bare percentage — see the dashboard's
- * own low-volume-data handling rule (docs/analytics/PRODUCT_METRIC_DICTIONARY.md). */
+ * own low-volume-data handling rule (docs/analytics/PRODUCT_METRIC_DICTIONARY.md).
+ * Reused by admin/pilot-analytics.ts for the same reason (Phase 17). */
 export type RatioMetric = { numerator: number; denominator: number; percent: number | null };
 
-function ratio(numerator: number, denominator: number): RatioMetric {
+export function ratio(numerator: number, denominator: number): RatioMetric {
   return {
     numerator,
     denominator,

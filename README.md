@@ -49,7 +49,10 @@ presence from production verification:
   scale, see [`docs/risks/ACTIVE_RISKS.md`](docs/risks/ACTIVE_RISKS.md)
 - **Notifications and a private Atom feed per user**
 - **Billing and subscriptions** via Paddle — annual-only, three paid tiers; webhook processing
-  `verified-live`, real paid checkout lifecycle not yet run
+  `verified-live`; a real paid checkout lifecycle has now been directly observed (two live
+  production subscriptions), but only on the product owner's own account — genuine commercial
+  validation (an independent external customer paying) is still open, see
+  [`docs/risks/ACTIVE_RISKS.md`](docs/risks/ACTIVE_RISKS.md) RISK-001
 - **Agency capabilities** — client groups, batch import, branded client-safe shares
 - **Crawler registry** — 23 crawlers across 9 operators, versioned releases, Super Admin
   governance UI
@@ -65,6 +68,12 @@ presence from production verification:
   computed from the immutable registry, plus a governed research-publication workflow
   (`/research`); no publication is live in production yet — see
   [`docs/research/PHASE_16_FIRST_RESEARCH_PUBLICATION_EVIDENCE.md`](docs/research/PHASE_16_FIRST_RESEARCH_PUBLICATION_EVIDENCE.md)
+- **Customer pilot framework** (Phase 17) — Super Admin cohort/participant management
+  (`/admin/pilots`), in-app feedback capture, activation/monitoring/paid-conversion metrics
+  derived from existing product data (never a duplicated field); technical infrastructure only —
+  no real external pilot participants have been recruited yet, since that requires the human
+  product owner, not an autonomous coding agent — see
+  [`docs/pilot/PHASE_17_PILOT_READY_AWAITING_EXTERNAL_EVIDENCE.md`](docs/pilot/PHASE_17_PILOT_READY_AWAITING_EXTERNAL_EVIDENCE.md)
 
 ## Product boundaries
 

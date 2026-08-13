@@ -147,6 +147,9 @@ jobs:
       - name: Verify research publication checksum integrity
         run: pnpm research:integrity:verify
 
+      - name: Validate customer-pilot cohort data and governance docs
+        run: pnpm pilot:validate
+
       - name: Validate content-collection quality
         # Phase 12: this script already existed (Phase 7) and was already
         # wired into `pnpm quality`/`pnpm run quality:gate`, but had never

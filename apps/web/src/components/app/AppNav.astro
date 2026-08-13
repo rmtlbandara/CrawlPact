@@ -2,6 +2,7 @@
 import { SignOutButton } from "../auth/SignOutButton";
 import { NotificationBadge } from "./NotificationBadge";
 import { AppMobileNav } from "./AppMobileNav";
+import { PilotFeedbackLink } from "./PilotFeedbackLink";
 import BrandMark from "../BrandMark.astro";
 
 export type Props = { displayName: string };
@@ -58,6 +59,7 @@ function isActive(href: string): boolean {
       <AppMobileNav client:idle links={links} currentPath={currentPath} />
     </div>
     <div class="flex items-center gap-3">
+      <PilotFeedbackLink client:idle />
       <span class="hidden text-supporting text-neutral-600 sm:inline">{displayName}</span>
       <SignOutButton client:load />
     </div>
