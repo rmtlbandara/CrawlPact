@@ -338,7 +338,13 @@ PRODUCT_TERMINOLOGY_GLOSSARY,CLAIMS_AND_MESSAGING_GUIDE,MESSAGING_SURFACE_INVENT
 
 - **Objective**: Run a real customer pilot once Gates A–D are met.
 - **Dependencies**: Gates A–D.
-- **Status**: not started.
+- **Status**: **technical readiness complete; commercial validation not started.** Pilot cohort/
+  participant/feedback data model, Super Admin `/admin/pilots` workspace, in-app feedback capture,
+  and activation/monitoring/paid-conversion metrics (derived live from existing product data) are
+  built and tested. Zero real external pilot participants have been recruited — recruitment
+  requires the human product owner, not an autonomous coding agent, and was explicitly out of
+  scope for this pass. See `docs/pilot/PHASE_17_PILOT_READY_AWAITING_EXTERNAL_EVIDENCE.md` for
+  exactly what remains and who must do it next.
 
 ### Phase 18 — Production Launch Readiness and Final Audit
 

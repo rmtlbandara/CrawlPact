@@ -416,6 +416,51 @@ async function purgeExpiredProductEvents(
   return { affected, wouldAffect: null, backlogRemaining, error: null };
 }
 
+/** Phase 17 (docs/pilot/PHASE_17_PILOT_DATA_RETENTION_DECISION.md): reuses
+ * PRODUCT_EVENT_RETENTION_DAYS's own 18-month precedent rather than
+ * inventing a fresh, unapproved retention period. Only the optional free-
+ * text `comment` is cleared — the structured category/rating fields and the
+ * cohort/participant relationship are aggregate-safe and retained
+ * indefinitely, so this is an UPDATE (null the comment), never a DELETE. */
+async function purgeExpiredPilotFeedbackComments(
+  db: Database,
+  now: Date,
+  dryRun: boolean,
+  chunkSize: number,
+  maxChunks: number,
+): Promise<CategoryResult> {
+  const cutoff = daysAgo(PRODUCT_EVENT_RETENTION_DAYS, now);
+  const where = and(
+    lt(schema.pilotFeedback.createdAt, cutoff),
+    isNotNull(schema.pilotFeedback.comment),
+  );
+
+  if (dryRun) {
+    const [row] = await db.select({ n: count() }).from(schema.pilotFeedback).where(where);
+    return { ...emptyCategoryResult(), wouldAffect: row?.n ?? 0 };
+  }
+
+  const cap = chunkSize * maxChunks;
+  const expired = await db
+    .select({ id: schema.pilotFeedback.id })
+    .from(schema.pilotFeedback)
+    .where(where)
+    .limit(cap);
+
+  for (const row of expired) {
+    await db
+      .update(schema.pilotFeedback)
+      .set({ comment: null })
+      .where(eq(schema.pilotFeedback.id, row.id));
+  }
+
+  const backlogRemaining =
+    expired.length === cap
+      ? await hasRowsMatching(db.select({ n: count() }).from(schema.pilotFeedback).where(where))
+      : false;
+  return { affected: expired.length, wouldAffect: null, backlogRemaining, error: null };
+}
+
 const CATEGORIES = [
   "expired_audit_continuations",
   "anonymous_scans",
@@ -424,6 +469,7 @@ const CATEGORIES = [
   "expired_entitlements",
   "orphaned_agency_logos",
   "expired_product_events",
+  "expired_pilot_feedback_comments",
 ] as const;
 type Category = (typeof CATEGORIES)[number];
 
@@ -436,6 +482,7 @@ export type DataRetentionResult = {
   expiredContinuationsDeleted: number;
   orphanedAgencyLogosDeleted: number;
   productEventsDeleted: number;
+  pilotFeedbackCommentsCleared: number;
   dryRun: boolean;
   /** True if any category threw — the run still completed the categories that didn't fail. */
   hasErrors: boolean;
@@ -480,6 +527,8 @@ export async function runDataRetentionPurge(
     expired_entitlements: () => revertExpiredEntitlements(db, now, dryRun, chunkSize, maxChunks),
     orphaned_agency_logos: () => purgeOrphanedAgencyLogos(db, options.agencyLogosBucket, dryRun),
     expired_product_events: () => purgeExpiredProductEvents(db, now, dryRun, chunkSize, maxChunks),
+    expired_pilot_feedback_comments: () =>
+      purgeExpiredPilotFeedbackComments(db, now, dryRun, chunkSize, maxChunks),
   };
 
   const categories = {} as Record<Category, CategoryResult>;
@@ -502,6 +551,7 @@ export async function runDataRetentionPurge(
     entitlementsExpired: categories.expired_entitlements.affected,
     orphanedAgencyLogosDeleted: categories.orphaned_agency_logos.affected,
     productEventsDeleted: categories.expired_product_events.affected,
+    pilotFeedbackCommentsCleared: categories.expired_pilot_feedback_comments.affected,
     dryRun,
     hasErrors: CATEGORIES.some((c) => categories[c].error !== null),
     hasBacklog: CATEGORIES.some((c) => categories[c].backlogRemaining),

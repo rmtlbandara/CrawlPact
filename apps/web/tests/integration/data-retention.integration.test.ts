@@ -553,4 +553,66 @@ describe("data retention purge (real D1)", () => {
     expect(result.categories.expired_product_events.wouldAffect).toBeGreaterThanOrEqual(1);
     expect(result.categories.expired_product_events.affected).toBe(0);
   });
+
+  it("nulls a pilot feedback comment older than 18 months but keeps the structured fields and recent comments intact (Phase 17)", async () => {
+    const now = new Date().toISOString();
+    await db.insert(schema.users).values({
+      id: "usr_retention_pilot_admin",
+      displayName: "Retention Pilot Admin",
+      status: "active",
+      planId: "free",
+      isAdmin: true,
+      createdAt: now,
+      updatedAt: now,
+    });
+    await db.insert(schema.pilotCohorts).values({
+      id: "pcoh_retention_test",
+      name: "Retention test cohort",
+      status: "active",
+      createdByUserId: "usr_retention_pilot_admin",
+      createdAt: now,
+    });
+    await db.insert(schema.pilotParticipants).values({
+      id: "ppart_retention_test",
+      pilotCohortId: "pcoh_retention_test",
+      userId: "usr_retention_pilot_admin",
+      segment: "individual",
+      participationStatus: "active",
+      humanHelpCount: 0,
+      createdAt: now,
+      updatedAt: now,
+    });
+    await db.insert(schema.pilotFeedback).values([
+      {
+        id: "pfb_old",
+        pilotParticipantId: "ppart_retention_test",
+        category: "onboarding",
+        comment: "This comment is old and should be cleared.",
+        createdAt: daysAgo(548 + 10),
+      },
+      {
+        id: "pfb_recent",
+        pilotParticipantId: "ppart_retention_test",
+        category: "pricing",
+        comment: "This comment is recent and should survive.",
+        createdAt: daysAgo(30),
+      },
+    ]);
+
+    const result = await runDataRetentionPurge(db);
+    expect(result.pilotFeedbackCommentsCleared).toBe(1);
+
+    const rows = await db
+      .select({
+        id: schema.pilotFeedback.id,
+        comment: schema.pilotFeedback.comment,
+        category: schema.pilotFeedback.category,
+      })
+      .from(schema.pilotFeedback);
+    const old = rows.find((r) => r.id === "pfb_old");
+    const recent = rows.find((r) => r.id === "pfb_recent");
+    expect(old?.comment).toBeNull();
+    expect(old?.category).toBe("onboarding"); // structured field survives — only comment is cleared
+    expect(recent?.comment).toBe("This comment is recent and should survive.");
+  });
 });

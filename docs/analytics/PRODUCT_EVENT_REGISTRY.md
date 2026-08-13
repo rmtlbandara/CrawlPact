@@ -205,3 +205,14 @@ only — no corpus domain, research study internal ID, or private filter value a
 | `observatory_methodology_viewed` | `/observatory/methodology` viewed     | Engagement |
 | `research_index_viewed`          | `/research` index viewed              | Engagement |
 | `research_publication_viewed`    | A published `/research/[slug]` viewed | Engagement |
+
+## Customer pilot (Phase 17)
+
+See `docs/pilot/PHASE_17_PILOT_DATA_MODEL_DECISION.md` for full detail. Fired server-side only, on
+the authenticated user's own action — never a property that could identify which pilot cohort a
+given anonymous visitor belongs to.
+
+| Event                      | Trigger                                                                                               | Purpose    |
+| -------------------------- | ----------------------------------------------------------------------------------------------------- | ---------- |
+| `pilot_joined`             | A Super Admin associates a user with a pilot cohort (`POST /api/admin/pilots/:cohortId/participants`) | Engagement |
+| `pilot_feedback_submitted` | A pilot participant submits feedback via `PilotFeedbackLink`                                          | Engagement |

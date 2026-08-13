@@ -157,6 +157,11 @@ export const PRODUCT_EVENT_NAMES = [
   "observatory_methodology_viewed",
   "research_index_viewed",
   "research_publication_viewed",
+  // Customer Pilot and Commercial Validation (Phase 17). Never includes the
+  // feedback comment text itself — only the controlled category — see
+  // docs/pilot/PHASE_17_PILOT_DATA_MODEL_DECISION.md.
+  "pilot_joined",
+  "pilot_feedback_submitted",
 ] as const;
 
 export type ProductEventName = (typeof PRODUCT_EVENT_NAMES)[number];

@@ -12,6 +12,40 @@ Phase 1's rule against fabricating or restructuring verifiable history. Add new 
 this distinguishes a code merge from a production deployment, which are not the same event (see
 the "Production deployment" entries below for the established pattern).
 
+## Unreleased
+
+### Added (Phase 17: Customer Pilot and Commercial Validation — technical readiness only)
+
+- Customer pilot data model (`pilot_cohorts`, `pilot_participants`, `pilot_feedback` — migration
+  `0036`) — deliberately minimal (3 tables, no invite-token table, no separate human-help-
+  intervention table); structurally incapable of granting a product entitlement (no plan/
+  subscription/domain-count column anywhere in the new schema). See
+  `docs/pilot/PHASE_17_PILOT_DATA_MODEL_DECISION.md`.
+- Super Admin `/admin/pilots` workspace — cohort/participant management, live activation/
+  monitoring/paid-conversion metrics derived from the existing `domains`/`subscriptions`/
+  `billing_customers` tables (never a duplicated pilot field), human-help counter, feedback list.
+- In-app pilot feedback capture (`PilotFeedbackLink`, `POST /api/app/pilot/feedback`), scoped so a
+  participant can only ever submit feedback for their own participation record.
+- Pilot-feedback-comment data retention: comments purged after the same 548-day window already
+  approved for `product_events` (Phase 13); structured fields and the cohort/participant
+  relationship survive indefinitely as aggregate-safe evidence.
+- `pnpm pilot:validate`, wired into `quality:gate`, CI, and `verify:push`.
+- Extensive Phase 17 governance documentation under `docs/pilot/`, `docs/product/`,
+  `docs/security/`, `docs/data/`, `docs/operations/` — hypotheses, success criteria, participant
+  qualification, change-control policy, commercial-validation decision framework, security/privacy
+  threat review, and `docs/pilot/PHASE_17_PILOT_READY_AWAITING_EXTERNAL_EVIDENCE.md`.
+
+**This is a technical-readiness pass only.** Zero real external pilot participants have been
+recruited — recruitment is the human product owner's task, not something an autonomous coding
+agent can do. `docs/pilot/PHASE_17_COMMERCIAL_VALIDATION_DECISION.md` explicitly records the
+verdict as **pending, not decidable** with 0 external participants. Separately, this phase found
+and independently re-verified two real, live production Paddle subscriptions (both on the product
+owner's own Super Admin account, created 2026-07-28 and 2026-08-05) — this closes RISK-001's
+_technical_ sub-question (a real checkout → payment → webhook → plan-grant chain has now been
+directly observed) but provides zero commercial-validation evidence; see
+`docs/pilot/REAL_PAID_CHECKOUT_VALIDATION_PROTOCOL.md` and the updated `docs/risks/ACTIVE_RISKS.md`
+RISK-001 entry.
+
 ## Production deployment (2026-08-11) — Phase 16: Policy Observatory and Research Authority
 
 PR #111 (squash-merged as `883728b`, full commit `883728b08cfd085b3c25584ef18b79f8b356325a`)

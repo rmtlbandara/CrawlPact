@@ -1,0 +1,23 @@
+---
+export const prerender = false;
+import AdminLayout from "../../../layouts/AdminLayout.astro";
+import AdminPageHeader from "../../../components/admin/AdminPageHeader.astro";
+import { PilotManager } from "../../../components/admin/PilotManager";
+import { createDb } from "@crawlpact/database";
+import { getEnv } from "../../../lib/env";
+import { getAdminPageSession } from "../../../lib/auth/require-admin";
+
+const db = createDb(getEnv().DB);
+const admin = await getAdminPageSession(Astro.request, db);
+if (!admin) return Astro.redirect("/sign-in");
+---
+
+<AdminLayout title="Pilots" displayName={admin.user.displayName}>
+  <AdminPageHeader
+    title="Pilots"
+    description="Phase 17 customer-pilot workspace — create cohorts, manually associate existing users, and review live activation/monitoring/paid-conversion metrics derived from authoritative product and billing tables. Pilot membership never grants a plan or entitlement."
+  />
+  <div class="mt-6">
+    <PilotManager client:load />
+  </div>
+</AdminLayout>
