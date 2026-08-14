@@ -19,28 +19,28 @@ not itself implement anything.
 
 ## Phase index
 
-| #   | Phase                                                      | Priority | Dependencies   | Status                                                                                                                                                |
-| --- | ---------------------------------------------------------- | -------- | -------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------- |
-| 0   | Baseline, Audit Preservation and Implementation Governance | P0       | None           | **complete** (PR #68, merged `1a39d29`)                                                                                                               |
-| 1   | Repository Documentation and Source-of-Truth Correction    | P0       | Phase 0        | **complete** (see `docs/reports/PHASE_01_DOCUMENTATION_SOURCE_OF_TRUTH_COMPLETION_REPORT.md`)                                                         |
-| 2   | Brand Positioning and Messaging System                     | P1       | Phase 1        | **complete** (see `docs/reports/PHASE_02_BRAND_POSITIONING_MESSAGING_COMPLETION_REPORT.md`)                                                           |
-| 3   | Legal Identity, Contact, Security and Trust Foundation     | P1       | Phase 1        | **complete** (see `docs/reports/PHASE_03_LEGAL_SECURITY_TRUST_COMPLETION_REPORT.md`)                                                                  |
-| 4   | Homepage Information Architecture and Conversion Redesign  | P1       | Phases 1–3     | **complete** (see `docs/reports/PHASE_04_HOMEPAGE_CONVERSION_REDESIGN_COMPLETION_REPORT.md`)                                                          |
-| 5   | Anonymous Audit Result and Account-Conversion Flow         | P1       | Phase 4        | **complete** (see `docs/reports/PHASE_05_ANONYMOUS_AUDIT_CONVERSION_COMPLETION_REPORT.md`)                                                            |
-| 6   | Pricing, Plan Architecture and Checkout Continuity         | P1       | Phase 4        | **complete** (see `docs/reports/PHASE_06_PRICING_PADDLE_CHECKOUT_COMPLETION_REPORT.md`)                                                               |
-| 7   | Vertical Landing Pages and Platform SEO Architecture       | P2       | Phases 2–4     | **substantially complete** (PR #82, merged `4637e1a`, deployed to production; see `docs/reports/PHASE_07_VERTICAL_PLATFORM_SEO_COMPLETION_REPORT.md`) |
-| 8   | Saved-Domain Experience and Change Timeline                | P1       | Phase 5        | **complete** (see `docs/reports/PHASE_08_SAVED_DOMAIN_CHANGE_TIMELINE_COMPLETION_REPORT.md`)                                                          |
-| 9   | Agency Workspace and Portfolio Workflows                   | P2       | Phase 8        | **complete** (see `docs/reports/PHASE_09_AGENCY_WORKSPACE_PORTFOLIO_COMPLETION_REPORT.md`)                                                            |
-| 10  | Notification Channels and Monitoring Reliability           | P1       | Phase 8, 9, 11 | **complete** (see `docs/reports/PHASE_10_NOTIFICATION_MONITORING_COMPLETION_REPORT.md`)                                                               |
-| 11  | Database, Storage, Retention and Performance Hardening     | P0       | Phase 1        | **complete** (PR #86, merged `36166a4`, deployed to production; see `docs/reports/PHASE_11_DATABASE_STORAGE_PERFORMANCE_COMPLETION_REPORT.md`)        |
-| 12  | Security, CI, Dependency and Quality-Gate Improvements     | P0       | Phase 1        | **stale — see note below** (git history/other docs indicate this shipped; not re-verified this pass)                                                  |
-| 13  | Analytics, Consent and Product Measurement Strategy        | P1       | Phase 1        | **stale — see note below**                                                                                                                            |
-| 14  | Status, Operations and Service Reliability                 | P1       | Phase 11       | **stale — see note below**                                                                                                                            |
-| 15  | Crawler Registry Governance and Public Changelog           | P1       | Phase 1        | **stale — see note below**                                                                                                                            |
-| 16  | Policy Observatory and Research Authority                  | P2       | Phase 15       | see detail section below (partially updated)                                                                                                          |
-| 17  | Customer Pilot and Commercial Validation                   | P1       | Gates A–D      | **pre-launch technical readiness complete**; commercial validation deferred to Phase 19 (owner decision, 2026-08-14)                                  |
-| 18  | Production Launch Readiness and Final Audit                | P0       | Gates A–E      | **complete** — GO WITH ACCEPTED NON-BLOCKING RISKS, deployed 2026-08-14 (`d25fe4f`)                                                                   |
-| 19  | Post-Launch Optimisation and Continuous Governance         | P1       | Phase 18       | not started                                                                                                                                           |
+| #   | Phase                                                      | Priority | Dependencies   | Status                                                                                                                                                                             |
+| --- | ---------------------------------------------------------- | -------- | -------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| 0   | Baseline, Audit Preservation and Implementation Governance | P0       | None           | **complete** (PR #68, merged `1a39d29`)                                                                                                                                            |
+| 1   | Repository Documentation and Source-of-Truth Correction    | P0       | Phase 0        | **complete** (see `docs/reports/PHASE_01_DOCUMENTATION_SOURCE_OF_TRUTH_COMPLETION_REPORT.md`)                                                                                      |
+| 2   | Brand Positioning and Messaging System                     | P1       | Phase 1        | **complete** (see `docs/reports/PHASE_02_BRAND_POSITIONING_MESSAGING_COMPLETION_REPORT.md`)                                                                                        |
+| 3   | Legal Identity, Contact, Security and Trust Foundation     | P1       | Phase 1        | **complete** (see `docs/reports/PHASE_03_LEGAL_SECURITY_TRUST_COMPLETION_REPORT.md`)                                                                                               |
+| 4   | Homepage Information Architecture and Conversion Redesign  | P1       | Phases 1–3     | **complete** (see `docs/reports/PHASE_04_HOMEPAGE_CONVERSION_REDESIGN_COMPLETION_REPORT.md`)                                                                                       |
+| 5   | Anonymous Audit Result and Account-Conversion Flow         | P1       | Phase 4        | **complete** (see `docs/reports/PHASE_05_ANONYMOUS_AUDIT_CONVERSION_COMPLETION_REPORT.md`)                                                                                         |
+| 6   | Pricing, Plan Architecture and Checkout Continuity         | P1       | Phase 4        | **complete** (see `docs/reports/PHASE_06_PRICING_PADDLE_CHECKOUT_COMPLETION_REPORT.md`)                                                                                            |
+| 7   | Vertical Landing Pages and Platform SEO Architecture       | P2       | Phases 2–4     | **substantially complete** (PR #82, merged `4637e1a`, deployed to production; see `docs/reports/PHASE_07_VERTICAL_PLATFORM_SEO_COMPLETION_REPORT.md`)                              |
+| 8   | Saved-Domain Experience and Change Timeline                | P1       | Phase 5        | **complete** (see `docs/reports/PHASE_08_SAVED_DOMAIN_CHANGE_TIMELINE_COMPLETION_REPORT.md`)                                                                                       |
+| 9   | Agency Workspace and Portfolio Workflows                   | P2       | Phase 8        | **complete** (see `docs/reports/PHASE_09_AGENCY_WORKSPACE_PORTFOLIO_COMPLETION_REPORT.md`)                                                                                         |
+| 10  | Notification Channels and Monitoring Reliability           | P1       | Phase 8, 9, 11 | **complete** (see `docs/reports/PHASE_10_NOTIFICATION_MONITORING_COMPLETION_REPORT.md`)                                                                                            |
+| 11  | Database, Storage, Retention and Performance Hardening     | P0       | Phase 1        | **complete** (PR #86, merged `36166a4`, deployed to production; see `docs/reports/PHASE_11_DATABASE_STORAGE_PERFORMANCE_COMPLETION_REPORT.md`)                                     |
+| 12  | Security, CI, Dependency and Quality-Gate Improvements     | P0       | Phase 1        | **stale — see note below** (git history/other docs indicate this shipped; not re-verified this pass)                                                                               |
+| 13  | Analytics, Consent and Product Measurement Strategy        | P1       | Phase 1        | **stale — see note below**                                                                                                                                                         |
+| 14  | Status, Operations and Service Reliability                 | P1       | Phase 11       | **stale — see note below**                                                                                                                                                         |
+| 15  | Crawler Registry Governance and Public Changelog           | P1       | Phase 1        | **stale — see note below**                                                                                                                                                         |
+| 16  | Policy Observatory and Research Authority                  | P2       | Phase 15       | see detail section below (partially updated)                                                                                                                                       |
+| 17  | Customer Pilot and Commercial Validation                   | P1       | Gates A–D      | **pre-launch technical readiness complete**; commercial validation deferred to Phase 19 (owner decision, 2026-08-14)                                                               |
+| 18  | Production Launch Readiness and Final Audit                | P0       | Gates A–E      | **complete** — reconfirmed 2026-08-14 (`16fb160`, brand/logo fix + full regression re-verification, see `docs/reports/PHASE_00_18_FINAL_RECONFIRMATION_AND_PRODUCTION_RELEASE.md`) |
+| 19  | Post-Launch Optimisation and Continuous Governance         | P1       | Phase 18       | **foundation established, 2026-08-14** — continuous governance active, not permanently complete (see `docs/reports/PHASE_19_FOUNDATION_COMPLETION_REPORT.md`)                      |
 
 **Note on the "stale" flags above (added 2026-08-14):** this pass discovered that Phases 12–15's
 own detail sections below still read "not started," which contradicts other current-authoritative
@@ -379,7 +379,12 @@ PRODUCT_TERMINOLOGY_GLOSSARY,CLAIMS_AND_MESSAGING_GUIDE,MESSAGING_SURFACE_INVENT
   `docs/pilot/PHASE_17_OWNER_APPROVED_COMMERCIAL_VALIDATION_DEFERRAL.md` and
   `docs/roadmap/PHASE_19_POST_LAUNCH_HANDOFF.md`. This must not silently drop off the roadmap.
 - **Dependencies**: Phase 18.
-- **Status**: not started (ongoing once reached).
+- **Status**: **foundation established, 2026-08-14** — real post-launch baseline recorded (0
+  external users/paying customers, honestly disclosed), risk register reconciled, commercial-
+  validation operating plan established (cross-referencing Phase 17's frozen criteria), KPI
+  dictionary and north-star metric (external monitored domains) decided, evidence backlog
+  created. Not permanently complete — continuous governance remains ongoing per this phase's own
+  §3. See `docs/reports/PHASE_19_FOUNDATION_COMPLETION_REPORT.md`.
 
 ## Release gates
 
@@ -404,12 +409,15 @@ erased. It is superseded by an explicit owner decision recorded in
 
 Gate E is satisfied under this revised definition: Phases 15–17's technical deliverables are
 confirmed live, and the deferral above is recorded. **Gate F is satisfied**: the Phase 0-18 final
-production release pass reached a GO WITH ACCEPTED NON-BLOCKING RISKS decision on 2026-08-14 and
-deployed commit `d25fe4f` to production (Worker version `699d87d8-767a-4cc9-ab70-a279979029fb`) —
-see `docs/release/PHASE_18_FINAL_GO_NO_GO_DECISION.md`.
+production release pass reached a GO WITH ACCEPTED NON-BLOCKING RISKS decision, reconfirmed
+2026-08-14 with a brand/logo fix and full regression re-verification, commit `16fb160` deployed to
+production (Worker version `280cac36-d3cb-4ca0-a7a2-03aab2c6ecf8`) — see
+`docs/release/PHASE_18_FINAL_GO_NO_GO_DECISION.md` and
+`docs/reports/PHASE_00_18_FINAL_RECONFIRMATION_AND_PRODUCTION_RELEASE.md`.
 
-Phase 19 is ongoing governance after launch readiness, not gated — see
-`docs/roadmap/PHASE_19_POST_LAUNCH_HANDOFF.md` for what it owns.
+Phase 19 is ongoing governance after launch readiness, not gated — its foundation was established
+2026-08-14; see `docs/reports/PHASE_19_FOUNDATION_COMPLETION_REPORT.md` for what it owns going
+forward, and `docs/roadmap/PHASE_19_POST_LAUNCH_HANDOFF.md` for the original handoff.
 
 ## GitHub governance
 

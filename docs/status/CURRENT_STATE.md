@@ -66,8 +66,12 @@ empty; `/`, `/observatory` (regression check), an unauthenticated `/admin/pilots
 all checked directly against `https://crawlpact.com`.
 
 Phase 18 (Production Launch Readiness and Final Audit) reached a **GO WITH ACCEPTED
-NON-BLOCKING RISKS** decision on 2026-08-14 and is deployed to production (commit `d25fe4f`,
-Worker version `699d87d8-767a-4cc9-ab70-a279979029fb`). The prior HOLD's two forcing issues were
+NON-BLOCKING RISKS** decision on 2026-08-14, reconfirmed the same day via a full Phase 0-18
+regression pass (found and fixed one real brand/logo defect — the historical C-bracket SVG in
+`AuditReportView.tsx`, replaced with the current shield/checkmark mark), and is deployed to
+production (commit `16fb160`, Worker version `280cac36-d3cb-4ca0-a7a2-03aab2c6ecf8`). See
+`docs/reports/PHASE_00_18_FINAL_RECONFIRMATION_AND_PRODUCTION_RELEASE.md` for the reconfirmation
+evidence. The prior HOLD's two forcing issues were
 both genuinely resolved in this pass, not waived: RISK-002 (unrotated Paddle webhook signing
 secret) was closed with a real replacement-destination rotation, verified end-to-end against live
 production (`docs/security/PADDLE_WEBHOOK_SECRET_ROTATION_2026_08.md`); Gate E (commercial
@@ -83,6 +87,21 @@ re-run, 41 security, full validator suite, build), plus a full Playwright E2E re
 `docs/release/PHASE_18_FINAL_GO_NO_GO_DECISION.md` for the formal decision record and
 `docs/release/PHASE_18_LAUNCH_READINESS_MATRIX.md`/`PHASE_18_LAUNCH_RISK_MATRIX.md` for the
 domain-by-domain evidence.
+
+Phase 19 (Post-Launch Optimisation and Continuous Governance) foundation was established
+2026-08-14 (docs-only pass, no application code changed, no Worker redeploy needed). Real
+post-launch baseline recorded honestly: **0 external activated accounts, 0 external monitored
+domains, 0 external paying customers, $0 external MRR** — 2 total accounts exist (1 owner Super
+Admin holding both real subscriptions, 1 dormant non-admin account with zero saved domains). This
+matches and reconfirms Phase 17's own finding. Risk register reconciled (stale "last reviewed"
+header fixed; RISK-002/006/018 confirmed not reopened; RISK-032/003 reconfirmed accurate).
+Commercial-validation operating plan, KPI/metric dictionary, north-star metric decision (external
+monitored domains), conversion funnel baseline, capacity/security/registry/SEO operating policies,
+and an evidence backlog were all established — see
+`docs/reports/PHASE_19_FOUNDATION_COMPLETION_REPORT.md`. No Search Console connection was possible
+(no Google-authenticated tool available, confirmed, not fabricated) — remains an open, documented
+owner action. **This is a foundation, not a completion** — Phase 19 governance continues
+indefinitely per its own §3.
 
 Phase 16 (Policy Observatory and Research Authority, deployed 2026-08-11) added a Registry
 Observatory (`/observatory`, `/observatory/registry`, `/observatory/methodology`) computed

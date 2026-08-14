@@ -8,7 +8,17 @@ below rather than duplicated. Do not maintain a third active-risk list anywhere 
 
 Statuses: `open` · `mitigating` · `accepted` · `blocked` · `monitoring`.
 
-Last reviewed: 2026-08-10 (Phase 13, Analytics, Consent, Product Measurement and Private-Repository
+Last reviewed: 2026-08-14 (Phase 19 foundation, Post-Launch Optimisation and Continuous
+Governance). No risk status changed in this pass — a full read-through confirmed every open entry
+below remains accurate against live production, and confirmed no basis to reopen RISK-002,
+RISK-006, or RISK-018 (all closed with evidence in the Phase 0-18 final reconfirmation pass, see
+`docs/risks/RISK_ARCHIVE.md` ARC-035/036/037). RISK-032 (Search Console) and RISK-003 (Cloudflare
+credential visibility) were specifically re-checked and remain accurately `accepted`/open exactly
+as recorded — see `docs/optimization/PHASE_19_EVIDENCE_BACKLOG.md` for their Phase 19 trigger
+status. Prior review: 2026-08-14 (Phase 0-18 final reconfirmation pass — resolved RISK-002,
+RISK-006, RISK-018; reclassified RISK-032 to POST-LAUNCH; see
+`docs/reports/PHASE_00_18_FINAL_RECONFIRMATION_AND_PRODUCTION_RELEASE.md`). Prior review:
+2026-08-10 (Phase 13, Analytics, Consent, Product Measurement and Private-Repository
 Exposure Governance). Phase 13 closed RISK-021 (see `docs/risks/RISK_ARCHIVE.md` ARC-031 — a real
 consent mechanism now gates Google Analytics), closed RISK-004 (see ARC-030 — a deliberate product
 decision to leave both Cloudflare Web Analytics and AI Crawl Control disabled/unchanged, documented
