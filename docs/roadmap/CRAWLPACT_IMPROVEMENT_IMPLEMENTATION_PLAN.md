@@ -33,14 +33,23 @@ not itself implement anything.
 | 9   | Agency Workspace and Portfolio Workflows                   | P2       | Phase 8        | **complete** (see `docs/reports/PHASE_09_AGENCY_WORKSPACE_PORTFOLIO_COMPLETION_REPORT.md`)                                                            |
 | 10  | Notification Channels and Monitoring Reliability           | P1       | Phase 8, 9, 11 | **complete** (see `docs/reports/PHASE_10_NOTIFICATION_MONITORING_COMPLETION_REPORT.md`)                                                               |
 | 11  | Database, Storage, Retention and Performance Hardening     | P0       | Phase 1        | **complete** (PR #86, merged `36166a4`, deployed to production; see `docs/reports/PHASE_11_DATABASE_STORAGE_PERFORMANCE_COMPLETION_REPORT.md`)        |
-| 12  | Security, CI, Dependency and Quality-Gate Improvements     | P0       | Phase 1        | not started                                                                                                                                           |
-| 13  | Analytics, Consent and Product Measurement Strategy        | P1       | Phase 1        | not started                                                                                                                                           |
-| 14  | Status, Operations and Service Reliability                 | P1       | Phase 11       | not started                                                                                                                                           |
-| 15  | Crawler Registry Governance and Public Changelog           | P1       | Phase 1        | not started                                                                                                                                           |
-| 16  | Policy Observatory and Research Authority                  | P2       | Phase 15       | not started                                                                                                                                           |
-| 17  | Customer Pilot and Commercial Validation                   | P1       | Gates A–D      | not started                                                                                                                                           |
-| 18  | Production Launch Readiness and Final Audit                | P0       | Gates A–E      | not started                                                                                                                                           |
+| 12  | Security, CI, Dependency and Quality-Gate Improvements     | P0       | Phase 1        | **stale — see note below** (git history/other docs indicate this shipped; not re-verified this pass)                                                  |
+| 13  | Analytics, Consent and Product Measurement Strategy        | P1       | Phase 1        | **stale — see note below**                                                                                                                            |
+| 14  | Status, Operations and Service Reliability                 | P1       | Phase 11       | **stale — see note below**                                                                                                                            |
+| 15  | Crawler Registry Governance and Public Changelog           | P1       | Phase 1        | **stale — see note below**                                                                                                                            |
+| 16  | Policy Observatory and Research Authority                  | P2       | Phase 15       | see detail section below (partially updated)                                                                                                          |
+| 17  | Customer Pilot and Commercial Validation                   | P1       | Gates A–D      | **pre-launch technical readiness complete**; commercial validation deferred to Phase 19 (owner decision, 2026-08-14)                                  |
+| 18  | Production Launch Readiness and Final Audit                | P0       | Gates A–E      | **complete** — GO WITH ACCEPTED NON-BLOCKING RISKS, deployed 2026-08-14 (`d25fe4f`)                                                                   |
 | 19  | Post-Launch Optimisation and Continuous Governance         | P1       | Phase 18       | not started                                                                                                                                           |
+
+**Note on the "stale" flags above (added 2026-08-14):** this pass discovered that Phases 12–15's
+own detail sections below still read "not started," which contradicts other current-authoritative
+evidence in the repo (git commit history and `docs/status/CURRENT_STATE.md`/memory records
+describing, e.g., Phase 14 operations and Phase 15 registry governance as shipped). This pass's
+scope was the Phase 0–18 blocker/governance closure, not a full re-audit of Phases 12–15's actual
+production state, so rather than either leave the contradiction silently unaddressed or assert
+specific claims about those phases that weren't independently re-verified this pass, it's flagged
+here for a future pass to reconcile against live evidence.
 
 ## Phase details
 
@@ -338,27 +347,29 @@ PRODUCT_TERMINOLOGY_GLOSSARY,CLAIMS_AND_MESSAGING_GUIDE,MESSAGING_SURFACE_INVENT
 
 - **Objective**: Run a real customer pilot once Gates A–D are met.
 - **Dependencies**: Gates A–D.
-- **Status**: **technical readiness complete; commercial validation not started.** Pilot cohort/
-  participant/feedback data model, Super Admin `/admin/pilots` workspace, in-app feedback capture,
-  and activation/monitoring/paid-conversion metrics (derived live from existing product data) are
+- **Status**: **pre-launch technical readiness complete; external commercial validation
+  explicitly deferred to Phase 19 by owner decision, 2026-08-14.** Pilot cohort/participant/
+  feedback data model, Super Admin `/admin/pilots` workspace, in-app feedback capture, and
+  activation/monitoring/paid-conversion metrics (derived live from existing product data) are
   built and tested. Zero real external pilot participants have been recruited — recruitment
-  requires the human product owner, not an autonomous coding agent, and was explicitly out of
-  scope for this pass. See `docs/pilot/PHASE_17_PILOT_READY_AWAITING_EXTERNAL_EVIDENCE.md` for
-  exactly what remains and who must do it next.
+  requires the human product owner, not an autonomous coding agent. This remains true; what
+  changed is that the product owner explicitly decided the release does not need to wait for it.
+  See `docs/pilot/PHASE_17_PILOT_READY_AWAITING_EXTERNAL_EVIDENCE.md` and
+  `docs/pilot/PHASE_17_OWNER_APPROVED_COMMERCIAL_VALIDATION_DEFERRAL.md`.
 
 ### Phase 18 — Production Launch Readiness and Final Audit
 
 - **Objective**: A final, current (not six-days-stale) SRS/security/production-readiness audit
   superseding the three "Final" reports Phase 1 will have already refreshed.
 - **Dependencies**: Gates A–E.
-- **Status**: **HOLD — technical-only audit pass complete, launch decision blocked.** Gate E is not
-  satisfied (Phase 17 commercial validation still open) and the phase's own launch policy
-  independently blocks GO on RISK-002 (unrotated Paddle webhook secret). Per an explicit
-  product-owner decision, a technical-only audit ran anyway across every gate-independent domain —
-  security, billing-technical, data integrity, CI, dependencies, SEO, documentation, and the full
-  risk register — resolving 2 stale risks (RISK-019, RISK-028) and re-confirming the rest with
-  fresh evidence. No Gate E/F completion, no GO decision, and no completion report resulted; see
-  `docs/release/PHASE_18_TECHNICAL_AUDIT_INTERIM_REPORT.md` for the full blocker plan.
+- **Status**: **complete — GO WITH ACCEPTED NON-BLOCKING RISKS, deployed to production
+  2026-08-14** (commit `d25fe4f`, Worker version `699d87d8-767a-4cc9-ab70-a279979029fb`). The
+  prior HOLD's two forcing conditions were both genuinely resolved, not waived: RISK-002
+  (unrotated Paddle webhook secret) was closed with a real, verified rotation; Gate E was resolved
+  by the explicit owner deferral decision above. RISK-006 and RISK-018 were also genuinely fixed
+  and tested; RISK-032 was honestly reclassified to POST-LAUNCH. See
+  `docs/release/PHASE_18_FINAL_GO_NO_GO_DECISION.md` and
+  `docs/reports/PHASE_18_PRODUCTION_LAUNCH_READINESS_FINAL_AUDIT.md`.
 
 ### Phase 19 — Post-Launch Optimisation and Continuous Governance
 
@@ -372,14 +383,14 @@ PRODUCT_TERMINOLOGY_GLOSSARY,CLAIMS_AND_MESSAGING_GUIDE,MESSAGING_SURFACE_INVENT
 
 ## Release gates
 
-| Gate                              | Requires                                                            |
-| --------------------------------- | ------------------------------------------------------------------- |
-| A — Trust-ready                   | Phases 0, 1, 2, 3 — **complete** (all four phases done, 2026-08-03) |
-| B — Conversion-ready              | Phases 4, 5, 6 — **complete** (all three done, 2026-08-04)          |
-| C — Agency-ready                  | Phases 8, 9, 10 — **complete** (all three done, 2026-08-07)         |
-| D — Scale-ready                   | Phases 11, 12, 13, 14                                               |
-| E — Authority and Pilot-Readiness | **Superseded definition, 2026-08-14** — see below                   |
-| F — Public-growth-ready           | Phase 18 (final determination pending this pass's audit result)     |
+| Gate                              | Requires                                                                  |
+| --------------------------------- | ------------------------------------------------------------------------- |
+| A — Trust-ready                   | Phases 0, 1, 2, 3 — **complete** (all four phases done, 2026-08-03)       |
+| B — Conversion-ready              | Phases 4, 5, 6 — **complete** (all three done, 2026-08-04)                |
+| C — Agency-ready                  | Phases 8, 9, 10 — **complete** (all three done, 2026-08-07)               |
+| D — Scale-ready                   | Phases 11, 12, 13, 14                                                     |
+| E — Authority and Pilot-Readiness | **Superseded definition, 2026-08-14 — satisfied**                         |
+| F — Public-growth-ready           | Phase 18 — **complete, 2026-08-14** (GO WITH ACCEPTED NON-BLOCKING RISKS) |
 
 **Gate E — superseded 2026-08-14.** The original definition (Phases 15, 16, 17, all with Phase
 17's external-commercial-validation criterion fully met) is preserved here for history, not
@@ -391,11 +402,14 @@ erased. It is superseded by an explicit owner decision recorded in
 > owner-approved deferral of external commercial validation to Phase 19. This does not claim that
 > external commercial validation has already occurred.
 
-Gate E is satisfied under this revised definition once Phases 15–17's technical deliverables are
-confirmed live (they are) and the deferral above is recorded (it is). Whether Gate F/Phase 18 can
-be marked complete depends on the rest of this pass's final audit, not on Gate E alone.
+Gate E is satisfied under this revised definition: Phases 15–17's technical deliverables are
+confirmed live, and the deferral above is recorded. **Gate F is satisfied**: the Phase 0-18 final
+production release pass reached a GO WITH ACCEPTED NON-BLOCKING RISKS decision on 2026-08-14 and
+deployed commit `d25fe4f` to production (Worker version `699d87d8-767a-4cc9-ab70-a279979029fb`) —
+see `docs/release/PHASE_18_FINAL_GO_NO_GO_DECISION.md`.
 
-Phase 19 is ongoing governance after launch readiness, not gated.
+Phase 19 is ongoing governance after launch readiness, not gated — see
+`docs/roadmap/PHASE_19_POST_LAUNCH_HANDOFF.md` for what it owns.
 
 ## GitHub governance
 
