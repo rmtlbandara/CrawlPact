@@ -12,7 +12,19 @@ Phase 1's rule against fabricating or restructuring verifiable history. Add new 
 this distinguishes a code merge from a production deployment, which are not the same event (see
 the "Production deployment" entries below for the established pattern).
 
-## Unreleased
+## Production deployment (2026-08-13) — Phase 17: Customer Pilot and Commercial Validation (technical readiness)
+
+PR #113 (squash-merged as `bc1b212`, full commit `bc1b212a4b1a6f03edc38683fc55b2ee46b191b3`)
+deployed to production via `deploy-production.yml`, run `31711315061`. One new D1 migration
+(`0036_customer_pilot.sql` — `pilot_cohorts`/`pilot_participants`/`pilot_feedback`; 36/36
+migrations applied, independently re-confirmed via a live read-only `d1_migrations` query).
+Deployed Worker version: `7d79dfd1-7978-4ee1-ac99-4e43e7f23129`. Independently re-verified
+post-deploy: a direct D1 query confirmed migration `0036` applied and both new tables present and
+empty (0 cohorts, 0 participants — correct, since no real recruitment has begun);
+`https://crawlpact.com/`, `/observatory` (regression check), an unauthenticated
+`/admin/pilots` (correctly redirected to `/sign-in`), and unauthenticated `/api/admin/pilots` and
+`/api/app/pilot/feedback` (both correctly `401`) were all checked directly. Full detail:
+`docs/pilot/PHASE_17_PILOT_READY_AWAITING_EXTERNAL_EVIDENCE.md`.
 
 ### Added (Phase 17: Customer Pilot and Commercial Validation — technical readiness only)
 

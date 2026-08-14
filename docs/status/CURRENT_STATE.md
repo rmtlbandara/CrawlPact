@@ -1,14 +1,14 @@
 ---
 Document owner: Engineering owner
 Status: current-authoritative
-Last verified: 2026-08-11
-Repository commit: 883728b08cfd085b3c25584ef18b79f8b356325a (main, post-Phase-16 merge, deployed)
-Production deployment identifier: crawlpact-web (Cloudflare Worker), https://crawlpact.com — Worker version e5cf03ea-7cd4-4970-b331-2f6879a84035
-Database migration version: 0035_research_publications.sql (35/35 applied to production, confirmed via a direct read-only D1 query against `d1_migrations` 2026-08-11 — new `research_publications` table, 0 rows)
-Crawler registry version: 2026.07.3 (active release, unchanged by Phase 16's deploy — the Amazon/Google/Bingbot corrections are independently re-verified and ready in `packages/database/seed/reference-data.sql`, still awaiting a real Super Admin session to publish; see docs/registry/CRAWLER_REGISTRY_GOVERNANCE.md and the Phase 15 completion report)
+Last verified: 2026-08-13
+Repository commit: bc1b212a4b1a6f03edc38683fc55b2ee46b191b3 (main, post-Phase-17 merge, deployed)
+Production deployment identifier: crawlpact-web (Cloudflare Worker), https://crawlpact.com — Worker version 7d79dfd1-7978-4ee1-ac99-4e43e7f23129
+Database migration version: 0036_customer_pilot.sql (36/36 applied to production, confirmed via a direct read-only D1 query against `d1_migrations` 2026-08-13 — new `pilot_cohorts`/`pilot_participants`/`pilot_feedback` tables, 0 rows each)
+Crawler registry version: 2026.07.3 (active release, unchanged by Phase 17's deploy — the Amazon/Google/Bingbot corrections are independently re-verified and ready in `packages/database/seed/reference-data.sql`, still awaiting a real Super Admin session to publish; see docs/registry/CRAWLER_REGISTRY_GOVERNANCE.md and the Phase 15 completion report)
 Phase 0 baseline reference: docs/baseline/2026-08-03/ (superseded on billing/migration facts by Phases 5–6 below; not re-run this pass)
 Review frequency: Every release, or monthly
-Next review date: 2026-09-10 (or sooner, at the next release)
+Next review date: 2026-09-13 (or sooner, at the next release)
 ---
 
 # Current State
@@ -32,7 +32,25 @@ verified platform guides (`/platforms/*`) — content-only, no product-behavior 
 production 2026-08-04, Worker version `630258b4-c020-4105-9ca3-550897f7c0e3`; all 10 new routes
 independently confirmed live (see the Phase 7 completion report).
 **Production and the default branch (`main`) are aligned** — no known drift as of the last
-deployed commit (`883728b`).
+deployed commit (`bc1b212`).
+
+Phase 17 (Customer Pilot and Commercial Validation, deployed 2026-08-13) added the **technical
+readiness** infrastructure for a real customer pilot: `pilot_cohorts`/`pilot_participants`/
+`pilot_feedback` (migration `0036`), a Super Admin `/admin/pilots` workspace, live activation/
+monitoring/paid-conversion metrics computed from existing `domains`/`subscriptions` data, and
+in-app feedback capture. **This is not commercial validation** — zero real external pilot
+participants have been recruited (recruitment is a manual, one-to-one product-owner action, not
+something this session performs), and `docs/pilot/PHASE_17_COMMERCIAL_VALIDATION_DECISION.md`
+honestly records the verdict as pending/insufficient evidence. Separately, this phase found and
+independently re-verified two real, live production Paddle subscriptions on the product owner's
+own account — closing `docs/risks/ACTIVE_RISKS.md` RISK-001's technical sub-question while leaving
+genuine commercial validation open. See
+`docs/pilot/PHASE_17_PILOT_READY_AWAITING_EXTERNAL_EVIDENCE.md` for exactly what remains. Deploy
+run `31711315061` completed cleanly, including its own smoke-test step. Independently re-verified
+post-deploy: a direct D1 query confirmed migration `0036` applied and both new tables present and
+empty; `/`, `/observatory` (regression check), an unauthenticated `/admin/pilots` (redirected to
+`/sign-in`), and unauthenticated `/api/admin/pilots`/`/api/app/pilot/feedback` (both `401`) were
+all checked directly against `https://crawlpact.com`.
 
 Phase 16 (Policy Observatory and Research Authority, deployed 2026-08-11) added a Registry
 Observatory (`/observatory`, `/observatory/registry`, `/observatory/methodology`) computed
