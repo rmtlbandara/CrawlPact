@@ -1,7 +1,7 @@
 ---
 Document owner: Engineering owner
 Status: current-authoritative
-Last verified: 2026-08-13
+Last verified: 2026-08-14
 Repository commit: bc1b212a4b1a6f03edc38683fc55b2ee46b191b3 (main, post-Phase-17 merge, deployed)
 Production deployment identifier: crawlpact-web (Cloudflare Worker), https://crawlpact.com — Worker version 7d79dfd1-7978-4ee1-ac99-4e43e7f23129
 Database migration version: 0036_customer_pilot.sql (36/36 applied to production, confirmed via a direct read-only D1 query against `d1_migrations` 2026-08-13 — new `pilot_cohorts`/`pilot_participants`/`pilot_feedback` tables, 0 rows each)
@@ -51,6 +51,21 @@ post-deploy: a direct D1 query confirmed migration `0036` applied and both new t
 empty; `/`, `/observatory` (regression check), an unauthenticated `/admin/pilots` (redirected to
 `/sign-in`), and unauthenticated `/api/admin/pilots`/`/api/app/pilot/feedback` (both `401`) were
 all checked directly against `https://crawlpact.com`.
+
+Phase 18 (Production Launch Readiness and Final Audit, 2026-08-14) is **on HOLD**, not deployed —
+this pass made documentation-only changes (no application code, no new Worker version). Stage
+18-0's mandatory precondition check found Gate E unsatisfied (Phase 17 commercial validation still
+open), which alone forces a HOLD; independently, RISK-002 (an unrotated Paddle webhook signing
+secret) is a launch BLOCKER under this phase's own policy. Per an explicit product-owner decision,
+a technical-only audit ran anyway across every gate-independent domain, re-verifying the full
+active-risk register against live production/GitHub/Cloudflare/Paddle evidence, resolving two
+stale risks (RISK-019 table-count discrepancy — no longer reproduces; RISK-028 SRS tagline
+conflict — resolved via explicit supersession note), and re-confirming the full canonical quality
+gate passes end-to-end (402 unit, 344 integration, 41 security tests, clean build). No Gate E/F
+completion, GO decision, or completion report resulted — see
+`docs/release/PHASE_18_TECHNICAL_AUDIT_INTERIM_REPORT.md` for the full blocker plan and
+`docs/release/PHASE_18_LAUNCH_READINESS_MATRIX.md`/`PHASE_18_LAUNCH_RISK_MATRIX.md` for the
+domain-by-domain evidence.
 
 Phase 16 (Policy Observatory and Research Authority, deployed 2026-08-11) added a Registry
 Observatory (`/observatory`, `/observatory/registry`, `/observatory/methodology`) computed
