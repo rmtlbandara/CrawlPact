@@ -129,6 +129,22 @@ const ALLOWLIST = [
     owner: "Product owner",
     reviewDate: "2026-09-01",
   },
+  {
+    file: "apps/web/src/components/audit-report-view-brand.test.ts",
+    pattern: "old-logo-geometry",
+    reason:
+      "Asserts these fingerprints are NOT present in AuditReportView.tsx — the geometry appears only inside .not.toMatch() negative-assertion regex literals, not as live rendered SVG.",
+    owner: "Engineering owner",
+    reviewDate: "2026-09-01",
+  },
+  {
+    file: "docs/brand/BRAND_ASSET_USAGE_INVENTORY.md",
+    pattern: "old-logo-geometry",
+    reason:
+      'Documents the historical defect by name in its own "Historical defect (fixed this pass)" section — describing what was removed, not live copy.',
+    owner: "Engineering owner",
+    reviewDate: "2026-09-01",
+  },
 ];
 
 const STALE_TAGLINE = /know what ai crawlers can access/i;
@@ -169,6 +185,16 @@ const NAMING_PATTERNS = [
   { name: "Crawl Pact (two words)", pattern: /\bCrawl Pact\b/ },
   { name: "ClawPact typo", pattern: /\bClawPact\b/ },
   { name: "CRAWLPACT wrong caps in prose", pattern: /\bCRAWLPACT\b(?!_)/ },
+];
+
+// Historical C-bracket logo SVG geometry (the pre-rebrand mark), found and removed from
+// AuditReportView.tsx during the Phase 0-18 final reconfirmation pass. Any of these fingerprints
+// reappearing in live source is the old logo returning, not a false positive — the current brand
+// mark is always the shared BrandMark component/asset, never inline SVG path data.
+const OLD_LOGO_GEOMETRY_PATTERNS = [
+  { name: "C-bracket left stroke", pattern: /M21 9h-8/ },
+  { name: "C-bracket crossbar", pattern: /M12 16h11/ },
+  { name: "C-bracket dot", pattern: /23\.2.*14\.4/ },
 ];
 
 function isExcluded(filePath) {
@@ -227,6 +253,12 @@ function main() {
     for (const { name, pattern } of NAMING_PATTERNS) {
       if (pattern.test(content) && !isAllowlisted(rel, "naming")) {
         errors.push(`${rel}: possible product-naming inconsistency (${name})`);
+      }
+    }
+
+    for (const { name, pattern } of OLD_LOGO_GEOMETRY_PATTERNS) {
+      if (pattern.test(content) && !isAllowlisted(rel, "old-logo-geometry")) {
+        errors.push(`${rel}: contains historical C-bracket logo SVG geometry (${name})`);
       }
     }
   }
