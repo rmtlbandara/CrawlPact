@@ -6,6 +6,7 @@ import { computePolicySummary, deriveConversionCtaCopy } from "../lib/policy-sum
 import type { PolicySummaryLabel } from "../lib/policy-summary";
 import { STATUS_LABEL, STATUS_TONE } from "../lib/scan-status-labels";
 import { AuditConversionCta } from "./AuditConversionCta";
+import { BrandMark } from "./BrandMark";
 
 const RESULT_TONE: Record<string, StatusTone> = {
   allowed: "success",
@@ -408,21 +409,7 @@ export function AuditReportView({
       <section className="rounded-panel border border-neutral-200 bg-white p-6">
         <div className="flex flex-wrap items-center justify-between gap-4 pb-4">
           <div className="flex items-center gap-2">
-            <svg
-              viewBox="0 0 32 32"
-              fill="none"
-              aria-hidden="true"
-              className="size-6 shrink-0 text-brand-600"
-            >
-              <path
-                d="M21 9h-8a4 4 0 0 0-4 4v6a4 4 0 0 0 4 4h8"
-                stroke="currentColor"
-                strokeWidth="2.4"
-                strokeLinecap="round"
-              />
-              <path d="M12 16h11" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" />
-              <rect x="23.2" y="14.4" width="3.2" height="3.2" rx="0.8" fill="currentColor" />
-            </svg>
+            <BrandMark className="size-6 shrink-0" />
             <ReportHeading className="text-h2 text-neutral-950">
               AI crawler policy report
             </ReportHeading>
