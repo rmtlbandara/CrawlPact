@@ -2,8 +2,8 @@
 Document owner: Engineering owner
 Status: current-authoritative
 Last verified: 2026-08-14
-Repository commit: d25fe4f75f07ec5be3af08f360d7161dbe92a0cd (main, post-Phase-18 merge, deployed)
-Production deployment identifier: crawlpact-web (Cloudflare Worker), https://crawlpact.com — Worker version 699d87d8-767a-4cc9-ab70-a279979029fb
+Repository commit: 16fb16088aef652fe021ac6b4eb8fa2db5e789d3 (main, post-Phase-0-18-final-reconfirmation, deployed)
+Production deployment identifier: crawlpact-web (Cloudflare Worker), https://crawlpact.com — Worker version 280cac36-d3cb-4ca0-a7a2-03aab2c6ecf8
 Database migration version: 0036_customer_pilot.sql (36/36 applied to production, confirmed via a direct read-only D1 query against `d1_migrations` 2026-08-13 — new `pilot_cohorts`/`pilot_participants`/`pilot_feedback` tables, 0 rows each)
 Crawler registry version: 2026.07.3 (active release, unchanged by Phase 17's deploy — the Amazon/Google/Bingbot corrections are independently re-verified and ready in `packages/database/seed/reference-data.sql`, still awaiting a real Super Admin session to publish; see docs/registry/CRAWLER_REGISTRY_GOVERNANCE.md and the Phase 15 completion report)
 Phase 0 baseline reference: docs/baseline/2026-08-03/ (superseded on billing/migration facts by Phases 5–6 below; not re-run this pass)
@@ -32,7 +32,20 @@ verified platform guides (`/platforms/*`) — content-only, no product-behavior 
 production 2026-08-04, Worker version `630258b4-c020-4105-9ca3-550897f7c0e3`; all 10 new routes
 independently confirmed live (see the Phase 7 completion report).
 **Production and the default branch (`main`) are aligned** — no known drift as of the last
-deployed commit (`d25fe4f`).
+deployed commit (`16fb160`).
+
+A final Phase 0–18 reconfirmation and brand-consistency pass (2026-08-14, commit `16fb160`, Worker
+`280cac36-d3cb-4ca0-a7a2-03aab2c6ecf8`) re-verified every Phase 0–18 guarantee against the actual
+current product rather than reusing prior evidence, and found and fixed one real defect: the
+shared `AuditReportView.tsx` (used by `/audit/[auditId]`, `/sample-report`, `/shared/[token]`, and
+the domain workspace) still inlined the historical pre-rebrand C-bracket logo SVG instead of the
+current shield/checkmark mark. Fixed via a new shared `BrandMark.tsx` React component, with
+`brand:validate` permanently strengthened against regression and new unit/E2E test coverage.
+Pricing was independently re-verified live (D1 catalog, live Paddle, and 8 public routes all
+match, 0 legacy prices leaking). Full quality gate re-run clean (unit 408, integration 350,
+security 41, E2E 246, accessibility 196/197 with only the pre-existing accepted RISK-013). See
+`docs/release/PHASE_00_18_RECONFIRMATION_MATRIX.md` and
+`docs/reports/PHASE_00_18_FINAL_RECONFIRMATION_AND_PRODUCTION_RELEASE.md`.
 
 Phase 17 (Customer Pilot and Commercial Validation, deployed 2026-08-13) added the **technical
 readiness** infrastructure for a real customer pilot: `pilot_cohorts`/`pilot_participants`/
