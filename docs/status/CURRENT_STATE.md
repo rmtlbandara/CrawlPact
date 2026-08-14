@@ -2,8 +2,8 @@
 Document owner: Engineering owner
 Status: current-authoritative
 Last verified: 2026-08-14
-Repository commit: bc1b212a4b1a6f03edc38683fc55b2ee46b191b3 (main, post-Phase-17 merge, deployed)
-Production deployment identifier: crawlpact-web (Cloudflare Worker), https://crawlpact.com — Worker version 7d79dfd1-7978-4ee1-ac99-4e43e7f23129
+Repository commit: d25fe4f75f07ec5be3af08f360d7161dbe92a0cd (main, post-Phase-18 merge, deployed)
+Production deployment identifier: crawlpact-web (Cloudflare Worker), https://crawlpact.com — Worker version 699d87d8-767a-4cc9-ab70-a279979029fb
 Database migration version: 0036_customer_pilot.sql (36/36 applied to production, confirmed via a direct read-only D1 query against `d1_migrations` 2026-08-13 — new `pilot_cohorts`/`pilot_participants`/`pilot_feedback` tables, 0 rows each)
 Crawler registry version: 2026.07.3 (active release, unchanged by Phase 17's deploy — the Amazon/Google/Bingbot corrections are independently re-verified and ready in `packages/database/seed/reference-data.sql`, still awaiting a real Super Admin session to publish; see docs/registry/CRAWLER_REGISTRY_GOVERNANCE.md and the Phase 15 completion report)
 Phase 0 baseline reference: docs/baseline/2026-08-03/ (superseded on billing/migration facts by Phases 5–6 below; not re-run this pass)
@@ -32,7 +32,7 @@ verified platform guides (`/platforms/*`) — content-only, no product-behavior 
 production 2026-08-04, Worker version `630258b4-c020-4105-9ca3-550897f7c0e3`; all 10 new routes
 independently confirmed live (see the Phase 7 completion report).
 **Production and the default branch (`main`) are aligned** — no known drift as of the last
-deployed commit (`bc1b212`).
+deployed commit (`d25fe4f`).
 
 Phase 17 (Customer Pilot and Commercial Validation, deployed 2026-08-13) added the **technical
 readiness** infrastructure for a real customer pilot: `pilot_cohorts`/`pilot_participants`/
@@ -52,18 +52,22 @@ empty; `/`, `/observatory` (regression check), an unauthenticated `/admin/pilots
 `/sign-in`), and unauthenticated `/api/admin/pilots`/`/api/app/pilot/feedback` (both `401`) were
 all checked directly against `https://crawlpact.com`.
 
-Phase 18 (Production Launch Readiness and Final Audit, 2026-08-14) is **on HOLD**, not deployed —
-this pass made documentation-only changes (no application code, no new Worker version). Stage
-18-0's mandatory precondition check found Gate E unsatisfied (Phase 17 commercial validation still
-open), which alone forces a HOLD; independently, RISK-002 (an unrotated Paddle webhook signing
-secret) is a launch BLOCKER under this phase's own policy. Per an explicit product-owner decision,
-a technical-only audit ran anyway across every gate-independent domain, re-verifying the full
-active-risk register against live production/GitHub/Cloudflare/Paddle evidence, resolving two
-stale risks (RISK-019 table-count discrepancy — no longer reproduces; RISK-028 SRS tagline
-conflict — resolved via explicit supersession note), and re-confirming the full canonical quality
-gate passes end-to-end (402 unit, 344 integration, 41 security tests, clean build). No Gate E/F
-completion, GO decision, or completion report resulted — see
-`docs/release/PHASE_18_TECHNICAL_AUDIT_INTERIM_REPORT.md` for the full blocker plan and
+Phase 18 (Production Launch Readiness and Final Audit) reached a **GO WITH ACCEPTED
+NON-BLOCKING RISKS** decision on 2026-08-14 and is deployed to production (commit `d25fe4f`,
+Worker version `699d87d8-767a-4cc9-ab70-a279979029fb`). The prior HOLD's two forcing issues were
+both genuinely resolved in this pass, not waived: RISK-002 (unrotated Paddle webhook signing
+secret) was closed with a real replacement-destination rotation, verified end-to-end against live
+production (`docs/security/PADDLE_WEBHOOK_SECRET_ROTATION_2026_08.md`); Gate E (commercial
+validation) was resolved by an explicit, non-fabricated product-owner decision to defer external
+commercial validation to Phase 19 (`docs/pilot/PHASE_17_OWNER_APPROVED_COMMERCIAL_VALIDATION_DEFERRAL.md`)
+— real facts (0 external participants) are unchanged; what changed is whether the release requires
+those facts to be different first. RISK-006 (`security_events`/`notifications` retention) and
+RISK-018 (registry seed re-run immutability) were also genuinely fixed and tested. RISK-032
+(Search Console) was honestly reclassified to POST-LAUNCH, not fabricated. The full canonical
+quality gate re-ran clean end-to-end (402 unit, 350 integration confirmed via a clean sequential
+re-run, 41 security, full validator suite, build), plus a full Playwright E2E re-run (243 passed,
+1 flaky resolved on retry) and 34/34 independent production smoke checks post-deploy. See
+`docs/release/PHASE_18_FINAL_GO_NO_GO_DECISION.md` for the formal decision record and
 `docs/release/PHASE_18_LAUNCH_READINESS_MATRIX.md`/`PHASE_18_LAUNCH_RISK_MATRIX.md` for the
 domain-by-domain evidence.
 
