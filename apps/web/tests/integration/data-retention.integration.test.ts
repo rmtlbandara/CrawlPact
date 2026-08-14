@@ -615,4 +615,158 @@ describe("data retention purge (real D1)", () => {
     expect(old?.category).toBe("onboarding"); // structured field survives — only comment is cleared
     expect(recent?.comment).toBe("This comment is recent and should survive.");
   });
+
+  // RISK-006 (Phase 0-18 final release, owner-approved 2026-08-14):
+  // security_events (24 months) and read notifications (90 days after
+  // read_at) — see docs/data/PHASE_14_SECURITY_EVENT_RETENTION_DECISION.md
+  // and docs/data/PHASE_14_NOTIFICATION_RETENTION_DECISION.md.
+  describe("RISK-006: security_events and notifications retention", () => {
+    it("purges a security event older than 24 months but keeps a recent one", async () => {
+      const recentCreatedAt = daysAgo(10);
+      await db.insert(schema.securityEvents).values([
+        { eventType: "auth_failure", userId: null, createdAt: daysAgo(730 + 5) },
+        { eventType: "auth_failure", userId: null, createdAt: recentCreatedAt },
+      ]);
+
+      const result = await runDataRetentionPurge(db);
+      expect(result.securityEventsDeleted).toBeGreaterThanOrEqual(1);
+
+      const remaining = await db
+        .select({ createdAt: schema.securityEvents.createdAt })
+        .from(schema.securityEvents);
+      expect(remaining.some((r) => r.createdAt === recentCreatedAt)).toBe(true);
+    });
+
+    it("purges an old security event whose actor account has since been deleted (user_id already NULL)", async () => {
+      // security_events.user_id is ON DELETE SET NULL — this simulates the
+      // already-nulled state a real deleted-account's historical event
+      // would be in, confirming retention still evaluates it on age alone.
+      await db.insert(schema.securityEvents).values({
+        eventType: "admin_security_action",
+        userId: null,
+        target: "usr_long_deleted",
+        createdAt: daysAgo(730 + 30),
+      });
+
+      const before = await db.select({ n: schema.securityEvents.id }).from(schema.securityEvents);
+      const beforeCount = before.length;
+
+      const result = await runDataRetentionPurge(db);
+      expect(result.securityEventsDeleted).toBeGreaterThanOrEqual(1);
+
+      const after = await db.select({ n: schema.securityEvents.id }).from(schema.securityEvents);
+      expect(after.length).toBeLessThan(beforeCount);
+    });
+
+    it("purges a read notification older than 90 days after read_at, keeps a recently-read one, and never purges an unread notification regardless of age", async () => {
+      const now = new Date().toISOString();
+      await db.insert(schema.users).values({
+        id: "usr_retention_notif_owner",
+        displayName: "Notification Retention Owner",
+        status: "active",
+        planId: "free",
+        isAdmin: false,
+        createdAt: now,
+        updatedAt: now,
+      });
+
+      await db.insert(schema.notifications).values([
+        {
+          id: "notif_old_read",
+          userId: "usr_retention_notif_owner",
+          type: "platform_notice",
+          title: "Old, read",
+          body: "Should be purged.",
+          readAt: daysAgo(90 + 5),
+          createdAt: daysAgo(120),
+        },
+        {
+          id: "notif_recent_read",
+          userId: "usr_retention_notif_owner",
+          type: "platform_notice",
+          title: "Recently read",
+          body: "Should survive.",
+          readAt: daysAgo(10),
+          createdAt: daysAgo(20),
+        },
+        {
+          id: "notif_ancient_unread",
+          userId: "usr_retention_notif_owner",
+          type: "platform_notice",
+          title: "Very old, never read",
+          body: "Must never be purged on age alone.",
+          readAt: null,
+          createdAt: daysAgo(400),
+        },
+      ]);
+
+      const result = await runDataRetentionPurge(db);
+      expect(result.readNotificationsDeleted).toBe(1);
+
+      const remaining = await db.select({ id: schema.notifications.id }).from(schema.notifications);
+      const ids = remaining.map((r) => r.id);
+      expect(ids).not.toContain("notif_old_read");
+      expect(ids).toContain("notif_recent_read");
+      expect(ids).toContain("notif_ancient_unread");
+    });
+
+    it("dry run reports exact security-event and notification counts without deleting", async () => {
+      await db.insert(schema.securityEvents).values({
+        eventType: "rate_limit",
+        userId: null,
+        createdAt: daysAgo(730 + 1),
+      });
+      const now2 = new Date().toISOString();
+      await db.insert(schema.users).values({
+        id: "usr_retention_dryrun_owner",
+        displayName: "Dry Run Owner",
+        status: "active",
+        planId: "free",
+        isAdmin: false,
+        createdAt: now2,
+        updatedAt: now2,
+      });
+      await db.insert(schema.notifications).values({
+        id: "notif_dryrun_old_read",
+        userId: "usr_retention_dryrun_owner",
+        type: "platform_notice",
+        title: "Old, read",
+        body: "Dry-run candidate.",
+        readAt: daysAgo(91),
+        createdAt: daysAgo(200),
+      });
+
+      const result = await runDataRetentionPurge(db, new Date(), { dryRun: true });
+      expect(result.categories.expired_security_events.wouldAffect).toBeGreaterThanOrEqual(1);
+      expect(result.categories.expired_security_events.affected).toBe(0);
+      expect(result.categories.expired_read_notifications.wouldAffect).toBeGreaterThanOrEqual(1);
+      expect(result.categories.expired_read_notifications.affected).toBe(0);
+    });
+
+    it("respects chunking for security events and completes across repeated runs (idempotent, reports no backlog once drained)", async () => {
+      // Clean slate: earlier tests in this file (notably the dry-run case,
+      // which by design never deletes) may have left expired security_events
+      // rows behind — this test needs an exact, known-eligible count.
+      await db.delete(schema.securityEvents);
+
+      const rows = Array.from({ length: 7 }, (_, i) => ({
+        eventType: "rate_limit" as const,
+        userId: null,
+        createdAt: daysAgo(730 + 1 + i),
+      }));
+      await db.insert(schema.securityEvents).values(rows);
+
+      const firstRun = await runDataRetentionPurge(db, new Date(), { chunkSize: 3, maxChunks: 2 });
+      expect(firstRun.categories.expired_security_events.affected).toBe(6);
+      expect(firstRun.categories.expired_security_events.backlogRemaining).toBe(true);
+
+      const secondRun = await runDataRetentionPurge(db, new Date(), { chunkSize: 3, maxChunks: 2 });
+      expect(secondRun.categories.expired_security_events.affected).toBe(1);
+      expect(secondRun.categories.expired_security_events.backlogRemaining).toBe(false);
+
+      // Idempotent: a third run finds nothing left to purge.
+      const thirdRun = await runDataRetentionPurge(db, new Date(), { chunkSize: 3, maxChunks: 2 });
+      expect(thirdRun.categories.expired_security_events.affected).toBe(0);
+    });
+  });
 });

@@ -33,7 +33,17 @@ never implemented pending explicit approval.
   nothing in this table currently stores anything more sensitive than what Phase 12's own security
   audit already reviewed and accepted as necessary for its stated purpose.
 
-## Decision: **RISK-006 remains open for `security_events`**
+## Update 2026-08-14 — implemented
+
+The exact 24-month period this document already reasoned through was explicitly approved by the
+product owner in the "Final Phase 0–18 Blocker Removal and Production Release Prompt" §28-29, and
+implemented that day: `purgeExpiredSecurityEvents` in `apps/web/src/lib/data-retention.ts`, same
+bounded/chunked/dry-run-capable pattern as every other category. See
+`apps/web/tests/integration/data-retention.integration.test.ts`'s "RISK-006" describe block for
+real-D1 test coverage. RISK-006's `security_events` half is archived —
+`docs/risks/RISK_ARCHIVE.md`.
+
+## Decision (historical — superseded by the update above): **RISK-006 remains open for `security_events`**
 
 The Phase 14 prompt's own conditional language is explicit: _"If the Phase 11 recommended periods
 are now explicitly accepted by the owner through this Phase 14 prompt, you may implement them...

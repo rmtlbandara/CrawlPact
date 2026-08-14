@@ -234,6 +234,19 @@ VALUES (
   NULL, '2026-07-28T00:00:00.000Z', 1
 );
 
+-- RISK-018 fix (Phase 0-18 final release, 2026-08-14): membership of an
+-- already-published registry release must be exact and immutable. The prior
+-- `WHERE operator_id IN (...)` form re-evaluated this SELECT against the
+-- live, mutable `crawlers` table on every seed run — a new crawler added
+-- later under one of these 9 operators would have been silently inserted
+-- into this already-"published, immutable" release the next time this file
+-- ran. The fixed id list below is the exact, verified production membership
+-- of `reg_2026_07_3` (23 crawlers, read directly from the live
+-- `registry_version_entries` table on 2026-08-14 — see
+-- docs/registry/PHASE_00_18_REGISTRY_IMMUTABILITY_FIX.md) and can never
+-- silently expand: a future crawler added to `crawlers` is invisible to
+-- this INSERT regardless of its operator, exactly as an already-published
+-- release's membership must behave.
 INSERT OR IGNORE INTO registry_version_entries (id, registry_version_id, crawler_id, snapshot)
 SELECT
   'rve_2026_07_3_' || id,
@@ -244,7 +257,11 @@ SELECT
     'lifecycleStatus', lifecycle_status, 'officialSourceUrl', official_source_url
   )
 FROM crawlers
-WHERE operator_id IN (
-  'op_openai', 'op_anthropic', 'op_perplexity', 'op_google', 'op_common_crawl',
-  'op_apple', 'op_meta', 'op_amazon', 'op_microsoft'
+WHERE id IN (
+  'crw_amazonbot', 'crw_amzn_searchbot', 'crw_amzn_user', 'crw_applebot_extended',
+  'crw_ccbot', 'crw_chatgpt_user', 'crw_claude_searchbot', 'crw_claude_user',
+  'crw_claudebot', 'crw_gptbot', 'crw_google_cloudvertexbot', 'crw_google_extended',
+  'crw_googleother', 'crw_googlebot', 'crw_meta_external_ads', 'crw_meta_external_agent',
+  'crw_meta_external_fetcher', 'crw_meta_web_indexer', 'crw_oai_adsbot', 'crw_oai_searchbot',
+  'crw_perplexity_user', 'crw_perplexitybot', 'crw_bingbot'
 );
