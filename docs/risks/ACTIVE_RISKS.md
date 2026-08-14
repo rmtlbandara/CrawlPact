@@ -59,10 +59,10 @@ extended platform guides), RISK-032 (no Search Console property connected), and 
 - **Category**: Security, Billing · **Severity**: P1 · **Probability**: Low (one-time exposure in a session transcript, not reproduced elsewhere)
 - **Impact**: If the exposed value were ever leaked from that transcript, an attacker could forge webhook signatures.
 - **Evidence**: `docs/status/KNOWN_RISKS.md` ("A Paddle read-only inventory call... returned the webhook signing secret in plaintext")
-- **Current mitigation**: Not reproduced anywhere else; no evidence of actual compromise.
-- **Owner**: Security owner · **Trigger**: Any suspicion of transcript/log exposure
-- **Review date**: Next billing-related change · **Target phase**: Phase 12
-- **Status**: open
+- **Current mitigation**: Not reproduced anywhere else; no evidence of actual compromise. **Re-checked, Phase 18 (2026-08-14)**: confirmed via the Cloudflare Workers secrets API that `PADDLE_WEBHOOK_SECRET` still exists as a `secret_text` binding on `crawlpact-web`, but this API exposes no rotation-timestamp metadata, and no rotation record exists anywhere in `CHANGELOG.md`/`docs/security/`/prior phase reports. **Per Phase 18 launch policy, this defaults to a launch BLOCKER until evidence proves rotation occurred** — no such evidence exists. Rotation was not performed this pass: it requires separate, explicit, in-the-moment live-operation approval (Cloudflare secret + Paddle webhook endpoint changed together, with a rollback plan and post-rotation verification), which was not sought this session.
+- **Owner**: Security owner · **Trigger**: Any suspicion of transcript/log exposure; blocks a full launch GO decision until resolved
+- **Review date**: Phase 18 (re-confirmed unrotated) · **Target phase**: Requires explicit owner-approved rotation before a real launch decision
+- **Status**: open — **launch BLOCKER**
 - **Acceptance criteria for closure**: `PADDLE_WEBHOOK_SECRET` rotated in Cloudflare and Paddle simultaneously, verified with a fresh webhook delivery.
 
 ### RISK-003 — Several Cloudflare zone-level settings are unreadable via the connected API credential
@@ -72,7 +72,8 @@ extended platform guides), RISK-032 (no Search Console property connected), and 
 - **Evidence**: `docs/status/KNOWN_RISKS.md` ("connected Cloudflare API credential cannot read several zone-level settings")
 - **Current mitigation**: Broader endpoints (zone list, DNS, ruleset list) confirm no custom WAF/rate-limit rules beyond Free-plan managed defaults. **Re-verified Phase 12 (2026-08-09)** via the Cloudflare MCP API tool (a different, broader-scoped credential than Phase 0's): `GET /zones/{id}/settings/ssl`, `/settings/always_use_https`, `/settings/min_tls_version`, `/settings/security_header` (HSTS), `/dnssec`, `/pagerules`, and `/rate_limits` all still return `401`/`403` ("Unauthorized to access requested resource" / "Authentication error") — the restriction is confirmed unchanged, not credential-specific. **New finding this pass**: `GET /zones/{id}/rulesets` (list-only, which IS readable) shows two zone-level custom rulesets beyond the Free-plan managed defaults — `http_request_dynamic_redirect` (v19, updated 2026-07-26) and **`http_request_firewall_custom`** (v18, updated 2026-07-31) — but their actual rule contents are not readable via this credential either (`GET /zones/{id}/rulesets/{id}` 403s). This means the prior "no custom WAF rules" claim cannot be fully confirmed — a custom firewall ruleset genuinely exists at the zone level; its contents need manual dashboard verification, not just its existence. **Recurred Phase 13 (2026-08-10)**: `POST /zones/{id}/purge_cache` returned `401 Authentication error` on the same restricted credential — confirmed the cache-purge gap first found 2026-07-29 (`docs/status/KNOWN_RISKS.md`) is still unresolved. Real-world consequence observed this time: the first Phase 13 production deploy's own automated smoke test (`deploy-production.yml` run `31397059938`) failed because Cloudflare's edge served a stale, pre-deploy copy of the homepage for a few minutes after deploy (`must-revalidate` alone does not force immediate revalidation at every edge PoP); a manual `scripts/smoke-test.ts` re-run 3 minutes later, and a full redeploy re-dispatch, both showed the correct post-deploy content. Not a code defect, but a real, disclosed operational gap worth carrying forward: any future deploy whose smoke test fails only on freshly-changed page content should be re-checked a few minutes later before assuming a real regression.
 - **Owner**: Operations owner · **Trigger**: Any security review requiring zone-settings verification, or another deploy whose smoke test fails only on cache-sensitive content
-- **Review date**: Next infrastructure phase (re-confirmed Phase 12, recurred Phase 13) · **Target phase**: Phase 12
+- **Review date**: Re-confirmed Phase 18 (2026-08-14) · **Target phase**: Phase 12 (recurring re-confirmation)
+- **Current mitigation (Phase 18 update)**: SSL mode, `always_use_https`, `min_tls_version`, HSTS, and DNSSEC all still `401`/`403` via the connected credential — unchanged. The two zone-level custom rulesets (`http_request_dynamic_redirect` v19, `http_request_firewall_custom` v18) still exist, still unchanged since 2026-07-26/07-31, still unreadable in content via this credential. Nothing has changed since Phase 13's finding; the gap remains a manual-dashboard-only verification item.
 - **Status**: accepted
 - **Acceptance criteria for closure**: A broader-scoped Cloudflare API token is issued, or manual dashboard verification is performed and recorded.
 
@@ -169,22 +170,11 @@ extended platform guides), RISK-032 (no Search Console property connected), and 
 - **Category**: Registry governance, Data · **Severity**: P1 · **Probability**: Possible, not confirmed
 - **Impact**: Since the active release's entries are inserted via a dynamic `SELECT ... FROM crawlers WHERE operator_id IN (...)` rather than a fixed ID list, re-running this idempotent seed file after new crawlers are added to the same operator group could silently insert new entries into an already-"published, immutable" release.
 - **Evidence**: `docs/baseline/2026-08-03/DATABASE_AND_MIGRATION_BASELINE.md`
-- **Current mitigation**: Not confirmed against a live database; no re-run has occurred since the finding.
-- **Owner**: Registry owner · **Trigger**: Any future `reference-data.sql` re-run against a database with the affected release already active
-- **Review date**: Phase 15 · **Target phase**: Phase 15
+- **Current mitigation**: **Re-investigated, Phase 18 (2026-08-14) — confirmed still real, not resolved.** Direct code read of `packages/database/seed/reference-data.sql`: the `registry_version_entries` insert uses `INSERT OR IGNORE` with a deterministic id (`'rve_2026_07_3_' || crawler.id`), keyed by the table's real primary key plus a `UNIQUE (registry_version_id, crawler_id)` constraint. This guard only prevents re-inserting the _same_ crawler twice — it does **not** prevent a brand-new crawler later added to one of the 9 listed operators (`WHERE operator_id IN (...)`) from being silently inserted into the already-published `reg_2026_07_3` release the next time this file runs, since that would be a genuinely new `(registry_version_id, crawler_id)` pair the `UNIQUE` constraint has never seen. The original concern stands exactly as described.
+- **Owner**: Registry owner · **Trigger**: Any future `reference-data.sql` re-run against a database with the affected release already active, or any new crawler added under one of the 9 listed operators
+- **Review date**: Phase 18 (re-confirmed open) · **Target phase**: Next phase touching registry seeding
 - **Status**: open
 - **Acceptance criteria for closure**: The active release's entry insert is changed to a fixed ID list, or a guard is added preventing entry insertion into an already-published release.
-
-### RISK-019 — 40-vs-39 table-count discrepancy between local `db:validate` and live production `sqlite_master`
-
-- **Category**: Database, Documentation · **Severity**: P2 · **Probability**: Certain (confirmed both counts)
-- **Impact**: Low direct impact; indicates the local validator and a live count measure slightly different things.
-- **Evidence**: `docs/baseline/2026-08-03/DATABASE_AND_MIGRATION_BASELINE.md`
-- **Current mitigation**: None — not investigated further (Phase 0 was inspection-only).
-- **Owner**: Engineering owner · **Trigger**: Next database-tooling change
-- **Review date**: Phase 11 · **Target phase**: Phase 11
-- **Status**: open
-- **Acceptance criteria for closure**: Root cause identified and either count corrected or the discrepancy explained and documented as expected.
 
 ### RISK-022 — No cross-request target-frequency abuse monitoring
 
@@ -226,41 +216,21 @@ extended platform guides), RISK-032 (no Search Console property connected), and 
 - **Evidence**: `docs/baseline/2026-08-03/TEST_AND_CI_EVIDENCE.md`
 - **Current mitigation**: **Investigated and partially fixed, Phase 12 (2026-08-09)**. Root cause found via `gh run view --log-failed`: the newer `@astrojs/cloudflare@14.1.7`'s transitive `@cloudflare/vite-plugin` requires Wrangler `^4.118.0`, which the repo was pinned below (`4.114.0`) — this caused a hard `astro check` failure ("Unable to load your Astro config... does not satisfy the peer dependency"). Fixed by bumping Wrangler to `4.120.0` (PR #97) — re-ran PR #65's CI after this landed on `main` and confirmed the original typecheck failure is gone (0 errors). **A new, different failure has surfaced in its place**: the `quality` job now fails at the `pnpm build` step with a Rolldown/Vite build error (`aggregateBindingErrorsIntoJsError`, "Build failed"), and `browser-smoke` separately times out waiting for the dev server. This looks like a genuine compatibility issue with `@astrojs/cloudflare@14.1.7` itself (or its Vite/Rolldown chain), not the Wrangler-version issue this phase targeted — a real, still-open gap requiring its own dedicated investigation, not attempted this phase given its already-large scope.
 - **Owner**: Engineering owner · **Trigger**: Next dependency-update review, or a dedicated Astro/Rolldown compatibility investigation
-- **Review date**: Phase 12 (root cause #1 fixed, root cause #2 found) · **Target phase**: Next phase touching Astro/Vite tooling
+- **Review date**: Re-confirmed Phase 18 (2026-08-14) · **Target phase**: Next phase touching Astro/Vite tooling
+- **Current mitigation (Phase 18 update)**: 5 Dependabot PRs currently open (`#66`, `#98`, `#102`, `#103`, `#104`), none merged. `#103` (`@astrojs/cloudflare` 14.1.4→14.2.0, the direct successor to the originally-tracked `14.1.7` PR) shows `mergeable_state: "unstable"` and its base commit (`051ada36`) is stale relative to current `main` (`54734109`) — it needs a rebase before its CI result would even be meaningful. **New finding**: the GitHub check-runs API now returns `403 "Resource not accessible by personal access token"` for this PR's head commit — a real, newly-observed access restriction (same class as RISK-003's Cloudflare-credential pattern), meaning CI status for open Dependabot PRs can no longer be read via this token at all, not just the specific build failure previously diagnosed. This is itself worth tracking, not just the original Astro/Rolldown build failure.
 - **Status**: open
-- **Acceptance criteria for closure**: CI failure investigated and either fixed or the PR closed with a documented reason. (Partially met — the Wrangler-version cause is fixed; the Rolldown/Vite build failure remains open.)
+- **Acceptance criteria for closure**: CI failure investigated and either fixed or the PR closed with a documented reason. (Partially met — the Wrangler-version cause is fixed; the Rolldown/Vite build failure and the new check-runs access restriction both remain open.)
 
 ### RISK-027 — `main` branch has no GitHub branch-protection rule configured
 
 - **Category**: Operations, Security · **Severity**: P2 · **Probability**: N/A (known platform constraint)
 - **Impact**: Merge safety depends entirely on the custom `merge-when-green.yml` workflow rather than a platform-enforced rule.
 - **Evidence**: `docs/baseline/2026-08-03/PRODUCTION_INFRASTRUCTURE_INVENTORY.md`
-- **Current mitigation**: `merge-when-green.yml` substitutes for native protection — private-repo GitHub Free-plan constraint, not a gap this repo introduced. **Re-confirmed live, Phase 12 (2026-08-09)**: `GET /repos/rmtlbandara/CrawlPact/branches/main/protection` still returns `403 "Upgrade to GitHub Pro or make this repository public to enable this feature"` — the constraint is unchanged.
+- **Current mitigation**: `merge-when-green.yml` substitutes for native protection — private-repo GitHub Free-plan constraint, not a gap this repo introduced. **Re-confirmed live, Phase 12 (2026-08-09)**: `GET /repos/rmtlbandara/CrawlPact/branches/main/protection` still returns `403 "Upgrade to GitHub Pro or make this repository public to enable this feature"` — the constraint is unchanged. **Re-confirmed again, Phase 18 (2026-08-14)**: identical `403` response, identical message. No change.
 - **Owner**: Operations owner · **Trigger**: A GitHub plan upgrade
-- **Review date**: Phase 12 (re-confirmed, unchanged) · **Target phase**: Next GitHub plan upgrade
+- **Review date**: Re-confirmed Phase 18 (2026-08-14) · **Target phase**: Next GitHub plan upgrade
 - **Status**: accepted
 - **Acceptance criteria for closure**: GitHub plan upgraded and native branch protection configured, or this acceptance is re-confirmed.
-
-### RISK-028 — SRS §2.3's Primary Tagline conflicts with the Phase 2 canonical brand system
-
-- **Category**: Documentation, Product · **Severity**: P2 · **Probability**: Certain (confirmed live)
-- **Impact**: `docs/product/CRAWLPACT_FINAL_SRS.md:150` (§2.3) states the Primary Tagline as "Know
-  what AI crawlers can access." — a claim of certainty about actual crawler access the product
-  cannot support. This conflicts with both the SRS's own §2.2 Primary Product Promise (which the
-  live homepage actually uses: "Audit and monitor your website's AI crawler policy.") and the new
-  canonical tagline established by Phase 2, "AI crawler policy, verified." Per `CLAUDE.md`, the SRS
-  outranks other documents unless an approved ADR records a deviation — this conflict was
-  deliberately recorded, not silently resolved by editing the SRS during Phase 2.
-- **Evidence**: `docs/brand/MESSAGING_SURFACE_INVENTORY.md` row E1,
-  `docs/brand/BRAND_POSITIONING_AND_MESSAGING_SYSTEM.md` ("Brand promise" section)
-- **Current mitigation**: No live surface uses the stale §2.3 wording (confirmed by three
-  independent Phase 2 research passes and `pnpm brand:validate`) — the exposure is a documentation
-  conflict, not a live customer-facing claim.
-- **Owner**: Product owner · **Trigger**: Any future SRS revision or brand-copy audit
-- **Review date**: Phase 7 · **Target phase**: Phase 7 (carried forward unclaimed through Phases 3-6; each phase's own execution prompt scoped it elsewhere — see `docs/governance/GITHUB_GOVERNANCE_SETUP_MANIFEST.md`)
-- **Status**: open
-- **Acceptance criteria for closure**: SRS §2.3 updated to match the canonical tagline, or an ADR
-  is recorded explicitly authorising the deviation and reconciling the two documents.
 
 ### RISK-029 — Terms of Service has no governing-law clause after the 2026-08-04 country-reference removal
 
@@ -382,10 +352,19 @@ extended platform guides), RISK-032 (no Search Console property connected), and 
   regression back below threshold
 - **Review date**: Phase 11 (re-measured, recommend closing) · **Target phase**: N/A — no further
   phase work identified as necessary
-- **Status**: monitoring
+- **Phase 18 update (2026-08-14)**: a fresh production re-measurement was attempted
+  (`node scripts/lighthouse-check.mjs https://crawlpact.com`) but did not complete — the local
+  machine ran out of usable resources/ports under concurrent load (42 accumulated Chrome/Lighthouse
+  processes from the slow multi-page/multi-run script, which also caused unrelated transient
+  integration-test failures until killed and the suite re-run cleanly). No new Lighthouse numbers
+  were obtained this pass; **not fabricated as a substitute**. Phase 11's real re-measurement
+  (94–99 score, 1,579–2,940ms LCP) remains the most recent actual evidence and is not superseded.
+- **Status**: monitoring — closure criteria still met by Phase 11's evidence; a fresh re-run is
+  recommended (from a quieter machine/CI runner) before archiving, since Phase 18's own attempt was
+  inconclusive rather than confirmatory.
 - **Acceptance criteria for closure**: A direct production Lighthouse run shows all tested pages
-  meeting the stated performance/LCP thresholds — **met** by this phase's real re-measurement.
-  Recommend moving to `RISK_ARCHIVE.md` upon this phase's merge.
+  meeting the stated performance/LCP thresholds — met by Phase 11's evidence; not re-confirmed
+  this pass due to a local tooling/resource issue, not a product regression.
 
 ### RISK-034 — `listDomains()`'s open-findings count is an N+1 query pattern (pre-existing, found during Phase 8)
 

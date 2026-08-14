@@ -149,6 +149,20 @@ CrawlPact then explains:
 
 > **Know what AI crawlers can access.**
 
+**Superseded (Phase 18, 2026-08-14, RISK-028 closure — Option A).** The wording above claims a
+certainty about actual crawler access that the product cannot support (CrawlPact audits declared
+policy signals, not real traffic — see §2.1's own scope). No live surface has ever used this
+wording (confirmed by three independent Phase 2 research passes and `pnpm brand:validate`); it was
+recorded here, not silently edited, per this repository's rule against quietly reinterpreting an
+SRS requirement. The canonical tagline is now:
+
+> **AI crawler policy, verified.**
+
+as established by Phase 2's brand system (`docs/brand/BRAND_POSITIONING_AND_MESSAGING_SYSTEM.md`)
+and consistent with §2.2's Primary Product Promise. The struck-through wording above is retained
+for historical traceability, not as current guidance — do not reintroduce it on any public
+surface. See `docs/risks/RISK_ARCHIVE.md` (RISK-028) for the full resolution record.
+
 ## 2.4 Supporting Product Description
 
 > CrawlPact checks how search, training, user-triggered, and agent crawlers are addressed by your website. It identifies configuration conflicts, generates clear recommendations, and monitors policy changes without requiring installation, server-log access, or an AI API.

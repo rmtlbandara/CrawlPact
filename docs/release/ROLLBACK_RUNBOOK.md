@@ -53,3 +53,28 @@
 Always run `pnpm deploy:verify-bindings <preview|production>` after a rollback of any kind — a
 `wrangler rollback` in particular reverts _code_, not necessarily the _vars_ a later deploy might
 have also changed, so bindings can end up in a combination that was never actually tested together.
+
+## Issue-specific recovery (added Phase 18)
+
+- **CSP issue**: the CSP header is generated in the Worker response path (not a static Cloudflare
+  rule), so a bad CSP change ships and reverts exactly like any other application rollback (see
+  above). Verify with a direct `curl -sD - -o /dev/null <url> | grep -i content-security-policy`
+  against the rolled-back version before considering the incident closed — see RISK-023 for the
+  accepted `'unsafe-inline'` baseline this should match.
+- **Billing issue**: see "Paddle recovery" above; never mutate a real customer's subscription to
+  "fix" an incident without separate explicit approval (Phase 17/18 doctrine).
+- **Authentication issue**: a WebAuthn/session regression rolls back exactly like any other
+  application code change (see "Application rollback" above). There is no separate auth-specific
+  data to restore — sessions are short-lived and self-heal once the code is reverted.
+- **Scanner issue**: a bad scanner/policy-evaluation change never edits historical `scans`/
+  `scan_diffs` rows — each scan is immutable once persisted (see `docs/registry/...` reproducibility
+  docs). Roll back the Worker; already-persisted results remain correctly attributable to whatever
+  ruleset version they recorded at scan time, per the ruleset-reproducibility guarantee.
+- **Registry issue**: never edit or delete a published `registry_versions`/`registry_version_entries`
+  row. A bad registry release is fixed by publishing a corrective new release through the normal
+  Super Admin publish flow (itself atomic/idempotent, Phase 15), or by using the existing rollback-
+  to-prior-release admin action — never a direct database edit.
+- **Status communication**: update `/status` via the Super Admin incident tooling
+  (`/admin/operations` → incidents) as soon as user-facing impact is confirmed, even before root
+  cause is known — an honest "investigating" beats silence. Never publish a fake or backdated
+  incident (Phase 18 doctrine, §99).
