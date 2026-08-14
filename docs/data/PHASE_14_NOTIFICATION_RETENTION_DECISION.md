@@ -27,7 +27,18 @@ indefinitely, including already-read ones. Phase 11's own recommendation was 90 
   itself (a separate, richer history view) is unaffected by notification retention, since it reads
   `domain_change_events` directly, not `notifications`.
 
-## Decision: **RISK-006 remains open for `notifications`**
+## Update 2026-08-14 — implemented
+
+The exact 90-days-after-`read_at` period this document already reasoned through was explicitly
+approved by the product owner in the "Final Phase 0–18 Blocker Removal and Production Release
+Prompt" §28, §30, and implemented that day: `purgeExpiredReadNotifications` in
+`apps/web/src/lib/data-retention.ts`. `isNotNull(readAt)` is load-bearing in the WHERE clause — an
+unread notification is never purged on age alone, exactly as required. See
+`apps/web/tests/integration/data-retention.integration.test.ts`'s "RISK-006" describe block,
+including an explicit "very old, never read" case that survives the purge. RISK-006's
+`notifications` half is archived — `docs/risks/RISK_ARCHIVE.md`.
+
+## Decision (historical — superseded by the update above): **RISK-006 remains open for `notifications`**
 
 Same reasoning and same outcome as the security-events decision
 (`docs/data/PHASE_14_SECURITY_EVENT_RETENTION_DECISION.md`): the Phase 14 prompt's conditional

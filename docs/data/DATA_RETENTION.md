@@ -141,10 +141,18 @@ failing the D1 write would leave a live D1 reference pointing at nothing.
   retention to "legally and operationally required," which needs a real decision (likely
   finance-adjacent) rather than an arbitrary cutoff invented here. This is now moot in the sense
   that these records are also never _accidentally_ deleted alongside an account (fixed above).
-- **`product_events`, `security_events`, and `notifications` also have no purge job at all** —
-  unlike `scans`/`scan_resources`/`findings` (bounded by plan-tier `history_retention_days`),
-  these three tables grow indefinitely regardless of plan or domain lifetime. Low individual risk
-  at today's volumes but structurally unbounded — see `docs/risks/ACTIVE_RISKS.md`. This was
-  previously disclosed only in the risk ledger, not in this document's own "still open" section
-  (corrected here as part of Phase 1's documentation-conflict resolution,
-  `docs/baseline/2026-08-03/DOCUMENTATION_CONFLICTS.md` DC-009).
+- `product_events` (Phase 13), pilot-feedback comments (Phase 17), `security_events`, and
+  `notifications` (both Phase 0-18 final release, 2026-08-14 — RISK-006, archived) **all now have
+  real purge jobs**, closing the gap this section originally described:
+  - `product_events`: 548 days (~18 months) from `created_at`.
+  - `pilot_feedback.comment`: nulled (not deleted) after the same 548-day window; structured
+    fields survive indefinitely.
+  - `security_events`: 730 days (24 months) from `created_at` — matches SRS §34's "administrative
+    logs, at least 24 months." See `docs/data/PHASE_14_SECURITY_EVENT_RETENTION_DECISION.md`.
+  - `notifications`: 90 days after `read_at` — **only for read notifications**. An unread
+    notification is never purged on age alone, regardless of how old it is. See
+    `docs/data/PHASE_14_NOTIFICATION_RETENTION_DECISION.md`.
+  - Billing records (`transactions`, `webhook_events`) remain the one category with genuinely no
+    purge job — SRS leaves their exact retention to "legally and operationally required," which
+    still needs a real, likely finance-adjacent decision rather than an arbitrary cutoff invented
+    here.

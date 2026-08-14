@@ -54,17 +54,6 @@ extended platform guides), RISK-032 (no Search Console property connected), and 
 - **Acceptance criteria for closure (technical)**: ✅ met — one real, live paid checkout completed end-to-end (payment → webhook → plan grant), independently re-verified read-only via the Paddle API and D1.
 - **Acceptance criteria for closure (commercial)**: still open — requires ≥2 independent external customers voluntarily purchasing at the current public price (`docs/pilot/PHASE_17_SUCCESS_CRITERIA.md`), not yet met.
 
-### RISK-002 — Paddle webhook signing secret was returned in plaintext by a read-only API call, not rotated
-
-- **Category**: Security, Billing · **Severity**: P1 · **Probability**: Low (one-time exposure in a session transcript, not reproduced elsewhere)
-- **Impact**: If the exposed value were ever leaked from that transcript, an attacker could forge webhook signatures.
-- **Evidence**: `docs/status/KNOWN_RISKS.md` ("A Paddle read-only inventory call... returned the webhook signing secret in plaintext")
-- **Current mitigation**: Not reproduced anywhere else; no evidence of actual compromise. **Re-checked, Phase 18 (2026-08-14)**: confirmed via the Cloudflare Workers secrets API that `PADDLE_WEBHOOK_SECRET` still exists as a `secret_text` binding on `crawlpact-web`, but this API exposes no rotation-timestamp metadata, and no rotation record exists anywhere in `CHANGELOG.md`/`docs/security/`/prior phase reports. **Per Phase 18 launch policy, this defaults to a launch BLOCKER until evidence proves rotation occurred** — no such evidence exists. Rotation was not performed this pass: it requires separate, explicit, in-the-moment live-operation approval (Cloudflare secret + Paddle webhook endpoint changed together, with a rollback plan and post-rotation verification), which was not sought this session.
-- **Owner**: Security owner · **Trigger**: Any suspicion of transcript/log exposure; blocks a full launch GO decision until resolved
-- **Review date**: Phase 18 (re-confirmed unrotated) · **Target phase**: Requires explicit owner-approved rotation before a real launch decision
-- **Status**: open — **launch BLOCKER**
-- **Acceptance criteria for closure**: `PADDLE_WEBHOOK_SECRET` rotated in Cloudflare and Paddle simultaneously, verified with a fresh webhook delivery.
-
 ### RISK-003 — Several Cloudflare zone-level settings are unreadable via the connected API credential
 
 - **Category**: Infrastructure, Security · **Severity**: P2 · **Probability**: N/A (permanent until credential rescoped)
@@ -76,17 +65,6 @@ extended platform guides), RISK-032 (no Search Console property connected), and 
 - **Current mitigation (Phase 18 update)**: SSL mode, `always_use_https`, `min_tls_version`, HSTS, and DNSSEC all still `401`/`403` via the connected credential — unchanged. The two zone-level custom rulesets (`http_request_dynamic_redirect` v19, `http_request_firewall_custom` v18) still exist, still unchanged since 2026-07-26/07-31, still unreadable in content via this credential. Nothing has changed since Phase 13's finding; the gap remains a manual-dashboard-only verification item.
 - **Status**: accepted
 - **Acceptance criteria for closure**: A broader-scoped Cloudflare API token is issued, or manual dashboard verification is performed and recorded.
-
-### RISK-006 — `security_events` and `notifications` have no purge job
-
-- **Category**: Database, Privacy · **Severity**: P2 · **Probability**: Low at current volume, structural
-- **Impact**: Unlike scan-related tables (bounded by plan-tier retention), these two grow indefinitely regardless of plan or account lifetime.
-- **Evidence**: `docs/data/DATA_RETENTION.md`, `docs/data/PHASE_11_RETENTION_DECISION_MATRIX.md`
-- **Current mitigation**: **Partially resolved, Phase 13 (2026-08-10)** — `product_events` (the third category this risk originally covered) now has a bounded 18-month purge job (`purgeExpiredProductEvents()`, `apps/web/src/lib/data-retention.ts`, `PRODUCT_EVENT_RETENTION_DAYS = 548`), following the Phase 11 recommendation with explicit Phase 13-prompt approval — see `docs/analytics/PHASE_13_PRODUCT_EVENT_RETENTION_DECISION.md`. `security_events` and `notifications` remain assessed-but-not-implemented: Phase 11 found the SRS's own retention table (§34) is silent on these two categories specifically, so a recommendation (24mo/90-days-after-read respectively) is recorded but not implemented without explicit approval — the Phase 13 prompt did not extend approval to these two.
-- **Owner**: Engineering owner · **Trigger**: Volume growth past current assumptions, or explicit approval of the Phase 11 recommendation for the remaining two categories
-- **Review date**: Phase 13 (product_events closed); revisited Phase 14 (2026-08-06) — the Phase 14 prompt's own conditional language required an explicit product-owner acceptance of the Phase 11 recommended periods before implementation was authorised, and the prompt text provided contained no such acceptance, so both categories remain unimplemented per the prompt's own "otherwise leave the risk open" branch. See `docs/data/PHASE_14_SECURITY_EVENT_RETENTION_DECISION.md` and `docs/data/PHASE_14_NOTIFICATION_RETENTION_DECISION.md`. · **Target phase**: Next phase touching retention, pending approval for `security_events`/`notifications`
-- **Status**: monitoring
-- **Acceptance criteria for closure**: A retention decision is made and a purge job implemented for `security_events` and `notifications`, or the decision to leave them unbounded is explicitly and permanently accepted with a documented reason. (`product_events` — met, Phase 13.)
 
 ### RISK-007 — `scan_resources.snapshot_text` (`html_meta` type) stores the full truncated HTML body
 
@@ -164,17 +142,6 @@ extended platform guides), RISK-032 (no Search Console property connected), and 
 - **Review date**: Phase 7 · **Target phase**: Phase 7
 - **Status**: mitigating
 - **Acceptance criteria for closure**: UI correctly labels upgrade vs. downgrade (done), and the underlying Paddle checkout behavior for an existing subscriber is verified against a real paid subscription (still tied to RISK-001, which remains open — a real upgrade/downgrade has been exercised against Paddle's real preview/update API for an existing subscription in this phase's own testing, but not yet for a subscription created by a real paid checkout).
-
-### RISK-018 — `reference-data.sql`'s dynamic operator-based crawler-entry insert risks violating registry-release immutability on re-run
-
-- **Category**: Registry governance, Data · **Severity**: P1 · **Probability**: Possible, not confirmed
-- **Impact**: Since the active release's entries are inserted via a dynamic `SELECT ... FROM crawlers WHERE operator_id IN (...)` rather than a fixed ID list, re-running this idempotent seed file after new crawlers are added to the same operator group could silently insert new entries into an already-"published, immutable" release.
-- **Evidence**: `docs/baseline/2026-08-03/DATABASE_AND_MIGRATION_BASELINE.md`
-- **Current mitigation**: **Re-investigated, Phase 18 (2026-08-14) — confirmed still real, not resolved.** Direct code read of `packages/database/seed/reference-data.sql`: the `registry_version_entries` insert uses `INSERT OR IGNORE` with a deterministic id (`'rve_2026_07_3_' || crawler.id`), keyed by the table's real primary key plus a `UNIQUE (registry_version_id, crawler_id)` constraint. This guard only prevents re-inserting the _same_ crawler twice — it does **not** prevent a brand-new crawler later added to one of the 9 listed operators (`WHERE operator_id IN (...)`) from being silently inserted into the already-published `reg_2026_07_3` release the next time this file runs, since that would be a genuinely new `(registry_version_id, crawler_id)` pair the `UNIQUE` constraint has never seen. The original concern stands exactly as described.
-- **Owner**: Registry owner · **Trigger**: Any future `reference-data.sql` re-run against a database with the affected release already active, or any new crawler added under one of the 9 listed operators
-- **Review date**: Phase 18 (re-confirmed open) · **Target phase**: Next phase touching registry seeding
-- **Status**: open
-- **Acceptance criteria for closure**: The active release's entry insert is changed to a fixed ID list, or a guard is added preventing entry insertion into an already-published release.
 
 ### RISK-022 — No cross-request target-frequency abuse monitoring
 
@@ -319,11 +286,17 @@ extended platform guides), RISK-032 (no Search Console property connected), and 
   a broken official source without needing Search Console.
 - **Owner**: Product owner · **Trigger**: Connecting a Search Console property (a one-time,
   low-effort setup task, not a code change)
-- **Review date**: Next release readiness review · **Target phase**: Phase 18 (Production Launch
-  Readiness and Final Audit) — same phase as the other pre-launch external-account gaps
-- **Status**: accepted
+- **Review date**: Next release readiness review · **Target phase**: **Reclassified POST-LAUNCH /
+  Phase 19, 2026-08-14** (Phase 0-18 final release, owner-authorized §39-43) — no Google-
+  authenticated Search Console tool/session is available to this agent, and none was guessed or
+  fabricated. Search Console is search observability, not a security/billing/audit-correctness/
+  customer-data prerequisite, so it no longer blocks the first production release. It remains a
+  real, undone task — see `docs/release/PHASE_18_SEARCH_CONSOLE_REQUIRED_ACTION.md` for the exact
+  manual owner steps, unchanged from before this reclassification.
+- **Status**: accepted (POST-LAUNCH)
 - **Acceptance criteria for closure**: A Search Console property is connected and the manual
-  verification checklist in `PHASE_07_SEARCH_PERFORMANCE_BASELINE.md` is completed at least once.
+  verification checklist in `PHASE_07_SEARCH_PERFORMANCE_BASELINE.md` is completed at least once —
+  owned by Phase 19, not a pre-launch requirement.
 
 ### RISK-033 — Production Lighthouse performance/LCP fails threshold on 3 of 5 tested pages (pre-existing, first measured this phase)
 

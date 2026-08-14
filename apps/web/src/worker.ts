@@ -256,7 +256,7 @@ async function runRetentionJob(
     await finishJobRun(env, runId, "data_retention_purge", cronExpression, startedAt, {
       status: result.hasErrors ? "completed_with_errors" : "completed",
       errorSummary:
-        `anonymous_scans=${result.anonymousScansDeleted} domain_scans=${result.domainScansDeleted} accounts=${result.accountsPurged} entitlements_expired=${result.entitlementsExpired} expired_continuations=${result.expiredContinuationsDeleted} orphaned_agency_logos=${result.orphanedAgencyLogosDeleted}` +
+        `anonymous_scans=${result.anonymousScansDeleted} domain_scans=${result.domainScansDeleted} accounts=${result.accountsPurged} entitlements_expired=${result.entitlementsExpired} expired_continuations=${result.expiredContinuationsDeleted} orphaned_agency_logos=${result.orphanedAgencyLogosDeleted} security_events=${result.securityEventsDeleted} read_notifications=${result.readNotificationsDeleted}` +
         (result.hasBacklog ? " backlog_remaining=true" : "") +
         (errorDetail ? ` errors=[${errorDetail}]` : ""),
     });

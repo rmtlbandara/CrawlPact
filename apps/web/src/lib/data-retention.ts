@@ -40,6 +40,19 @@ const ANONYMOUS_SCAN_RETENTION_DAYS = 7;
  * own (still-open, RISK-006) decisions pending separately. */
 const PRODUCT_EVENT_RETENTION_DAYS = 548; // ~18 months
 
+/** RISK-006 (`security_events` half), owner-approved 2026-08-14 per the
+ * Phase 0-18 final production release authorization — see
+ * docs/data/PHASE_14_SECURITY_EVENT_RETENTION_DECISION.md for the reasoning
+ * (24 months, matching SRS §34's "administrative logs, at least 24 months"),
+ * previously reasoned through but withheld pending exactly this approval. */
+const SECURITY_EVENT_RETENTION_DAYS = 730; // 24 months
+
+/** RISK-006 (`notifications` half), owner-approved 2026-08-14 — see
+ * docs/data/PHASE_14_NOTIFICATION_RETENTION_DECISION.md. Applies only to
+ * notifications that have been read; an unread notification is never
+ * purged on age alone (see purgeExpiredReadNotifications's WHERE clause). */
+const NOTIFICATION_READ_RETENTION_DAYS = 90;
+
 /** Rows deleted per DELETE statement — confirmed via a real Miniflare D1
  * integration probe that `DELETE ... LIMIT` is supported by this D1
  * dialect before relying on it here. Bounds both the single-statement cost
@@ -461,6 +474,83 @@ async function purgeExpiredPilotFeedbackComments(
   return { affected: expired.length, wouldAffect: null, backlogRemaining, error: null };
 }
 
+/** RISK-006 (`security_events`, owner-approved 2026-08-14): age-based
+ * cutoff, same shape as purgeExpiredProductEvents — every row is equally
+ * eligible once it ages out, no "keep the baseline" exception applies. */
+async function purgeExpiredSecurityEvents(
+  db: Database,
+  now: Date,
+  dryRun: boolean,
+  chunkSize: number,
+  maxChunks: number,
+): Promise<CategoryResult> {
+  const cutoff = daysAgo(SECURITY_EVENT_RETENTION_DAYS, now);
+  const where = lt(schema.securityEvents.createdAt, cutoff);
+
+  if (dryRun) {
+    const [row] = await db.select({ n: count() }).from(schema.securityEvents).where(where);
+    return { ...emptyCategoryResult(), wouldAffect: row?.n ?? 0 };
+  }
+
+  let affected = 0;
+  let lastChunkFull = false;
+  for (let i = 0; i < maxChunks; i++) {
+    const result = await db
+      .delete(schema.securityEvents)
+      .where(where)
+      .limit(chunkSize)
+      .returning({ id: schema.securityEvents.id });
+    affected += result.length;
+    lastChunkFull = result.length === chunkSize;
+    if (!lastChunkFull) break;
+  }
+  const backlogRemaining = lastChunkFull
+    ? await hasRowsMatching(db.select({ n: count() }).from(schema.securityEvents).where(where))
+    : false;
+  return { affected, wouldAffect: null, backlogRemaining, error: null };
+}
+
+/** RISK-006 (`notifications`, owner-approved 2026-08-14): purges only
+ * notifications that have actually been read, and only once `read_at` is
+ * itself older than the retention window. `isNotNull(readAt)` is load-
+ * bearing — an unread notification must never be purged on creation age
+ * alone, regardless of how old it is. */
+async function purgeExpiredReadNotifications(
+  db: Database,
+  now: Date,
+  dryRun: boolean,
+  chunkSize: number,
+  maxChunks: number,
+): Promise<CategoryResult> {
+  const cutoff = daysAgo(NOTIFICATION_READ_RETENTION_DAYS, now);
+  const where = and(
+    isNotNull(schema.notifications.readAt),
+    lt(schema.notifications.readAt, cutoff),
+  );
+
+  if (dryRun) {
+    const [row] = await db.select({ n: count() }).from(schema.notifications).where(where);
+    return { ...emptyCategoryResult(), wouldAffect: row?.n ?? 0 };
+  }
+
+  let affected = 0;
+  let lastChunkFull = false;
+  for (let i = 0; i < maxChunks; i++) {
+    const result = await db
+      .delete(schema.notifications)
+      .where(where)
+      .limit(chunkSize)
+      .returning({ id: schema.notifications.id });
+    affected += result.length;
+    lastChunkFull = result.length === chunkSize;
+    if (!lastChunkFull) break;
+  }
+  const backlogRemaining = lastChunkFull
+    ? await hasRowsMatching(db.select({ n: count() }).from(schema.notifications).where(where))
+    : false;
+  return { affected, wouldAffect: null, backlogRemaining, error: null };
+}
+
 const CATEGORIES = [
   "expired_audit_continuations",
   "anonymous_scans",
@@ -470,6 +560,8 @@ const CATEGORIES = [
   "orphaned_agency_logos",
   "expired_product_events",
   "expired_pilot_feedback_comments",
+  "expired_security_events",
+  "expired_read_notifications",
 ] as const;
 type Category = (typeof CATEGORIES)[number];
 
@@ -483,6 +575,8 @@ export type DataRetentionResult = {
   orphanedAgencyLogosDeleted: number;
   productEventsDeleted: number;
   pilotFeedbackCommentsCleared: number;
+  securityEventsDeleted: number;
+  readNotificationsDeleted: number;
   dryRun: boolean;
   /** True if any category threw — the run still completed the categories that didn't fail. */
   hasErrors: boolean;
@@ -529,6 +623,10 @@ export async function runDataRetentionPurge(
     expired_product_events: () => purgeExpiredProductEvents(db, now, dryRun, chunkSize, maxChunks),
     expired_pilot_feedback_comments: () =>
       purgeExpiredPilotFeedbackComments(db, now, dryRun, chunkSize, maxChunks),
+    expired_security_events: () =>
+      purgeExpiredSecurityEvents(db, now, dryRun, chunkSize, maxChunks),
+    expired_read_notifications: () =>
+      purgeExpiredReadNotifications(db, now, dryRun, chunkSize, maxChunks),
   };
 
   const categories = {} as Record<Category, CategoryResult>;
@@ -552,6 +650,8 @@ export async function runDataRetentionPurge(
     orphanedAgencyLogosDeleted: categories.orphaned_agency_logos.affected,
     productEventsDeleted: categories.expired_product_events.affected,
     pilotFeedbackCommentsCleared: categories.expired_pilot_feedback_comments.affected,
+    securityEventsDeleted: categories.expired_security_events.affected,
+    readNotificationsDeleted: categories.expired_read_notifications.affected,
     dryRun,
     hasErrors: CATEGORIES.some((c) => categories[c].error !== null),
     hasBacklog: CATEGORIES.some((c) => categories[c].backlogRemaining),

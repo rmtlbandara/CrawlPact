@@ -362,20 +362,38 @@ PRODUCT_TERMINOLOGY_GLOSSARY,CLAIMS_AND_MESSAGING_GUIDE,MESSAGING_SURFACE_INVENT
 
 ### Phase 19 — Post-Launch Optimisation and Continuous Governance
 
-- **Objective**: Ongoing governance after launch readiness — not a terminal phase.
+- **Objective**: Ongoing governance after launch readiness — not a terminal phase. **Updated
+  2026-08-14**: explicitly inherits full ownership of genuine external commercial validation,
+  deferred from Phase 17 by owner decision — see
+  `docs/pilot/PHASE_17_OWNER_APPROVED_COMMERCIAL_VALIDATION_DEFERRAL.md` and
+  `docs/roadmap/PHASE_19_POST_LAUNCH_HANDOFF.md`. This must not silently drop off the roadmap.
 - **Dependencies**: Phase 18.
 - **Status**: not started (ongoing once reached).
 
 ## Release gates
 
-| Gate                    | Requires                                                            |
-| ----------------------- | ------------------------------------------------------------------- |
-| A — Trust-ready         | Phases 0, 1, 2, 3 — **complete** (all four phases done, 2026-08-03) |
-| B — Conversion-ready    | Phases 4, 5, 6 — **complete** (all three done, 2026-08-04)          |
-| C — Agency-ready        | Phases 8, 9, 10 — **complete** (all three done, 2026-08-07)         |
-| D — Scale-ready         | Phases 11, 12, 13, 14                                               |
-| E — Authority-ready     | Phases 15, 16, 17                                                   |
-| F — Public-growth-ready | Phase 18                                                            |
+| Gate                              | Requires                                                            |
+| --------------------------------- | ------------------------------------------------------------------- |
+| A — Trust-ready                   | Phases 0, 1, 2, 3 — **complete** (all four phases done, 2026-08-03) |
+| B — Conversion-ready              | Phases 4, 5, 6 — **complete** (all three done, 2026-08-04)          |
+| C — Agency-ready                  | Phases 8, 9, 10 — **complete** (all three done, 2026-08-07)         |
+| D — Scale-ready                   | Phases 11, 12, 13, 14                                               |
+| E — Authority and Pilot-Readiness | **Superseded definition, 2026-08-14** — see below                   |
+| F — Public-growth-ready           | Phase 18 (final determination pending this pass's audit result)     |
+
+**Gate E — superseded 2026-08-14.** The original definition (Phases 15, 16, 17, all with Phase
+17's external-commercial-validation criterion fully met) is preserved here for history, not
+erased. It is superseded by an explicit owner decision recorded in
+`docs/pilot/PHASE_17_OWNER_APPROVED_COMMERCIAL_VALIDATION_DEFERRAL.md`. Gate E now reads:
+
+> Gate E — Authority and Pilot-Readiness. Requires: Phase 15 registry governance, Phase 16
+> Observatory/research authority foundation, Phase 17 pilot technical readiness, and an explicit
+> owner-approved deferral of external commercial validation to Phase 19. This does not claim that
+> external commercial validation has already occurred.
+
+Gate E is satisfied under this revised definition once Phases 15–17's technical deliverables are
+confirmed live (they are) and the deferral above is recorded (it is). Whether Gate F/Phase 18 can
+be marked complete depends on the rest of this pass's final audit, not on Gate E alone.
 
 Phase 19 is ongoing governance after launch readiness, not gated.
 
