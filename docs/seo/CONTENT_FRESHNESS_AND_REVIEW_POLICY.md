@@ -72,3 +72,18 @@ Phase 7 does not delete any existing published URL. If a future phase renames or
 page, the old URL redirects (permanent, no chain, per
 `docs/seo/ROUTE_REGISTRY.md`'s existing redirect rules) rather than 404ing or silently
 disappearing from the sitemap.
+
+## Phase 19 addendum — content-decay classification (2026-08-14)
+
+This policy predates Phase 16 (Observatory/research content) and didn't originally classify that
+material. Every piece of current-authoritative content now falls into exactly one decay category:
+
+| Category           | Examples                                                  | Review trigger                                                                                                                                                                                                                                 |
+| ------------------ | --------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Evergreen          | Methodology explanations, "what is llms.txt" fundamentals | Only on a user-reported inaccuracy or a genuine conceptual correction — no fixed cadence                                                                                                                                                       |
+| Registry-dependent | `/crawlers/*` pages                                       | Registry release change affecting that crawler (per `PHASE_19_REGISTRY_MAINTENANCE_POLICY.md`)                                                                                                                                                 |
+| Platform-dependent | `/platforms/*` guides                                     | Existing 90-day cadence above, unchanged                                                                                                                                                                                                       |
+| Research-dependent | `/observatory/*`, `/research/*`                           | A registry change affecting the underlying statistics, or a research correction/retraction per `docs/research/` governance (Phase 16) — never a fixed calendar cadence, since Observatory publications are event-driven, not scheduled content |
+
+No code or content was changed to add this classification — it's a naming/organizing addendum,
+not a new mechanism.
