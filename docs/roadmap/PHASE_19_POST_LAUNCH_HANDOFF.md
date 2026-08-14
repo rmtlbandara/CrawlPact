@@ -33,25 +33,22 @@ Phase 19 owns: connecting a real Search Console property (requires either a Goog
 MCP/API tool or the product owner performing the verification manually via the Dashboard/DNS TXT
 record), then checking indexation status for the Phase 7 `/for/*` and `/platforms/*` pages.
 
-## 3. Paddle webhook rotation residue (RISK-002 cleanup)
+## 3. Paddle webhook rotation residue (RISK-002 cleanup) — resolved, no action needed
 
-The rotation itself is complete and verified (`docs/security/PADDLE_WEBHOOK_SECRET_ROTATION_2026_08.md`).
-Three Paddle notification destinations need manual cleanup via the Paddle Dashboard (not
-affected by the API tool bug that blocked programmatic cleanup this session):
+The rotation is complete and verified (`docs/security/PADDLE_WEBHOOK_SECRET_ROTATION_2026_08.md`).
+The expected manual Dashboard cleanup turned out to be unnecessary: a direct check of the Paddle
+Dashboard on 2026-08-14 showed Paddle had already auto-deactivated the old destination
+(`ntfset_01kyfkc59d8h66prnhw220hnzy`) and the two stray destinations
+(`ntfset_01kzzkm7yw1kww7pdp36wp2wg8`, `ntfset_01kzzmepmh2awqh7ce7gvg7yag`) when the new one was
+created against the same URL — only `ntfset_01kzzmrf732n7y759nrnth7dnw` is `Active`. No log noise,
+no manual step required. The 3 inactive rows can be deleted for tidiness whenever convenient, but
+this is cosmetic, not functional.
 
-1. Deactivate or delete `ntfset_01kyfkc59d8h66prnhw220hnzy` (the old, pre-rotation destination —
-   no longer needed; its real-event deliveries now correctly fail signature checks, which is safe
-   but generates avoidable log noise).
-2. Delete `ntfset_01kzzkm7yw1kww7pdp36wp2wg8` (stray, 19/24 events, simulation-only, harmless).
-3. Delete `ntfset_01kzzmepmh2awqh7ce7gvg7yag` (stray, 24/24 events, secret unrecoverable,
-   harmless).
-4. Confirm exactly one active destination remains:
-   `ntfset_01kzzmrf732n7y759nrnth7dnw`.
-
-Also worth filing with Paddle or re-testing periodically: the underlying MCP tool bug (any
+Still worth filing with Paddle or re-testing periodically: the underlying MCP tool bug (any
 `notificationSettings`/`simulations` call needing a resource ID in the URL path fails with
 "URL called is invalid") — reported twice via `paddle:report_missing_tool` this session but not
-independently confirmed fixed.
+independently confirmed fixed. It didn't end up mattering for this rotation's outcome, but would
+block a future one.
 
 ## 4. RISK-033 — preview-environment Lighthouse budget failures
 

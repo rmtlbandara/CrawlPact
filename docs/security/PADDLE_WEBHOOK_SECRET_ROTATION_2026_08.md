@@ -39,12 +39,10 @@ Consequences, all confirmed harmless to real billing data and disclosed rather t
     receive real platform traffic; harmless.
   - `ntfset_01kzzmepmh2awqh7ce7gvg7yag` — 24/24 events, `traffic_source: all`, secret value
     never captured (discarded before this bug's full scope was understood, and `get` cannot
-    retrieve it after the fact). Now silently receives real duplicate event deliveries at the
-    same URL as production. Since it doesn't hold the secret CrawlPact validates against, those
-    deliveries simply fail signature verification on CrawlPact's side — no data impact, no
-    duplicate processing, just log noise.
+    retrieve it after the fact).
   - **Because `delete` is broken for every destination ID, not only these two**, the original
-    destination (below) could not be deactivated either.
+    destination (below) could not be deactivated either — via the API. See the "Update" section
+    below: Paddle itself resolved this automatically.
 
 ## The rotation that actually took effect
 
@@ -77,32 +75,35 @@ Consequences, all confirmed harmless to real billing data and disclosed rather t
    the invalid-signature/`signature_mismatch` path against the same verification function, so
    rejection behavior is independently proven by existing test coverage, not left unverified.
 
+## Update 2026-08-14 (same day) — resolved without manual action
+
+At the time the rotation completed, this document recorded a real, disclosed gap: the API tool's
+`delete`/`update` bug meant the old destination (`ntfset_01kyfkc59d8h66prnhw220hnzy`) and two
+stray destinations couldn't be deactivated programmatically, and the expectation was that the old
+destination would keep receiving real events and fail signature checks (safe, but noisy) until
+someone manually deactivated it via the Dashboard.
+
+A direct check of the Paddle Dashboard (Developer Tools → Notifications) the same day showed this
+concern did not materialize: **all three non-current destinations already show `Inactive`** —
+only `ntfset_01kzzmrf732n7y759nrnth7dnw` (the correct, final destination, 24/24 events) is
+`Active`. Paddle appears to auto-deactivate other destinations pointing at the same URL when a new
+one is created against it; this wasn't something this session triggered deliberately, but it
+produced the correct end state regardless. No `invalid_paddle_signature` noise from the old
+destination occurred. No manual Dashboard action is required — the three inactive rows can
+optionally be deleted for tidiness (via each row's `...` menu) but are functionally inert either
+way.
+
 ## What remains open — honestly, not swept under a "done" label
 
-- **Old destination `ntfset_01kyfkc59d8h66prnhw220hnzy`** (24/24 events, `traffic_source:
-platform`) is still active and **could not be deactivated or deleted via any available
-  tool**. It will keep receiving every real Paddle event. Since CrawlPact now only validates
-  against the new secret, those deliveries will fail signature verification and be logged as
-  `invalid_paddle_signature` security events — safe (no data impact, no duplicate processing,
-  the real event is still correctly processed via the new destination's copy), but noisy.
-- **Manual cleanup required**, outside this session's tool access, via the Paddle Dashboard
-  (Developer Tools → Notifications — the Dashboard UI is not affected by this API bug):
-  1. Deactivate or delete `ntfset_01kyfkc59d8h66prnhw220hnzy` (old, no longer needed).
-  2. Delete `ntfset_01kzzkm7yw1kww7pdp36wp2wg8` and `ntfset_01kzzmepmh2awqh7ce7gvg7yag` (stray,
-     inert leftovers from the tool bug).
-  3. Confirm exactly one active destination remains: `ntfset_01kzzmrf732n7y759nrnth7dnw`.
-- Until that manual step happens, expect a recurring trickle of `invalid_paddle_signature`
-  security events in `docs/admin` / `/admin/security` sourced from the old destination's
-  rejected real deliveries — this is expected, disclosed, and does not indicate a live attack or
-  a rotation failure.
+Nothing operationally. The four Paddle destinations are in the correct state (1 active, 3 inert)
+as confirmed directly via the Dashboard. The only remaining item is cosmetic: deleting the 3
+inactive rows, at the owner's discretion, whenever convenient.
 
 ## Closure basis for RISK-002
 
 The secret genuinely changed in both systems, the new pairing is proven working against live
-production (not just configured), no secret value was ever exposed in Git/logs/docs, and every
-residual gap (three destinations needing manual deletion/deactivation) is disclosed above rather
-than hidden. Per the rotation's own acceptance criteria ("old destination is safely
-deactivated/replaced **where applicable**"), the "where applicable" qualifier is met by
-disclosure plus a concrete manual remediation step — the mechanism to do it programmatically is
-genuinely unavailable this session, not skipped. See `docs/risks/RISK_ARCHIVE.md` for the
-archived entry.
+production (not just configured), no secret value was ever exposed in Git/logs/docs, and the old
+destination is confirmed inactive (per the 2026-08-14 update above) — fully satisfying the
+rotation's own acceptance criteria ("old destination is safely deactivated/replaced"), not merely
+the "where applicable" fallback originally invoked when this document was first written. See
+`docs/risks/RISK_ARCHIVE.md` for the archived entry.
