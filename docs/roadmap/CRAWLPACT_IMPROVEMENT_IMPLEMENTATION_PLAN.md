@@ -33,23 +33,26 @@ not itself implement anything.
 | 9   | Agency Workspace and Portfolio Workflows                   | P2       | Phase 8        | **complete** (see `docs/reports/PHASE_09_AGENCY_WORKSPACE_PORTFOLIO_COMPLETION_REPORT.md`)                                                                                         |
 | 10  | Notification Channels and Monitoring Reliability           | P1       | Phase 8, 9, 11 | **complete** (see `docs/reports/PHASE_10_NOTIFICATION_MONITORING_COMPLETION_REPORT.md`)                                                                                            |
 | 11  | Database, Storage, Retention and Performance Hardening     | P0       | Phase 1        | **complete** (PR #86, merged `36166a4`, deployed to production; see `docs/reports/PHASE_11_DATABASE_STORAGE_PERFORMANCE_COMPLETION_REPORT.md`)                                     |
-| 12  | Security, CI, Dependency and Quality-Gate Improvements     | P0       | Phase 1        | **stale — see note below** (git history/other docs indicate this shipped; not re-verified this pass)                                                                               |
-| 13  | Analytics, Consent and Product Measurement Strategy        | P1       | Phase 1        | **stale — see note below**                                                                                                                                                         |
-| 14  | Status, Operations and Service Reliability                 | P1       | Phase 11       | **stale — see note below**                                                                                                                                                         |
-| 15  | Crawler Registry Governance and Public Changelog           | P1       | Phase 1        | **stale — see note below**                                                                                                                                                         |
+| 12  | Security, CI, Dependency and Quality-Gate Improvements     | P0       | Phase 1        | **complete** — deployed 2026-08-10 (see `docs/reports/PHASE_12_SECURITY_CI_DEPENDENCY_QUALITY_COMPLETION_REPORT.md`)                                                               |
+| 13  | Analytics, Consent and Product Measurement Strategy        | P1       | Phase 1        | **complete** — deployed 2026-08-10, run `31398172686` (see `docs/reports/PHASE_13_ANALYTICS_CONSENT_PRODUCT_MEASUREMENT_COMPLETION_REPORT.md`)                                     |
+| 14  | Status, Operations and Service Reliability                 | P1       | Phase 11       | **complete** — deployed 2026-08-11, run `31452008949` (see `docs/reports/PHASE_14_STATUS_OPERATIONS_RELIABILITY_COMPLETION_REPORT.md`)                                             |
+| 15  | Crawler Registry Governance and Public Changelog           | P1       | Phase 1        | **complete** — deployed 2026-08-11, run `31483728804` (see `docs/reports/PHASE_15_CRAWLER_REGISTRY_GOVERNANCE_COMPLETION_REPORT.md`)                                               |
 | 16  | Policy Observatory and Research Authority                  | P2       | Phase 15       | see detail section below (partially updated)                                                                                                                                       |
 | 17  | Customer Pilot and Commercial Validation                   | P1       | Gates A–D      | **pre-launch technical readiness complete**; commercial validation deferred to Phase 19 (owner decision, 2026-08-14)                                                               |
 | 18  | Production Launch Readiness and Final Audit                | P0       | Gates A–E      | **complete** — reconfirmed 2026-08-14 (`16fb160`, brand/logo fix + full regression re-verification, see `docs/reports/PHASE_00_18_FINAL_RECONFIRMATION_AND_PRODUCTION_RELEASE.md`) |
 | 19  | Post-Launch Optimisation and Continuous Governance         | P1       | Phase 18       | **foundation established, 2026-08-14** — continuous governance active, not permanently complete (see `docs/reports/PHASE_19_FOUNDATION_COMPLETION_REPORT.md`)                      |
 
-**Note on the "stale" flags above (added 2026-08-14):** this pass discovered that Phases 12–15's
-own detail sections below still read "not started," which contradicts other current-authoritative
-evidence in the repo (git commit history and `docs/status/CURRENT_STATE.md`/memory records
-describing, e.g., Phase 14 operations and Phase 15 registry governance as shipped). This pass's
-scope was the Phase 0–18 blocker/governance closure, not a full re-audit of Phases 12–15's actual
-production state, so rather than either leave the contradiction silently unaddressed or assert
-specific claims about those phases that weren't independently re-verified this pass, it's flagged
-here for a future pass to reconcile against live evidence.
+**Note on the "stale" flags above (resolved 2026-08-15):** the 2026-08-14 pass flagged that Phases
+12–15's own detail sections below still read "not started," contradicting other
+current-authoritative evidence in the repo. This was reconciled on 2026-08-15 against
+`docs/status/CURRENT_STATE.md`'s dated deployment paragraphs, the four existing completion reports,
+`git log` (confirmed distinct merged PRs and "docs: record production deployment" commits for all
+four phases), and fresh live spot-checks against `https://crawlpact.com` (`/admin/operations` and
+`/admin/analytics` redirect to sign-in as expected for unauthenticated requests, `/status/feed.xml`
+returns `200`/`atom+xml`, `/changelog` returns `200`, all GitHub Actions workflows are
+full-SHA-pinned, and the `operational_alerts`/`scheduled_job_runs`/`crawler_operators` D1 tables
+exist in production). No contradicting evidence was found — the detail sections below have been
+corrected to match.
 
 ## Phase details
 
@@ -305,7 +308,16 @@ PRODUCT_TERMINOLOGY_GLOSSARY,CLAIMS_AND_MESSAGING_GUIDE,MESSAGING_SURFACE_INVENT
   branch-protection alternatives given the current plan's constraint (R-008); remove the dead
   `packages/core` billing contract module or reconcile it with the real API shape.
 - **Dependencies**: Phase 1.
-- **Status**: not started.
+- **Status**: **complete** — deployed 2026-08-10. Hardened CI/CD supply-chain integrity
+  (SHA-pinned GitHub Actions, fixed a real script-injection shape, made the
+  dependency-vulnerability gate actually blocking), added a privacy-minimized cross-request
+  target-frequency abuse-detection feature (detection-only, never auto-blocking), and root-caused
+  and fixed two real, previously-misdiagnosed operational gaps: the persistent
+  `deploy-preview.yml` failure (missing Cloudflare Worker secrets, not a GitHub secret-naming
+  mismatch as originally documented) and a blocked Dependabot PR (a Wrangler version floor).
+  Live-reconfirmed 2026-08-15: `ci.yml`/`deploy-production.yml`/`deploy-preview.yml` are all
+  full-SHA-pinned. Full detail:
+  `docs/reports/PHASE_12_SECURITY_CI_DEPENDENCY_QUALITY_COMPLETION_REPORT.md`.
 
 ### Phase 13 — Analytics, Consent and Product Measurement Strategy
 
@@ -313,14 +325,38 @@ PRODUCT_TERMINOLOGY_GLOSSARY,CLAIMS_AND_MESSAGING_GUIDE,MESSAGING_SURFACE_INVENT
   regression test asserting GA never loads outside `MarketingLayout` (R-010); build the SRS
   §28.13 14-metric Super Admin analytics dashboard (currently absent, per `ANALYTICS_AND_CONSENT_BASELINE.md`).
 - **Dependencies**: Phase 1.
-- **Status**: not started.
+- **Status**: **complete** — deployed 2026-08-10, run `31398172686` (first attempt, run
+  `31397059938`, hit a transient post-deploy edge-cache smoke-test failure, not a real Worker
+  defect; re-dispatch completed cleanly, 34/34 smoke checks). Gated Google Analytics behind a
+  real, first-party consent mechanism (no GA script exists pre-consent, route-allowlisted), built
+  the first-party Super Admin product-measurement dashboard (`/admin/analytics`), added a
+  PII-shaped property guard and bounded `product_events` retention, fixed a production
+  error-message leak, and established repository-confidentiality governance
+  (`repo-privacy:validate`, `analytics:validate`, both CI-gated). No new D1 migration (31/31
+  unchanged at time of deploy). Live-reconfirmed 2026-08-15: unauthenticated `/admin/analytics`
+  redirects to `/sign-in`; `scripts/analytics-validate.mjs` and
+  `scripts/repo-privacy-validate.mjs` exist. Full detail:
+  `docs/reports/PHASE_13_ANALYTICS_CONSENT_PRODUCT_MEASUREMENT_COMPLETION_REPORT.md`.
 
 ### Phase 14 — Status, Operations and Service Reliability
 
 - **Objective**: Verify cron execution history (not just configuration); formalize
   `scripts/smoke-test.ts` as a required, not just manual, post-deploy gate.
 - **Dependencies**: Phase 11.
-- **Status**: not started.
+- **Status**: **complete** — deployed 2026-08-11, run `31452008949`. Fixed two real,
+  previously-latent bugs: a status-query N+1 in `loadPublicIncidents`, and a
+  scheduled-maintenance incident escalating its public component before its actual `startsAt`
+  time. Fixed a structural gap that made the scheduler's stuck/overlapping-job detection
+  unreachable, and added a missing index on `scheduled_job_runs` found via real
+  `EXPLAIN QUERY PLAN` evidence. Added first-party, deduplicated internal operational alerting
+  (`operational_alerts`) and a Super Admin operations control plane at `/admin/operations`.
+  Defined internal SLIs/SLOs — no public uptime percentage is published. Added a public status
+  Atom feed (`/status/feed.xml`). Two new D1 migrations (`0032`, `0033`; 33/33 applied at time of
+  deploy). RISK-006 retention was resolved separately in the later Phase 0-18 blocker-removal
+  pass, not this phase. Live-reconfirmed 2026-08-15: unauthenticated `/admin/operations` redirects
+  to `/sign-in`; `/status/feed.xml` returns `200` with `content-type: application/atom+xml`; the
+  `operational_alerts`/`scheduled_job_runs` D1 tables exist in production. Full detail:
+  `docs/reports/PHASE_14_STATUS_OPERATIONS_RELIABILITY_COMPLETION_REPORT.md`.
 
 ### Phase 15 — Crawler Registry Governance and Public Changelog
 
@@ -330,7 +366,21 @@ PRODUCT_TERMINOLOGY_GLOSSARY,CLAIMS_AND_MESSAGING_GUIDE,MESSAGING_SURFACE_INVENT
   check (R-004), and address the `reference-data.sql` re-run immutability risk (R-003). Add the
   Bingbot content page once its JS-rendered official source becomes fetchable.
 - **Dependencies**: Phase 1.
-- **Status**: not started.
+- **Status**: **complete** — deployed 2026-08-11, run `31483728804`. Found and fixed a real,
+  critical bug: `getActiveRegistry()` and historical scan rendering read the live, mutable
+  `crawlers` table instead of the immutable `registry_version_entries` release snapshot, meaning
+  editing a crawler's row after a release was published could silently change what an
+  already-active release evaluated. Both paths now resolve exclusively from the frozen release
+  snapshot (regression-tested — RISK-018). Also replaced whole-row-edit re-evaluation triggering
+  with a field-level semantic diff so only evaluation-semantic changes schedule customer
+  re-evaluation. Made publish/rollback atomic and idempotent, added release checksums and
+  candidate validation, and independently re-verified all 23 crawlers across 9 operators against
+  live official documentation. The active registry release itself was unchanged by this deployment
+  (`2026.07.3`) — publishing the reverified Amazon/Google/Bingbot corrections as a new release
+  remains a pending Super Admin action (`docs/registry/PHASE_19_REGISTRY_MAINTENANCE_POLICY.md`).
+  Migration `0034` applied (34/34 at time of deploy). Live-reconfirmed 2026-08-15: `/changelog`
+  returns `200`; the `crawler_operators` D1 table exists in production. Full detail:
+  `docs/reports/PHASE_15_CRAWLER_REGISTRY_GOVERNANCE_COMPLETION_REPORT.md`.
 
 ### Phase 16 — Policy Observatory and Research Authority
 
