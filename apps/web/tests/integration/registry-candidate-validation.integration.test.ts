@@ -100,6 +100,15 @@ describe("registry release candidate validation (real D1)", () => {
   });
 
   it("blocks a candidate with a duplicate primary token across two evaluation-eligible crawlers", async () => {
+    // Since RISK-025's fix (migration 0037: `idx_crawlers_user_agent_token`
+    // is now `COLLATE NOCASE`), two live `crawlers` rows can no longer hold
+    // case-variant (or exact) duplicate primary tokens — the insert itself
+    // is rejected before a release candidate could ever be built from them.
+    // This test now exercises `duplicate_token` as the remaining
+    // defense-in-depth backstop: a `registry_version_entries.snapshot` that
+    // somehow ends up with a colliding token (e.g. stale/tampered snapshot
+    // data) must still block publication, even though the live `crawlers`
+    // table itself can no longer produce this scenario directly.
     const now = new Date().toISOString();
     await db.insert(schema.crawlers).values([
       {
@@ -119,9 +128,9 @@ describe("registry release candidate validation (real D1)", () => {
         id: "crw_dup_2",
         operatorId,
         name: "DupBot Duplicate",
-        userAgentToken: "dupbot",
+        userAgentToken: "OtherBot",
         purpose: "training",
-        description: "Second of a duplicate-token pair (case-insensitive match).",
+        description: "Second crawler, later snapshot-tampered to collide with the first.",
         officialSourceUrl: "https://example.test/dup2",
         lifecycleStatus: "active",
         lastVerifiedAt: now,
@@ -133,6 +142,18 @@ describe("registry release candidate validation (real D1)", () => {
       versionLabel: "candidate-dup-token",
       changelog: "Duplicate token test.",
     });
+
+    const [entry] = await db
+      .select()
+      .from(schema.registryVersionEntries)
+      .where(eq(schema.registryVersionEntries.crawlerId, "crw_dup_2"))
+      .limit(1);
+    if (!entry) throw new Error("expected a registry_version_entries row for crw_dup_2");
+    const tamperedSnapshot = { ...JSON.parse(entry.snapshot), userAgentToken: "dupbot" };
+    await db
+      .update(schema.registryVersionEntries)
+      .set({ snapshot: JSON.stringify(tamperedSnapshot) })
+      .where(eq(schema.registryVersionEntries.id, entry.id));
 
     const validation = await validateReleaseCandidate(db, releaseId);
     expect(validation.errors.some((e) => e.code === "duplicate_token")).toBe(true);
