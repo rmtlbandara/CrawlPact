@@ -46,6 +46,12 @@ export const crawlers = sqliteTable(
     createdAt: text("created_at").notNull(),
     updatedAt: text("updated_at").notNull(),
   },
+  // The real physical index (migrations 0004/0015/0037) is
+  // `idx_crawlers_user_agent_token`, defined `COLLATE NOCASE` as of 0037 to
+  // match `registry-tools.mjs`'s case-insensitive duplicate check (RISK-025).
+  // This Drizzle-level index is typing-only (never pushed — ADR-0002/db:validate
+  // only checks table/column names, not index definitions) and named
+  // differently to avoid implying it governs the physical schema.
   (table) => [uniqueIndex("idx_crawlers_user_agent_token_drizzle").on(table.userAgentToken)],
 );
 

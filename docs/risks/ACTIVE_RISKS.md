@@ -8,7 +8,10 @@ below rather than duplicated. Do not maintain a third active-risk list anywhere 
 
 Statuses: `open` · `mitigating` · `accepted` · `blocked` · `monitoring`.
 
-Last reviewed: 2026-08-14 (Phase 19 foundation, Post-Launch Optimisation and Continuous
+Last reviewed: 2026-08-15 (Phase 19 continuous governance, ad hoc maintenance pass). Closed
+RISK-025 (see `docs/risks/RISK_ARCHIVE.md` ARC-038 — migration `0037` makes the DB's own unique
+index case-insensitive, matching `registry-tools.mjs`'s existing check). Prior review: 2026-08-14
+(Phase 19 foundation, Post-Launch Optimisation and Continuous
 Governance). No risk status changed in this pass — a full read-through confirmed every open entry
 below remains accurate against live production, and confirmed no basis to reopen RISK-002,
 RISK-006, or RISK-018 (all closed with evidence in the Phase 0-18 final reconfirmation pass, see
@@ -174,17 +177,6 @@ extended platform guides), RISK-032 (no Search Console property connected), and 
 - **Review date**: Phase 12 (investigated, not closed) · **Target phase**: Unscheduled — needs its own dedicated phase, not a sub-task of a broader security pass
 - **Status**: accepted
 - **Acceptance criteria for closure**: Either a hash-based CSP covers every static/cached page and per-request nonces cover every private SSR page (both, not one), or `'unsafe-inline'` is otherwise provably eliminated without weakening real functionality.
-
-### RISK-025 — Duplicate-token protection gap: case-sensitive DB unique index vs. case-insensitive CLI validator
-
-- **Category**: Registry governance, Security · **Severity**: P2 · **Probability**: Low (no current occurrence)
-- **Impact**: Two tokens differing only by case could pass the DB constraint while being flagged by `registry-tools.mjs validate`, or vice versa.
-- **Evidence**: `docs/baseline/2026-08-03/CRAWLER_REGISTRY_BASELINE.md`
-- **Current mitigation**: All 23 current tokens are distinct even case-insensitively.
-- **Owner**: Registry owner · **Trigger**: Any new crawler registration
-- **Review date**: Phase 15 · **Target phase**: Phase 15
-- **Status**: monitoring
-- **Acceptance criteria for closure**: Both checks are made consistent (both case-sensitive or both case-insensitive).
 
 ### RISK-026 — Open Dependabot PR currently has a failing CI run
 
