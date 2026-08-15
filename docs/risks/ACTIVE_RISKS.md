@@ -12,7 +12,11 @@ Last reviewed: 2026-08-15 (Phase 19 continuous governance, ad hoc maintenance pa
 RISK-025 (see `docs/risks/RISK_ARCHIVE.md` ARC-038 — migration `0037` makes the DB's own unique
 index case-insensitive, matching `registry-tools.mjs`'s existing check) and RISK-026 (see
 `docs/risks/RISK_ARCHIVE.md` ARC-039 — bumping `astro` and `@astrojs/cloudflare` together, not
-`@astrojs/cloudflare` alone, resolves the missing-export build failure). Prior review: 2026-08-14
+`@astrojs/cloudflare` alone, resolves the missing-export build failure). Reclassified RISK-033 from
+`monitoring` back to `open`: a controlled production/preview Lighthouse comparison found a real,
+currently-active, homepage-specific LCP regression present in both environments — see that risk's
+own entry and the corrected classification in
+`docs/optimization/PHASE_19_CAPACITY_AND_RELIABILITY_GOVERNANCE.md`. Prior review: 2026-08-14
 (Phase 19 foundation, Post-Launch Optimisation and Continuous
 Governance). No risk status changed in this pass — a full read-through confirmed every open entry
 below remains accurate against live production, and confirmed no basis to reopen RISK-002,
@@ -291,9 +295,9 @@ extended platform guides), RISK-032 (no Search Console property connected), and 
   verification checklist in `PHASE_07_SEARCH_PERFORMANCE_BASELINE.md` is completed at least once —
   owned by Phase 19, not a pre-launch requirement.
 
-### RISK-033 — Production Lighthouse performance/LCP fails threshold on 3 of 5 tested pages (pre-existing, first measured this phase)
+### RISK-033 — Homepage Lighthouse performance/LCP intermittently fails threshold in both production and preview (originally found Phase 7, closed Phase 11, re-opened 2026-08-15 as a homepage-specific regression)
 
-- **Category**: Performance · **Severity**: P2 · **Probability**: Certain (measured directly)
+- **Category**: Performance · **Severity**: P2 · **Probability**: Certain (measured directly, 5 of 7 recent production runs and 1 of 1 preview run)
 - **Impact**: A direct `scripts/lighthouse-check.mjs` run against `https://crawlpact.com` (first
   time this script was ever run against production rather than the preview Worker) found `/`
   (79/100, LCP 4,653ms), `/crawlers/amazonbot` (71/100, LCP 5,070ms), and `/for/agencies` (73/100,
@@ -325,12 +329,38 @@ extended platform guides), RISK-032 (no Search Console property connected), and 
   integration-test failures until killed and the suite re-run cleanly). No new Lighthouse numbers
   were obtained this pass; **not fabricated as a substitute**. Phase 11's real re-measurement
   (94–99 score, 1,579–2,940ms LCP) remains the most recent actual evidence and is not superseded.
-- **Status**: monitoring — closure criteria still met by Phase 11's evidence; a fresh re-run is
-  recommended (from a quieter machine/CI runner) before archiving, since Phase 18's own attempt was
-  inconclusive rather than confirmatory.
-- **Acceptance criteria for closure**: A direct production Lighthouse run shows all tested pages
-  meeting the stated performance/LCP thresholds — met by Phase 11's evidence; not re-confirmed
-  this pass due to a local tooling/resource issue, not a product regression.
+- **Re-measured 2026-08-15 — new, real homepage-specific regression found; prior "preview-only"
+  classification overturned.** A full controlled comparison was run to resolve the separate
+  preview-Lighthouse-discrepancy question
+  (`docs/optimization/PHASE_19_CAPACITY_AND_RELIABILITY_GOVERNANCE.md`'s RISK-033 section, which
+  had classified the preview gap as "preview-specific environmental difference, not a production
+  regression" without ever actually running the comparison): production was measured twice (7 runs
+  total across `/`, `/pricing`, `/sample-report`, `/crawlers/amazonbot`, `/for/agencies`,
+  `/platforms/cloudflare`), and the live preview Worker
+  (`https://crawlpact-web-preview.rmtlbandara.workers.dev`) once. **The homepage (`/`) specifically
+  fails badly and consistently in both environments** — production: 5 of 7 runs scored 71–75 with
+  LCP 5,670–6,332ms (1 of 7 runs was fast: 100/1,545ms); preview: 74/100, LCP 6,055ms. Every other
+  page tested is fine in both environments (92–100/100, LCP 1,528–2,634ms), matching Phase 11's
+  baseline for those pages. **This means the two things previously believed to be separate
+  (a preview-only CI flake, and a long-since-fixed production issue) are actually the same real,
+  currently-active, homepage-specific defect present in both environments** — the "preview-specific
+  environmental difference" classification in the Phase 19 governance doc was wrong and has been
+  corrected there. A detailed single-run Lighthouse report against the homepage was inspected to
+  rule out the obvious cause: no render-blocking external `<script>` tags exist (all are inline
+  bootstrap code or `type="module"`, confirmed via direct HTML inspection). The LCP element itself
+  is a hero-section text paragraph, not an image; its reported `elementRenderDelay` (~2.1s) does
+  not fully reconcile with the ~5.6–6.3s top-line LCP metric, which needs further investigation of
+  Lighthouse's simulated-throttling (Lantern) model rather than a real network/CPU trace. Leading
+  hypothesis, not confirmed: the homepage's hero `AuditForm` React island (5 separate JS
+  chunks — `AuditForm`, `client`, `react`, `react-dom`, `jsx-runtime` — none of which load on the
+  other tested pages) delays paint of nearby text content during hydration; this is the only
+  structural difference identified between the homepage and every other tested page, but no
+  code-level fix was attempted this pass since the hypothesis is not yet proven.
+- **Status**: open — reclassified from `monitoring` given this is now a confirmed, real, currently
+  reproducing regression, not a closed-and-monitored item.
+- **Acceptance criteria for closure**: A direct production Lighthouse run shows the homepage
+  consistently (not just occasionally) meeting the stated performance/LCP thresholds, with a
+  confirmed root cause — not yet met.
 
 ### RISK-034 — `listDomains()`'s open-findings count is an N+1 query pattern (pre-existing, found during Phase 8)
 
