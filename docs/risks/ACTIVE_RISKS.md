@@ -10,7 +10,9 @@ Statuses: `open` · `mitigating` · `accepted` · `blocked` · `monitoring`.
 
 Last reviewed: 2026-08-15 (Phase 19 continuous governance, ad hoc maintenance pass). Closed
 RISK-025 (see `docs/risks/RISK_ARCHIVE.md` ARC-038 — migration `0037` makes the DB's own unique
-index case-insensitive, matching `registry-tools.mjs`'s existing check). Prior review: 2026-08-14
+index case-insensitive, matching `registry-tools.mjs`'s existing check) and RISK-026 (see
+`docs/risks/RISK_ARCHIVE.md` ARC-039 — bumping `astro` and `@astrojs/cloudflare` together, not
+`@astrojs/cloudflare` alone, resolves the missing-export build failure). Prior review: 2026-08-14
 (Phase 19 foundation, Post-Launch Optimisation and Continuous
 Governance). No risk status changed in this pass — a full read-through confirmed every open entry
 below remains accurate against live production, and confirmed no basis to reopen RISK-002,
@@ -178,18 +180,6 @@ extended platform guides), RISK-032 (no Search Console property connected), and 
 - **Review date**: Phase 12 (investigated, not closed) · **Target phase**: Unscheduled — needs its own dedicated phase, not a sub-task of a broader security pass
 - **Status**: accepted
 - **Acceptance criteria for closure**: Either a hash-based CSP covers every static/cached page and per-request nonces cover every private SSR page (both, not one), or `'unsafe-inline'` is otherwise provably eliminated without weakening real functionality.
-
-### RISK-026 — Open Dependabot PR currently has a failing CI run
-
-- **Category**: Dependencies, CI · **Severity**: P2 · **Probability**: Certain (confirmed live)
-- **Impact**: `dependabot/npm_and_yarn/astrojs/cloudflare-14.1.7` cannot currently auto-merge.
-- **Evidence**: `docs/baseline/2026-08-03/TEST_AND_CI_EVIDENCE.md`
-- **Current mitigation**: **Investigated and partially fixed, Phase 12 (2026-08-09)**. Root cause found via `gh run view --log-failed`: the newer `@astrojs/cloudflare@14.1.7`'s transitive `@cloudflare/vite-plugin` requires Wrangler `^4.118.0`, which the repo was pinned below (`4.114.0`) — this caused a hard `astro check` failure ("Unable to load your Astro config... does not satisfy the peer dependency"). Fixed by bumping Wrangler to `4.120.0` (PR #97) — re-ran PR #65's CI after this landed on `main` and confirmed the original typecheck failure is gone (0 errors). **A new, different failure has surfaced in its place**: the `quality` job now fails at the `pnpm build` step with a Rolldown/Vite build error (`aggregateBindingErrorsIntoJsError`, "Build failed"), and `browser-smoke` separately times out waiting for the dev server. This looks like a genuine compatibility issue with `@astrojs/cloudflare@14.1.7` itself (or its Vite/Rolldown chain), not the Wrangler-version issue this phase targeted — a real, still-open gap requiring its own dedicated investigation, not attempted this phase given its already-large scope.
-- **Owner**: Engineering owner · **Trigger**: Next dependency-update review, or a dedicated Astro/Rolldown compatibility investigation
-- **Review date**: Re-confirmed Phase 18 (2026-08-14) · **Target phase**: Next phase touching Astro/Vite tooling
-- **Current mitigation (Phase 18 update)**: 5 Dependabot PRs currently open (`#66`, `#98`, `#102`, `#103`, `#104`), none merged. `#103` (`@astrojs/cloudflare` 14.1.4→14.2.0, the direct successor to the originally-tracked `14.1.7` PR) shows `mergeable_state: "unstable"` and its base commit (`051ada36`) is stale relative to current `main` (`54734109`) — it needs a rebase before its CI result would even be meaningful. **New finding**: the GitHub check-runs API now returns `403 "Resource not accessible by personal access token"` for this PR's head commit — a real, newly-observed access restriction (same class as RISK-003's Cloudflare-credential pattern), meaning CI status for open Dependabot PRs can no longer be read via this token at all, not just the specific build failure previously diagnosed. This is itself worth tracking, not just the original Astro/Rolldown build failure.
-- **Status**: open
-- **Acceptance criteria for closure**: CI failure investigated and either fixed or the PR closed with a documented reason. (Partially met — the Wrangler-version cause is fixed; the Rolldown/Vite build failure and the new check-runs access restriction both remain open.)
 
 ### RISK-027 — `main` branch has no GitHub branch-protection rule configured
 
