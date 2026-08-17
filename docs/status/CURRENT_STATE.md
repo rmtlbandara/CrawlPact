@@ -1,10 +1,10 @@
 ---
 Document owner: Engineering owner
 Status: current-authoritative
-Last verified: 2026-08-14
-Repository commit: 16fb16088aef652fe021ac6b4eb8fa2db5e789d3 (main, post-Phase-0-18-final-reconfirmation, deployed)
-Production deployment identifier: crawlpact-web (Cloudflare Worker), https://crawlpact.com — Worker version 280cac36-d3cb-4ca0-a7a2-03aab2c6ecf8
-Database migration version: 0036_customer_pilot.sql (36/36 applied to production, confirmed via a direct read-only D1 query against `d1_migrations` 2026-08-13 — new `pilot_cohorts`/`pilot_participants`/`pilot_feedback` tables, 0 rows each)
+Last verified: 2026-08-17
+Repository commit: 4fae5c63b99c7e79a76ae74332d3d09e499a33d0 (main, post-RISK-025/026-fix-deploy)
+Production deployment identifier: crawlpact-web (Cloudflare Worker), https://crawlpact.com — Worker version d7c88820-33ed-46e0-945a-9b7b7d5add78
+Database migration version: 0037_registry_token_case_insensitive_uniqueness.sql (37/37 applied to production, confirmed via a direct read-only D1 query against `d1_migrations` 2026-08-17)
 Crawler registry version: 2026.07.3 (active release, unchanged by Phase 17's deploy — the Amazon/Google/Bingbot corrections are independently re-verified and ready in `packages/database/seed/reference-data.sql`, still awaiting a real Super Admin session to publish; see docs/registry/CRAWLER_REGISTRY_GOVERNANCE.md and the Phase 15 completion report)
 Phase 0 baseline reference: docs/baseline/2026-08-03/ (superseded on billing/migration facts by Phases 5–6 below; not re-run this pass)
 Review frequency: Every release, or monthly
@@ -197,6 +197,30 @@ credential cannot force a cache purge). The Worker itself deployed correctly on 
 (run `31398172686`) once the edge cache had settled and completed cleanly end-to-end, including
 its own smoke-test step (34/34). Full detail:
 `docs/reports/PHASE_13_ANALYTICS_CONSENT_PRODUCT_MEASUREMENT_COMPLETION_REPORT.md`.
+
+An ad hoc Phase 19 maintenance pass (deployed 2026-08-17, run `31990452013`) closed two real,
+previously-open risks and investigated two more without a code fix. **RISK-025** (duplicate-token
+protection gap): `idx_crawlers_user_agent_token` used SQLite's default BINARY collation, so
+case-variant duplicate crawler tokens (e.g. `Googlebot`/`googlebot`) could both be inserted despite
+`registry-tools.mjs`'s validator already comparing case-insensitively — migration `0037` makes the
+DB's own index `COLLATE NOCASE`, closing the gap at insert time. Independently re-verified live
+post-deploy: `sqlite_master` confirms the index now reads
+`CREATE UNIQUE INDEX idx_crawlers_user_agent_token ON crawlers (user_agent_token COLLATE NOCASE)`,
+37/37 migrations applied. **RISK-026** (failing Dependabot PR): root-caused via direct local
+reproduction — `@astrojs/cloudflare@14.2.0` imports `beginContentEntryCollection` from `astro/app`,
+which `astro@7.1.3` (this repo's pinned version) doesn't export; bumping `astro` to `7.2.2`
+alongside the adapter (not the adapter alone, as the Dependabot PR attempted) fixes the build.
+Deploy completed cleanly end-to-end including its own smoke-test step; independently re-verified
+post-deploy with a fresh `pnpm run smoke:production` run (34/34) and direct route checks against
+`https://crawlpact.com`. **RISK-015** (built-server E2E) was retried given Wrangler is now well
+past the version lead from Phase 12 — the historical crash reproduced again, this time locally on
+macOS too (new evidence pointing at an upstream wrangler/Miniflare loopback custom-fetch bug, not
+a Linux-CI-runner or Wrangler-version issue); the code change was reverted, **still open**.
+**RISK-033** (Lighthouse) was investigated with a real controlled comparison and found to be a
+genuine, currently-active, homepage-specific LCP regression present in **both** preview and
+production (not the preview-only artifact previously assumed) — root cause not yet confirmed,
+**still open**, reclassified from `monitoring` back to `open`. Full detail:
+`docs/risks/ACTIVE_RISKS.md`, `docs/risks/RISK_ARCHIVE.md` (ARC-038/039).
 
 Major limitations: a real **paid** Paddle checkout lifecycle has never been run (webhook
 processing itself is verified live — RISK-001, still open); the Workers Free CPU budget constrains
