@@ -2,8 +2,8 @@
 Document owner: Engineering owner
 Status: current-authoritative
 Last verified: 2026-08-17
-Repository commit: a1c18ca78de89f1e9b84275ef03dab7720d4dd21 (main, post-RISK-033-fix-deploy)
-Production deployment identifier: crawlpact-web (Cloudflare Worker), https://crawlpact.com — Worker version d082f02d-b4ed-4bf3-903b-50095cb06beb
+Repository commit: 027eb6f1b2638b614942880aaab2851a30008172 (main, post-cloudflare-adapter-bump-deploy)
+Production deployment identifier: crawlpact-web (Cloudflare Worker), https://crawlpact.com — Worker version b0a7950b-3a69-4ff6-aeb6-e3f2e45587f0
 Database migration version: 0037_registry_token_case_insensitive_uniqueness.sql (37/37 applied to production, confirmed via a direct read-only D1 query against `d1_migrations` 2026-08-17)
 Crawler registry version: 2026.07.3 (active release, unchanged by Phase 17's deploy — the Amazon/Google/Bingbot corrections are independently re-verified and ready in `packages/database/seed/reference-data.sql`, still awaiting a real Super Admin session to publish; see docs/registry/CRAWLER_REGISTRY_GOVERNANCE.md and the Phase 15 completion report)
 Phase 0 baseline reference: docs/baseline/2026-08-03/ (superseded on billing/migration facts by Phases 5–6 below; not re-run this pass)
@@ -242,6 +242,18 @@ devtools-throttled Lighthouse run against production scored 96/100 at 2.3s LCP (
 3.9–4.2s pre-fix). Deploy completed cleanly end-to-end including its own smoke-test step;
 independently re-verified with a fresh `pnpm run smoke:production` run (34/34) and direct route
 checks against `https://crawlpact.com`. Full detail: `docs/risks/RISK_ARCHIVE.md` (ARC-040).
+
+A final deployment the same day (2026-08-17, run `32019684129`, commit `027eb6f`) closed out a
+leftover gap found while double-checking that everything genuinely reached production: a
+Dependabot PR bumping `@astrojs/cloudflare` 14.2.0→14.2.1 (PR #131) had been rebased and verified
+earlier but never actually merged. `@astrojs/cloudflare` is a real runtime `dependencies` entry
+(the build adapter that generates the deployed Worker), not dev-tooling, so — unlike the earlier
+pure-dev-tooling Dependabot merges this pass, which didn't need a redeploy — this one did. No
+functional or schema change; pure build-dependency freshness. Deploy completed cleanly end-to-end
+including its own smoke-test step; independently re-verified post-deploy: new Worker version live
+at 100% via the Cloudflare deployments API, migrations unchanged at 37/37, a fresh
+`pnpm run smoke:production` run (34/34), and direct checks on `/`, `/pricing`, `/sample-report`,
+`/crawlers`, `/changelog`, `/status` (all 200).
 
 Major limitations: a real **paid** Paddle checkout lifecycle has never been run (webhook
 processing itself is verified live — RISK-001, still open); the Workers Free CPU budget constrains
