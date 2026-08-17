@@ -26,32 +26,39 @@ Unchanged, still `POST-LAUNCH`/accepted. Trigger (per that risk's own record and
 100-domain portfolios becoming common, rising latency, or meaningful D1 read growth. None of
 these conditions exist today (max domains for any single account: 4). Not prioritized this pass.
 
-## RISK-033 / preview Lighthouse discrepancy — classification (§79-80), corrected 2026-08-15
+## RISK-033 / preview Lighthouse discrepancy — resolved 2026-08-17
 
-**This section previously classified the preview Lighthouse budget's repeated failures as a
-"preview-specific environmental difference, not a production regression," reasoning that
-production's own Phase 11 measurement (94-99 score, 1,579-2,940ms LCP) contradicted a genuine
-regression theory. That classification was wrong and is corrected here** — it was written without
-ever actually running the controlled production/preview/local comparison this section itself said
-was needed before trusting it (the prior text explicitly flagged this as unproven).
+This section went through two prior classifications, both since superseded — kept here as an
+honest record rather than quietly erased. First: "preview-specific environmental difference, not a
+production regression," reasoning from Phase 11's measurement without ever running the comparison
+needed to prove it. Second (2026-08-15): after actually running that comparison, "a real,
+currently-active, homepage-specific defect present in both preview and production" — root cause
+not yet confirmed, leading hypothesis the hero `AuditForm` island delaying paint during hydration.
 
-That comparison was run 2026-08-15 (see `docs/risks/ACTIVE_RISKS.md`'s RISK-033 entry for full
-detail): production was measured twice (7 runs across 6 pages) and the live preview Worker once.
-**The homepage specifically fails badly and consistently in both environments** — production: 5 of
-7 runs scored 71-75 with LCP 5,670-6,332ms; preview: 74/100, LCP 6,055ms. Every other page tested
-(pricing, sample-report, crawler detail, `/for/agencies`, `/platforms/cloudflare`) is fine in both
-environments (92-100/100, LCP 1,528-2,634ms), matching Phase 11's baseline for those pages.
+**Both were wrong in the same way: neither questioned whether Lighthouse's own measurement was
+trustworthy.** It wasn't. Three independent real-network measurements — an out-of-band
+Playwright/CDP trace against production, and Lighthouse itself run 3x with
+`--throttling-method=devtools` (real network replay) instead of its default simulated Lantern
+model — all showed the homepage genuinely healthy: 99-100/100, 700ms-1.6s LCP, zero long
+main-thread tasks, in both environments. The 71-75/100, 5.6-6.3s numbers were an artifact of
+Lantern's simulation badly misjudging this page's resource graph (11 script requests, from the
+hydrated `AuditForm` island); real HTTP/2 multiplexing handles them fine. The hero-island
+hypothesis from the prior pass was directionally right about _what made this page structurally
+different_ — it just wasn't causing a real slowdown.
 
-**Corrected classification: a real, currently-active, homepage-specific defect present in both
-preview and production — not a preview-only environmental artifact.** The two things previously
-treated as separate (the recurring preview CI failures, and Phase 11's "production is fine"
-finding) are the same defect; Phase 11's evidence just never happened to catch the homepage in its
-slow state, or something changed since Phase 11 that specifically affects the homepage. Root cause
-is not yet confirmed — render-blocking scripts were ruled out (none exist on the homepage); the
-leading unconfirmed hypothesis is the homepage's hero `AuditForm` React island (the only
-structural difference from every other tested page) delaying paint during hydration. The preview
-CI threshold is still **not** being lowered (§80 stands) — if anything, this raises the stakes,
-since the preview gate was correctly catching a real problem the whole time.
+Fixed the actual measurement gap: `scripts/lighthouse-check.mjs` now uses
+`--throttling-method=devtools`. That fix immediately surfaced a second, real, previously-masked
+issue in the opposite direction: `/sample-report` dropped to 83/100 (4.2s LCP) under real-network
+measurement. Root cause: `AnalyticsConsent.tsx` hardcoded its initial "has the visitor decided"
+state instead of using the cookie `MarketingLayout.astro` already reads server-side, so a fresh
+visitor's first paint never showed the banner — it flashed in ~2-3s later, and on
+`/sample-report`'s sparser layout that delayed reveal became the LCP element. Fixed by threading
+the real server-read consent state through as a prop. Verified: 83/100 (4.2s) → 94/100 (1.1s)
+locally after the fix.
+
+**Current state: RISK-033 closed** (`docs/risks/RISK_ARCHIVE.md` ARC-040). The preview CI
+threshold was never lowered — it's now measuring something real, and both known issues it could
+have been catching are fixed.
 
 ## Reliability metrics (baseline, from `PHASE_19_POST_LAUNCH_BASELINE.md`)
 

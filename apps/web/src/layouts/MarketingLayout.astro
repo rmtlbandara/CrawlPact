@@ -91,5 +91,9 @@ const shouldRenderGa = isProduction && gaEligible && consentState === "granted";
     </main>
     <SiteFooter />
   </div>
-  {isProduction && <AnalyticsConsent client:load gaEligible={gaEligible} />}
+  {
+    isProduction && (
+      <AnalyticsConsent client:load gaEligible={gaEligible} initialConsentState={consentState} />
+    )
+  }
 </BaseLayout>

@@ -11,6 +11,22 @@ type Props = {
   /** Computed server-side (apps/web/src/lib/consent.ts's isGaEligibleRoute)
    * for the exact page this island is mounted on. */
   gaEligible: boolean;
+  /** The real consent cookie, read server-side from this same request
+   * (MarketingLayout.astro's `Astro.cookies`). Without this, the component
+   * has no way to know the visitor's decision until its own `useEffect` runs
+   * post-hydration — client:load still SSRs with a hardcoded default, so a
+   * fresh visitor's first paint always showed no banner, then the banner
+   * flashed in ~2-3s later once JS loaded/hydrated/ran the effect. That
+   * delayed reveal was large enough, on pages with sparse above-the-fold
+   * content (e.g. /sample-report), to make the banner text itself the
+   * LCP element — a real, measurable regression once Lighthouse's
+   * `--throttling-method=devtools` (real network replay) replaced its
+   * default Lantern-simulated timing, which had been masking it. Passing
+   * the true state through means the very first server-rendered paint
+   * (and the client's initial hydration, since Astro islands hydrate from
+   * their serialized server props, not a fresh client computation) already
+   * reflects reality — no flash, no delayed reveal. */
+  initialConsentState: AnalyticsConsentState | null;
 };
 
 function readConsentCookie(): AnalyticsConsentState | null {
@@ -89,12 +105,16 @@ function denyGaIfLoaded() {
  * access to the rest of the page — "no consent wall" is a hard requirement):
  * a persistent, dismissible `role="region"` panel instead.
  */
-export function AnalyticsConsent({ gaEligible }: Props) {
-  const [consent, setConsent] = useState<AnalyticsConsentState | null>(null);
+export function AnalyticsConsent({ gaEligible, initialConsentState }: Props) {
+  const [consent, setConsent] = useState<AnalyticsConsentState | null>(initialConsentState);
   const [panelOpen, setPanelOpen] = useState(false);
-  const [hasDecided, setHasDecided] = useState(true);
+  const [hasDecided, setHasDecided] = useState(initialConsentState !== null);
 
   useEffect(() => {
+    // Re-read on the client too: a cookie written in another tab, or any
+    // future divergence between what the server saw and what the browser
+    // now has, still self-corrects. Cheap and idempotent when they already
+    // agree, which is the common case now that the initial state is real.
     const existing = readConsentCookie();
     setConsent(existing);
     setHasDecided(existing !== null);
