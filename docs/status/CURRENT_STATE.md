@@ -2,8 +2,8 @@
 Document owner: Engineering owner
 Status: current-authoritative
 Last verified: 2026-08-17
-Repository commit: 4fae5c63b99c7e79a76ae74332d3d09e499a33d0 (main, post-RISK-025/026-fix-deploy)
-Production deployment identifier: crawlpact-web (Cloudflare Worker), https://crawlpact.com — Worker version d7c88820-33ed-46e0-945a-9b7b7d5add78
+Repository commit: a1c18ca78de89f1e9b84275ef03dab7720d4dd21 (main, post-RISK-033-fix-deploy)
+Production deployment identifier: crawlpact-web (Cloudflare Worker), https://crawlpact.com — Worker version d082f02d-b4ed-4bf3-903b-50095cb06beb
 Database migration version: 0037_registry_token_case_insensitive_uniqueness.sql (37/37 applied to production, confirmed via a direct read-only D1 query against `d1_migrations` 2026-08-17)
 Crawler registry version: 2026.07.3 (active release, unchanged by Phase 17's deploy — the Amazon/Google/Bingbot corrections are independently re-verified and ready in `packages/database/seed/reference-data.sql`, still awaiting a real Super Admin session to publish; see docs/registry/CRAWLER_REGISTRY_GOVERNANCE.md and the Phase 15 completion report)
 Phase 0 baseline reference: docs/baseline/2026-08-03/ (superseded on billing/migration facts by Phases 5–6 below; not re-run this pass)
@@ -218,9 +218,30 @@ macOS too (new evidence pointing at an upstream wrangler/Miniflare loopback cust
 a Linux-CI-runner or Wrangler-version issue); the code change was reverted, **still open**.
 **RISK-033** (Lighthouse) was investigated with a real controlled comparison and found to be a
 genuine, currently-active, homepage-specific LCP regression present in **both** preview and
-production (not the preview-only artifact previously assumed) — root cause not yet confirmed,
-**still open**, reclassified from `monitoring` back to `open`. Full detail:
+production (not the preview-only artifact previously assumed) — root cause not yet confirmed at
+the time, flagged `open`. **Resolved in the next deployment, below.** Full detail:
 `docs/risks/ACTIVE_RISKS.md`, `docs/risks/RISK_ARCHIVE.md` (ARC-038/039).
+
+A follow-up deployment the same day (2026-08-17, run `32013679266`, commit `a1c18ca`) closed
+RISK-033 for real. The homepage was never actually slow — Lighthouse's default `simulate`
+throttling mode (the Lantern model) was badly misjudging its resource graph (11 script requests,
+from the hydrated `AuditForm` island); three independent real-network measurements (an
+out-of-band Playwright/CDP trace, and Lighthouse itself run 3x with
+`--throttling-method=devtools`) all showed it genuinely healthy — 99–100/100, 700ms–1.6s LCP, in
+both preview and production. Fixed the actual measurement (`scripts/lighthouse-check.mjs` now
+uses devtools throttling), which then surfaced a second, real, previously-masked issue in the
+opposite direction: `/sample-report` scored 83/100 (4.2s LCP) under real-network measurement.
+`AnalyticsConsent.tsx` hardcoded its initial "has the visitor decided" state instead of using the
+consent cookie `MarketingLayout.astro` already reads server-side, so a fresh visitor's first
+paint never showed the banner — it flashed in ~2–3s later, and on `/sample-report`'s sparser
+layout that delayed reveal became the LCP element. Fixed by threading the real server-read state
+through as an `initialConsentState` prop. Independently re-verified post-deploy: a fresh-visitor
+request to production's `/sample-report` now shows the banner immediately in the initial
+server-rendered HTML (`initialConsentState` correctly serialized), and a live
+devtools-throttled Lighthouse run against production scored 96/100 at 2.3s LCP (was 83–86/100,
+3.9–4.2s pre-fix). Deploy completed cleanly end-to-end including its own smoke-test step;
+independently re-verified with a fresh `pnpm run smoke:production` run (34/34) and direct route
+checks against `https://crawlpact.com`. Full detail: `docs/risks/RISK_ARCHIVE.md` (ARC-040).
 
 Major limitations: a real **paid** Paddle checkout lifecycle has never been run (webhook
 processing itself is verified live — RISK-001, still open); the Workers Free CPU budget constrains
