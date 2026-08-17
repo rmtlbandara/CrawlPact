@@ -201,7 +201,10 @@ project and `responsive-smoke.spec.ts`, both passing, covering the same breakpoi
 
 Not separately re-measured (no broad UI change — a single decorative image swap in a report
 header). Production Lighthouse evidence of record remains Phase 11's (RISK-033, unchanged,
-94-99 score / 1,579-2,940ms LCP).
+94-99 score / 1,579-2,940ms LCP). **Superseded 2026-08-15**: a real, homepage-specific LCP
+regression was found present in both production and preview — see the current RISK-033 entry in
+`docs/risks/ACTIVE_RISKS.md`. This section is left as an accurate record of what was known at the
+time this report was written, not retroactively edited.
 
 ## CI
 

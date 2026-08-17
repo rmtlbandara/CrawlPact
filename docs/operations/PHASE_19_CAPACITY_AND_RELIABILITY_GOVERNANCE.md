@@ -26,22 +26,32 @@ Unchanged, still `POST-LAUNCH`/accepted. Trigger (per that risk's own record and
 100-domain portfolios becoming common, rising latency, or meaningful D1 read growth. None of
 these conditions exist today (max domains for any single account: 4). Not prioritized this pass.
 
-## RISK-033 / preview Lighthouse discrepancy — classification (§79-80)
+## RISK-033 / preview Lighthouse discrepancy — classification (§79-80), corrected 2026-08-15
 
-The preview environment's Lighthouse budget has failed twice on unrelated commits (baseline
-`352a4f8` and the Phase 0-18 reconfirmation's `16fb160`) with near-identical numbers each time
-(score ~82 vs. 85 threshold, LCP ~4980ms vs. 3000ms threshold), while production's own measured
-Lighthouse evidence (Phase 11: 94-99 score, 1,579-2,940ms LCP) remains far above threshold and is
-the number that reflects real customer experience.
+**This section previously classified the preview Lighthouse budget's repeated failures as a
+"preview-specific environmental difference, not a production regression," reasoning that
+production's own Phase 11 measurement (94-99 score, 1,579-2,940ms LCP) contradicted a genuine
+regression theory. That classification was wrong and is corrected here** — it was written without
+ever actually running the controlled production/preview/local comparison this section itself said
+was needed before trusting it (the prior text explicitly flagged this as unproven).
 
-**Classification: preview-specific environmental difference, not a production regression.** The
-repeatability across two unrelated commits with no shared code change strongly suggests a
-preview-Worker cold-start or CI-runner network characteristic, not a real page-weight issue —
-production's own measurement contradicts a genuine regression theory. This is not yet proven with
-a controlled side-by-side (production vs. preview vs. local built Worker under comparable
-conditions, per §79) — that measurement is logged as an evidence-backlog item
-(`docs/optimization/PHASE_19_EVIDENCE_BACKLOG.md`) rather than performed speculatively in this
-pass, and the preview CI threshold is **not** being lowered without that evidence (§80).
+That comparison was run 2026-08-15 (see `docs/risks/ACTIVE_RISKS.md`'s RISK-033 entry for full
+detail): production was measured twice (7 runs across 6 pages) and the live preview Worker once.
+**The homepage specifically fails badly and consistently in both environments** — production: 5 of
+7 runs scored 71-75 with LCP 5,670-6,332ms; preview: 74/100, LCP 6,055ms. Every other page tested
+(pricing, sample-report, crawler detail, `/for/agencies`, `/platforms/cloudflare`) is fine in both
+environments (92-100/100, LCP 1,528-2,634ms), matching Phase 11's baseline for those pages.
+
+**Corrected classification: a real, currently-active, homepage-specific defect present in both
+preview and production — not a preview-only environmental artifact.** The two things previously
+treated as separate (the recurring preview CI failures, and Phase 11's "production is fine"
+finding) are the same defect; Phase 11's evidence just never happened to catch the homepage in its
+slow state, or something changed since Phase 11 that specifically affects the homepage. Root cause
+is not yet confirmed — render-blocking scripts were ruled out (none exist on the homepage); the
+leading unconfirmed hypothesis is the homepage's hero `AuditForm` React island (the only
+structural difference from every other tested page) delaying paint during hydration. The preview
+CI threshold is still **not** being lowered (§80 stands) — if anything, this raises the stakes,
+since the preview gate was correctly catching a real problem the whole time.
 
 ## Reliability metrics (baseline, from `PHASE_19_POST_LAUNCH_BASELINE.md`)
 
