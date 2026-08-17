@@ -20,6 +20,24 @@
 // JSON artifact the CI workflow uploads, so a failure — or a suspicious
 // pass — can be inspected after the fact instead of only ever seeing the
 // console.table summary.
+//
+// RISK-033 (2026-08-17): switched to `--throttling-method=devtools` (real
+// network replay) instead of Lighthouse's default `simulate` mode (the
+// Lantern model, which estimates timing from a simplified network/CPU
+// simulation rather than actually replaying it). Root-caused a real,
+// recurring false-positive: the homepage consistently scored 71-75/100
+// with ~5.6-6.3s LCP under simulate mode, in both preview and production,
+// while three independent real-network measurements (an out-of-band
+// Playwright/CDP trace, and Lighthouse itself under devtools throttling,
+// run 3x) all showed 99-100/100 and 700ms-1.6s LCP — genuinely fast.
+// Simulate mode's Lantern model was badly misjudging this specific page's
+// resource graph (11 script requests, driven by the hydrated homepage
+// AuditForm island); real HTTP/2 multiplexing handles them fine. Switching
+// to devtools throttling is slower (it waits out real delays instead of
+// estimating them) but trades that for actually matching reality — and it
+// surfaced a second, genuinely real issue simulate mode had been masking in
+// the opposite direction: see AnalyticsConsent.tsx's `initialConsentState`
+// fix, closed in the same pass.
 
 import { execFileSync } from "node:child_process";
 import { mkdtempSync, mkdirSync, readFileSync, rmSync, writeFileSync } from "node:fs";
@@ -81,6 +99,7 @@ function runLighthouseOnce(url) {
       `--output-path=${outFile}`,
       "--chrome-flags=--headless=new --no-sandbox",
       "--only-categories=performance,accessibility,best-practices,seo",
+      "--throttling-method=devtools",
       "--quiet",
     ],
     { stdio: ["ignore", "ignore", "inherit"] },

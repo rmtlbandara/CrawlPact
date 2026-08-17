@@ -8,16 +8,21 @@ below rather than duplicated. Do not maintain a third active-risk list anywhere 
 
 Statuses: `open` · `mitigating` · `accepted` · `blocked` · `monitoring`.
 
-Last reviewed: 2026-08-15 (Phase 19 continuous governance, ad hoc maintenance pass). Closed
-RISK-025 (see `docs/risks/RISK_ARCHIVE.md` ARC-038 — migration `0037` makes the DB's own unique
-index case-insensitive, matching `registry-tools.mjs`'s existing check) and RISK-026 (see
+Last reviewed: 2026-08-17 (master engineering closure pass). Closed RISK-033 (see
+`docs/risks/RISK_ARCHIVE.md` ARC-040 — the homepage was never actually slow; Lighthouse's default
+simulated-throttling mode was misjudging it. Real-network measurement proved the homepage healthy
+and, in switching to that measurement method, surfaced and fixed a second, genuinely real issue:
+the analytics-consent banner's delayed reveal on `/sample-report`). Prior review: 2026-08-15 (Phase
+19 continuous governance, ad hoc maintenance pass). Closed RISK-025 (see
+`docs/risks/RISK_ARCHIVE.md` ARC-038 — migration `0037` makes the DB's own unique index
+case-insensitive, matching `registry-tools.mjs`'s existing check) and RISK-026 (see
 `docs/risks/RISK_ARCHIVE.md` ARC-039 — bumping `astro` and `@astrojs/cloudflare` together, not
 `@astrojs/cloudflare` alone, resolves the missing-export build failure). Reclassified RISK-033 from
-`monitoring` back to `open`: a controlled production/preview Lighthouse comparison found a real,
-currently-active, homepage-specific LCP regression present in both environments — see that risk's
-own entry and the corrected classification in
-`docs/optimization/PHASE_19_CAPACITY_AND_RELIABILITY_GOVERNANCE.md`. Prior review: 2026-08-14
-(Phase 19 foundation, Post-Launch Optimisation and Continuous
+`monitoring` back to `open` (later superseded by the 2026-08-17 closure above): a controlled
+production/preview Lighthouse comparison found what looked like a real, currently-active,
+homepage-specific LCP regression present in both environments — see the archive entry for how that
+turned out to be a measurement artifact, not a real regression. Prior review: 2026-08-14 (Phase 19
+foundation, Post-Launch Optimisation and Continuous
 Governance). No risk status changed in this pass — a full read-through confirmed every open entry
 below remains accurate against live production, and confirmed no basis to reopen RISK-002,
 RISK-006, or RISK-018 (all closed with evidence in the Phase 0-18 final reconfirmation pass, see
@@ -294,73 +299,6 @@ extended platform guides), RISK-032 (no Search Console property connected), and 
 - **Acceptance criteria for closure**: A Search Console property is connected and the manual
   verification checklist in `PHASE_07_SEARCH_PERFORMANCE_BASELINE.md` is completed at least once —
   owned by Phase 19, not a pre-launch requirement.
-
-### RISK-033 — Homepage Lighthouse performance/LCP intermittently fails threshold in both production and preview (originally found Phase 7, closed Phase 11, re-opened 2026-08-15 as a homepage-specific regression)
-
-- **Category**: Performance · **Severity**: P2 · **Probability**: Certain (measured directly, 5 of 7 recent production runs and 1 of 1 preview run)
-- **Impact**: A direct `scripts/lighthouse-check.mjs` run against `https://crawlpact.com` (first
-  time this script was ever run against production rather than the preview Worker) found `/`
-  (79/100, LCP 4,653ms), `/crawlers/amazonbot` (71/100, LCP 5,070ms), and `/for/agencies` (73/100,
-  LCP 4,788ms) all fail the stated thresholds (performance ≥85, LCP ≤3000ms). This is **not** a
-  Phase 7 regression — `/for/agencies` performs almost identically to the pre-existing, unmodified
-  `/crawlers/amazonbot`, and Phase 7's other new page (`/platforms/cloudflare`, 90/100) actually
-  outperforms both. `deploy-preview.yml` only ever runs this check against the preview Worker, so
-  production's real Lighthouse numbers were previously unmeasured, not previously passing.
-  Accessibility (100/100), SEO (100/100), Best Practices (92/92), and CLS (0/0) are unaffected and
-  identical across every page tested.
-- **Evidence**: `docs/seo/PHASE_07_SEARCH_PERFORMANCE_BASELINE.md` ("Real production Lighthouse run
-  (post-deploy, 2026-08-04)")
-- **Current mitigation**: Real production re-measurement in Phase 11
-  (`docs/performance/PHASE_11_PAGE_PERFORMANCE_RESULTS.md`, `PHASE_11_PAGE_PERFORMANCE_ROOT_CAUSE.md`)
-  found every previously-failing page now scores 94–99 (was 71–90) with LCP 1,579–2,940ms (was
-  3,300–5,070ms) — the gap had already closed before this phase touched any frontend code (several
-  commits landed between the two measurement dates; this phase's own investigation did not isolate
-  which one, and discloses that honestly rather than claiming credit). `scripts/lighthouse-check.mjs`
-  now gates on the median of 3 runs (not 1) and covers a previously-missing template
-  (`/sample-report`), reducing the chance of this kind of gap going undetected again.
-- **Owner**: Engineering owner · **Trigger**: A future Lighthouse run against production showing
-  regression back below threshold
-- **Review date**: Phase 11 (re-measured, recommend closing) · **Target phase**: N/A — no further
-  phase work identified as necessary
-- **Phase 18 update (2026-08-14)**: a fresh production re-measurement was attempted
-  (`node scripts/lighthouse-check.mjs https://crawlpact.com`) but did not complete — the local
-  machine ran out of usable resources/ports under concurrent load (42 accumulated Chrome/Lighthouse
-  processes from the slow multi-page/multi-run script, which also caused unrelated transient
-  integration-test failures until killed and the suite re-run cleanly). No new Lighthouse numbers
-  were obtained this pass; **not fabricated as a substitute**. Phase 11's real re-measurement
-  (94–99 score, 1,579–2,940ms LCP) remains the most recent actual evidence and is not superseded.
-- **Re-measured 2026-08-15 — new, real homepage-specific regression found; prior "preview-only"
-  classification overturned.** A full controlled comparison was run to resolve the separate
-  preview-Lighthouse-discrepancy question
-  (`docs/optimization/PHASE_19_CAPACITY_AND_RELIABILITY_GOVERNANCE.md`'s RISK-033 section, which
-  had classified the preview gap as "preview-specific environmental difference, not a production
-  regression" without ever actually running the comparison): production was measured twice (7 runs
-  total across `/`, `/pricing`, `/sample-report`, `/crawlers/amazonbot`, `/for/agencies`,
-  `/platforms/cloudflare`), and the live preview Worker
-  (`https://crawlpact-web-preview.rmtlbandara.workers.dev`) once. **The homepage (`/`) specifically
-  fails badly and consistently in both environments** — production: 5 of 7 runs scored 71–75 with
-  LCP 5,670–6,332ms (1 of 7 runs was fast: 100/1,545ms); preview: 74/100, LCP 6,055ms. Every other
-  page tested is fine in both environments (92–100/100, LCP 1,528–2,634ms), matching Phase 11's
-  baseline for those pages. **This means the two things previously believed to be separate
-  (a preview-only CI flake, and a long-since-fixed production issue) are actually the same real,
-  currently-active, homepage-specific defect present in both environments** — the "preview-specific
-  environmental difference" classification in the Phase 19 governance doc was wrong and has been
-  corrected there. A detailed single-run Lighthouse report against the homepage was inspected to
-  rule out the obvious cause: no render-blocking external `<script>` tags exist (all are inline
-  bootstrap code or `type="module"`, confirmed via direct HTML inspection). The LCP element itself
-  is a hero-section text paragraph, not an image; its reported `elementRenderDelay` (~2.1s) does
-  not fully reconcile with the ~5.6–6.3s top-line LCP metric, which needs further investigation of
-  Lighthouse's simulated-throttling (Lantern) model rather than a real network/CPU trace. Leading
-  hypothesis, not confirmed: the homepage's hero `AuditForm` React island (5 separate JS
-  chunks — `AuditForm`, `client`, `react`, `react-dom`, `jsx-runtime` — none of which load on the
-  other tested pages) delays paint of nearby text content during hydration; this is the only
-  structural difference identified between the homepage and every other tested page, but no
-  code-level fix was attempted this pass since the hypothesis is not yet proven.
-- **Status**: open — reclassified from `monitoring` given this is now a confirmed, real, currently
-  reproducing regression, not a closed-and-monitored item.
-- **Acceptance criteria for closure**: A direct production Lighthouse run shows the homepage
-  consistently (not just occasionally) meeting the stated performance/LCP thresholds, with a
-  confirmed root cause — not yet met.
 
 ### RISK-034 — `listDomains()`'s open-findings count is an N+1 query pattern (pre-existing, found during Phase 8)
 
