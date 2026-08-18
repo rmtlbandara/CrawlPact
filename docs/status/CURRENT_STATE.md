@@ -1,9 +1,9 @@
 ---
 Document owner: Engineering owner
 Status: current-authoritative
-Last verified: 2026-08-17
-Repository commit: 027eb6f1b2638b614942880aaab2851a30008172 (main, post-cloudflare-adapter-bump-deploy)
-Production deployment identifier: crawlpact-web (Cloudflare Worker), https://crawlpact.com — Worker version b0a7950b-3a69-4ff6-aeb6-e3f2e45587f0
+Last verified: 2026-08-18
+Repository commit: e72d7242d08ffdfbbb028f62b8379b7f9cbb6d4b (main, post-Phase-19-pricing-comparison-deploy)
+Production deployment identifier: crawlpact-web (Cloudflare Worker), https://crawlpact.com — Worker version 9efd4c33-9b64-4959-94f8-2f79a7d50294
 Database migration version: 0037_registry_token_case_insensitive_uniqueness.sql (37/37 applied to production, confirmed via a direct read-only D1 query against `d1_migrations` 2026-08-17)
 Crawler registry version: 2026.07.3 (active release, unchanged by Phase 17's deploy — the Amazon/Google/Bingbot corrections are independently re-verified and ready in `packages/database/seed/reference-data.sql`, still awaiting a real Super Admin session to publish; see docs/registry/CRAWLER_REGISTRY_GOVERNANCE.md and the Phase 15 completion report)
 Phase 0 baseline reference: docs/baseline/2026-08-03/ (superseded on billing/migration facts by Phases 5–6 below; not re-run this pass)
@@ -346,6 +346,27 @@ and `/api/notifications` correctly require authentication, and that the private 
 live invalid-token 404 response). See
 `docs/reports/PHASE_10_NOTIFICATION_MONITORING_COMPLETION_REPORT.md` and `CHANGELOG.md`'s 2026-08-07
 Phase 10 entry for full deployment evidence.
+
+**Phase 19 (Pricing Comparison Table Strengthening) status**: merged and deployed to production
+2026-08-18, Worker version `9efd4c33-9b64-4959-94f8-2f79a7d50294` (PR #134). Focused
+presentation-layer UX improvement to `/pricing`: replaces the single 11-row comparison table with
+four accessible semantic tables (core audit & reports; domains, history & monitoring; portfolio
+workflows; agency capabilities), so a visitor can see immediately that every plan gets the same
+complete audit and paid plans differ on scale/monitoring/history/workflow, not audit quality. No
+pricing, entitlement, or checkout-architecture change; no D1 migration ("No migrations to apply!"
+confirmed live during this deploy, still 37/37). Found and fixed two real defects while building
+it: a history-retention rounding bug that showed Free's 30-day retention as "1 month" and
+Agency's 1095-day retention as "37 months" instead of 36, and a genuine page-level
+horizontal-scroll bug at 320px caused by having four sibling scrollable tables instead of one
+(fixed with `contain:paint`). Independently re-verified post-deploy: a direct fetch of
+`https://crawlpact.com/pricing` returns 200 and renders all four comparison sections with correct
+plan/price/entitlement values (30 days/12/24/36 months, not 1/37), "Most Popular" only on Pro
+(never Agency), 36 "Included" + 10 "Not included" cells matching the expected entitlement count
+exactly, correct CTA hrefs, and unchanged JSON-LD offer count (7: 1 Free + 3 paid plans × 2
+intervals); live Paddle production prices re-checked via `prices.list` and still match
+`packages/database/seed/reference-data.sql` exactly (no drift); `smoke:production` passed 34/34
+as part of the deploy workflow. Full detail:
+`docs/optimization/PHASE_19_PRICING_COMPARISON_UX_IMPROVEMENT.md`.
 
 ## Capability table
 
