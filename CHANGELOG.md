@@ -12,6 +12,44 @@ Phase 1's rule against fabricating or restructuring verifiable history. Add new 
 this distinguishes a code merge from a production deployment, which are not the same event (see
 the "Production deployment" entries below for the established pattern).
 
+## Production deployment (2026-08-18) — Phase 19: Pricing Comparison Table Strengthening
+
+PR #134 (squash-merged as `e72d724`, full commit `e72d7242d08ffdfbbb028f62b8379b7f9cbb6d4b`)
+deployed to production via `deploy-production.yml`, run `32097446692`. No D1 migration ("No
+migrations to apply!" confirmed live during this deploy, migrations unchanged at 37/37). Deployed
+Worker version: `9efd4c33-9b64-4959-94f8-2f79a7d50294`.
+
+### Changed
+
+- Replaced the single 11-row `/pricing` comparison table with four accessible semantic tables
+  (core audit & reports; domains, history & monitoring; portfolio workflows; agency capabilities),
+  each with a real `<table>`/`<caption>`/`scope="col"`/`scope="row"`, its own keyboard-focusable
+  scroll region, and "Included"/"Not included" cell language instead of bare "Yes"/"No". Added a
+  short "every plan includes the full audit" message above the comparison and a restrained final
+  CTA below it. New `apps/web/src/lib/pricing-comparison.ts` holds only section/row presentation
+  metadata and pure formatters — every value still reads from the existing
+  `D1 plans/plan_prices -> getPlanCatalog()` catalog, no second entitlement or price source. No
+  pricing, entitlement, or checkout-architecture change.
+
+### Fixed
+
+- History-retention display bug: Free's 30-day retention rendered as "1 month" and Agency's
+  1095-day retention as "37 months" instead of 36, from pre-rounding `historyRetentionDays / 30`
+  before display. Fixed by passing the raw day count through and computing the label from
+  `days * 12 / 365`, which recovers the correct whole-year month counts exactly.
+- Page-level horizontal scroll at a 320px viewport: four sibling `overflow-x-auto` comparison
+  tables (replacing the old single table) triggered a real Chromium behavior where
+  `document.documentElement.scrollWidth` included a scroll container's unclipped content extent
+  even though every box measured correctly — confirmed as a genuine, user-triggerable scroll via
+  `window.scrollTo`, not a stale property. Fixed with `contain:paint` on each scroll region.
+
+Independently re-verified post-deploy: a direct fetch of `https://crawlpact.com/pricing` returns
+200 and renders all four sections with correct entitlement values, "Most Popular" only on Pro,
+correct CTA hrefs, and an unchanged JSON-LD offer count (7); live Paddle production prices
+re-checked via `prices.list` and still match `packages/database/seed/reference-data.sql` exactly;
+`smoke:production` passed 34/34. Full detail:
+`docs/optimization/PHASE_19_PRICING_COMPARISON_UX_IMPROVEMENT.md`.
+
 ## Production deployment (2026-08-13) — Phase 17: Customer Pilot and Commercial Validation (technical readiness)
 
 PR #113 (squash-merged as `bc1b212`, full commit `bc1b212a4b1a6f03edc38683fc55b2ee46b191b3`)
