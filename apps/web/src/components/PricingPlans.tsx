@@ -1,5 +1,7 @@
 import { useState } from "react";
 import { track } from "../lib/analytics-client";
+import { COMPARISON_SECTIONS, formatUsdCents, planPriceLabel } from "../lib/pricing-comparison";
+import type { ComparisonCell } from "../lib/pricing-comparison";
 
 export type PricingPlanEntry = {
   id: "free" | "solo" | "pro" | "agency";
@@ -9,7 +11,10 @@ export type PricingPlanEntry = {
   recommended: boolean;
   savedDomainLimit: number;
   monitoringFrequency: "none" | "monthly" | "weekly";
-  historyRetentionMonths: number;
+  /** Raw retention in days, straight from the plan catalog — never pre-rounded to months here,
+   * so display formatting (pricing-comparison.ts's formatHistoryRetention) has the real value to
+   * work with instead of a second, lossy copy. */
+  historyRetentionDays: number;
   manualRescansPerDomainPerMonth: number;
   domainGroupsEnabled: boolean;
   csvExportEnabled: boolean;
@@ -27,8 +32,25 @@ const MONITORING_LABEL: Record<PricingPlanEntry["monitoringFrequency"], string> 
   weekly: "Weekly monitoring",
 };
 
-function formatUsd(cents: number): string {
-  return (cents / 100).toFixed(cents % 100 === 0 ? 0 : 2);
+const formatUsd = formatUsdCents;
+
+function ComparisonCellContent({ cell }: { cell: ComparisonCell }) {
+  if (cell.kind === "included") {
+    return (
+      <span className="inline-flex items-center gap-1.5 text-neutral-800">
+        <span aria-hidden="true">✓</span> Included
+      </span>
+    );
+  }
+  if (cell.kind === "not-included") {
+    return (
+      <span className="text-neutral-400">
+        <span aria-hidden="true">—</span>
+        <span className="sr-only">Not included</span>
+      </span>
+    );
+  }
+  return <span className="text-neutral-800">{cell.text}</span>;
 }
 
 /**
@@ -130,147 +152,113 @@ export function PricingPlans({
         ))}
       </div>
 
-      {/* A scrollable region must itself be keyboard-focusable (WCAG 2.1.1;
-          axe-core's "scrollable-region-focusable" rule) even though `role="region"`
-          isn't in jsx-a11y's interactive-role list — see AuditReportView.tsx for the
-          same documented pattern. */}
-      <div
-        className="mt-10 overflow-x-auto rounded-card border border-neutral-200"
-        // eslint-disable-next-line jsx-a11y/no-noninteractive-tabindex
-        tabIndex={0}
-        role="region"
-        aria-label="Plan comparison table"
-      >
-        <table className="w-full min-w-[720px] border-collapse text-left text-body">
-          <thead>
-            <tr className="border-b border-neutral-200 text-supporting font-medium text-neutral-600">
-              <th scope="col" className="px-4 py-3">
-                Feature
-              </th>
-              {plans.map((plan) => (
-                <th key={plan.id} scope="col" className="px-4 py-3 text-neutral-950">
-                  {plan.name}
-                </th>
-              ))}
-            </tr>
-          </thead>
-          <tbody className="divide-y divide-neutral-100">
-            <tr>
-              <th scope="row" className="px-4 py-3 font-normal text-neutral-600">
-                Price
-              </th>
-              {plans.map((plan) => (
-                <td key={plan.id} className="px-4 py-3 font-medium">
-                  {plan.id === "free"
-                    ? "$0"
-                    : `$${formatUsd(interval === "month" ? plan.monthlyCents! : plan.yearlyCents!)}/${interval === "month" ? "mo" : "yr"}`}
-                </td>
-              ))}
-            </tr>
-            <tr>
-              <th scope="row" className="px-4 py-3 font-normal text-neutral-600">
-                Saved domains
-              </th>
-              {plans.map((plan) => (
-                <td key={plan.id} className="px-4 py-3">
-                  {plan.savedDomainLimit}
-                </td>
-              ))}
-            </tr>
-            <tr>
-              <th scope="row" className="px-4 py-3 font-normal text-neutral-600">
-                Monitoring
-              </th>
-              {plans.map((plan) => (
-                <td key={plan.id} className="px-4 py-3">
-                  {MONITORING_LABEL[plan.monitoringFrequency]}
-                </td>
-              ))}
-            </tr>
-            <tr>
-              <th scope="row" className="px-4 py-3 font-normal text-neutral-600">
-                History retention
-              </th>
-              {plans.map((plan) => (
-                <td key={plan.id} className="px-4 py-3">
-                  {plan.historyRetentionMonths >= 1
-                    ? `${plan.historyRetentionMonths} month${plan.historyRetentionMonths === 1 ? "" : "s"}`
-                    : "30 days"}
-                </td>
-              ))}
-            </tr>
-            <tr>
-              <th scope="row" className="px-4 py-3 font-normal text-neutral-600">
-                Manual rescans / domain / month
-              </th>
-              {plans.map((plan) => (
-                <td key={plan.id} className="px-4 py-3">
-                  {plan.manualRescansPerDomainPerMonth}
-                </td>
-              ))}
-            </tr>
-            <tr>
-              <th scope="row" className="px-4 py-3 font-normal text-neutral-600">
-                Private report sharing
-              </th>
-              {plans.map((plan) => (
-                <td key={plan.id} className="px-4 py-3">
-                  Yes
-                </td>
-              ))}
-            </tr>
-            <tr>
-              <th scope="row" className="px-4 py-3 font-normal text-neutral-600">
-                Domain groups
-              </th>
-              {plans.map((plan) => (
-                <td key={plan.id} className="px-4 py-3">
-                  {plan.domainGroupsEnabled ? "Yes" : "No"}
-                </td>
-              ))}
-            </tr>
-            <tr>
-              <th scope="row" className="px-4 py-3 font-normal text-neutral-600">
-                CSV export
-              </th>
-              {plans.map((plan) => (
-                <td key={plan.id} className="px-4 py-3">
-                  {plan.csvExportEnabled ? "Yes" : "No"}
-                </td>
-              ))}
-            </tr>
-            <tr>
-              <th scope="row" className="px-4 py-3 font-normal text-neutral-600">
-                Private Atom feed
-              </th>
-              {plans.map((plan) => (
-                <td key={plan.id} className="px-4 py-3">
-                  {plan.privateAtomFeedEnabled ? "Yes" : "No"}
-                </td>
-              ))}
-            </tr>
-            <tr>
-              <th scope="row" className="px-4 py-3 font-normal text-neutral-600">
-                Batch import
-              </th>
-              {plans.map((plan) => (
-                <td key={plan.id} className="px-4 py-3">
-                  {plan.batchImportLimit > 0 ? `Up to ${plan.batchImportLimit}` : "No"}
-                </td>
-              ))}
-            </tr>
-            <tr>
-              <th scope="row" className="px-4 py-3 font-normal text-neutral-600">
-                Agency-branded shared reports
-              </th>
-              {plans.map((plan) => (
-                <td key={plan.id} className="px-4 py-3">
-                  {plan.agencyBrandingEnabled ? "Yes" : "No"}
-                </td>
-              ))}
-            </tr>
-          </tbody>
-        </table>
+      <div className="mt-10 max-w-2xl">
+        <h2 className="text-h3 text-neutral-950">Every plan includes the full audit</h2>
+        <p className="mt-2 text-body text-neutral-700">
+          Every CrawlPact plan includes the complete AI crawler policy audit — Free included. Choose
+          a paid plan when you need recurring monitoring, longer history, more domains, or portfolio
+          workflows.
+        </p>
+      </div>
+
+      <p className="mt-6 text-supporting text-neutral-500 sm:hidden">
+        Swipe horizontally to compare plans.
+      </p>
+
+      <div className="mt-4 space-y-10">
+        {COMPARISON_SECTIONS.map((section) => (
+          <section key={section.id}>
+            <h3 className="text-card-heading text-neutral-950">{section.heading}</h3>
+            {/* A scrollable region must itself be keyboard-focusable (WCAG 2.1.1;
+                axe-core's "scrollable-region-focusable" rule) even though `role="region"`
+                isn't in jsx-a11y's interactive-role list — see AuditReportView.tsx for the
+                same documented pattern. */}
+            <div
+              // `contain:paint` stops this box's clipped table content from being counted
+              // toward the document's root scrollWidth — without it, four sibling
+              // overflow-x-auto tables (vs. the old single table) tickle a real Chromium
+              // behavior where document.documentElement.scrollWidth includes a scrolled
+              // container's full unclipped content extent even though the container itself,
+              // and every ancestor up to <body>, measures and behaves correctly (verified via
+              // getBoundingClientRect on every level — only the root scrollWidth figure was
+              // wrong, though window.scrollTo could still pan there, so this is a real,
+              // user-triggerable page-level horizontal scroll, not just a stale-property
+              // artifact). Reproduced/fixed against the real page via a temporary debug
+              // spec — regression-tested at 320px in forced-colors-and-zoom.spec.ts.
+              className="mt-3 overflow-x-auto rounded-card border border-neutral-200 [contain:paint]"
+              // eslint-disable-next-line jsx-a11y/no-noninteractive-tabindex
+              tabIndex={0}
+              role="region"
+              aria-label={section.scrollRegionLabel}
+            >
+              <table className="w-full min-w-[640px] border-collapse text-left text-body">
+                <caption className="sr-only">{section.caption}</caption>
+                <thead>
+                  <tr className="border-b border-neutral-200 text-supporting font-medium text-neutral-600">
+                    <th scope="col" className="px-4 py-3">
+                      Feature
+                    </th>
+                    {plans.map((plan) => (
+                      <th
+                        key={plan.id}
+                        scope="col"
+                        className={
+                          "px-4 py-3 align-bottom text-neutral-950 " +
+                          (plan.recommended ? "bg-brand-50" : "")
+                        }
+                      >
+                        {plan.recommended && (
+                          <span className="block text-metadata font-medium uppercase tracking-wide text-brand-700">
+                            Most Popular
+                          </span>
+                        )}
+                        <span className="block">{plan.name}</span>
+                        <span className="block text-supporting font-normal text-neutral-600">
+                          {planPriceLabel(plan, interval)}
+                        </span>
+                      </th>
+                    ))}
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-neutral-100">
+                  {section.rows.map((row) => (
+                    <tr key={row.key}>
+                      <th scope="row" className="px-4 py-3 align-top font-normal text-neutral-600">
+                        <span className="block text-neutral-800">{row.label}</span>
+                        {row.description && (
+                          <span className="mt-0.5 block text-supporting text-neutral-500">
+                            {row.description}
+                          </span>
+                        )}
+                      </th>
+                      {plans.map((plan) => (
+                        <td
+                          key={plan.id}
+                          className={"px-4 py-3 " + (plan.recommended ? "bg-brand-50" : "")}
+                        >
+                          <ComparisonCellContent cell={row.cell(plan)} />
+                        </td>
+                      ))}
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          </section>
+        ))}
+      </div>
+
+      <div className="mt-10 rounded-card border border-neutral-200 bg-neutral-50 p-5 text-center">
+        <p className="text-body text-neutral-700">
+          Not ready to choose? Start with the free audit and upgrade when you need monitoring.
+        </p>
+        <a
+          href="/audit"
+          onClick={() => track("plan_selected", { planId: "free", interval })}
+          className="mt-3 inline-block rounded-control border border-neutral-300 bg-white px-4 py-2 text-body font-medium text-neutral-800 hover:bg-neutral-100"
+        >
+          Audit a domain free
+        </a>
       </div>
     </div>
   );
