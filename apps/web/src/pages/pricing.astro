@@ -22,7 +22,7 @@ const plans: PricingPlanEntry[] = catalog.map((entry) => ({
   recommended: entry.recommended,
   savedDomainLimit: entry.savedDomainLimit,
   monitoringFrequency: entry.monitoringFrequency,
-  historyRetentionMonths: Math.round(entry.historyRetentionDays / 30),
+  historyRetentionDays: entry.historyRetentionDays,
   manualRescansPerDomainPerMonth: entry.manualRescansPerDomainPerMonth,
   domainGroupsEnabled: entry.domainGroupsEnabled,
   csvExportEnabled: entry.csvExportEnabled,
