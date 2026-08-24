@@ -81,7 +81,7 @@
     "@types/node": "26.2.0",
     "@typescript-eslint/eslint-plugin": "8.67.0",
     "@typescript-eslint/parser": "8.67.0",
-    "@vitest/coverage-v8": "4.1.10",
+    "@vitest/coverage-v8": "4.1.11",
     "eslint": "9.39.5",
     "eslint-config-prettier": "10.1.8",
     "eslint-plugin-astro": "1.7.0",
@@ -92,8 +92,8 @@
     "prettier": "3.9.6",
     "prettier-plugin-astro": "0.14.1",
     "typescript": "6.0.3",
-    "vitest": "4.1.10",
-    "wrangler": "4.123.0",
+    "vitest": "4.1.11",
+    "wrangler": "4.125.0",
     "yaml": "2.9.0"
   }
 }

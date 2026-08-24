@@ -35,11 +35,11 @@
   },
   "devDependencies": {
     "@astrojs/check": "0.9.10",
-    "@cloudflare/workers-types": "5.20260814.1",
+    "@cloudflare/workers-types": "5.20260821.1",
     "@types/react": "19.2.18",
     "@types/react-dom": "19.2.4",
     "miniflare": "4.20260730.0",
     "typescript": "6.0.3",
-    "wrangler": "4.123.0"
+    "wrangler": "4.125.0"
   }
 }
