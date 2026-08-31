@@ -15,7 +15,7 @@
     "@astrojs/react": "6.0.2",
     "@paddle/paddle-js": "1.6.4",
     "@simplewebauthn/browser": "13.3.0",
-    "@simplewebauthn/server": "13.3.2",
+    "@simplewebauthn/server": "13.3.3",
     "@crawlpact/config": "workspace:*",
     "@crawlpact/core": "workspace:*",
     "@crawlpact/database": "workspace:*",
