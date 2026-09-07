@@ -1,7 +1,7 @@
 import { ApiError } from "@crawlpact/core";
 import type { Database } from "@crawlpact/database";
-import { getEnv } from "../env";
 import { getBoolConfig } from "../runtime-config";
+import { assertSameOrigin } from "./same-origin";
 import {
   getSessionAndUser,
   isRecentlyAuthenticated,
@@ -13,32 +13,6 @@ type SessionAndUser = NonNullable<Awaited<ReturnType<typeof getSessionAndUser>>>
 export type AuthenticatedContext = { token: string } & SessionAndUser;
 
 const SAFE_METHODS = new Set(["GET", "HEAD", "OPTIONS"]);
-
-/**
- * CSRF defence-in-depth (SRS §33). Our session cookie is `SameSite=Lax`
- * (session.ts), which already blocks cross-site POST/PATCH/DELETE in every
- * modern browser — this Origin/Referer check is a second, independent
- * layer for the state-changing methods, in case of a `SameSite` bypass or
- * a non-browser client that ignores it. Read-only requests are exempt:
- * there's nothing for a forged request to achieve by only reading data.
- */
-function assertSameOrigin(request: Request): void {
-  if (SAFE_METHODS.has(request.method)) return;
-
-  const expectedOrigin = new URL(getEnv().PUBLIC_SITE_URL).origin;
-  const origin = request.headers.get("Origin");
-  if (origin) {
-    if (origin !== expectedOrigin) {
-      throw new ApiError("FORBIDDEN", "Cross-site request blocked.");
-    }
-    return;
-  }
-
-  const referer = request.headers.get("Referer");
-  if (referer && new URL(referer).origin === expectedOrigin) return;
-
-  throw new ApiError("FORBIDDEN", "Cross-site request blocked.");
-}
 
 /**
  * Every authenticated route calls this first — never re-implement cookie

@@ -95,14 +95,17 @@ modern browser. `requireSession` (used by every authenticated mutating endpoint)
 independent Origin/Referer check as a second layer — see `docs/security/THREAT_MODEL.md`'s "Key
 mitigations" section for the detail and the accepted residual risk.
 
-`POST /api/auth/google` (`pages/api/auth/google/index.ts`) is the one deliberate, narrowly-scoped
-exception: Google itself performs the cross-site POST to this endpoint by design, so the
-Origin/Referer check would reject every legitimate call. It is protected instead by three
-independent layers — Google's own `g_csrf_token` double-submit cookie, a server-issued one-time
-`state`/`nonce` (`lib/auth/oauth-intent.ts`, only SHA-256 hashes ever persisted), and full
+`POST /api/auth/google` (`pages/api/auth/google/index.ts`) is an ordinary same-origin mutating
+endpoint, not an exception — ADR-0009's Google Identity Services integration runs in
+JavaScript-callback mode (`ux_mode: "popup"`), so the CrawlPact page's own script makes this
+`fetch()`, never Google itself. It uses the same `assertSameOrigin` check as every other
+mutating endpoint (`lib/auth/same-origin.ts`, shared with `requireSession`), plus a server-issued
+one-time `state`/`nonce` (`lib/auth/oauth-intent.ts`, only SHA-256 hashes ever persisted) and full
 cryptographic ID-token verification (`lib/auth/google.ts`) — see
-`docs/security/GOOGLE_AUTHENTICATION_THREAT_REVIEW.md` for the complete threat table. No other
-endpoint's Origin/Referer check is weakened because of this exception.
+`docs/security/GOOGLE_AUTHENTICATION_THREAT_REVIEW.md` for the complete threat table, including
+the post-acceptance correction note on the redirect-mode transport this replaced (which _did_
+require a genuine Origin-check exception, and which Astro's own CSRF protection correctly
+rejected once deployed).
 
 ## Google federated authentication
 

@@ -73,3 +73,22 @@ export const googleAccountStatusSchema = z.object({
   connectedAt: z.string().datetime().nullable(),
 });
 export type GoogleAccountStatus = z.infer<typeof googleAccountStatusSchema>;
+
+/**
+ * The corrected Google callback contract (ADR-0009's transport correction):
+ * GIS's JavaScript `callback` (popup/callback ux_mode, not `login_uri`
+ * redirect mode) hands the CrawlPact page a `CredentialResponse` in-browser;
+ * the page then makes this same-origin JSON POST to `/api/auth/google`
+ * itself, rather than Google posting a cross-site form directly. `state` is
+ * the opaque one-time value the button was rendered with (`renderButton`'s
+ * own `state` option) — the same server-authoritative `oauth_auth_intents`
+ * lookup as before, just carried over JSON instead of a form field.
+ */
+export const googleCallbackRequestSchema = z.object({
+  credential: z.string().min(1),
+  state: z.string().min(1),
+});
+
+export const googleCallbackResponseSchema = z.object({
+  redirectTo: z.string(),
+});

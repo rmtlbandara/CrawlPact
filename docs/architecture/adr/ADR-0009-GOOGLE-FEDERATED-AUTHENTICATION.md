@@ -3,6 +3,23 @@
 **Status:** Accepted
 **Date:** 2026-09-07
 
+**Post-acceptance correction (same day):** the initial implementation configured Google
+Identity Services in **redirect UX** (`login_uri`, `ux_mode: "redirect"`), which makes Google
+itself perform the credential POST to `/api/auth/google` as a genuinely cross-site request. That
+is not a defect in Astro's built-in CSRF protection (`security.checkOrigin`) — Astro correctly
+refused it, observed live on Preview and Production as `Cross-site POST form submissions are
+forbidden`. The corrected, currently accepted architecture below uses GIS's **JavaScript-callback
+UX** instead (`callback`, `ux_mode: "popup"`): Google hands the ID token to a callback running in
+the CrawlPact page's own JavaScript, and the page itself makes an ordinary same-origin
+`fetch()` JSON POST to `/api/auth/google` — there is no cross-site request to protect against
+anymore, so `g_csrf_token` (which belonged to the old, defective direct-POST transport) is gone,
+replaced by this app's own explicit same-origin check (`assertSameOrigin`, shared with
+`requireSession`) plus the unchanged one-time state, nonce, and full JWT verification. Every
+bullet below describes the **corrected, current** architecture; nothing else in this ADR's
+security model (identity key, admin isolation, session issuance, linking/disconnect rules)
+changed — see the CSRF bullet and `docs/security/GOOGLE_AUTHENTICATION_THREAT_REVIEW.md` for the
+full corrected threat model.
+
 ## Context
 
 SRS §6.2 prohibits "external authentication providers," and §24/ADR-0004 established CrawlPact
@@ -30,11 +47,15 @@ account after explicit, authenticated linking.
 
 ## Decision
 
-- **Flow**: Google Identity Services (GIS), redirect UX, using the official "Sign In With
-  Google" button. No Google One Tap, no automatic sign-in, no authorization-code exchange, no
-  access/refresh tokens, no Google API scopes beyond `openid`/`userinfo.email`/`userinfo.profile`.
-  No `GOOGLE_CLIENT_SECRET` anywhere — the ID-token flow only needs the public
-  `GOOGLE_CLIENT_ID`, already present in `packages/config/src/env.ts`'s schema.
+- **Flow**: Google Identity Services (GIS), **JavaScript-callback UX** (`ux_mode: "popup"`), using
+  the official "Sign In With Google" button. GIS invokes a callback in the CrawlPact page's own
+  JavaScript with a `CredentialResponse { credential, state }`; the page then makes a same-origin
+  `fetch()` JSON POST to `/api/auth/google` itself — Google never posts directly to CrawlPact (see
+  the post-acceptance correction note above). No Google One Tap, no automatic sign-in, no
+  authorization-code exchange, no access/refresh tokens, no Google API scopes beyond
+  `openid`/`userinfo.email`/`userinfo.profile`. No `GOOGLE_CLIENT_SECRET` anywhere — the ID-token
+  flow only needs the public `GOOGLE_CLIENT_ID`, already present in `packages/config/src/env.ts`'s
+  schema.
 - **Identity key**: Google's immutable `sub` claim, never email. `oauth_accounts` (migration 0038) maps `(provider, provider_subject)` uniquely to one `users.id`; email is stored only as
   provider-account display metadata, never as an authorization key, and is never used to
   auto-link or merge accounts. CrawlPact's existing passkey-created accounts have no verified
@@ -45,14 +66,17 @@ account after explicit, authenticated linking.
   (`https://www.googleapis.com/oauth2/v3/certs`) — signature, issuer, audience, expiry, and
   (when present) `azp` are all verified; the nonce claim is extracted here but compared against
   the issued intent's hash by the caller (see below).
-- **CSRF/replay protection**: three independent layers, described in full in
-  `docs/security/GOOGLE_AUTHENTICATION_THREAT_REVIEW.md` — Google's own `g_csrf_token`
-  double-submit cookie, a server-authoritative one-time `oauth_auth_intents` row (migration 0038,
+- **CSRF/replay protection**: four independent layers, described in full in
+  `docs/security/GOOGLE_AUTHENTICATION_THREAT_REVIEW.md` — (1) explicit same-origin enforcement
+  (`assertSameOrigin`, `apps/web/src/lib/auth/same-origin.ts`, the exact helper `requireSession`
+  uses — the Google callback is an ordinary same-origin mutating endpoint now, no exception
+  needed); (2) a server-authoritative one-time `oauth_auth_intents` row (migration 0038,
   `apps/web/src/lib/auth/oauth-intent.ts`) whose `state`/`nonce` are cryptographically random and
-  only ever persisted as SHA-256 hashes, and full ID-token cryptographic verification. The Google
-  callback (`POST /api/auth/google`) is a deliberate, narrowly-scoped exception to
-  `requireSession`'s same-origin Origin/Referer check — Google itself performs the cross-site
-  POST — protected instead by this three-layer stack, not weakened Origin policy.
+  only ever persisted as SHA-256 hashes; (3) the ID-token `nonce` claim, bound to that same
+  intent; (4) full ID-token cryptographic verification. There is no cross-site caller to defend
+  against in the corrected transport, so there is nothing resembling Google's old `g_csrf_token`
+  double-submit mechanism — that belonged to the abandoned direct-form-POST transport (see the
+  post-acceptance correction note above).
 - **Admin isolation**: an account with any active administrator role can never be authenticated,
   linked, or signed up via Google, under any circumstance — enforced in
   `apps/web/src/lib/auth/google-account.ts`, not merely by omission. Google authentication never

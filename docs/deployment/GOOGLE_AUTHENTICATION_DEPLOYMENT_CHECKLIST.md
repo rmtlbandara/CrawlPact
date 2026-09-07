@@ -7,15 +7,21 @@ real, deployed environment. Update the checkboxes below with real evidence as ea
 actually completed — do not check a box because the code exists, only because it was observed
 working.
 
-## Current status (as of this document's creation, 2026-09-07)
+## Current status (updated 2026-09-07 — transport defect found and corrected)
 
-**implemented-local** — the full architecture (schema, JWT verification, CSRF/state/nonce
-protection, sign-in/sign-up/link/disconnect semantics, admin isolation, UI, CSP) is built and
-passes local unit/integration tests, typecheck, lint, and format against a real (Miniflare) D1
-database and real cryptographic JWT verification using locally generated test keys. **None of it
-has been exercised against the real Google network, a real preview deployment, or real
-production traffic.** Production today remains passkey/recovery-code only until the steps below
-are completed and independently re-verified.
+**Deployed, but currently defective; correction built and locally verified, not yet redeployed.**
+The initial implementation (`c7b3d62`/`b31270d`) was deployed to preview and production and
+configured Google Identity Services in redirect mode (`login_uri`). This makes Google itself POST
+the credential cross-site to `/api/auth/google`, which Astro's own CSRF protection correctly
+rejects (`Cross-site POST form submissions are forbidden`) — **confirmed live on both preview and
+production**. The corrected architecture (GIS JavaScript-callback mode, `ux_mode: "popup"`; see
+ADR-0009's post-acceptance correction note and
+`docs/security/GOOGLE_AUTHENTICATION_THREAT_REVIEW.md`) is built and passes local unit/integration
+tests, typecheck, lint, and format against a real (Miniflare) D1 database and real cryptographic
+JWT verification using locally generated test keys — **but has not yet been committed, pushed, or
+redeployed.** Until that redeploy happens, Google sign-in remains non-functional on both
+production and preview (the button renders, but every attempt fails with the cross-site-POST
+error) — passkey/recovery-code sign-in is completely unaffected and continues working normally.
 
 ## Cloudflare / environment prerequisites (should already be true — verify before proceeding)
 

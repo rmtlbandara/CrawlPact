@@ -14,18 +14,48 @@ the "Production deployment" entries below for the established pattern).
 
 ## Unreleased
 
-### Changed
+### Fixed
 
-- Preview environment is migrating off its `*.workers.dev` hostname onto the CrawlPact-owned
-  Custom Domain `preview.crawlpact.com`, required before Google OAuth preview testing can be
-  configured (Google Auth Platform needs a stable, real origin to register). `env.preview` in
-  `apps/web/wrangler.jsonc` now declares a `routes`/`custom_domain: true` entry for it, and
-  `PUBLIC_SITE_URL`/`WEBAUTHN_RP_ID`/`WEBAUTHN_RP_ORIGIN` now point at it; `env.preview.vars` also
-  gained `GOOGLE_CLIENT_ID` (same public Client ID as production), fixing `pnpm
-env:validate:preview`, which previously failed once that var became required by the canonical
-  schema. Not yet live: the Cloudflare Custom Domain still needs to be attached by an account
-  owner, and Google Auth Platform still needs `preview.crawlpact.com` added as an Authorized
-  origin/redirect URI — see `docs/deployment/CLOUDFLARE_ENVIRONMENT_MATRIX.md`'s Notes section.
+- **Google Sign-In cross-site POST defect (ADR-0009 post-acceptance correction).** The initial
+  Google Identity Services integration (deployed below) configured redirect UX (`login_uri`,
+  `ux_mode: "redirect"`), which makes Google itself POST the credential cross-site to
+  `/api/auth/google` — Astro's own CSRF protection correctly rejected it
+  (`Cross-site POST form submissions are forbidden`), confirmed live on both preview and
+  production. Corrected to GIS's JavaScript-callback mode (`callback`, `ux_mode: "popup"`): the
+  CrawlPact page's own script now makes a same-origin JSON `fetch()` POST instead, so Google is
+  never a caller of `/api/auth/google` at all. `/api/auth/google` changed from a form-POST/303-
+  redirect endpoint to an ordinary JSON API endpoint (`{ credential, state }` in,
+  `{ redirectTo }`/standard error envelope out), protected by the same explicit
+  `assertSameOrigin` check every other mutating endpoint uses (now shared via
+  `apps/web/src/lib/auth/same-origin.ts`) plus the unchanged one-time state/nonce/JWT
+  verification — no more `g_csrf_token`. Not yet redeployed — see
+  `docs/deployment/GOOGLE_AUTHENTICATION_DEPLOYMENT_CHECKLIST.md`.
+
+## Production deployment (2026-09-07) — Google Sign-In (ADR-0009) and preview Custom Domain migration
+
+Commit `b31270d1d497629567908b99d8c73404936af02c` (on top of `c7b3d6243d16104675faadb40ee11b9958da5717`)
+deployed to production via `deploy-production.yml`, run `34104809270`, Worker version
+`acddbd04-2a9e-4509-8f98-68c02fe53ca2`. Migration `0038_google_oauth.sql` applied to production
+D1 (`oauth_accounts`, `oauth_auth_intents`, both new — no existing table altered). Preview
+deployed via `deploy-preview.yml`, run `34103892827`. Independently re-verified post-deploy: a
+direct fetch of `https://crawlpact.com/` and `/sign-in` returned 200 with the Google GIS CSP
+origins present, `POST /api/auth/google/begin` returned a real 200 against live production D1,
+unauthenticated `/app/account` redirected to `/sign-in`, and existing passkey/pricing/status
+routes were unaffected. **Found live, same day**: the deployed Google Sign-In UI could not
+actually complete a Google sign-in — see the "Fixed" entry above for the defect and its
+correction (not yet redeployed as of this entry).
+
+### Added
+
+- Google Sign-In / Sign-Up as an additional credential provider alongside passkeys (ADR-0009) —
+  `oauth_accounts`/`oauth_auth_intents` (migration 0038), real Google ID-token/JWKS verification
+  (`jose`), sign-in/sign-up/explicit-linking/disconnect semantics, Super Admin isolation, new
+  `AUTH_GOOGLE_*` API error codes. See ADR-0009 and
+  `docs/security/GOOGLE_AUTHENTICATION_THREAT_REVIEW.md`.
+- Preview environment migrated off its `*.workers.dev` hostname onto the CrawlPact-owned Custom
+  Domain `preview.crawlpact.com` (`env.preview.routes` in `apps/web/wrangler.jsonc`), required
+  before Google OAuth preview testing can be configured. Google Auth Platform's preview origin
+  registration is a separate, still-pending owner step.
 
 ## Production deployment (2026-08-18) — Phase 19: Pricing Comparison Table Strengthening
 

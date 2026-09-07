@@ -8,11 +8,19 @@ import { ctx, cookieFromResponse, readJson } from "./test-helpers";
 
 /**
  * Real cryptographic Google ID-token verification (a local test JWKS, never
- * the live Google network — sections 49/50/57) against a real (Miniflare)
- * D1 database. `verifyGoogleIdToken`'s own signature/issuer/audience/exp/azp
- * checks are exercised unmodified (google.test.ts covers those in isolation);
- * this file only swaps the JWKS *source* for a local one, the same
- * dependency-injection seam google.test.ts uses.
+ * the live Google network) against a real (Miniflare) D1 database.
+ * `verifyGoogleIdToken`'s own signature/issuer/audience/exp/azp checks are
+ * exercised unmodified (google.test.ts covers those in isolation); this
+ * file only swaps the JWKS *source* for a local one, the same dependency-
+ * injection seam google.test.ts uses.
+ *
+ * ADR-0009's transport correction: GIS runs in JavaScript-callback mode
+ * (`ux_mode: "popup"`), so the browser — never Google — performs the
+ * `/api/auth/google` POST, as a same-origin `application/json` request.
+ * These tests exercise exactly that contract: `Content-Type: application/json`,
+ * a matching `Origin` header, and a JSON `{ credential, state }` body — no
+ * more `g_csrf_token`/form-urlencoded plumbing, which belonged to the old,
+ * defective direct-form-POST transport.
  */
 let mockEnv: Cloudflare.Env;
 vi.mock("../../src/lib/env", () => ({ getEnv: () => mockEnv }));
@@ -29,8 +37,9 @@ vi.mock("../../src/lib/auth/google", async (importOriginal) => {
 
 const registerBegin = (await import("../../src/pages/api/auth/register/begin")).POST;
 const registerFinish = (await import("../../src/pages/api/auth/register/finish")).POST;
+const googleModule = await import("../../src/pages/api/auth/google/index");
 const googleBegin = (await import("../../src/pages/api/auth/google/begin")).POST;
-const googleCallback = (await import("../../src/pages/api/auth/google/index")).POST;
+const googleCallback = googleModule.POST;
 const googleStatus = (await import("../../src/pages/api/account/google/index")).GET;
 const googleLinkBegin = (await import("../../src/pages/api/account/google/link/begin")).POST;
 const googleDisconnect = (await import("../../src/pages/api/account/google/disconnect")).POST;
@@ -78,38 +87,38 @@ async function signIdToken(claims: {
     .sign(privateKey);
 }
 
-/** Builds the exact form-urlencoded POST Google's own redirect flow sends to /api/auth/google. */
+/**
+ * Builds the corrected same-origin JSON callback request — what the
+ * CrawlPact page's own `fetch("/api/auth/google")` sends after GIS's
+ * JavaScript callback hands it a `CredentialResponse` (section 16). `origin`
+ * defaults to the legitimate same-origin value; tests exercising the
+ * same-origin check override it explicitly.
+ */
 function googleCallbackRequest(params: {
   credential?: string;
   state?: string;
-  csrfCookie?: string | null;
-  csrfField?: string | null;
+  origin?: string | null;
+  referer?: string | null;
   sessionCookie?: string;
+  raw?: string; // for malformed-JSON / wrong-content-type regression tests
+  contentType?: string;
 }): Request {
-  const form = new URLSearchParams();
-  if (params.credential !== undefined) form.set("credential", params.credential);
-  if (params.state !== undefined) form.set("state", params.state);
-  if (params.csrfField !== undefined && params.csrfField !== null) {
-    form.set("g_csrf_token", params.csrfField);
-  }
-  form.set("select_by", "btn"); // harmless field Google adds — must never break the callback
-
-  const cookieParts: string[] = [];
-  if (params.csrfCookie !== undefined && params.csrfCookie !== null) {
-    cookieParts.push(`g_csrf_token=${params.csrfCookie}`);
-  }
-  if (params.sessionCookie) cookieParts.push(params.sessionCookie);
-
   const headers: Record<string, string> = {
-    "Content-Type": "application/x-www-form-urlencoded",
+    "Content-Type": params.contentType ?? "application/json",
   };
-  if (cookieParts.length > 0) headers["Cookie"] = cookieParts.join("; ");
+  if (params.origin !== null) headers["Origin"] = params.origin ?? ORIGIN;
+  if (params.referer) headers["Referer"] = params.referer;
+  if (params.sessionCookie) headers["Cookie"] = params.sessionCookie;
 
-  return new Request("http://x/api/auth/google", {
-    method: "POST",
-    headers,
-    body: form.toString(),
-  });
+  const body =
+    params.raw !== undefined
+      ? params.raw
+      : JSON.stringify({
+          ...(params.credential !== undefined ? { credential: params.credential } : {}),
+          ...(params.state !== undefined ? { state: params.state } : {}),
+        });
+
+  return new Request("http://x/api/auth/google", { method: "POST", headers, body });
 }
 
 /** Full happy-path helper: begin (signin or signup), sign a matching token, post the callback. */
@@ -119,7 +128,6 @@ async function performGoogleAuth(params: {
   email?: string | null;
   emailVerified?: boolean;
   name?: string | null;
-  csrfToken?: string;
 }): Promise<Response> {
   const beginResponse = await googleBegin(ctx(jsonRequest("http://x/api/auth/google/begin", {})));
   const begin = await readJson<{ nonce: string; signInState: string; signUpState: string }>(
@@ -135,10 +143,7 @@ async function performGoogleAuth(params: {
     emailVerified: params.emailVerified,
     name: params.name,
   });
-  const csrf = params.csrfToken ?? "csrf-token-abc";
-  return googleCallback(
-    ctx(googleCallbackRequest({ credential, state, csrfCookie: csrf, csrfField: csrf })),
-  );
+  return googleCallback(ctx(googleCallbackRequest({ credential, state })));
 }
 
 describe("Google authentication (real D1 + real JWT cryptography)", () => {
@@ -192,7 +197,144 @@ describe("Google authentication (real D1 + real JWT cryptography)", () => {
     return result?.n ?? 0;
   }
 
-  describe("callback CSRF/state/nonce security", () => {
+  it("GET is not a supported method (no GET handler is exported at all)", () => {
+    expect((googleModule as Record<string, unknown>).GET).toBeUndefined();
+  });
+
+  describe("same-origin enforcement (ADR-0009's corrected transport)", () => {
+    it("accepts a same-origin JSON POST (matching Origin header)", async () => {
+      const beginResponse = await googleBegin(
+        ctx(jsonRequest("http://x/api/auth/google/begin", {})),
+      );
+      const begin = await readJson<{ nonce: string; signUpState: string }>(beginResponse);
+      if (!begin.ok) throw new Error("begin failed");
+      const credential = await signIdToken({ sub: "same-origin-user", nonce: begin.data.nonce });
+      const response = await googleCallback(
+        ctx(googleCallbackRequest({ credential, state: begin.data.signUpState, origin: ORIGIN })),
+      );
+      expect(response.status).toBe(200);
+      const body = await readJson<{ redirectTo: string }>(response);
+      expect(body.ok).toBe(true);
+    });
+
+    it("rejects a callback whose Origin is Google's own origin", async () => {
+      const beginResponse = await googleBegin(
+        ctx(jsonRequest("http://x/api/auth/google/begin", {})),
+      );
+      const begin = await readJson<{ nonce: string; signUpState: string }>(beginResponse);
+      if (!begin.ok) throw new Error("begin failed");
+      const credential = await signIdToken({ sub: "google-origin-user", nonce: begin.data.nonce });
+      const response = await googleCallback(
+        ctx(
+          googleCallbackRequest({
+            credential,
+            state: begin.data.signUpState,
+            origin: "https://accounts.google.com",
+          }),
+        ),
+      );
+      expect(response.status).toBe(403);
+      const body = await readJson(response);
+      if (!body.ok) expect(body.error.code).toBe("FORBIDDEN");
+    });
+
+    it("rejects a callback from an unrelated cross-site Origin", async () => {
+      const response = await googleCallback(
+        ctx(
+          googleCallbackRequest({
+            credential: "irrelevant",
+            state: "irrelevant",
+            origin: "https://evil.example",
+          }),
+        ),
+      );
+      expect(response.status).toBe(403);
+    });
+
+    it("rejects a lookalike Origin (crawlpact.com.evil.example)", async () => {
+      const response = await googleCallback(
+        ctx(
+          googleCallbackRequest({
+            credential: "irrelevant",
+            state: "irrelevant",
+            origin: "https://crawlpact.com.evil.example",
+          }),
+        ),
+      );
+      expect(response.status).toBe(403);
+    });
+
+    it("falls back to a matching Referer when Origin is absent", async () => {
+      const beginResponse = await googleBegin(
+        ctx(jsonRequest("http://x/api/auth/google/begin", {})),
+      );
+      const begin = await readJson<{ nonce: string; signUpState: string }>(beginResponse);
+      if (!begin.ok) throw new Error("begin failed");
+      const credential = await signIdToken({
+        sub: "referer-fallback-user",
+        nonce: begin.data.nonce,
+      });
+      const response = await googleCallback(
+        ctx(
+          googleCallbackRequest({
+            credential,
+            state: begin.data.signUpState,
+            origin: null,
+            referer: `${ORIGIN}/sign-in`,
+          }),
+        ),
+      );
+      expect(response.status).toBe(200);
+    });
+
+    it("fails closed with neither Origin nor Referer present", async () => {
+      const response = await googleCallback(
+        ctx(
+          googleCallbackRequest({
+            credential: "irrelevant",
+            state: "irrelevant",
+            origin: null,
+          }),
+        ),
+      );
+      expect(response.status).toBe(403);
+    });
+
+    it("the old direct form-POST transport is no longer an accepted contract", async () => {
+      // Simulates what Google's now-abandoned redirect-mode direct POST used
+      // to send: form-urlencoded, cross-site Origin. This route now only
+      // ever calls request.json() — a form body fails to parse as JSON and
+      // is rejected as a validation failure, regardless of Origin. (Astro's
+      // own security.checkOrigin middleware — exercised only at the real
+      // HTTP layer, not in this direct handler-function test — additionally
+      // rejects form-shaped cross-site POSTs before this code ever runs;
+      // see PasskeyAuth's manual local-acceptance notes.)
+      const form = new URLSearchParams();
+      form.set("credential", "fake");
+      form.set("g_csrf_token", "fake");
+      form.set("state", "fake");
+      const response = await googleCallback(
+        ctx(
+          googleCallbackRequest({
+            raw: form.toString(),
+            contentType: "application/x-www-form-urlencoded",
+            origin: "https://accounts.google.com",
+          }),
+        ),
+      );
+      expect(response.status).not.toBe(200);
+      expect(response.headers.get("set-cookie")).toBeNull();
+    });
+  });
+
+  describe("callback request validation", () => {
+    it("rejects malformed JSON", async () => {
+      const response = await googleCallback(ctx(googleCallbackRequest({ raw: "{not valid json" })));
+      expect(response.status).toBe(400);
+      const body = await readJson(response);
+      if (!body.ok) expect(body.error.code).toBe("VALIDATION_FAILED");
+    });
+
     it("rejects a callback with no credential", async () => {
       const beginResponse = await googleBegin(
         ctx(jsonRequest("http://x/api/auth/google/begin", {})),
@@ -200,107 +342,49 @@ describe("Google authentication (real D1 + real JWT cryptography)", () => {
       const begin = await readJson<{ signUpState: string }>(beginResponse);
       if (!begin.ok) throw new Error("begin failed");
       const response = await googleCallback(
-        ctx(
-          googleCallbackRequest({
-            state: begin.data.signUpState,
-            csrfCookie: "x",
-            csrfField: "x",
-          }),
-        ),
+        ctx(googleCallbackRequest({ state: begin.data.signUpState })),
       );
-      expect(response.status).toBe(303);
-      const location = new URL(response.headers.get("Location")!);
-      expect(location.searchParams.get("googleError")).toBe("google_invalid_request");
-      expect(response.headers.get("set-cookie")).toBeNull();
+      expect(response.status).toBe(400);
+      const body = await readJson(response);
+      if (!body.ok) expect(body.error.code).toBe("VALIDATION_FAILED");
+    });
+
+    it("rejects a callback with an empty credential", async () => {
+      const beginResponse = await googleBegin(
+        ctx(jsonRequest("http://x/api/auth/google/begin", {})),
+      );
+      const begin = await readJson<{ signUpState: string }>(beginResponse);
+      if (!begin.ok) throw new Error("begin failed");
+      const response = await googleCallback(
+        ctx(googleCallbackRequest({ credential: "", state: begin.data.signUpState })),
+      );
+      expect(response.status).toBe(400);
     });
 
     it("rejects a callback with no state", async () => {
       const credential = await signIdToken({ sub: "no-state-user", nonce: "irrelevant" });
-      const response = await googleCallback(
-        ctx(googleCallbackRequest({ credential, csrfCookie: "x", csrfField: "x" })),
-      );
-      expect(response.status).toBe(303);
-      const location = new URL(response.headers.get("Location")!);
-      expect(location.searchParams.get("googleError")).toBe("google_invalid_request");
+      const response = await googleCallback(ctx(googleCallbackRequest({ credential })));
+      expect(response.status).toBe(400);
+      const body = await readJson(response);
+      if (!body.ok) expect(body.error.code).toBe("VALIDATION_FAILED");
     });
 
-    it("rejects a callback missing the g_csrf_token cookie", async () => {
-      const response = await performGoogleAuthWithMissingCsrf("cookie");
-      expect(response.status).toBe(303);
-      expect(new URL(response.headers.get("Location")!).searchParams.get("googleError")).toBe(
-        "google_invalid_request",
-      );
-      expect(response.headers.get("set-cookie")).toBeNull();
+    it("rejects a callback with an empty state", async () => {
+      const credential = await signIdToken({ sub: "empty-state-user", nonce: "irrelevant" });
+      const response = await googleCallback(ctx(googleCallbackRequest({ credential, state: "" })));
+      expect(response.status).toBe(400);
     });
+  });
 
-    it("rejects a callback missing the g_csrf_token form field", async () => {
-      const response = await performGoogleAuthWithMissingCsrf("field");
-      expect(response.status).toBe(303);
-      expect(new URL(response.headers.get("Location")!).searchParams.get("googleError")).toBe(
-        "google_invalid_request",
-      );
-    });
-
-    async function performGoogleAuthWithMissingCsrf(
-      missing: "cookie" | "field",
-    ): Promise<Response> {
-      const beginResponse = await googleBegin(
-        ctx(jsonRequest("http://x/api/auth/google/begin", {})),
-      );
-      const begin = await readJson<{ nonce: string; signUpState: string }>(beginResponse);
-      if (!begin.ok) throw new Error("begin failed");
-      const credential = await signIdToken({ sub: "csrf-missing-user", nonce: begin.data.nonce });
-      return googleCallback(
-        ctx(
-          googleCallbackRequest({
-            credential,
-            state: begin.data.signUpState,
-            csrfCookie: missing === "cookie" ? null : "csrf-abc",
-            csrfField: missing === "field" ? null : "csrf-abc",
-          }),
-        ),
-      );
-    }
-
-    it("rejects mismatched CSRF cookie/field values", async () => {
-      const beginResponse = await googleBegin(
-        ctx(jsonRequest("http://x/api/auth/google/begin", {})),
-      );
-      const begin = await readJson<{ nonce: string; signUpState: string }>(beginResponse);
-      if (!begin.ok) throw new Error("begin failed");
-      const credential = await signIdToken({ sub: "csrf-mismatch-user", nonce: begin.data.nonce });
-      const response = await googleCallback(
-        ctx(
-          googleCallbackRequest({
-            credential,
-            state: begin.data.signUpState,
-            csrfCookie: "cookie-value",
-            csrfField: "different-field-value",
-          }),
-        ),
-      );
-      expect(response.status).toBe(303);
-      expect(new URL(response.headers.get("Location")!).searchParams.get("googleError")).toBe(
-        "google_invalid_request",
-      );
-    });
-
+  describe("state/nonce/token security", () => {
     it("rejects an unknown state", async () => {
       const credential = await signIdToken({ sub: "unknown-state-user", nonce: "whatever" });
       const response = await googleCallback(
-        ctx(
-          googleCallbackRequest({
-            credential,
-            state: "this-state-was-never-issued",
-            csrfCookie: "x",
-            csrfField: "x",
-          }),
-        ),
+        ctx(googleCallbackRequest({ credential, state: "this-state-was-never-issued" })),
       );
-      expect(response.status).toBe(303);
-      expect(new URL(response.headers.get("Location")!).searchParams.get("googleError")).toBe(
-        "google_invalid_request",
-      );
+      expect(response.status).toBe(400);
+      const body = await readJson(response);
+      if (!body.ok) expect(body.error.code).toBe("AUTH_GOOGLE_INVALID_REQUEST");
     });
 
     it("rejects an expired state", async () => {
@@ -328,19 +412,11 @@ describe("Google authentication (real D1 + real JWT cryptography)", () => {
 
       const credential = await signIdToken({ sub: "expired-state-user", nonce: begin.data.nonce });
       const response = await googleCallback(
-        ctx(
-          googleCallbackRequest({
-            credential,
-            state: begin.data.signUpState,
-            csrfCookie: "x",
-            csrfField: "x",
-          }),
-        ),
+        ctx(googleCallbackRequest({ credential, state: begin.data.signUpState })),
       );
-      expect(response.status).toBe(303);
-      expect(new URL(response.headers.get("Location")!).searchParams.get("googleError")).toBe(
-        "google_invalid_request",
-      );
+      expect(response.status).toBe(400);
+      const body = await readJson(response);
+      if (!body.ok) expect(body.error.code).toBe("AUTH_GOOGLE_INVALID_REQUEST");
     });
 
     it("a state can never be used twice (single-use, atomic consumption)", async () => {
@@ -352,32 +428,17 @@ describe("Google authentication (real D1 + real JWT cryptography)", () => {
       const credential = await signIdToken({ sub: "replay-state-user", nonce: begin.data.nonce });
 
       const first = await googleCallback(
-        ctx(
-          googleCallbackRequest({
-            credential,
-            state: begin.data.signUpState,
-            csrfCookie: "x",
-            csrfField: "x",
-          }),
-        ),
+        ctx(googleCallbackRequest({ credential, state: begin.data.signUpState })),
       );
-      expect(first.status).toBe(303);
+      expect(first.status).toBe(200);
       expect(first.headers.get("set-cookie")).toBeTruthy();
 
       const replay = await googleCallback(
-        ctx(
-          googleCallbackRequest({
-            credential,
-            state: begin.data.signUpState,
-            csrfCookie: "x",
-            csrfField: "x",
-          }),
-        ),
+        ctx(googleCallbackRequest({ credential, state: begin.data.signUpState })),
       );
-      expect(replay.status).toBe(303);
-      expect(new URL(replay.headers.get("Location")!).searchParams.get("googleError")).toBe(
-        "google_invalid_request",
-      );
+      expect(replay.status).toBe(400);
+      const replayBody = await readJson(replay);
+      if (!replayBody.ok) expect(replayBody.error.code).toBe("AUTH_GOOGLE_INVALID_REQUEST");
       expect(replay.headers.get("set-cookie")).toBeNull();
     });
 
@@ -389,19 +450,11 @@ describe("Google authentication (real D1 + real JWT cryptography)", () => {
       if (!begin.ok) throw new Error("begin failed");
       const credential = await signIdToken({ sub: "nonce-mismatch-user", nonce: "wrong-nonce" });
       const response = await googleCallback(
-        ctx(
-          googleCallbackRequest({
-            credential,
-            state: begin.data.signUpState,
-            csrfCookie: "x",
-            csrfField: "x",
-          }),
-        ),
+        ctx(googleCallbackRequest({ credential, state: begin.data.signUpState })),
       );
-      expect(response.status).toBe(303);
-      expect(new URL(response.headers.get("Location")!).searchParams.get("googleError")).toBe(
-        "google_invalid_request",
-      );
+      expect(response.status).toBe(400);
+      const body = await readJson(response);
+      if (!body.ok) expect(body.error.code).toBe("AUTH_GOOGLE_INVALID_REQUEST");
       expect(response.headers.get("set-cookie")).toBeNull();
     });
 
@@ -416,23 +469,12 @@ describe("Google authentication (real D1 + real JWT cryptography)", () => {
           googleCallbackRequest({
             credential: "not-a-real-jwt-at-all",
             state: begin.data.signUpState,
-            csrfCookie: "x",
-            csrfField: "x",
           }),
         ),
       );
-      expect(response.status).toBe(303);
-      expect(new URL(response.headers.get("Location")!).searchParams.get("googleError")).toBe(
-        "google_invalid_request",
-      );
-    });
-
-    it("ignores a harmless unrecognized field (select_by) without failing", async () => {
-      // Every callback request built by googleCallbackRequest() already sets
-      // select_by — every test above proves the callback works with it
-      // present, none of them fail because of it.
-      const response = await performGoogleAuth({ action: "signup", sub: "select-by-user" });
-      expect(response.status).toBe(303);
+      expect(response.status).toBe(400);
+      const body = await readJson(response);
+      if (!body.ok) expect(body.error.code).toBe("AUTH_GOOGLE_INVALID_REQUEST");
     });
 
     it("an attacker-supplied redirectTo at begin time never overrides the safe default", async () => {
@@ -450,19 +492,14 @@ describe("Google authentication (real D1 + real JWT cryptography)", () => {
         nonce: begin.data.nonce,
       });
       const response = await googleCallback(
-        ctx(
-          googleCallbackRequest({
-            credential,
-            state: begin.data.signUpState,
-            csrfCookie: "x",
-            csrfField: "x",
-          }),
-        ),
+        ctx(googleCallbackRequest({ credential, state: begin.data.signUpState })),
       );
-      expect(response.status).toBe(303);
-      const location = response.headers.get("Location")!;
-      expect(location).not.toContain("evil.example");
-      expect(new URL(location).pathname).toBe("/app");
+      expect(response.status).toBe(200);
+      const body = await readJson<{ redirectTo: string }>(response);
+      if (body.ok) {
+        expect(body.data.redirectTo).not.toContain("evil.example");
+        expect(body.data.redirectTo).toBe("/app");
+      }
     });
   });
 
@@ -470,10 +507,9 @@ describe("Google authentication (real D1 + real JWT cryptography)", () => {
     it("sign-in with an unlinked Google account does not create a user", async () => {
       const before = await countUsers();
       const response = await performGoogleAuth({ action: "signin", sub: "never-signed-up" });
-      expect(response.status).toBe(303);
-      expect(new URL(response.headers.get("Location")!).searchParams.get("googleError")).toBe(
-        "google_not_linked",
-      );
+      expect(response.status).toBe(400);
+      const body = await readJson(response);
+      if (!body.ok) expect(body.error.code).toBe("AUTH_GOOGLE_NOT_LINKED");
       expect(response.headers.get("set-cookie")).toBeNull();
       expect(await countUsers()).toBe(before);
     });
@@ -488,8 +524,9 @@ describe("Google authentication (real D1 + real JWT cryptography)", () => {
         emailVerified: true,
         name: "Grace Hopper",
       });
-      expect(response.status).toBe(303);
-      expect(new URL(response.headers.get("Location")!).pathname).toBe("/app");
+      expect(response.status).toBe(200);
+      const body = await readJson<{ redirectTo: string }>(response);
+      if (body.ok) expect(body.data.redirectTo).toBe("/app");
       const cookie = cookieFromResponse(response);
       expect(await countUsers()).toBe(beforeUsers + 1);
       expect(await countOAuthAccounts()).toBe(beforeOAuth + 1);
@@ -515,11 +552,11 @@ describe("Google authentication (real D1 + real JWT cryptography)", () => {
     it("repeated sign-up with the same Google sub is idempotent — signs into the existing account, never duplicates it", async () => {
       const sub = "idempotent-signup-user";
       const first = await performGoogleAuth({ action: "signup", sub, name: "First Time" });
-      expect(first.status).toBe(303);
+      expect(first.status).toBe(200);
 
       const beforeUsers = await countUsers();
       const second = await performGoogleAuth({ action: "signup", sub, name: "First Time" });
-      expect(second.status).toBe(303);
+      expect(second.status).toBe(200);
       expect(await countUsers()).toBe(beforeUsers);
       expect(second.headers.get("set-cookie")).toBeTruthy();
     });
@@ -530,7 +567,7 @@ describe("Google authentication (real D1 + real JWT cryptography)", () => {
 
       const beforeUsers = await countUsers();
       const response = await performGoogleAuth({ action: "signin", sub });
-      expect(response.status).toBe(303);
+      expect(response.status).toBe(200);
       expect(await countUsers()).toBe(beforeUsers);
       const cookie = cookieFromResponse(response);
       const session = await readJson<{ displayName: string }>(
@@ -582,10 +619,9 @@ describe("Google authentication (real D1 + real JWT cryptography)", () => {
         .run();
 
       const response = await performGoogleAuth({ action: "signin", sub });
-      expect(response.status).toBe(303);
-      expect(new URL(response.headers.get("Location")!).searchParams.get("googleError")).toBe(
-        "google_account_unavailable",
-      );
+      expect(response.status).toBe(400);
+      const body = await readJson(response);
+      if (!body.ok) expect(body.error.code).toBe("AUTH_GOOGLE_ACCOUNT_UNAVAILABLE");
       expect(response.headers.get("set-cookie")).toBeNull();
     });
 
@@ -602,7 +638,7 @@ describe("Google authentication (real D1 + real JWT cryptography)", () => {
         .run();
 
       const response = await performGoogleAuth({ action: "signin", sub });
-      expect(response.status).toBe(303);
+      expect(response.status).toBe(200);
       expect(response.headers.get("set-cookie")).toBeTruthy();
 
       // Restore for isolation from later tests touching the same DB.
@@ -623,7 +659,7 @@ describe("Google authentication (real D1 + real JWT cryptography)", () => {
     });
   });
 
-  describe("admin isolation (section 29, mandatory)", () => {
+  describe("admin isolation (section 38, mandatory)", () => {
     it("Google sign-in never creates isAdminSession=true, and an active admin cannot sign in via Google at all", async () => {
       // Create an ordinary Google account, then promote it to admin exactly
       // as auth-flow.integration.test.ts does (direct SQL — no promotion
@@ -645,10 +681,9 @@ describe("Google authentication (real D1 + real JWT cryptography)", () => {
         .run();
 
       const response = await performGoogleAuth({ action: "signin", sub });
-      expect(response.status).toBe(303);
-      expect(new URL(response.headers.get("Location")!).searchParams.get("googleError")).toBe(
-        "google_admin_passkey_required",
-      );
+      expect(response.status).toBe(403);
+      const body = await readJson(response);
+      if (!body.ok) expect(body.error.code).toBe("AUTH_GOOGLE_ADMIN_REQUIRES_PASSKEY");
       expect(response.headers.get("set-cookie")).toBeNull();
 
       // No admin session (or any session) exists as a result of this attempt.
@@ -666,7 +701,7 @@ describe("Google authentication (real D1 + real JWT cryptography)", () => {
     });
   });
 
-  describe("account linking / unlinking (sections 21-24, 52)", () => {
+  describe("account linking / unlinking (sections 35-37, 50)", () => {
     async function createPasskeyAccount(displayName: string): Promise<string> {
       const begin = await readJson<{
         challengeId: string;
@@ -705,7 +740,31 @@ describe("Google authentication (real D1 + real JWT cryptography)", () => {
       expect(response.status).toBe(401);
     });
 
-    it("a passkey account can explicitly connect Google, and both methods then reach the same user", async () => {
+    it("the link callback requires the session cookie (section 36) — without it, an otherwise-valid link fails closed", async () => {
+      const cookie = await createPasskeyAccount("No Cookie Link Attempt");
+      const linkBegin = await readJson<{ nonce: string; state: string }>(
+        await googleLinkBegin(
+          ctx(
+            new Request("http://x/api/account/google/link/begin", {
+              method: "POST",
+              headers: { Origin: ORIGIN, Cookie: cookie },
+            }),
+          ),
+        ),
+      );
+      if (!linkBegin.ok) throw new Error("link begin failed");
+      const credential = await signIdToken({
+        sub: "no-cookie-link-sub",
+        nonce: linkBegin.data.nonce,
+      });
+      // Same-origin, valid state/nonce/token — but no session cookie at all.
+      const response = await googleCallback(
+        ctx(googleCallbackRequest({ credential, state: linkBegin.data.state })),
+      );
+      expect(response.status).toBe(401);
+    });
+
+    it("a passkey account can explicitly connect Google (same-origin JSON, session cookie forwarded), and both methods then reach the same user", async () => {
       const passkeyCookie = await createPasskeyAccount("Link Test User");
       const sessionBody = await readJson<{ id: string; displayName: string }>(
         await getSession(ctx(getRequest("http://x/api/auth/session", passkeyCookie))),
@@ -727,21 +786,21 @@ describe("Google authentication (real D1 + real JWT cryptography)", () => {
 
       const sub = "linked-to-passkey-account";
       const credential = await signIdToken({ sub, nonce: linkBegin.data.nonce });
+      // credentials: "same-origin" in the browser means this fetch carries
+      // the page's own session cookie — simulated here by setting it
+      // explicitly on the callback request.
       const callbackResponse = await googleCallback(
         ctx(
           googleCallbackRequest({
             credential,
             state: linkBegin.data.state,
-            csrfCookie: "x",
-            csrfField: "x",
             sessionCookie: passkeyCookie,
           }),
         ),
       );
-      expect(callbackResponse.status).toBe(303);
-      expect(
-        new URL(callbackResponse.headers.get("Location")!).searchParams.get("googleLinked"),
-      ).toBe("1");
+      expect(callbackResponse.status).toBe(200);
+      const callbackBody = await readJson<{ redirectTo: string }>(callbackResponse);
+      if (callbackBody.ok) expect(callbackBody.data.redirectTo).toContain("/app/account");
 
       const status = await readJson<{ connected: boolean }>(
         await googleStatus(ctx(getRequest("http://x/api/account/google", passkeyCookie))),
@@ -801,8 +860,6 @@ describe("Google authentication (real D1 + real JWT cryptography)", () => {
           googleCallbackRequest({
             credential: firstCredential,
             state: firstLinkBegin.data.state,
-            csrfCookie: "x",
-            csrfField: "x",
             sessionCookie: firstAccountCookie,
           }),
         ),
@@ -827,16 +884,13 @@ describe("Google authentication (real D1 + real JWT cryptography)", () => {
           googleCallbackRequest({
             credential: secondCredential,
             state: secondLinkBegin.data.state,
-            csrfCookie: "x",
-            csrfField: "x",
             sessionCookie: secondAccountCookie,
           }),
         ),
       );
-      expect(collisionResponse.status).toBe(303);
-      expect(
-        new URL(collisionResponse.headers.get("Location")!).searchParams.get("googleError"),
-      ).toBe("google_already_linked");
+      expect(collisionResponse.status).toBe(409);
+      const collisionBody = await readJson(collisionResponse);
+      if (!collisionBody.ok) expect(collisionBody.error.code).toBe("AUTH_GOOGLE_ALREADY_LINKED");
 
       const secondStatus = await readJson<{ connected: boolean }>(
         await googleStatus(ctx(getRequest("http://x/api/account/google", secondAccountCookie))),
@@ -866,16 +920,11 @@ describe("Google authentication (real D1 + real JWT cryptography)", () => {
             googleCallbackRequest({
               credential,
               state: linkBegin.data.state,
-              csrfCookie: "x",
-              csrfField: "x",
               sessionCookie: cookie,
             }),
           ),
         );
-        expect(response.status).toBe(303);
-        expect(new URL(response.headers.get("Location")!).searchParams.get("googleLinked")).toBe(
-          "1",
-        );
+        expect(response.status).toBe(200);
       }
     });
 
@@ -919,13 +968,7 @@ describe("Google authentication (real D1 + real JWT cryptography)", () => {
       const credential = await signIdToken({ sub, nonce: linkBegin.data.nonce });
       await googleCallback(
         ctx(
-          googleCallbackRequest({
-            credential,
-            state: linkBegin.data.state,
-            csrfCookie: "x",
-            csrfField: "x",
-            sessionCookie: cookie,
-          }),
+          googleCallbackRequest({ credential, state: linkBegin.data.state, sessionCookie: cookie }),
         ),
       );
 
@@ -946,9 +989,9 @@ describe("Google authentication (real D1 + real JWT cryptography)", () => {
 
       // The disconnected identity can no longer sign in — it's unlinked now.
       const signInAttempt = await performGoogleAuth({ action: "signin", sub });
-      expect(new URL(signInAttempt.headers.get("Location")!).searchParams.get("googleError")).toBe(
-        "google_not_linked",
-      );
+      expect(signInAttempt.status).toBe(400);
+      const signInBody = await readJson(signInAttempt);
+      if (!signInBody.ok) expect(signInBody.error.code).toBe("AUTH_GOOGLE_NOT_LINKED");
     });
 
     it("reconnecting Google after disconnect is possible", async () => {
@@ -973,8 +1016,6 @@ describe("Google authentication (real D1 + real JWT cryptography)", () => {
             googleCallbackRequest({
               credential,
               state: linkBegin.data.state,
-              csrfCookie: "x",
-              csrfField: "x",
               sessionCookie: cookie,
             }),
           ),
@@ -991,10 +1032,7 @@ describe("Google authentication (real D1 + real JWT cryptography)", () => {
         ),
       );
       const reconnect = await link();
-      expect(reconnect.status).toBe(303);
-      expect(new URL(reconnect.headers.get("Location")!).searchParams.get("googleLinked")).toBe(
-        "1",
-      );
+      expect(reconnect.status).toBe(200);
     });
 
     it("an admin account cannot start a Google link operation", async () => {

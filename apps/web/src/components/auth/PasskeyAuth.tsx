@@ -3,7 +3,11 @@ import type { FormEvent } from "react";
 import { startAuthentication, startRegistration, WebAuthnError } from "@simplewebauthn/browser";
 import { Alert, Button, FormField, Input } from "@crawlpact/ui";
 import { track } from "../../lib/analytics-client";
-import { getGoogleAccountsId, loadGoogleIdentityServices } from "../../lib/google-identity";
+import {
+  getGoogleAccountsId,
+  loadGoogleIdentityServices,
+  type GoogleCredentialResponse,
+} from "../../lib/google-identity";
 
 type Mode = "signin" | "signup" | "recovery";
 
@@ -12,22 +16,20 @@ type Screen =
   | { step: "recovery-codes"; codes: string[] }
   | { step: "error"; message: string };
 
-/** Section 34 — a small, stable vocabulary of Google failure codes, never raw JWT/DB errors. */
+/** Section 28 — a small, stable vocabulary of AUTH_GOOGLE_* API error codes, never raw JWT/DB errors. */
 const GOOGLE_ERROR_COPY: Record<string, string> = {
-  google_not_linked:
+  AUTH_GOOGLE_NOT_LINKED:
     "No CrawlPact account is connected to that Google account. Choose Create account to make a new account, or sign in with your existing passkey and connect Google from Account settings.",
-  google_already_linked: "This Google account is already connected to another CrawlPact account.",
-  google_account_unavailable: "This account is not available.",
-  google_admin_passkey_required: "Administrator accounts must sign in with a passkey.",
-  google_invalid_request:
+  AUTH_GOOGLE_ALREADY_LINKED:
+    "This Google account is already connected to another CrawlPact account.",
+  AUTH_GOOGLE_ACCOUNT_UNAVAILABLE: "This account is not available.",
+  AUTH_GOOGLE_ADMIN_REQUIRES_PASSKEY: "Administrator accounts must sign in with a passkey.",
+  AUTH_GOOGLE_INVALID_REQUEST:
     "Google sign-in could not be completed. Please try again, or use a passkey.",
 };
 
-function googleErrorFromLocation(): string | null {
-  if (typeof window === "undefined") return null;
-  const code = new URLSearchParams(window.location.search).get("googleError");
-  if (!code) return null;
-  return GOOGLE_ERROR_COPY[code] ?? GOOGLE_ERROR_COPY["google_invalid_request"]!;
+function googleFriendlyMessage(code: string | undefined, fallback: string): string {
+  return GOOGLE_ERROR_COPY[code ?? ""] ?? fallback;
 }
 
 /**
@@ -35,10 +37,13 @@ function googleErrorFromLocation(): string | null {
  * email/password field anywhere — "Create account" and "Sign in" are each
  * either a single WebAuthn ceremony round-trip through
  * /api/auth/{register,login}/{begin,finish}, or Google's official "Sign In
- * With Google" button via the GIS redirect flow through
- * /api/auth/google/{begin,''}. Recovery-code redemption is the only other
- * path in, for when no passkey is available. A Google SDK/network failure
- * never breaks passkey sign-in — see the `googleUnavailable` handling below.
+ * With Google" button via GIS's JavaScript-callback mode: GIS hands the
+ * page a `CredentialResponse` in-browser, which the page then forwards as a
+ * same-origin JSON POST to /api/auth/google (never a cross-site form POST
+ * from Google itself — see that route's own doc comment for why). Recovery-
+ * code redemption is the only other path in, for when no passkey is
+ * available. A Google SDK/network failure never breaks passkey sign-in —
+ * see the `googleUnavailable` handling below.
  */
 export function PasskeyAuth({
   redirectTo = "/app",
@@ -58,10 +63,7 @@ export function PasskeyAuth({
   const [recoveryCode, setRecoveryCode] = useState("");
   const [confirmedSaved, setConfirmedSaved] = useState(false);
   const [busy, setBusy] = useState(false);
-  const [screen, setScreen] = useState<Screen>(() => {
-    const googleError = googleErrorFromLocation();
-    return googleError ? { step: "error", message: googleError } : { step: "form" };
-  });
+  const [screen, setScreen] = useState<Screen>({ step: "form" });
   const nameInputId = useId();
   const codeInputId = useId();
 
@@ -72,9 +74,65 @@ export function PasskeyAuth({
   } | null>(null);
   const [googleUnavailable, setGoogleUnavailable] = useState(false);
   const [googleReady, setGoogleReady] = useState(false);
+  const [googleBusy, setGoogleBusy] = useState(false);
   const signInButtonRef = useRef<HTMLDivElement | null>(null);
   const signUpButtonRef = useRef<HTMLDivElement | null>(null);
   const initializedRef = useRef(false);
+  // Section 18: client-side duplicate-submission guard — a real defence is
+  // the server's one-time `state` consumption (oauth-intent.ts), this just
+  // avoids firing a second, doomed-to-fail request from one credential
+  // response. A ref, not state, so the GIS callback (a stable closure set
+  // once at `initialize()` time) always reads the current value.
+  const googleSubmittingRef = useRef(false);
+
+  /**
+   * GIS's JavaScript-callback contract (ADR-0009's corrected transport):
+   * invoked in-browser once the user picks a Google account — Google itself
+   * never posts anywhere. This forwards the credential to CrawlPact's own
+   * origin as a same-origin JSON POST, the only place the ID token ever
+   * travels to.
+   */
+  async function handleGoogleCredentialResponse(response: GoogleCredentialResponse): Promise<void> {
+    if (googleSubmittingRef.current) return;
+    if (!response?.credential || !response?.state) {
+      setScreen({
+        step: "error",
+        message: googleFriendlyMessage(undefined, GOOGLE_ERROR_COPY.AUTH_GOOGLE_INVALID_REQUEST!),
+      });
+      return;
+    }
+    googleSubmittingRef.current = true;
+    setGoogleBusy(true);
+    try {
+      const apiResponse = await fetch("/api/auth/google", {
+        method: "POST",
+        credentials: "same-origin",
+        headers: { "Content-Type": "application/json", Accept: "application/json" },
+        body: JSON.stringify({ credential: response.credential, state: response.state }),
+      });
+      const parsed = (await apiResponse.json()) as {
+        ok: boolean;
+        data?: { redirectTo: string };
+        error?: { code?: string; message: string };
+      };
+      if (parsed.ok && parsed.data) {
+        window.location.assign(parsed.data.redirectTo);
+        return;
+      }
+      setScreen({
+        step: "error",
+        message: googleFriendlyMessage(
+          parsed.error?.code,
+          parsed.error?.message ?? GOOGLE_ERROR_COPY.AUTH_GOOGLE_INVALID_REQUEST!,
+        ),
+      });
+    } catch {
+      setScreen({ step: "error", message: GOOGLE_ERROR_COPY.AUTH_GOOGLE_INVALID_REQUEST! });
+    } finally {
+      googleSubmittingRef.current = false;
+      setGoogleBusy(false);
+    }
+  }
 
   // Begin the Google OAuth intents and load the GIS script exactly once per
   // page load, regardless of how many times the visible tab changes
@@ -118,7 +176,7 @@ export function PasskeyAuth({
   }, []);
 
   // Renders the Google button for whichever tab is currently visible.
-  // `initialize()` genuinely only needs to run once (client_id/login_uri/
+  // `initialize()` genuinely only needs to run once (client_id/callback/
   // nonce never change); `renderButton()` re-runs whenever the active mode
   // or the target container changes, per section 31's "rerender the button
   // when the tab changes" guidance.
@@ -130,9 +188,9 @@ export function PasskeyAuth({
     if (!initializedRef.current) {
       accountsId.initialize({
         client_id: googleClientId,
-        login_uri: `${window.location.origin}/api/auth/google`,
+        callback: (response) => void handleGoogleCredentialResponse(response),
         nonce: googleBegin.nonce,
-        ux_mode: "redirect",
+        ux_mode: "popup",
         auto_select: false,
       });
       initializedRef.current = true;
@@ -333,7 +391,7 @@ export function PasskeyAuth({
         <div className="flex flex-col gap-4">
           {!googleUnavailable && (
             <div className="flex flex-col items-center gap-3">
-              <div ref={signInButtonRef} aria-live="polite" />
+              <div ref={signInButtonRef} aria-live="polite" aria-busy={googleBusy} />
               <div className="flex w-full items-center gap-3 text-supporting text-neutral-500">
                 <span className="h-px flex-1 bg-neutral-200" aria-hidden="true" />
                 or
@@ -361,7 +419,7 @@ export function PasskeyAuth({
         <div className="flex flex-col gap-4">
           {!googleUnavailable && (
             <div className="flex flex-col items-center gap-3">
-              <div ref={signUpButtonRef} aria-live="polite" />
+              <div ref={signUpButtonRef} aria-live="polite" aria-busy={googleBusy} />
               <div className="flex w-full items-center gap-3 text-supporting text-neutral-500">
                 <span className="h-px flex-1 bg-neutral-200" aria-hidden="true" />
                 or

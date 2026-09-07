@@ -14,11 +14,15 @@ const DEFAULT_FAILURE_REDIRECT = "/sign-in";
 /**
  * POST /api/auth/google/begin — unauthenticated. Creates the paired
  * sign-in/sign-up OAuth intents (section 13) `/sign-in`'s two Google
- * buttons need, sharing one GIS nonce. `redirectTo`/`failureRedirect` are
- * whatever `/sign-in` already computed for its own passkey flow (audit
- * continuation, pricing continuity, or the `/app` default) — re-validated
- * here with the same `isSafeRelativeRedirect` check used everywhere else,
- * never trusted outright from the request body.
+ * buttons need, sharing one GIS nonce. `redirectTo` is whatever `/sign-in`
+ * already computed for its own passkey flow (audit continuation, pricing
+ * continuity, or the `/app` default) — re-validated here with the same
+ * `isSafeRelativeRedirect` check used everywhere else, never trusted
+ * outright from the request body, and returned directly in the callback's
+ * JSON success response (ADR-0009's corrected transport). `failureRedirect`
+ * is still accepted and stored on the intent row (a holdover from the
+ * pre-correction page-redirect design) but no longer read by the callback —
+ * failures are now returned as ordinary API errors, not a redirect.
  */
 export const POST: APIRoute = async ({ request }) => {
   const requestId = crypto.randomUUID();

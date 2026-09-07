@@ -1,22 +1,35 @@
 import { useEffect, useRef, useState } from "react";
 import { Alert, Button } from "@crawlpact/ui";
-import { getGoogleAccountsId, loadGoogleIdentityServices } from "../../lib/google-identity";
+import {
+  getGoogleAccountsId,
+  loadGoogleIdentityServices,
+  type GoogleCredentialResponse,
+} from "../../lib/google-identity";
 
 type GoogleStatus = { connected: boolean; email: string | null; connectedAt: string | null };
 
 const GOOGLE_ERROR_COPY: Record<string, string> = {
-  google_already_linked: "This Google account is already connected to another CrawlPact account.",
-  google_admin_passkey_required: "Administrator accounts cannot connect Google sign-in.",
-  google_invalid_request: "Connecting Google could not be completed. Please try again.",
+  AUTH_GOOGLE_ALREADY_LINKED:
+    "This Google account is already connected to another CrawlPact account.",
+  AUTH_GOOGLE_ADMIN_REQUIRES_PASSKEY: "Administrator accounts cannot connect Google sign-in.",
+  AUTH_GOOGLE_INVALID_REQUEST: "Connecting Google could not be completed. Please try again.",
 };
+
+function googleFriendlyMessage(code: string | undefined, fallback: string): string {
+  return GOOGLE_ERROR_COPY[code ?? ""] ?? fallback;
+}
 
 /**
  * "Sign-in methods" → Google, in Account settings (section 21). Mirrors
- * PasskeysManager.tsx's fetch-on-mount pattern. Disconnecting is refused
- * server-side (AUTH_GOOGLE_DISCONNECT_BLOCKED) whenever it would leave the
- * account with no usable sign-in method — this panel just surfaces
- * whatever message the API returns, the same way every other sensitive
- * action panel here does (RecoveryCodesPanel, PasskeysManager).
+ * PasskeysManager.tsx's fetch-on-mount pattern. GIS runs in JavaScript-
+ * callback mode (ADR-0009's corrected transport) — Google hands the
+ * CredentialResponse to this page in-browser, which then forwards it as a
+ * same-origin JSON POST to /api/auth/google, `credentials: "same-origin"`
+ * so the existing link session cookie travels with it. Disconnecting is
+ * refused server-side (AUTH_GOOGLE_DISCONNECT_BLOCKED) whenever it would
+ * leave the account with no usable sign-in method — this panel just
+ * surfaces whatever message the API returns, the same way every other
+ * sensitive action panel here does (RecoveryCodesPanel, PasskeysManager).
  */
 export function GoogleAccountPanel({
   googleClientId,
@@ -33,8 +46,10 @@ export function GoogleAccountPanel({
   const [linkBegin, setLinkBegin] = useState<{ nonce: string; state: string } | null>(null);
   const [googleReady, setGoogleReady] = useState(false);
   const [googleUnavailable, setGoogleUnavailable] = useState(false);
+  const [linking, setLinking] = useState(false);
   const buttonRef = useRef<HTMLDivElement | null>(null);
   const initializedRef = useRef(false);
+  const linkSubmittingRef = useRef(false);
 
   async function refresh() {
     const response = await fetch("/api/account/google");
@@ -44,11 +59,55 @@ export function GoogleAccountPanel({
 
   useEffect(() => {
     void refresh();
-    const params = new URLSearchParams(window.location.search);
-    if (params.get("googleLinked") === "1") setInfo("Google account connected.");
-    const code = params.get("googleError");
-    if (code) setError(GOOGLE_ERROR_COPY[code] ?? GOOGLE_ERROR_COPY["google_invalid_request"]!);
   }, []);
+
+  /**
+   * GIS's JavaScript-callback contract — invoked in-browser once the user
+   * picks a Google account to connect. `credentials: "same-origin"` is
+   * load-bearing here: the server must see this page's existing CrawlPact
+   * session cookie to verify the link request belongs to the account that
+   * started it (section 36).
+   */
+  async function handleGoogleCredentialResponse(response: GoogleCredentialResponse): Promise<void> {
+    if (linkSubmittingRef.current) return;
+    if (!response?.credential || !response?.state) {
+      setError(googleFriendlyMessage(undefined, GOOGLE_ERROR_COPY.AUTH_GOOGLE_INVALID_REQUEST!));
+      return;
+    }
+    linkSubmittingRef.current = true;
+    setLinking(true);
+    setError(null);
+    setInfo(null);
+    try {
+      const apiResponse = await fetch("/api/auth/google", {
+        method: "POST",
+        credentials: "same-origin",
+        headers: { "Content-Type": "application/json", Accept: "application/json" },
+        body: JSON.stringify({ credential: response.credential, state: response.state }),
+      });
+      const parsed = (await apiResponse.json()) as {
+        ok: boolean;
+        data?: { redirectTo: string };
+        error?: { code?: string; message: string };
+      };
+      if (parsed.ok) {
+        setInfo("Google account connected.");
+        await refresh();
+        return;
+      }
+      setError(
+        googleFriendlyMessage(
+          parsed.error?.code,
+          parsed.error?.message ?? GOOGLE_ERROR_COPY.AUTH_GOOGLE_INVALID_REQUEST!,
+        ),
+      );
+    } catch {
+      setError(GOOGLE_ERROR_COPY.AUTH_GOOGLE_INVALID_REQUEST!);
+    } finally {
+      linkSubmittingRef.current = false;
+      setLinking(false);
+    }
+  }
 
   // Once we know the account has no Google identity connected yet, begin a
   // link intent and load GIS so the official "Connect Google" button can be
@@ -92,9 +151,9 @@ export function GoogleAccountPanel({
     if (!initializedRef.current) {
       accountsId.initialize({
         client_id: googleClientId,
-        login_uri: `${window.location.origin}/api/auth/google`,
+        callback: (response) => void handleGoogleCredentialResponse(response),
         nonce: linkBegin.nonce,
-        ux_mode: "redirect",
+        ux_mode: "popup",
         auto_select: false,
       });
       initializedRef.current = true;
@@ -167,7 +226,7 @@ export function GoogleAccountPanel({
         </div>
       ) : (
         <div className="flex flex-col gap-2">
-          {!googleUnavailable && <div ref={buttonRef} aria-live="polite" />}
+          {!googleUnavailable && <div ref={buttonRef} aria-live="polite" aria-busy={linking} />}
           {googleUnavailable && (
             <p className="text-supporting text-neutral-600">
               Connecting Google is currently unavailable. Please try again later.

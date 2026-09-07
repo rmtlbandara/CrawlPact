@@ -12,10 +12,13 @@ import { jsonErrorResponse, jsonResponse } from "../../../../../lib/json-respons
 
 export const prerender = false;
 
-// Linking always starts and ends on Account settings — both the success and
-// failure redirect are this same path, differentiated by query params
-// (`googleLinked=1` vs `googleError=...`), so there is no client-supplied
-// redirect destination to validate here.
+// Linking always starts and ends on Account settings, so there is no
+// client-supplied redirect destination to validate here. ADR-0009's
+// corrected transport (JSON callback, not a page redirect) means the
+// callback returns `redirectTo` directly in its JSON response on success
+// and a normal API error on failure — `failureRedirect` is still stored on
+// the intent row (unused schema field kept from the pre-correction design
+// rather than a migration for this alone) but no longer read.
 const ACCOUNT_SETTINGS_PATH = "/app/account";
 
 /**
