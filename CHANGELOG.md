@@ -14,22 +14,34 @@ the "Production deployment" entries below for the established pattern).
 
 ## Unreleased
 
+_Nothing pending._
+
+## Production deployment (2026-09-07) — Google Sign-In cross-site POST transport correction
+
+Commit `72a8630` deployed to preview via `deploy-preview.yml` (run `34111862991`), then to
+production via `deploy-production.yml` (run `34113458986`). Corrects the defect found live the
+same day (see the entry below): the initial Google Identity Services integration configured
+redirect UX (`login_uri`, `ux_mode: "redirect"`), which makes Google itself POST the credential
+cross-site to `/api/auth/google` — Astro's own CSRF protection correctly rejected it
+(`Cross-site POST form submissions are forbidden`), confirmed live on both preview and
+production. Corrected to GIS's JavaScript-callback mode (`callback`, `ux_mode: "popup"`): the
+CrawlPact page's own script now makes a same-origin JSON `fetch()` POST instead, so Google is
+never a caller of `/api/auth/google` at all. `/api/auth/google` changed from a form-POST/303-
+redirect endpoint to an ordinary JSON API endpoint (`{ credential, state }` in,
+`{ redirectTo }`/standard error envelope out), protected by the same explicit `assertSameOrigin`
+check every other mutating endpoint uses (now shared via `apps/web/src/lib/auth/same-origin.ts`)
+plus the unchanged one-time state/nonce/JWT verification — no more `g_csrf_token`. Independently
+re-verified post-deploy on both environments: the corrected JSON contract reaches real
+sign-in/sign-up logic, the old cross-site form contract is still correctly rejected. **The
+product owner then manually signed in and signed up with a real Google account on both Preview
+and Production, confirmed working, 2026-09-07** — see
+`docs/deployment/GOOGLE_AUTHENTICATION_DEPLOYMENT_CHECKLIST.md` for exactly what remains
+unconfirmed (account linking, disconnect, admin isolation — covered by automated tests only).
+
 ### Fixed
 
-- **Google Sign-In cross-site POST defect (ADR-0009 post-acceptance correction).** The initial
-  Google Identity Services integration (deployed below) configured redirect UX (`login_uri`,
-  `ux_mode: "redirect"`), which makes Google itself POST the credential cross-site to
-  `/api/auth/google` — Astro's own CSRF protection correctly rejected it
-  (`Cross-site POST form submissions are forbidden`), confirmed live on both preview and
-  production. Corrected to GIS's JavaScript-callback mode (`callback`, `ux_mode: "popup"`): the
-  CrawlPact page's own script now makes a same-origin JSON `fetch()` POST instead, so Google is
-  never a caller of `/api/auth/google` at all. `/api/auth/google` changed from a form-POST/303-
-  redirect endpoint to an ordinary JSON API endpoint (`{ credential, state }` in,
-  `{ redirectTo }`/standard error envelope out), protected by the same explicit
-  `assertSameOrigin` check every other mutating endpoint uses (now shared via
-  `apps/web/src/lib/auth/same-origin.ts`) plus the unchanged one-time state/nonce/JWT
-  verification — no more `g_csrf_token`. Not yet redeployed — see
-  `docs/deployment/GOOGLE_AUTHENTICATION_DEPLOYMENT_CHECKLIST.md`.
+- Google Sign-In cross-site POST defect (ADR-0009 post-acceptance correction) — see summary
+  above.
 
 ## Production deployment (2026-09-07) — Google Sign-In (ADR-0009) and preview Custom Domain migration
 
@@ -42,8 +54,9 @@ direct fetch of `https://crawlpact.com/` and `/sign-in` returned 200 with the Go
 origins present, `POST /api/auth/google/begin` returned a real 200 against live production D1,
 unauthenticated `/app/account` redirected to `/sign-in`, and existing passkey/pricing/status
 routes were unaffected. **Found live, same day**: the deployed Google Sign-In UI could not
-actually complete a Google sign-in — see the "Fixed" entry above for the defect and its
-correction (not yet redeployed as of this entry).
+actually complete a Google sign-in — see the "Google Sign-In cross-site POST transport
+correction" entry above for the defect and its correction, redeployed later the same day
+(`72a8630`) and subsequently confirmed working with a real Google account.
 
 ### Added
 
