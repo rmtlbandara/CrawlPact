@@ -87,3 +87,39 @@ export const adminRoleAssignments = sqliteTable(
   },
   (table) => [uniqueIndex("idx_admin_role_assignments_user_role").on(table.userId, table.roleId)],
 );
+
+// Mirrors packages/database/migrations/0038_google_oauth.sql (ADR-0009).
+export const oauthAccounts = sqliteTable(
+  "oauth_accounts",
+  {
+    id: text("id").primaryKey(),
+    userId: text("user_id")
+      .notNull()
+      .references(() => users.id),
+    provider: text("provider").notNull().default("google").$type<"google">(),
+    providerSubject: text("provider_subject").notNull(),
+    email: text("email"),
+    emailVerified: integer("email_verified", { mode: "boolean" }).notNull().default(false),
+    createdAt: text("created_at").notNull(),
+    updatedAt: text("updated_at").notNull(),
+    lastUsedAt: text("last_used_at"),
+  },
+  (table) => [
+    uniqueIndex("idx_oauth_accounts_provider_subject").on(table.provider, table.providerSubject),
+    uniqueIndex("idx_oauth_accounts_user_provider").on(table.userId, table.provider),
+  ],
+);
+
+export const oauthAuthIntents = sqliteTable("oauth_auth_intents", {
+  id: text("id").primaryKey(),
+  stateHash: text("state_hash").notNull().unique(),
+  provider: text("provider").notNull().default("google").$type<"google">(),
+  action: text("action").notNull().$type<"signin" | "signup" | "link">(),
+  redirectTo: text("redirect_to").notNull(),
+  failureRedirect: text("failure_redirect").notNull(),
+  userId: text("user_id").references(() => users.id),
+  nonceHash: text("nonce_hash").notNull(),
+  createdAt: text("created_at").notNull(),
+  expiresAt: text("expires_at").notNull(),
+  consumedAt: text("consumed_at"),
+});

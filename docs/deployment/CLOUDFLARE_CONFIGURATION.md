@@ -81,9 +81,11 @@ aren't secrets, but getting them wrong breaks real functionality, not just cosme
   domain.
 - `WEBAUTHN_RP_ID` / `WEBAUTHN_RP_ORIGIN` — **passkey auth fails outright for every user if these
   don't exactly match the domain the app is actually served from**, since the browser strictly
-  validates `rpId`/origin against the real page origin during the WebAuthn ceremony. Update both
-  the moment a real preview domain (or a production domain change) is known — the current
-  `preview.crawlpact.com` values in `wrangler.jsonc` are placeholders.
+  validates `rpId`/origin against the real page origin during the WebAuthn ceremony. Preview's
+  values now point at the CrawlPact-owned Custom Domain `preview.crawlpact.com` (migration
+  in progress — see `CLOUDFLARE_ENVIRONMENT_MATRIX.md`'s Notes section), but that hostname isn't
+  live yet: the Cloudflare Custom Domain still needs to be attached by an account owner before
+  preview passkey ceremonies against it will actually work.
 
 ## Secrets (never in `wrangler.jsonc`)
 
@@ -170,12 +172,15 @@ Worker Custom Domain already attached (`crawlpact.com` → `crawlpact-web`, prod
   CrawlPact-controlled scan target for two required e2e tests (`auth-and-account.spec.ts`) that
   need a genuine, publicly-resolvable HTTP origin — see `docs/status/KNOWN_RISKS.md`'s "SSRF-safe
   deterministic scanner test target" entry. Never referenced by production app code.
-- `preview.crawlpact.com` — not provisioned. Preview is currently reachable only via its
-  `*.workers.dev` subdomain (`crawlpact-web-preview.<account-subdomain>.workers.dev`); the
-  `WEBAUTHN_RP_ID`/`WEBAUTHN_RP_ORIGIN`/`PUBLIC_SITE_URL` preview values in `wrangler.jsonc` are
-  still placeholders (`preview.crawlpact.com`) and **must** be updated to the real `workers.dev`
-  hostname (or a real preview custom domain, if one is added later) before preview passkey
-  ceremonies will work — see "Non-secret environment vars" above.
+- `preview.crawlpact.com` — the CrawlPact-owned Custom Domain preview is migrating to.
+  `apps/web/wrangler.jsonc`'s `env.preview` now declares it as a `routes`/`custom_domain: true`
+  entry and points `WEBAUTHN_RP_ID`/`WEBAUTHN_RP_ORIGIN`/`PUBLIC_SITE_URL` at it, but **it is not
+  yet provisioned in Cloudflare** — an account owner still needs to attach the Custom Domain
+  (Workers & Pages → `crawlpact-web-preview` → Settings → Domains & Routes → Add → Custom Domain)
+  before it resolves. Until then, preview remains reachable only via its `*.workers.dev` subdomain
+  (`crawlpact-web-preview.<account-subdomain>.workers.dev`), which is kept as a temporary
+  operational fallback during the migration — see "Non-secret environment vars" above and
+  `CLOUDFLARE_ENVIRONMENT_MATRIX.md`'s Notes section.
 
 ### Confirmed via live HTTP checks (2026-07-26)
 

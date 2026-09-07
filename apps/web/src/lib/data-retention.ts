@@ -551,8 +551,51 @@ async function purgeExpiredReadNotifications(
   return { affected, wouldAffect: null, backlogRemaining, error: null };
 }
 
+/** ADR-0009: mirrors purgeExpiredAuditContinuations exactly — a Google OAuth
+ * intent is meant to live 10 minutes (INTENT_TTL_SECONDS, oauth-intent.ts),
+ * and this is the primary cleanup path for one that expired unconsumed
+ * (never completed the redirect round trip). A user's own intents are also
+ * cascade-deleted if the account itself is later purged (ON DELETE CASCADE,
+ * migration 0038) — this category handles the far more common case of an
+ * abandoned or failed Google sign-in attempt whose account never changes. */
+async function purgeExpiredOAuthIntents(
+  db: Database,
+  now: Date,
+  dryRun: boolean,
+  chunkSize: number,
+  maxChunks: number,
+): Promise<CategoryResult> {
+  const where = and(
+    isNull(schema.oauthAuthIntents.consumedAt),
+    lt(schema.oauthAuthIntents.expiresAt, now.toISOString()),
+  );
+
+  if (dryRun) {
+    const [row] = await db.select({ n: count() }).from(schema.oauthAuthIntents).where(where);
+    return { ...emptyCategoryResult(), wouldAffect: row?.n ?? 0 };
+  }
+
+  let affected = 0;
+  let lastChunkFull = false;
+  for (let i = 0; i < maxChunks; i++) {
+    const result = await db
+      .delete(schema.oauthAuthIntents)
+      .where(where)
+      .limit(chunkSize)
+      .returning({ id: schema.oauthAuthIntents.id });
+    affected += result.length;
+    lastChunkFull = result.length === chunkSize;
+    if (!lastChunkFull) break;
+  }
+  const backlogRemaining = lastChunkFull
+    ? await hasRowsMatching(db.select({ n: count() }).from(schema.oauthAuthIntents).where(where))
+    : false;
+  return { ...emptyCategoryResult(), affected, backlogRemaining };
+}
+
 const CATEGORIES = [
   "expired_audit_continuations",
+  "expired_oauth_intents",
   "anonymous_scans",
   "domain_scans",
   "deleted_accounts",
@@ -572,6 +615,7 @@ export type DataRetentionResult = {
   accountsPurged: number;
   entitlementsExpired: number;
   expiredContinuationsDeleted: number;
+  expiredOAuthIntentsDeleted: number;
   orphanedAgencyLogosDeleted: number;
   productEventsDeleted: number;
   pilotFeedbackCommentsCleared: number;
@@ -615,6 +659,7 @@ export async function runDataRetentionPurge(
   const runners: Record<Category, () => Promise<CategoryResult>> = {
     expired_audit_continuations: () =>
       purgeExpiredAuditContinuations(db, now, dryRun, chunkSize, maxChunks),
+    expired_oauth_intents: () => purgeExpiredOAuthIntents(db, now, dryRun, chunkSize, maxChunks),
     anonymous_scans: () => purgeAnonymousScans(db, now, dryRun, chunkSize, maxChunks),
     domain_scans: () => purgeExpiredDomainScans(db, now, dryRun, chunkSize, maxChunks),
     deleted_accounts: () => purgeDeletedAccounts(db, now, dryRun, chunkSize, maxChunks),
@@ -643,6 +688,7 @@ export async function runDataRetentionPurge(
 
   return {
     expiredContinuationsDeleted: categories.expired_audit_continuations.affected,
+    expiredOAuthIntentsDeleted: categories.expired_oauth_intents.affected,
     anonymousScansDeleted: categories.anonymous_scans.affected,
     domainScansDeleted: categories.domain_scans.affected,
     accountsPurged: categories.deleted_accounts.affected,

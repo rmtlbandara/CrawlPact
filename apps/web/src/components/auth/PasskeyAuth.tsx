@@ -1,8 +1,9 @@
-import { useId, useState } from "react";
+import { useEffect, useId, useRef, useState } from "react";
 import type { FormEvent } from "react";
 import { startAuthentication, startRegistration, WebAuthnError } from "@simplewebauthn/browser";
 import { Alert, Button, FormField, Input } from "@crawlpact/ui";
 import { track } from "../../lib/analytics-client";
+import { getGoogleAccountsId, loadGoogleIdentityServices } from "../../lib/google-identity";
 
 type Mode = "signin" | "signup" | "recovery";
 
@@ -11,30 +12,154 @@ type Screen =
   | { step: "recovery-codes"; codes: string[] }
   | { step: "error"; message: string };
 
+/** Section 34 — a small, stable vocabulary of Google failure codes, never raw JWT/DB errors. */
+const GOOGLE_ERROR_COPY: Record<string, string> = {
+  google_not_linked:
+    "No CrawlPact account is connected to that Google account. Choose Create account to make a new account, or sign in with your existing passkey and connect Google from Account settings.",
+  google_already_linked: "This Google account is already connected to another CrawlPact account.",
+  google_account_unavailable: "This account is not available.",
+  google_admin_passkey_required: "Administrator accounts must sign in with a passkey.",
+  google_invalid_request:
+    "Google sign-in could not be completed. Please try again, or use a passkey.",
+};
+
+function googleErrorFromLocation(): string | null {
+  if (typeof window === "undefined") return null;
+  const code = new URLSearchParams(window.location.search).get("googleError");
+  if (!code) return null;
+  return GOOGLE_ERROR_COPY[code] ?? GOOGLE_ERROR_COPY["google_invalid_request"]!;
+}
+
 /**
- * Passkey-only sign-in/sign-up (SRS §24). No password, no email — "Create
- * account" and "Sign in" are both a single WebAuthn ceremony round-trip
- * through /api/auth/{register,login}/{begin,finish}. Recovery-code
- * redemption is the only other path in, for when no passkey is available.
+ * Passkey and Google sign-in/sign-up (SRS §24, ADR-0009). No password, no
+ * email/password field anywhere — "Create account" and "Sign in" are each
+ * either a single WebAuthn ceremony round-trip through
+ * /api/auth/{register,login}/{begin,finish}, or Google's official "Sign In
+ * With Google" button via the GIS redirect flow through
+ * /api/auth/google/{begin,''}. Recovery-code redemption is the only other
+ * path in, for when no passkey is available. A Google SDK/network failure
+ * never breaks passkey sign-in — see the `googleUnavailable` handling below.
  */
 export function PasskeyAuth({
   redirectTo = "/app",
   initialMode = "signin",
+  googleClientId,
 }: {
   redirectTo?: string;
   /** Phase 5: defaults the visible tab to "signup" when arriving from a
    * "Save and monitor" CTA (the common case — most clickers are new users),
    * without changing default behaviour for every other existing caller. */
   initialMode?: Mode;
+  /** Public Google OAuth Web Client ID — not a secret (packages/config's env schema requires it). */
+  googleClientId: string;
 }) {
   const [mode, setMode] = useState<Mode>(initialMode);
   const [displayName, setDisplayName] = useState("");
   const [recoveryCode, setRecoveryCode] = useState("");
   const [confirmedSaved, setConfirmedSaved] = useState(false);
   const [busy, setBusy] = useState(false);
-  const [screen, setScreen] = useState<Screen>({ step: "form" });
+  const [screen, setScreen] = useState<Screen>(() => {
+    const googleError = googleErrorFromLocation();
+    return googleError ? { step: "error", message: googleError } : { step: "form" };
+  });
   const nameInputId = useId();
   const codeInputId = useId();
+
+  const [googleBegin, setGoogleBegin] = useState<{
+    nonce: string;
+    signInState: string;
+    signUpState: string;
+  } | null>(null);
+  const [googleUnavailable, setGoogleUnavailable] = useState(false);
+  const [googleReady, setGoogleReady] = useState(false);
+  const signInButtonRef = useRef<HTMLDivElement | null>(null);
+  const signUpButtonRef = useRef<HTMLDivElement | null>(null);
+  const initializedRef = useRef(false);
+
+  // Begin the Google OAuth intents and load the GIS script exactly once per
+  // page load, regardless of how many times the visible tab changes
+  // (section 31: "Initialize GIS only once per page"). Either failing
+  // (network, the endpoint down, the script blocked by privacy tooling)
+  // only disables the Google UI — passkey/recovery sign-in stay fully
+  // functional (section 32).
+  useEffect(() => {
+    let cancelled = false;
+    (async () => {
+      try {
+        const response = await fetch("/api/auth/google/begin", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            redirectTo,
+            failureRedirect: window.location.pathname + window.location.search,
+          }),
+        });
+        const parsed = (await response.json()) as {
+          ok: boolean;
+          data?: { nonce: string; signInState: string; signUpState: string };
+        };
+        if (!cancelled && parsed.ok && parsed.data) setGoogleBegin(parsed.data);
+        else if (!cancelled) setGoogleUnavailable(true);
+      } catch {
+        if (!cancelled) setGoogleUnavailable(true);
+      }
+
+      try {
+        await loadGoogleIdentityServices();
+        if (!cancelled) setGoogleReady(true);
+      } catch {
+        if (!cancelled) setGoogleUnavailable(true);
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+    // Intentionally empty deps — runs once; `redirectTo` is stable for the lifetime of this page.
+  }, []);
+
+  // Renders the Google button for whichever tab is currently visible.
+  // `initialize()` genuinely only needs to run once (client_id/login_uri/
+  // nonce never change); `renderButton()` re-runs whenever the active mode
+  // or the target container changes, per section 31's "rerender the button
+  // when the tab changes" guidance.
+  useEffect(() => {
+    if (!googleReady || !googleBegin || googleUnavailable) return;
+    const accountsId = getGoogleAccountsId();
+    if (!accountsId) return;
+
+    if (!initializedRef.current) {
+      accountsId.initialize({
+        client_id: googleClientId,
+        login_uri: `${window.location.origin}/api/auth/google`,
+        nonce: googleBegin.nonce,
+        ux_mode: "redirect",
+        auto_select: false,
+      });
+      initializedRef.current = true;
+    }
+
+    if (mode === "signin" && signInButtonRef.current) {
+      signInButtonRef.current.innerHTML = "";
+      accountsId.renderButton(signInButtonRef.current, {
+        type: "standard",
+        theme: "outline",
+        size: "large",
+        text: "signin_with",
+        width: 336,
+        state: googleBegin.signInState,
+      });
+    } else if (mode === "signup" && signUpButtonRef.current) {
+      signUpButtonRef.current.innerHTML = "";
+      accountsId.renderButton(signUpButtonRef.current, {
+        type: "standard",
+        theme: "outline",
+        size: "large",
+        text: "signup_with",
+        width: 336,
+        state: googleBegin.signUpState,
+      });
+    }
+  }, [googleReady, googleBegin, googleUnavailable, mode, googleClientId]);
 
   function friendlyWebAuthnError(error: unknown): string {
     if (error instanceof WebAuthnError) {
@@ -205,32 +330,67 @@ export function PasskeyAuth({
       )}
 
       {mode === "signin" && (
-        <form onSubmit={handleSignIn} className="flex flex-col gap-4">
-          <p className="text-body text-neutral-700">
-            Sign in with the passkey registered to your device — no username needed.
-          </p>
-          <Button type="submit" isLoading={busy}>
-            Sign in with passkey
-          </Button>
-        </form>
+        <div className="flex flex-col gap-4">
+          {!googleUnavailable && (
+            <div className="flex flex-col items-center gap-3">
+              <div ref={signInButtonRef} aria-live="polite" />
+              <div className="flex w-full items-center gap-3 text-supporting text-neutral-500">
+                <span className="h-px flex-1 bg-neutral-200" aria-hidden="true" />
+                or
+                <span className="h-px flex-1 bg-neutral-200" aria-hidden="true" />
+              </div>
+            </div>
+          )}
+          {googleUnavailable && (
+            <p className="text-supporting text-neutral-600">
+              Google sign-in is currently unavailable. You can still sign in with a passkey.
+            </p>
+          )}
+          <form onSubmit={handleSignIn} className="flex flex-col gap-4">
+            <p className="text-body text-neutral-700">
+              Sign in with the passkey registered to your device — no username needed.
+            </p>
+            <Button type="submit" isLoading={busy}>
+              Sign in with passkey
+            </Button>
+          </form>
+        </div>
       )}
 
       {mode === "signup" && (
-        <form onSubmit={handleSignUp} className="flex flex-col gap-4">
-          <FormField label="Display name">
-            <Input
-              id={nameInputId}
-              value={displayName}
-              onChange={(event) => setDisplayName(event.target.value)}
-              autoComplete="name"
-              required
-              maxLength={80}
-            />
-          </FormField>
-          <Button type="submit" isLoading={busy} disabled={displayName.trim().length === 0}>
-            Create account with a passkey
-          </Button>
-        </form>
+        <div className="flex flex-col gap-4">
+          {!googleUnavailable && (
+            <div className="flex flex-col items-center gap-3">
+              <div ref={signUpButtonRef} aria-live="polite" />
+              <div className="flex w-full items-center gap-3 text-supporting text-neutral-500">
+                <span className="h-px flex-1 bg-neutral-200" aria-hidden="true" />
+                or
+                <span className="h-px flex-1 bg-neutral-200" aria-hidden="true" />
+              </div>
+            </div>
+          )}
+          {googleUnavailable && (
+            <p className="text-supporting text-neutral-600">
+              Google sign-up is currently unavailable. You can still create an account with a
+              passkey.
+            </p>
+          )}
+          <form onSubmit={handleSignUp} className="flex flex-col gap-4">
+            <FormField label="Display name">
+              <Input
+                id={nameInputId}
+                value={displayName}
+                onChange={(event) => setDisplayName(event.target.value)}
+                autoComplete="name"
+                required
+                maxLength={80}
+              />
+            </FormField>
+            <Button type="submit" isLoading={busy} disabled={displayName.trim().length === 0}>
+              Create account with a passkey
+            </Button>
+          </form>
+        </div>
       )}
 
       {mode === "recovery" && (

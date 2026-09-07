@@ -12,6 +12,21 @@ Phase 1's rule against fabricating or restructuring verifiable history. Add new 
 this distinguishes a code merge from a production deployment, which are not the same event (see
 the "Production deployment" entries below for the established pattern).
 
+## Unreleased
+
+### Changed
+
+- Preview environment is migrating off its `*.workers.dev` hostname onto the CrawlPact-owned
+  Custom Domain `preview.crawlpact.com`, required before Google OAuth preview testing can be
+  configured (Google Auth Platform needs a stable, real origin to register). `env.preview` in
+  `apps/web/wrangler.jsonc` now declares a `routes`/`custom_domain: true` entry for it, and
+  `PUBLIC_SITE_URL`/`WEBAUTHN_RP_ID`/`WEBAUTHN_RP_ORIGIN` now point at it; `env.preview.vars` also
+  gained `GOOGLE_CLIENT_ID` (same public Client ID as production), fixing `pnpm
+env:validate:preview`, which previously failed once that var became required by the canonical
+  schema. Not yet live: the Cloudflare Custom Domain still needs to be attached by an account
+  owner, and Google Auth Platform still needs `preview.crawlpact.com` added as an Authorized
+  origin/redirect URI — see `docs/deployment/CLOUDFLARE_ENVIRONMENT_MATRIX.md`'s Notes section.
+
 ## Production deployment (2026-08-18) — Phase 19: Pricing Comparison Table Strengthening
 
 PR #134 (squash-merged as `e72d724`, full commit `e72d7242d08ffdfbbb028f62b8379b7f9cbb6d4b`)

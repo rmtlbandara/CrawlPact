@@ -44,13 +44,19 @@ Every error response has the shape:
 
 ## Authentication
 
-| Code                         | HTTP status | Meaning                                                                        |
-| ---------------------------- | ----------: | ------------------------------------------------------------------------------ |
-| `AUTH_CHALLENGE_EXPIRED`     |         400 | The WebAuthn registration/assertion challenge expired before completion.       |
-| `AUTH_CREDENTIAL_INVALID`    |         400 | The passkey assertion/attestation failed verification.                         |
-| `AUTH_RECOVERY_CODE_INVALID` |         400 | The recovery code is unknown, already used, or malformed.                      |
-| `AUTH_SESSION_EXPIRED`       |         401 | The session existed but has expired or been revoked.                           |
-| `AUTH_STEP_UP_REQUIRED`      |         401 | The action requires a recent WebAuthn re-assertion (sensitive-action step-up). |
+| Code                                 | HTTP status | Meaning                                                                                                                                                 |
+| ------------------------------------ | ----------: | ------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `AUTH_CHALLENGE_EXPIRED`             |         400 | The WebAuthn registration/assertion challenge expired before completion.                                                                                |
+| `AUTH_CREDENTIAL_INVALID`            |         400 | The passkey assertion/attestation failed verification.                                                                                                  |
+| `AUTH_RECOVERY_CODE_INVALID`         |         400 | The recovery code is unknown, already used, or malformed.                                                                                               |
+| `AUTH_SESSION_EXPIRED`               |         401 | The session existed but has expired or been revoked.                                                                                                    |
+| `AUTH_STEP_UP_REQUIRED`              |         401 | The action requires a recent WebAuthn re-assertion (sensitive-action step-up).                                                                          |
+| `AUTH_GOOGLE_INVALID_REQUEST`        |         400 | Google CSRF/state/nonce/ID-token verification failed. Deliberately generic — never discloses which specific check failed (ADR-0009).                    |
+| `AUTH_GOOGLE_NOT_LINKED`             |         400 | Sign-in with an unlinked Google account. No account was created; use Create account or sign in with a passkey and connect Google from Account settings. |
+| `AUTH_GOOGLE_ALREADY_LINKED`         |         409 | The Google account is already connected to a different CrawlPact account (link attempt).                                                                |
+| `AUTH_GOOGLE_ACCOUNT_UNAVAILABLE`    |         400 | The resolved account is suspended, or Google sign-in is not usable for it right now.                                                                    |
+| `AUTH_GOOGLE_ADMIN_REQUIRES_PASSKEY` |         403 | The resolved account has an active administrator role — Google authentication is refused; sign in with a passkey.                                       |
+| `AUTH_GOOGLE_DISCONNECT_BLOCKED`     |         409 | Disconnecting Google would leave the account with no usable sign-in method — add a passkey first.                                                       |
 
 ## Domains and groups
 

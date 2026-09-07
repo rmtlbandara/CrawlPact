@@ -17,6 +17,7 @@ type CloudflareRuntimeEnv = {
   ABUSE_MONITORING_SECRET: string;
   WEBAUTHN_RP_ID: string;
   WEBAUTHN_RP_ORIGIN: string;
+  GOOGLE_CLIENT_ID: string;
   PADDLE_API_KEY: string;
   PADDLE_ENVIRONMENT: "sandbox" | "production";
   PADDLE_WEBHOOK_SECRET: string;

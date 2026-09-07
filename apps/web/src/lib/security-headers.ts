@@ -10,12 +10,17 @@
  */
 export const CSP_HEADER_VALUE = [
   "default-src 'self'",
-  "script-src 'self' 'unsafe-inline' https://cdn.paddle.com https://www.googletagmanager.com",
-  "style-src 'self' 'unsafe-inline'",
+  // ADR-0009 (Google federated authentication): only Google's official GIS
+  // origins are added, exactly matching Google's own documented CSP
+  // guidance (developers.google.com/identity/gsi/web/guides) — no broad
+  // `*.google.com`/`https:` shortcut. `object-src`/`base-uri`/`frame-ancestors`/
+  // `form-action` are unchanged by this addition.
+  "script-src 'self' 'unsafe-inline' https://cdn.paddle.com https://www.googletagmanager.com https://accounts.google.com/gsi/client",
+  "style-src 'self' 'unsafe-inline' https://accounts.google.com/gsi/style",
   "img-src 'self' data: https:",
   "font-src 'self' data:",
-  "connect-src 'self' https://*.paddle.com https://www.google-analytics.com https://*.google-analytics.com https://www.googletagmanager.com",
-  "frame-src https://*.paddle.com",
+  "connect-src 'self' https://*.paddle.com https://www.google-analytics.com https://*.google-analytics.com https://www.googletagmanager.com https://accounts.google.com/gsi/",
+  "frame-src https://*.paddle.com https://accounts.google.com/gsi/",
   "frame-ancestors 'none'",
   "base-uri 'self'",
   "form-action 'self'",

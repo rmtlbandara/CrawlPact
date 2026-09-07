@@ -8,6 +8,7 @@ const validEnv = {
   ABUSE_MONITORING_SECRET: "b".repeat(32),
   WEBAUTHN_RP_ID: "localhost",
   WEBAUTHN_RP_ORIGIN: "http://localhost:4321",
+  GOOGLE_CLIENT_ID: "123456789-test.apps.googleusercontent.com",
   PADDLE_API_KEY: "sandbox_key",
   PADDLE_ENVIRONMENT: "sandbox",
   PADDLE_WEBHOOK_SECRET: "sandbox_secret",
@@ -32,6 +33,22 @@ describe("parseEnv", () => {
     const env = parseEnv(validEnv);
     expect(env.PUBLIC_APP_ENV).toBe("local");
     expect(env.AUDIT_ENGINE_ENABLED).toBe(false);
+    expect(env.GOOGLE_CLIENT_ID).toBe("123456789-test.apps.googleusercontent.com");
+  });
+
+  it("requires GOOGLE_CLIENT_ID", () => {
+    const { GOOGLE_CLIENT_ID: _omitted, ...rest } = validEnv;
+
+    expect(() => parseEnv(rest)).toThrow(InvalidEnvironmentError);
+  });
+
+  it("rejects an invalid GOOGLE_CLIENT_ID", () => {
+    expect(() =>
+      parseEnv({
+        ...validEnv,
+        GOOGLE_CLIENT_ID: "not-a-google-client-id",
+      }),
+    ).toThrow(InvalidEnvironmentError);
   });
 
   it("defaults AUDIT_ENGINE_ENABLED to false when absent", () => {

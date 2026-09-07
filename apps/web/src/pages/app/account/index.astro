@@ -3,6 +3,7 @@ export const prerender = false;
 import AppLayout from "../../../layouts/AppLayout.astro";
 import { ProfileForm } from "../../../components/app/ProfileForm";
 import { PasskeysManager } from "../../../components/app/PasskeysManager";
+import { GoogleAccountPanel } from "../../../components/app/GoogleAccountPanel";
 import { SessionsManager } from "../../../components/app/SessionsManager";
 import { RecoveryCodesPanel } from "../../../components/app/RecoveryCodesPanel";
 import { DeleteAccountPanel } from "../../../components/app/DeleteAccountPanel";
@@ -27,7 +28,18 @@ const { user } = result;
   </section>
 
   <section class="mt-10">
-    <h2 class="text-h2 text-neutral-950">Passkeys</h2>
+    <h2 class="text-h2 text-neutral-950">Sign-in methods</h2>
+
+    <h3 class="mt-4 text-body-lg font-medium text-neutral-900">Google</h3>
+    <div class="mt-3">
+      <GoogleAccountPanel
+        client:load
+        googleClientId={getEnv().GOOGLE_CLIENT_ID}
+        isAdmin={user.isAdmin}
+      />
+    </div>
+
+    <h3 class="mt-6 text-body-lg font-medium text-neutral-900">Passkeys</h3>
     <div class="mt-3">
       <PasskeysManager client:load />
     </div>

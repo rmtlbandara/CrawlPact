@@ -42,7 +42,13 @@ const effectiveDate = new Date(TRUST_CONFIG.policyEffectiveDate).toLocaleDateStr
     </p>
     <h3 class="mt-5 text-h3 text-neutral-950">Account and service data</h3>
     <ul class="mt-3 list-disc pl-5 text-body text-neutral-700">
-      <li>Your account (a display name and passkey credentials — no password, no email address)</li>
+      <li>
+        Your account (a display name, and either passkey credentials or a connected Google identity
+        — never a password). If you sign in with Google, CrawlPact stores Google's stable account
+        identifier and, if provided, your Google email address as connected-account metadata only;
+        email is never required, and no other Google data (Gmail, Drive, contacts, etc.) is ever
+        requested or received
+      </li>
       <li>
         Billing metadata, limited to identifiers needed to link your account to a Paddle customer
         and subscription (never full payment-card details)
@@ -172,8 +178,12 @@ const effectiveDate = new Date(TRUST_CONFIG.policyEffectiveDate).toLocaleDateStr
       <li>Legal authorities, where required by law</li>
     </ul>
     <p class="mt-3 text-body text-neutral-700">
-      CrawlPact does not use any third-party email, SMS, push-notification, AI API, or external
-      authentication provider.
+      CrawlPact does not use any third-party email, SMS, push-notification, or AI API service. If
+      you choose "Sign in with Google," Google acts as an identity provider for that one action:
+      CrawlPact receives only the identity information needed to authenticate you (a stable account
+      identifier, and optionally your name and email), never your Google password, and never
+      requests or receives access to your Gmail, Drive, or any other Google data. Signing in with a
+      passkey involves no external identity provider at all.
     </p>
 
     <h2 class="mt-8 text-h2 text-neutral-950">10. International processing</h2>
@@ -233,10 +243,11 @@ const effectiveDate = new Date(TRUST_CONFIG.policyEffectiveDate).toLocaleDateStr
 
     <h2 class="mt-8 text-h2 text-neutral-950">12. Security</h2>
     <p class="mt-3 text-body text-neutral-700">
-      CrawlPact uses reasonable technical and organisational safeguards, including passkey-only
-      authentication, signature-verified billing webhooks, and an isolated scanner with SSRF
-      protections — see <a href="/security" class="text-brand-700 underline underline-offset-2"
-        >security</a
+      CrawlPact uses reasonable technical and organisational safeguards, including passkey and
+      Google sign-in authentication, signature-verified billing webhooks, and an isolated scanner
+      with SSRF protections — see <a
+        href="/security"
+        class="text-brand-700 underline underline-offset-2">security</a
       >. No method of storage or transmission is completely secure, and CrawlPact does not claim
       absolute security.
     </p>

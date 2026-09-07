@@ -36,6 +36,13 @@ export const envSchema = z
     WEBAUTHN_RP_ID: z.string().min(1),
     WEBAUTHN_RP_ORIGIN: z.string().url(),
 
+    GOOGLE_CLIENT_ID: z
+      .string()
+      .min(1)
+      .refine((value) => value.endsWith(".apps.googleusercontent.com"), {
+        message: "GOOGLE_CLIENT_ID must be a valid Google OAuth Web Client ID.",
+      }),
+
     PADDLE_API_KEY: z.string().min(1),
     PADDLE_ENVIRONMENT: z.enum(["sandbox", "production"]).default("sandbox"),
     PADDLE_WEBHOOK_SECRET: z.string().min(1),

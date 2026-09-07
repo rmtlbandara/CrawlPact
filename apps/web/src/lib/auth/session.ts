@@ -54,7 +54,7 @@ export async function createSession(
   return { token, expiresAt };
 }
 
-function parseCookies(cookieHeader: string | null): Record<string, string> {
+export function parseCookies(cookieHeader: string | null): Record<string, string> {
   if (!cookieHeader) return {};
   const result: Record<string, string> = {};
   for (const part of cookieHeader.split(";")) {

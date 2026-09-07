@@ -77,7 +77,7 @@ jobs:
         id: setup-chrome
 
       - name: Lighthouse budget check against the deployed preview
-        run: pnpm run lighthouse:check https://crawlpact-web-preview.rmtlbandara.workers.dev
+        run: pnpm run lighthouse:check https://preview.crawlpact.com
         env:
           CHROME_PATH: ${{ steps.setup-chrome.outputs.chrome-path }}
           LIGHTHOUSE_ARTIFACT_DIR: ${{ runner.temp }}/lighthouse
@@ -102,7 +102,7 @@ jobs:
           {
             echo "### Preview deployment"
             echo "- Commit: \`${{ github.event.workflow_run.head_sha }}\`"
-            echo "- URL: https://crawlpact-web-preview.rmtlbandara.workers.dev"
+            echo "- URL: https://preview.crawlpact.com"
           } >> "$GITHUB_STEP_SUMMARY"
 
       - name: Upload failure diagnostics

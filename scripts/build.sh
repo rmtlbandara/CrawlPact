@@ -29,7 +29,7 @@ fi
 
 if [[ "$target" == "preview" ]]; then
   export CLOUDFLARE_ENV=preview
-  export PUBLIC_SITE_URL="https://crawlpact-web-preview.rmtlbandara.workers.dev"
+  export PUBLIC_SITE_URL="https://preview.crawlpact.com"
 else
   export PUBLIC_SITE_URL="https://crawlpact.com"
 fi

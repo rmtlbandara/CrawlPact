@@ -43,3 +43,33 @@ export const recoveryCodeIssueResponseSchema = z.object({
   codes: z.array(z.string()),
   issuedAt: z.string().datetime(),
 });
+
+/**
+ * Google federated authentication (ADR-0009). Client-supplied fields are
+ * deliberately limited to display/redirect intent — the server independently
+ * re-validates `redirectTo` with `isSafeRelativeRedirect` and derives the
+ * account-linking identity from the caller's own session, never from the
+ * request body (see apps/web/src/pages/api/auth/google/**).
+ */
+export const beginGoogleAuthRequestSchema = z.object({
+  redirectTo: z.string().max(512).optional(),
+  failureRedirect: z.string().max(512).optional(),
+});
+
+export const beginGoogleAuthResponseSchema = z.object({
+  nonce: z.string(),
+  signInState: z.string(),
+  signUpState: z.string(),
+});
+
+export const beginGoogleLinkResponseSchema = z.object({
+  nonce: z.string(),
+  state: z.string(),
+});
+
+export const googleAccountStatusSchema = z.object({
+  connected: z.boolean(),
+  email: z.string().nullable(),
+  connectedAt: z.string().datetime().nullable(),
+});
+export type GoogleAccountStatus = z.infer<typeof googleAccountStatusSchema>;

@@ -65,6 +65,7 @@ describe("audit report signal fields (llms.txt/RSL/Content Signals/robots meta) 
       ABUSE_MONITORING_SECRET: "integration-test-abuse-secret-value-long-enough",
       WEBAUTHN_RP_ID: RP_ID,
       WEBAUTHN_RP_ORIGIN: ORIGIN,
+      GOOGLE_CLIENT_ID: "test-client-id.apps.googleusercontent.com",
       PADDLE_API_KEY: "test",
       PADDLE_ENVIRONMENT: "sandbox",
       PADDLE_WEBHOOK_SECRET: "test",

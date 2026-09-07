@@ -23,8 +23,11 @@ import { TRUST_CONFIG } from "../lib/trust-config";
 
     <h2 class="mt-8 text-h2 text-neutral-950">Authentication</h2>
     <p class="mt-3 text-body text-neutral-700">
-      CrawlPact uses passkeys (WebAuthn) exclusively — no passwords, and no email or SMS in the
-      authentication or recovery path. Sessions are server-side records that can be individually
+      CrawlPact supports passkeys (WebAuthn) and Google sign-in — no passwords, and no email or SMS
+      in the authentication or recovery path. Google sign-in is verified server-side with
+      cryptographic ID-token verification, and every Google account maps to exactly one ordinary
+      CrawlPact account, the same as a passkey-created one; administrator accounts always require a
+      passkey, with no Google exception. Sessions are server-side records that can be individually
       reviewed and revoked.
     </p>
 

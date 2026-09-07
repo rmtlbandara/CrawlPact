@@ -37,6 +37,7 @@
   "vars": {
     "PUBLIC_APP_ENV": "production",
     "PUBLIC_SITE_URL": "https://crawlpact.com",
+    "GOOGLE_CLIENT_ID": "913355566806-nk8ut4qmjqpigmife8q213vlc4ifdksp.apps.googleusercontent.com",
     "PADDLE_ENVIRONMENT": "production",
     // Live Paddle catalog created 2026-07-26 (see paddle:catalog-setup run) —
     // not secrets, per docs/deployment/CLOUDFLARE_CONFIGURATION.md.
@@ -80,19 +81,44 @@
       // Distinct bucket from production, same reasoning as the D1/KV
       // separation above — never reuse the production bucket here.
       "r2_buckets": [{ "binding": "AGENCY_LOGOS", "bucket_name": "crawlpact-preview" }],
+      // CrawlPact-owned Custom Domain migration (from the workers.dev
+      // fallback below) — required before Google OAuth preview testing can
+      // be registered, since Google Auth Platform needs a stable origin.
+      // Cloudflare manages this hostname's DNS record and TLS certificate
+      // once the Custom Domain is attached in the dashboard (Workers &
+      // Pages → crawlpact-web-preview → Settings → Domains & Routes); no
+      // DNS record should be created manually. A whole-hostname Custom
+      // Domain, not a Worker Route with a `/*` pattern, because this
+      // Worker is the origin, not a proxy in front of one.
+      "routes": [
+        {
+          "pattern": "preview.crawlpact.com",
+          "custom_domain": true,
+        },
+      ],
       "vars": {
         "PUBLIC_APP_ENV": "preview",
-        // Real serving origin: the `crawlpact-web-preview` Worker's
-        // Cloudflare-assigned workers.dev hostname (account subdomain
-        // "rmtlbandara", confirmed live 2026-07-27 — a dedicated
-        // preview.crawlpact.com was considered but no such DNS record
-        // exists, so it would 404/fail TLS if used here). Every
-        // WebAuthn ceremony strictly validates rpId/origin against the
-        // page actually serving the request, so this must exactly match
-        // wherever preview is really deployed.
-        "PUBLIC_SITE_URL": "https://crawlpact-web-preview.rmtlbandara.workers.dev",
-        "WEBAUTHN_RP_ID": "crawlpact-web-preview.rmtlbandara.workers.dev",
-        "WEBAUTHN_RP_ORIGIN": "https://crawlpact-web-preview.rmtlbandara.workers.dev",
+        // Canonical preview origin: the CrawlPact-owned Custom Domain
+        // declared above. Cloudflare provisions its DNS/TLS once the
+        // Custom Domain is attached (see the `routes` comment above) —
+        // until then this hostname won't resolve yet. The Worker's
+        // `*.workers.dev` address (account subdomain "rmtlbandara") may
+        // remain reachable as a temporary operational fallback during
+        // migration, but is no longer the canonical preview origin these
+        // vars point at. Every WebAuthn ceremony strictly validates
+        // rpId/origin against the page actually serving the request, so
+        // these must exactly match wherever preview is really deployed.
+        "PUBLIC_SITE_URL": "https://preview.crawlpact.com",
+        "WEBAUTHN_RP_ID": "preview.crawlpact.com",
+        "WEBAUTHN_RP_ORIGIN": "https://preview.crawlpact.com",
+        // Same public Google Web OAuth Client ID as production's top-level
+        // `vars` above — not a secret, safe to share across environments.
+        // Google Sign-In on preview additionally requires
+        // https://preview.crawlpact.com to be registered as an Authorized
+        // JavaScript origin/redirect URI in Google Auth Platform before
+        // preview OAuth testing is enabled (not yet done as of this
+        // change — see docs/deployment/CLOUDFLARE_CONFIGURATION.md).
+        "GOOGLE_CLIENT_ID": "913355566806-nk8ut4qmjqpigmife8q213vlc4ifdksp.apps.googleusercontent.com",
         "PADDLE_ENVIRONMENT": "sandbox",
         // `vars` is a non-inheritable field per Wrangler's named-environment
         // model (env.preview does NOT merge with the top-level `vars` block
