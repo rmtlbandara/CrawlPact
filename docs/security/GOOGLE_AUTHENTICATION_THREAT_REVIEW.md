@@ -52,16 +52,19 @@ of transport; (7) a CrawlPact session is only ever minted after every one of tho
 | Suspended account re-entry                                       | `resolveGoogleSignIn` blocks `status === "suspended"` exactly like passkey `login/finish.ts`; `pending_deletion` accounts can still authenticate via Google, matching the existing cancellable-deletion semantics.                                                                                                                                                                                          | None known — intentionally identical policy to the existing passkey path, not a new decision.                                      |
 | Race conditions (concurrent duplicate signup/link)               | Covered by the atomicity notes above (`db.batch()` for signup, `UNIQUE` constraints + catch-and-resolve for both signup and link) — the DB constraint is the final authority, not application-level check-then-write.                                                                                                                                                                                       | None known.                                                                                                                        |
 
-## Known limitation: the corrected transport is not yet backed by live evidence
+## Known limitation: linking, disconnect, and admin isolation are not yet backed by live evidence
 
 The _original_ redirect-mode transport was deployed and its defect was genuinely observed live,
 on both Preview and Production — real evidence, not a theoretical concern (`Cross-site POST form
 submissions are forbidden`). The _correction_ recorded in this document (JavaScript-callback
-mode) has been verified locally: unit/integration tests against a real (Miniflare) D1 database
-and real cryptographic JWT verification (locally generated test keys), plus a direct local check
-that the corrected same-origin JSON contract is accepted while the old cross-site form contract
-is not. It has **not yet** been exercised against the real Google network, a real end-user click-
-through, or a fresh Preview/Production deployment of the corrected code. See
-`docs/status/CURRENT_STATE.md` for exactly what has and hasn't been re-verified, and
-`docs/deployment/GOOGLE_AUTHENTICATION_DEPLOYMENT_CHECKLIST.md` for the remaining owner/deployment
-steps before the corrected transport should be treated as verified live.
+mode) was verified locally (unit/integration tests against a real Miniflare D1 database and real
+cryptographic JWT verification), then deployed to Preview and Production (`72a8630`). The product
+owner then manually signed in and signed up with a real Google account on both environments and
+confirmed it works, 2026-09-07 — the corrected transport is no longer a theoretical fix, it has
+been exercised against the real Google network and a real end-user click-through for sign-in and
+sign-up. Account linking (an existing passkey account connecting Google), disconnect, and admin
+isolation remain covered only by the automated test suite — they have **not** been separately
+exercised with a real Google account. See `docs/status/CURRENT_STATE.md` for exactly what has and
+hasn't been re-verified, and
+`docs/deployment/GOOGLE_AUTHENTICATION_DEPLOYMENT_CHECKLIST.md` for the remaining verification
+steps.
