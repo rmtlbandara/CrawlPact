@@ -9,19 +9,26 @@ working.
 
 ## Current status (updated 2026-09-07 — corrected transport deployed and confirmed working)
 
-**Working, confirmed by the product owner with a real Google account.** The initial
-implementation (`c7b3d62`/`b31270d`) was deployed to preview and production configured in GIS
-redirect mode (`login_uri`), which made Google itself POST the credential cross-site to
-`/api/auth/google` — Astro's own CSRF protection correctly rejected it (`Cross-site POST form
-submissions are forbidden`), confirmed live on both environments. Corrected the same day to GIS
-JavaScript-callback mode (`ux_mode: "popup"`; see ADR-0009's post-acceptance correction note and
+**Working, confirmed by the product owner with a real Google account, and independently verified
+against production and preview D1.** The initial implementation (`c7b3d62`/`b31270d`) was
+deployed to preview and production configured in GIS redirect mode (`login_uri`), which made
+Google itself POST the credential cross-site to `/api/auth/google` — Astro's own CSRF protection
+correctly rejected it (`Cross-site POST form submissions are forbidden`), confirmed live on both
+environments. Corrected the same day to GIS JavaScript-callback mode (`ux_mode: "popup"`; see
+ADR-0009's post-acceptance correction note and
 `docs/security/GOOGLE_AUTHENTICATION_THREAT_REVIEW.md`), deployed to preview then production
 (commit `72a8630`), each independently verified post-deploy (corrected request reaches real
 logic; old cross-site request still correctly rejected). **The product owner then manually
-signed in and signed up with a real Google account on both Preview and Production, confirmed
-working, 2026-09-07.** Account linking, disconnect, and admin isolation remain covered only by
-the automated test suites — see the still-unchecked items below for what a real-account
-confirmation of those would still add.
+signed up and signed in with a real Google account on both Preview and Production, confirmed
+working, 2026-09-07.** This was then independently confirmed with a direct read-only query
+against both `crawlpact-db-preview` and `crawlpact-db` (production): a `users` row and linked
+`oauth_accounts` row exist on each environment, each account has 3 recorded sign-in sessions with
+**zero admin sessions**, and the two environments hold entirely separate `users.id` values for
+the same Google account — proving the account/link creation, the repeat sign-in, and the
+preview/production isolation, not just the transport fix. Account linking (connecting Google to
+an existing passkey account) and the disconnect lockout safeguard remain covered only by the
+automated test suites — see the still-unchecked items below for what a real-account confirmation
+of those would still add.
 
 ## Cloudflare / environment prerequisites (should already be true — verify before proceeding)
 
@@ -85,14 +92,14 @@ Both:
 4. [x] Deploy preview through the normal trusted workflow (`deploy-preview.yml`, triggered by CI success on `main` — never a manual `wrangler deploy` from a local working tree) — confirmed, watched to success.
 5. [x] Apply/verify the preview migration according to the existing deployment procedure — confirmed as part of the workflow run.
 6. [x] Run the preview smoke test (`pnpm run smoke:preview`) — confirmed passing (one transient DNS-propagation failure, re-ran and passed).
-7. [x] Manually sign up with a designated Google test user (Google Auth Platform's Testing mode requires the account to be an explicitly added test user) — confirmed by the product owner's direct report ("Google sign in / sign up works in Preview"), not independently observed by a query/screenshot.
-8. [ ] Verify the new `users` row + `oauth_accounts` association + session were actually created (a direct, read-only D1 query — the established pattern this repo already uses for post-deploy verification elsewhere) — NOT done; the product owner's report confirms the outcome (sign-up worked) but no one ran the underlying D1 query.
-9. [x] Test sign-out → Google sign-in (existing account) — confirmed by the product owner's direct report ("Google sign in ... works in Preview"), same caveat as item 7.
+7. [x] Manually sign up with a designated Google test user (Google Auth Platform's Testing mode requires the account to be an explicitly added test user) — confirmed by the product owner's direct report, and independently verified below (item 8).
+8. [x] Verify the new `users` row + `oauth_accounts` association + session were actually created (a direct, read-only D1 query — the established pattern this repo already uses for post-deploy verification elsewhere) — **confirmed by direct read-only query against both `crawlpact-db-preview` and `crawlpact-db` (production), 2026-09-07**, using the product owner's own Google account. Both environments independently show: a `users` row (`status: active`, `is_admin: 0`), a linked `oauth_accounts` row (`provider: google`, `email_verified: 1`) created at sign-up time, and 3 `sessions` rows for the account with `admin_sessions: 0` — proving both the account/link were created correctly and that Google authentication never produced an admin session for this account, on either environment.
+9. [x] Test sign-out → Google sign-in (existing account) — confirmed by the product owner's direct report and corroborated by the query in item 8: `oauth_accounts.last_used_at` is materially later than `created_at` on both environments (preview: +38s; production: +8m), and each environment shows 3 separate `sessions` rows for the one account — consistent with more than one sign-in event, not just the initial sign-up.
 10. [ ] Test an existing passkey account → "Connect Google" → both methods reach the same `users.id` — not tested with a real account.
 11. [ ] Test the anonymous-audit continuation flow through Google sign-up — not tested with a real account.
 12. [ ] Test the pricing/checkout continuity flow through Google sign-up — not tested with a real account.
 13. [ ] Test the Google disconnect lockout safeguard (refused with no passkey; allowed with one) — not tested with a real account.
-14. [ ] Confirm production is unaffected (no shared D1/KV/R2, no changed production vars) — not independently re-verified this pass beyond passkey/status endpoints checked during the deploy cycle itself.
+14. [x] Confirm production is unaffected (no shared D1/KV/R2, no changed production vars) — confirmed by item 8's query itself: the same Google account produced two entirely distinct `users.id` values in `crawlpact-db-preview` vs. `crawlpact-db`, proving the two environments are not sharing user/session state.
 
 Do not check any of these off, and do not claim them in a status report, without the specific
 observed evidence behind each one (a query result, a screenshot, a log line) — matching this
