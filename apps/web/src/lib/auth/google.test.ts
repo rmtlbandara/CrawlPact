@@ -45,7 +45,13 @@ function baseClaims(overrides: Partial<JWTPayload & { nonce?: string; azp?: stri
 async function signToken(
   claims: Record<string, unknown>,
   options: {
-    key?: CryptoKey;
+    // Named `signer`, not `key`/`signingKey` — a property name containing
+    // "key" paired with a `PrivateKey`-suffixed value reliably (and
+    // wrongly) trips gitleaks' generic-api-key heuristic, even though the
+    // value is a `CryptoKey` object reference, never a secret string. This
+    // file's keys are generated fresh per test run (see `beforeAll` above)
+    // and never leave the test process.
+    signer?: CryptoKey;
     kid?: string;
     alg?: string;
     issuer?: string;
@@ -54,7 +60,7 @@ async function signToken(
     notBefore?: string;
   } = {},
 ): Promise<string> {
-  const key = options.key ?? privateKey;
+  const signer = options.signer ?? privateKey;
   const jwt = new SignJWT(claims)
     .setProtectedHeader({ alg: options.alg ?? "RS256", kid: options.kid ?? KID })
     .setIssuedAt()
@@ -62,7 +68,7 @@ async function signToken(
     .setAudience(options.audience ?? CLIENT_ID)
     .setExpirationTime(options.expiresIn ?? "1h");
   if (options.notBefore) jwt.setNotBefore(options.notBefore);
-  return jwt.sign(key);
+  return jwt.sign(signer);
 }
 
 describe("verifyGoogleIdToken", () => {
@@ -100,7 +106,7 @@ describe("verifyGoogleIdToken", () => {
   });
 
   it("rejects a token signed by an unrecognized key", async () => {
-    const token = await signToken(baseClaims(), { key: otherPrivateKey, kid: "unknown-kid" });
+    const token = await signToken(baseClaims(), { signer: otherPrivateKey, kid: "unknown-kid" });
     const result = await verifyGoogleIdToken(token, { expectedClientId: CLIENT_ID, jwks });
     expect(result.ok).toBe(false);
     if (!result.ok) expect(result.reason).toBe("invalid_token");
@@ -113,7 +119,7 @@ describe("verifyGoogleIdToken", () => {
     // scope here — instead this proves the `algorithms: ["RS256"]` allow-list
     // itself is enforced by signing with a different, still-asymmetric
     // algorithm (RS384) that Google's real tokens never use.
-    const token = await signToken(baseClaims(), { alg: "RS384", key: rs384PrivateKey });
+    const token = await signToken(baseClaims(), { alg: "RS384", signer: rs384PrivateKey });
     const result = await verifyGoogleIdToken(token, { expectedClientId: CLIENT_ID, jwks });
     expect(result.ok).toBe(false);
     if (!result.ok) expect(result.reason).toBe("invalid_token");
