@@ -16,7 +16,7 @@ officialSources:
       url: "https://nextjs.org/docs/app/api-reference/file-conventions/metadata/robots",
     },
   ]
-platformDocsVerifiedDate: "2026-08-04"
+platformDocsVerifiedDate: "2026-09-08"
 publishedDate: "2026-08-04"
 relatedGuideSlugs:
   ["robots-txt-vs-meta-robots-vs-x-robots-tag", "policy-health-score-dropped-between-scans"]
@@ -119,8 +119,8 @@ output, or header configuration — including one introduced by a framework/depe
 
 ## Related tools and crawler pages
 
-See [robots.txt vs. meta robots vs. X-Robots-Tag](/guides/robots-txt-vs-meta-robots-vs-x-robots-tag)
-for how these signal layers relate, and the [crawler directory](/crawlers) for documented AI
+See [robots.txt vs. meta robots vs. X-Robots-Tag](/guides/robots-txt-vs-meta-robots-vs-x-robots-tag/)
+for how these signal layers relate, and the [crawler directory](/crawlers/) for documented AI
 crawler tokens.
 
 ## Frequently asked questions

@@ -26,4 +26,4 @@ Disallowing `Meta-ExternalFetcher` prevents Meta's agentic AI features from fetc
 specific page on a user's behalf — a single-page, user-directed retrieval, not a bulk crawl. It
 does not affect `Meta-ExternalAgent` (bulk AI-training crawling), `Meta-WebIndexer` (search), or
 `Meta-ExternalAds` (advertising validation), each of which Meta documents as a separate token.
-See [/limitations](/limitations) for what a `robots.txt` rule can and cannot guarantee.
+See [/limitations](/limitations/) for what a `robots.txt` rule can and cannot guarantee.

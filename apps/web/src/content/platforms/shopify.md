@@ -109,8 +109,8 @@ alters a previously-customised `robots.txt.liquid`) without requiring a manual r
 
 ## Related tools and crawler pages
 
-See [robots.txt syntax basics](/guides/robots-txt-syntax-basics) for the underlying directive
-rules Shopify's Liquid template ultimately generates, and the [crawler directory](/crawlers) for
+See [robots.txt syntax basics](/guides/robots-txt-syntax-basics/) for the underlying directive
+rules Shopify's Liquid template ultimately generates, and the [crawler directory](/crawlers/) for
 documented AI crawler tokens to reference by name.
 
 ## Frequently asked questions
@@ -118,7 +118,7 @@ documented AI crawler tokens to reference by name.
 **Can I block AI training crawlers on Shopify without breaking SEO crawlers?** Yes, in principle —
 add a rule group targeting the specific AI-training crawler's `user_agent` token while leaving
 Shopify's default groups (which govern search-crawler-relevant paths) untouched. See
-[Block only AI training crawlers](/guides/how-to-block-only-ai-training-crawlers) for the
+[Block only AI training crawlers](/guides/how-to-block-only-ai-training-crawlers/) for the
 platform-neutral directive pattern.
 
 **Will Shopify support help me fix a robots.txt.liquid mistake?** Per Shopify's own documentation,

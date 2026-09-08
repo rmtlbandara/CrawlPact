@@ -49,18 +49,18 @@ element" rather than silently discarded, since RSL is still an evolving specific
 
 ## Step 4: Verify
 
-Run CrawlPact's [RSL validator](/tools/rsl-validator). It reports whether a `<license>` element
+Run CrawlPact's [RSL validator](/tools/rsl-validator/). It reports whether a `<license>` element
 was discovered, and lists the declared permits, prohibits, and payment terms.
 
 ## Keep it consistent with your other declarations
 
 If you also publish a `Content-Signal` header or specific `robots.txt` rules, make sure they say
 the same thing — see
-[RSL vs. Content Signals vs. robots.txt](/guides/rsl-vs-content-signals-vs-robots-txt) for why
+[RSL vs. Content Signals vs. robots.txt](/guides/rsl-vs-content-signals-vs-robots-txt/) for why
 nothing reconciles a disagreement between them automatically.
 
 ## What this doesn't do
 
 RSL is a machine-readable declaration, not technical enforcement — see
-[/limitations](/limitations). There is no guarantee that any specific crawler operator checks
+[/limitations](/limitations/). There is no guarantee that any specific crawler operator checks
 this file, since RSL adoption varies.

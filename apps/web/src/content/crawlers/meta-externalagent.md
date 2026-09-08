@@ -17,7 +17,7 @@ models and for improving Meta's AI products and features.
 Disallowing `Meta-ExternalAgent` affects only Meta's AI-training use of this content. It does not
 affect `Meta-WebIndexer` (search), `Meta-ExternalAds` (advertising validation), or
 `Meta-ExternalFetcher` (user-triggered agent fetches) — Meta documents each as its own distinct
-token, and CrawlPact evaluates them independently. See [/limitations](/limitations) for what a
+token, and CrawlPact evaluates them independently. See [/limitations](/limitations/) for what a
 `robots.txt` rule can and cannot guarantee.
 
 ## Distinguishing from Meta's other crawlers

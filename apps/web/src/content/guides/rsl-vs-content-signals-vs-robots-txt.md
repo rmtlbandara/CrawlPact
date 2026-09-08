@@ -36,5 +36,5 @@ resolve the disagreement for you; it only surfaces it so you can fix the declara
 
 If you're publishing more than one of these three mechanisms, treat updating all of them together
 as a single change, not three independent edits. CrawlPact's
-[RSL validator](/tools/rsl-validator) and [Content Signals checker](/tools/content-signals-checker)
+[RSL validator](/tools/rsl-validator/) and [Content Signals checker](/tools/content-signals-checker/)
 show each declaration on its own, so you can compare them directly before publishing.

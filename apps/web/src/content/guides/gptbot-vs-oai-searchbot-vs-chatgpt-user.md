@@ -12,10 +12,10 @@ misconfiguration CrawlPact sees in this operator's traffic.
 
 ## The three tokens
 
-- [`GPTBot`](/crawlers/gptbot) — training. Crawls content that may inform future model training.
-- [`OAI-SearchBot`](/crawlers/oai-searchbot) — search. Surfaces and links to pages in ChatGPT
+- [`GPTBot`](/crawlers/gptbot/) — training. Crawls content that may inform future model training.
+- [`OAI-SearchBot`](/crawlers/oai-searchbot/) — search. Surfaces and links to pages in ChatGPT
   search results.
-- [`ChatGPT-User`](/crawlers/chatgpt-user) — user-triggered. Fetches a specific page because a
+- [`ChatGPT-User`](/crawlers/chatgpt-user/) — user-triggered. Fetches a specific page because a
   person asked ChatGPT a direct question about it.
 
 ## The decision
@@ -34,5 +34,5 @@ misconfiguration CrawlPact sees in this operator's traffic.
 A single `User-agent: GPTBot` group is sometimes assumed to cover "all of OpenAI." It doesn't —
 `robots.txt` groups match on the exact token named, with no fallback to a shared vendor identity.
 Each token needs its own explicit `Disallow` if you want to restrict it. CrawlPact's
-[AI crawler checker](/tools/ai-crawler-checker) shows the result for all three, evaluated
+[AI crawler checker](/tools/ai-crawler-checker/) shows the result for all three, evaluated
 independently, so a gap is visible immediately.

@@ -82,8 +82,8 @@ every crawler will actually comply.
 
 ## Methodology and limitations
 
-See [Methodology](/methodology) for the full description of what CrawlPact evaluates, and
-[Limitations](/limitations) for what it deliberately does not claim.
+See [Methodology](/methodology/) for the full description of what CrawlPact evaluates, and
+[Limitations](/limitations/) for what it deliberately does not claim.
 
 ## Frequently asked questions
 

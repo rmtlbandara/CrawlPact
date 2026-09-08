@@ -74,12 +74,12 @@ CrawlPact does not improve search or AI-citation ranking automatically, does not
 citation, does not manage or edit documentation content, and does not deploy policy fixes on a
 team's behalf — it audits and monitors the public policy signals a domain already publishes.
 CrawlPact also does not claim native, first-party integrations with every documentation platform;
-the [platform guides](/platforms) describe what's independently verifiable about each platform's
+the [platform guides](/platforms/) describe what's independently verifiable about each platform's
 public behaviour, not a built integration.
 
 ## Methodology
 
-See [Methodology](/methodology) for what CrawlPact evaluates and [Limitations](/limitations) for
+See [Methodology](/methodology/) for what CrawlPact evaluates and [Limitations](/limitations/) for
 what it deliberately does not claim.
 
 ## Frequently asked questions

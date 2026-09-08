@@ -32,7 +32,7 @@ file physically lives depends on your hosting:
 ```
 
 A top-level `#` heading near the start of the file is the structural convention this format is
-built around — CrawlPact's [llms.txt validator](/tools/llms-txt-validator) specifically checks
+built around — CrawlPact's [llms.txt validator](/tools/llms-txt-validator/) specifically checks
 for its presence, since its absence is the most common structural issue.
 
 ## Step 3: Add links to your most relevant resources
@@ -60,7 +60,7 @@ multiple links.
 
 ## Step 5: Verify
 
-Run CrawlPact's [llms.txt validator](/tools/llms-txt-validator). It reports the file's size,
+Run CrawlPact's [llms.txt validator](/tools/llms-txt-validator/). It reports the file's size,
 whether a top-level heading was found, and how many linked resources were detected, for both
 `/llms.txt` and `/llms-full.txt` independently.
 

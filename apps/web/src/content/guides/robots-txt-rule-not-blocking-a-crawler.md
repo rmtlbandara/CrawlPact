@@ -12,7 +12,7 @@ down to one of a small number of causes.
 
 `robots.txt` matches a crawler's token against `User-agent` lines by exact, case-insensitive
 string — not by partial match or vendor name. `User-agent: OpenAI` does not match `GPTBot`.
-Confirm the exact token via CrawlPact's [crawler directory](/crawlers).
+Confirm the exact token via CrawlPact's [crawler directory](/crawlers/).
 
 ## 2. A more specific rule elsewhere wins
 
@@ -36,10 +36,10 @@ this as a `DUPLICATE_GROUP` issue — check your scan's evidence for this warnin
 ## 5. The crawler doesn't obey robots.txt at all
 
 `robots.txt` is a declared instruction. CrawlPact's evaluation reflects what your file says, not
-a guarantee about a crawler's actual behaviour — see [/limitations](/limitations).
+a guarantee about a crawler's actual behaviour — see [/limitations](/limitations/).
 
 ## Verify with evidence
 
-CrawlPact's [robots.txt AI validator](/tools/robots-txt-ai-validator) shows the exact matched
+CrawlPact's [robots.txt AI validator](/tools/robots-txt-ai-validator/) shows the exact matched
 rule and line number for each crawler, so you can see precisely which line produced the result
 you're seeing.

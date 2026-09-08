@@ -83,6 +83,12 @@ async function run(): Promise<void> {
     "Home page: no googletagmanager.com script tag on a cookie-less first visit",
     !initialHomeBody.includes("googletagmanager.com"),
   );
+  // Phase 22: Microsoft Clarity shares GA's exact gate (shouldRenderClarity ===
+  // shouldRenderGa in MarketingLayout.astro) — same pre-consent absence proof.
+  record(
+    "Home page: no clarity.ms script tag on a cookie-less first visit",
+    !initialHomeBody.includes("clarity.ms"),
+  );
   if (target === "production") {
     // AnalyticsConsent defaults its `hasDecided` state to true on first
     // paint (avoids an SSR/hydration flash of the full panel for a

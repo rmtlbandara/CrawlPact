@@ -13,7 +13,7 @@ newer, separate token specifically for generative AI training opt-out.
 
 - `Applebot` — Apple's general-purpose crawler, used since well before the current wave of
   generative AI products, for features like Siri and Spotlight Suggestions.
-- [`Applebot-Extended`](/crawlers/applebot-extended) — controls use of website content for
+- [`Applebot-Extended`](/crawlers/applebot-extended/) — controls use of website content for
   training Apple Intelligence and other Apple generative AI models, independent of the base
   `Applebot` crawl.
 

@@ -5,7 +5,7 @@ category: "troubleshooting"
 publishedDate: "2026-07-24"
 ---
 
-CrawlPact's [llms.txt validator](/tools/llms-txt-validator) checks a small set of structural
+CrawlPact's [llms.txt validator](/tools/llms-txt-validator/) checks a small set of structural
 properties. Here's what each issue means.
 
 ## "No top-level Markdown heading found near the start of the file"
@@ -38,5 +38,5 @@ the domain root and returns a normal 200 response.
 `/llms.txt` and `/llms-full.txt` are checked and reported independently — an issue with one
 doesn't imply an issue with the other, and you don't need to publish both.
 
-See [How to publish an llms.txt file](/guides/how-to-publish-an-llms-txt-file) for the full
+See [How to publish an llms.txt file](/guides/how-to-publish-an-llms-txt-file/) for the full
 step-by-step guide.

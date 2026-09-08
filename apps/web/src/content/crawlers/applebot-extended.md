@@ -20,4 +20,4 @@ Apple generative AI models specifically. As with Google's pairing of `Googlebot`
 it leaves standard Apple indexing for Siri and Spotlight Suggestions (`Applebot`) unaffected — the
 two tokens are evaluated independently, and `Applebot-Extended` does not itself perform a separate
 crawl; it layers a training-use restriction on top of Apple's existing `Applebot` access. See
-[/limitations](/limitations) for what a `robots.txt` rule can and cannot guarantee.
+[/limitations](/limitations/) for what a `robots.txt` rule can and cannot guarantee.

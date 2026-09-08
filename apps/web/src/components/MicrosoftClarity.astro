@@ -1,0 +1,36 @@
+---
+/**
+ * Phase 22 addendum: Microsoft Clarity, behavioural UX evidence supporting
+ * content/SEO interpretation — not a Google-ranking mechanism, not a
+ * replacement for GA4 or the first-party `product_events` funnel (see
+ * apps/web/src/lib/analytics.ts). Mirrors GoogleAnalytics.astro's own gating
+ * exactly (see that file's doc comment): only ever rendered by
+ * MarketingLayout.astro, and only when ALL of: `PUBLIC_APP_ENV ===
+ * "production"`, the visitor has granted analytics consent
+ * (docs/analytics/CONSENT_AND_ANALYTICS_PREFERENCE_MODEL.md), and the
+ * current route is on the same GA/Clarity marketing-page allowlist
+ * (apps/web/src/lib/consent.ts's `isGaEligibleRoute` — never app/admin/
+ * billing/private-report/private-audit-result/auth routes). Never on Preview
+ * (production-only, matching GoogleAnalytics.astro, so Preview traffic never
+ * contaminates real Clarity session data).
+ *
+ * The script tag below is Microsoft's supplied project snippet, copied
+ * verbatim per the Phase 22 prompt's explicit "the supplied script itself
+ * must not be altered" instruction — do not reformat, minify, or edit it.
+ */
+---
+
+<script type="text/javascript">
+  (function (c, l, a, r, i, t, y) {
+    c[a] =
+      c[a] ||
+      function () {
+        (c[a].q = c[a].q || []).push(arguments);
+      };
+    t = l.createElement(r);
+    t.async = 1;
+    t.src = "https://www.clarity.ms/tag/" + i;
+    y = l.getElementsByTagName(r)[0];
+    y.parentNode.insertBefore(t, y);
+  })(window, document, "clarity", "script", "yf18yfb8m9");
+</script>

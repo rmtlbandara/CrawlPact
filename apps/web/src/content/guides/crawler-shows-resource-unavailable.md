@@ -38,5 +38,5 @@ observe or guarantee.
 
 ## Verify once fixed
 
-Re-run the scan via CrawlPact's [AI crawler checker](/tools/ai-crawler-checker) once the
+Re-run the scan via CrawlPact's [AI crawler checker](/tools/ai-crawler-checker/) once the
 underlying reachability issue is resolved.

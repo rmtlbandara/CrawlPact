@@ -25,5 +25,5 @@ Disallowing `Google-CloudVertexBot` prevents crawls performed specifically becau
 (not necessarily you) requested that a Vertex AI Agent be built against this content. It does not
 affect Google Search indexing (`Googlebot`) or the generative-AI-training opt-out
 (`Google-Extended`) — this token governs only agent-initiated, request-driven access, not a
-general web-wide crawl. See [/limitations](/limitations) for what a `robots.txt` rule can and
+general web-wide crawl. See [/limitations](/limitations/) for what a `robots.txt` rule can and
 cannot guarantee.

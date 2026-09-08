@@ -13,13 +13,13 @@ them.
 
 ## The four tokens
 
-- [`Meta-ExternalAgent`](/crawlers/meta-externalagent) — training. Crawls the web "for use cases
+- [`Meta-ExternalAgent`](/crawlers/meta-externalagent/) — training. Crawls the web "for use cases
   such as training foundation AI models or improving products by indexing content directly."
-- [`Meta-WebIndexer`](/crawlers/meta-webindexer) — search. Navigates the web to improve Meta AI
+- [`Meta-WebIndexer`](/crawlers/meta-webindexer/) — search. Navigates the web to improve Meta AI
   search result quality.
-- [`Meta-ExternalAds`](/crawlers/meta-externalads) — advertising/validation. Crawls for use cases
+- [`Meta-ExternalAds`](/crawlers/meta-externalads/) — advertising/validation. Crawls for use cases
   such as improving advertising and other business-related products.
-- [`Meta-ExternalFetcher`](/crawlers/meta-externalfetcher) — agent. Fetches individual links at a
+- [`Meta-ExternalFetcher`](/crawlers/meta-externalfetcher/) — agent. Fetches individual links at a
   user's request, to support agentic AI capabilities in Meta products.
 
 ## The decision

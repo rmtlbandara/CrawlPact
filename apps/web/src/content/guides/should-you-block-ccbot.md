@@ -6,7 +6,7 @@ publishedDate: "2026-07-24"
 relatedCrawlerSlugs: ["ccbot"]
 ---
 
-[`CCBot`](/crawlers/ccbot) is operated by the Common Crawl Foundation, a nonprofit that publishes
+[`CCBot`](/crawlers/ccbot/) is operated by the Common Crawl Foundation, a nonprofit that publishes
 a large, open web corpus reused by many third-party researchers and model trainers — not a single
 company's product crawler.
 
@@ -34,6 +34,6 @@ research purpose category on this crawler reflects that its data has a wider dow
 than a single operator's own training pipeline, and CrawlPact cannot verify or enumerate every
 downstream reuse.
 
-See [/limitations](/limitations) for what a `robots.txt` rule can and cannot guarantee, or check
+See [/limitations](/limitations/) for what a `robots.txt` rule can and cannot guarantee, or check
 whether your own site currently allows or blocks CCBot with the
 [AI crawler checker](/tools/ai-crawler-checker/).

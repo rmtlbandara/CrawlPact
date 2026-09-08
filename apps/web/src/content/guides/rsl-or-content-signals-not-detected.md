@@ -37,6 +37,6 @@ Common causes:
 
 ## Verify
 
-Run CrawlPact's [RSL validator](/tools/rsl-validator) or
-[Content Signals checker](/tools/content-signals-checker) after making a change — both re-fetch
+Run CrawlPact's [RSL validator](/tools/rsl-validator/) or
+[Content Signals checker](/tools/content-signals-checker/) after making a change — both re-fetch
 live on each scan.

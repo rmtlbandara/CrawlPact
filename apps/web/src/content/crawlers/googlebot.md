@@ -36,5 +36,5 @@ organic search visibility rather than any AI-training-specific use. It is separa
 `Google-Extended` (generative-AI training opt-out) and `Google-CloudVertexBot`
 (site-owner-requested Vertex AI Agent crawls): blocking either of those does not affect Search
 indexing, and blocking `Googlebot` does not, by itself, opt content out of the AI training use
-`Google-Extended` governs. See [/limitations](/limitations) for what a `robots.txt` rule can and
+`Google-Extended` governs. See [/limitations](/limitations/) for what a `robots.txt` rule can and
 cannot guarantee.

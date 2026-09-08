@@ -15,11 +15,17 @@ export const CSP_HEADER_VALUE = [
   // guidance (developers.google.com/identity/gsi/web/guides) — no broad
   // `*.google.com`/`https:` shortcut. `object-src`/`base-uri`/`frame-ancestors`/
   // `form-action` are unchanged by this addition.
-  "script-src 'self' 'unsafe-inline' https://cdn.paddle.com https://www.googletagmanager.com https://accounts.google.com/gsi/client",
+  // Phase 22: Microsoft Clarity's own official CSP guidance
+  // (learn.microsoft.com/en-us/clarity/setup-and-installation/clarity-csp)
+  // recommends `https://*.clarity.ms` and `https://c.bing.com` — Clarity
+  // load-balances data collection across lettered subdomains
+  // (a.clarity.ms..z.clarity.ms), so the wildcard is Microsoft's own
+  // documented minimum, not a broad shortcut chosen locally.
+  "script-src 'self' 'unsafe-inline' https://cdn.paddle.com https://www.googletagmanager.com https://accounts.google.com/gsi/client https://www.clarity.ms",
   "style-src 'self' 'unsafe-inline' https://accounts.google.com/gsi/style",
   "img-src 'self' data: https:",
   "font-src 'self' data:",
-  "connect-src 'self' https://*.paddle.com https://www.google-analytics.com https://*.google-analytics.com https://www.googletagmanager.com https://accounts.google.com/gsi/",
+  "connect-src 'self' https://*.paddle.com https://www.google-analytics.com https://*.google-analytics.com https://www.googletagmanager.com https://accounts.google.com/gsi/ https://*.clarity.ms https://c.bing.com",
   "frame-src https://*.paddle.com https://accounts.google.com/gsi/",
   "frame-ancestors 'none'",
   "base-uri 'self'",

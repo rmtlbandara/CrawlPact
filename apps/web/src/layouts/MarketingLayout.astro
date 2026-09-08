@@ -4,6 +4,7 @@ import type { Breadcrumb } from "./BaseLayout.astro";
 import SiteHeader from "../components/SiteHeader.astro";
 import SiteFooter from "../components/SiteFooter.astro";
 import GoogleAnalytics from "../components/GoogleAnalytics.astro";
+import MicrosoftClarity from "../components/MicrosoftClarity.astro";
 import { AnalyticsConsent } from "../components/AnalyticsConsent";
 import { getEnv } from "../lib/env";
 import {
@@ -47,6 +48,12 @@ const isProduction = getEnv().PUBLIC_APP_ENV === "production";
 const gaEligible = isGaEligibleRoute(Astro.url.pathname);
 const consentState = parseConsentCookieValue(Astro.cookies.get(ANALYTICS_CONSENT_COOKIE)?.value);
 const shouldRenderGa = isProduction && gaEligible && consentState === "granted";
+// Phase 22: Microsoft Clarity reuses GA's exact gate rather than inventing a
+// second allowlist — same production-only, same consent requirement, same
+// marketing-page route set. If Clarity's rollout ever needs to diverge from
+// GA's (e.g. a different route set), split this into its own named boolean
+// at that point rather than pre-emptively duplicating identical logic now.
+const shouldRenderClarity = shouldRenderGa;
 ---
 
 <BaseLayout
@@ -62,6 +69,7 @@ const shouldRenderGa = isProduction && gaEligible && consentState === "granted";
   ogImage={ogImage}
 >
   {shouldRenderGa && <GoogleAnalytics />}
+  {shouldRenderClarity && <MicrosoftClarity />}
   <div class="flex min-h-screen flex-col">
     <SiteHeader />
     <main id="main-content" tabindex="-1" class="flex-1">

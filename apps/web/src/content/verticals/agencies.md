@@ -83,8 +83,8 @@ monitoring on any plan today; the fastest current automatic cadence is weekly.
 
 CrawlPact audits and monitors the public policy signals a website publishes — it does not control
 external crawlers or guarantee that any of them will comply with what a site declares. See
-[Methodology](/methodology) for exactly what CrawlPact evaluates and how, and
-[Scoring](/scoring) for how findings are weighted into a result.
+[Methodology](/methodology/) for exactly what CrawlPact evaluates and how, and
+[Scoring](/scoring/) for how findings are weighted into a result.
 
 ## Frequently asked questions
 

@@ -51,7 +51,7 @@ content="noindex,nofollow" />` tag. In versions before 5.2, the same setting ins
 - **SEO plugins** (e.g. those managing sitemaps/meta tags) — a common source of additional meta
   robots or header directives, distinct from WordPress core's own behaviour.
 - **A hosting platform or CDN** in front of WordPress, which can add its own headers or modify the
-  response independently of WordPress itself — see the [Cloudflare guide](/platforms/cloudflare)
+  response independently of WordPress itself — see the [Cloudflare guide](/platforms/cloudflare/)
   if applicable.
 
 ## Public signals relevant to WordPress
@@ -119,8 +119,8 @@ Pro/Agency: weekly) — this will catch a plugin update, theme change, or an acc
 
 ## Related tools and crawler pages
 
-See [robots.txt vs. meta robots vs. X-Robots-Tag](/guides/robots-txt-vs-meta-robots-vs-x-robots-tag)
-for how these three signal layers relate, and the [crawler directory](/crawlers) for documented
+See [robots.txt vs. meta robots vs. X-Robots-Tag](/guides/robots-txt-vs-meta-robots-vs-x-robots-tag/)
+for how these three signal layers relate, and the [crawler directory](/crawlers/) for documented
 AI crawler tokens.
 
 ## Frequently asked questions
@@ -128,7 +128,7 @@ AI crawler tokens.
 **Does checking "Discourage search engines" block AI training crawlers specifically?** On current
 WordPress versions it adds a sitewide `noindex` meta tag — a broad signal, not one that
 distinguishes search from AI-training crawlers. For that distinction, see
-[Block only AI training crawlers](/guides/how-to-block-only-ai-training-crawlers).
+[Block only AI training crawlers](/guides/how-to-block-only-ai-training-crawlers/).
 
 **Does CrawlPact edit my WordPress site?** No — CrawlPact audits the public `robots.txt` and meta
 signals your site already produces; changing WordPress settings, themes, or plugins happens in

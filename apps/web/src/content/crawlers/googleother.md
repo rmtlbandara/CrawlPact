@@ -26,5 +26,5 @@ Because Google's own documentation doesn't specify which product team or purpose
 request serves, what disallowing it affects is correspondingly unspecific — it may affect an
 internal Google research or development use, but it does not affect Google Search indexing
 (`Googlebot`) or the generative-AI-training opt-out (`Google-Extended`), which are governed by
-their own separate, purpose-specific tokens. See [/limitations](/limitations) for what a
+their own separate, purpose-specific tokens. See [/limitations](/limitations/) for what a
 `robots.txt` rule can and cannot guarantee.
