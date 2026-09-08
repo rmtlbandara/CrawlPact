@@ -177,7 +177,7 @@ export function UserDetailManager({ initial }: { initial: UserDetail }) {
         <div className="flex flex-wrap items-start justify-between gap-4">
           <div>
             <h2 className="text-h3 text-neutral-950">{u.displayName}</h2>
-            <p className="mt-1 font-mono text-supporting text-neutral-600">{u.id}</p>
+            <p className="mt-1 break-all font-mono text-supporting text-neutral-600">{u.id}</p>
             <p className="mt-1 text-supporting text-neutral-600">
               Created {new Date(u.createdAt).toLocaleDateString()} · Plan {u.planId}
             </p>

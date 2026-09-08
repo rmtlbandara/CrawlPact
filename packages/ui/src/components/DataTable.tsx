@@ -9,7 +9,7 @@ export type DataTableColumn<T> = {
   header: string;
   render: (row: T) => ReactNode;
   /** Hidden below this breakpoint to keep mobile tables scannable (SRS §10.22). */
-  hideBelow?: "sm" | "md" | "lg";
+  hideBelow?: "sm" | "md" | "lg" | "xl";
 };
 
 export type DataTableProps<T> = {
@@ -26,6 +26,7 @@ const HIDE_CLASSES: Record<NonNullable<DataTableColumn<unknown>["hideBelow"]>, s
   sm: "hidden sm:table-cell",
   md: "hidden md:table-cell",
   lg: "hidden lg:table-cell",
+  xl: "hidden xl:table-cell",
 };
 
 /**

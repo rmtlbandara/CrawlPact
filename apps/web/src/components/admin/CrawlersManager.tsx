@@ -154,7 +154,9 @@ export function CrawlersManager({ operators }: { operators: OperatorOption[] }) 
     {
       key: "token",
       header: "User-agent token",
-      render: (r) => <span className="font-mono text-supporting">{r.crawler.userAgentToken}</span>,
+      render: (r) => (
+        <span className="break-all font-mono text-supporting">{r.crawler.userAgentToken}</span>
+      ),
       hideBelow: "md",
     },
     { key: "purpose", header: "Purpose", render: (r) => r.crawler.purpose, hideBelow: "sm" },

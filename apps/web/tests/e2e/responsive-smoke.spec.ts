@@ -151,6 +151,27 @@ test.describe("Responsive layout smoke", () => {
           await assertNoHorizontalOverflow(page);
         }
       });
+
+      // Phase 21: found live at 768px — the runtime-settings table's long,
+      // unbroken snake_case keys (e.g. "account_deletion_grace_period_days")
+      // had no room to wrap, so the browser instead squeezed the sentence-length
+      // Description column down to a handful of characters wide, wrapping it
+      // across ~9 lines and inflating every row to 216.5px (a table meant to
+      // be scannable at a glance). Horizontal-overflow checks alone never catch
+      // this class of bug — it degrades vertically, not horizontally. Fixed by
+      // making the key wrap within its own column (`break-all`) and pushing the
+      // Description column's reveal breakpoint from `lg` (768px, exactly where
+      // this broke) to `xl` (1024px, see packages/ui/src/components/DataTable.tsx).
+      test("the runtime settings table stays a reasonable row height at 768px", async ({
+        page,
+      }) => {
+        await page.setViewportSize({ width: 768, height: 1024 });
+        await page.goto("/admin/settings");
+        const firstRow = page.locator("table tbody tr").first();
+        await expect(firstRow).toBeVisible();
+        const rowHeight = await firstRow.evaluate((el) => el.getBoundingClientRect().height);
+        expect(rowHeight, `first data row was ${rowHeight}px tall`).toBeLessThan(100);
+      });
     });
   });
 
