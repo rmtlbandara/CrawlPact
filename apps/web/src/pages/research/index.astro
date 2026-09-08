@@ -18,7 +18,7 @@ const noindex = publications.length === 0;
 <MarketingLayout
   title="Research | CrawlPact"
   description="Published Policy Observatory research: reproducible, source-backed findings about the AI crawler ecosystem."
-  canonicalPath="/research"
+  canonicalPath="/research/"
   noindex={noindex}
   breadcrumbs={[
     { name: "Home", url: "/" },
@@ -55,7 +55,7 @@ const noindex = publications.length === 0;
                 {pub.status === "corrected" && <span class="ml-2 text-amber-700">(corrected)</span>}
               </p>
               <a
-                href={`/research/${pub.slug}`}
+                href={`/research/${pub.slug}/`}
                 class="mt-1 block text-card-heading text-neutral-950 underline underline-offset-2"
               >
                 {pub.title}

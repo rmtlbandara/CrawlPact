@@ -69,7 +69,7 @@ export function PricingPlans({
   const [interval, setInterval] = useState<"month" | "year">("year");
 
   function ctaHref(plan: PricingPlanEntry): string {
-    if (plan.id === "free") return "/audit";
+    if (plan.id === "free") return "/audit/";
     return isAuthenticated
       ? `/app/billing?plan=${plan.id}&interval=${interval}`
       : `/sign-in?plan=${plan.id}&interval=${interval}`;

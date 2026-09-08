@@ -277,7 +277,7 @@ export function ComponentShowcase() {
         <div className="w-full max-w-sm">
           <ScoreComponent
             score={{ state: "scored", value: 82, label: "Good" }}
-            methodologyHref="/scoring"
+            methodologyHref="/scoring/"
           />
         </div>
         <div className="w-full max-w-sm">

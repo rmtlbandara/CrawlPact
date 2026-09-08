@@ -59,7 +59,7 @@ export function ReportPreview() {
           { label: "Objective alignment", value: 45 },
           { label: "Cross-signal consistency", value: 70 },
         ]}
-        methodologyHref="/scoring"
+        methodologyHref="/scoring/"
       />
       <div className="flex flex-col gap-3">
         {ROWS.map((row) => (

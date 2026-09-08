@@ -22,7 +22,7 @@ const publications = await listPublishedResearchPublications(db);
 <MarketingLayout
   title="AI Crawler Policy Observatory | CrawlPact"
   description="Source-backed research on crawler registries and publicly declared AI crawler policy, with visible methodology, denominators, and limitations."
-  canonicalPath="/observatory"
+  canonicalPath="/observatory/"
   breadcrumbs={[
     { name: "Home", url: "/" },
     { name: "Observatory", url: "/observatory/" },
@@ -99,7 +99,7 @@ const publications = await listPublishedResearchPublications(db);
                   )}
                 </p>
                 <a
-                  href={`/research/${pub.slug}`}
+                  href={`/research/${pub.slug}/`}
                   class="mt-1 block text-card-heading text-neutral-950 underline underline-offset-2"
                 >
                   {pub.title}
@@ -110,7 +110,7 @@ const publications = await listPublishedResearchPublications(db);
         )
       }
       <a
-        href="/research"
+        href="/research/"
         class="mt-4 inline-block text-supporting font-medium text-brand-700 underline underline-offset-2"
       >
         All research publications

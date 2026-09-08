@@ -438,7 +438,7 @@ export function AuditReportView({
             categoryBreakdown={
               report.score.state === "scored" ? report.score.categoryBreakdown : undefined
             }
-            methodologyHref="/scoring"
+            methodologyHref="/scoring/"
           />
         </div>
       </section>
