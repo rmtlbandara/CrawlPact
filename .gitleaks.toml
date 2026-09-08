@@ -19,3 +19,21 @@ regexes = [
   # `secret_text` bindings and never appear in this repository at all.
   '''live_7744585ebeca2976cd76da4b966''',
 ]
+
+# Historical commits already fixed going forward, but which a full-history scan
+# (ci.yml's `workflow_dispatch` trigger — see the regex allowlist's comment
+# above) permanently re-flags no matter what a later commit changes. Excluding
+# the commit here, rather than adding a broader regex, keeps the exclusion
+# scoped to exactly the reviewed false positive instead of a pattern that
+# could mask a real future secret in the same file.
+commits = [
+  # apps/web/src/lib/auth/google.test.ts:116 (RuleID generic-api-key): the
+  # `key:` option gitleaks flagged is a `CryptoKey` object generated at test
+  # runtime via `jose`'s `generateKeyPair("RS384")` (see the file's own
+  # `rs384PrivateKey` variable, line 19) — no literal key material of any
+  # kind exists in this commit. `b31270d` (the very next commit) already
+  # renamed this option to stop future diff-based scans from matching the
+  # same pattern; this commit itself can't be edited (SRS forward-only
+  # history), so a full-history scan will always re-flag it otherwise.
+  "c7b3d6243d16104675faadb40ee11b9958da5717",
+]
