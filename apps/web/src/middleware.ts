@@ -8,6 +8,9 @@ import {
   X_CONTENT_TYPE_OPTIONS_VALUE,
   X_FRAME_OPTIONS_VALUE,
 } from "./lib/security-headers";
+import { needsTrailingSlashRedirect } from "./lib/route-registry";
+
+export { needsTrailingSlashRedirect };
 
 /**
  * Security response headers applied to every SSR request (SRS §33, Part 2
@@ -30,6 +33,15 @@ import {
  * "no external analytics vendors" — see docs/status/KNOWN_RISKS.md).
  */
 export const onRequest = defineMiddleware(async (context, next) => {
+  if (
+    (context.request.method === "GET" || context.request.method === "HEAD") &&
+    needsTrailingSlashRedirect(context.url.pathname)
+  ) {
+    const target = new URL(`${context.url.pathname}/`, context.url.origin);
+    target.search = context.url.search;
+    return Response.redirect(target.toString(), 301);
+  }
+
   const response = await next();
 
   const isLocal = getEnv().PUBLIC_APP_ENV === "local";

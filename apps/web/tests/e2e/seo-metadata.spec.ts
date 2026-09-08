@@ -60,25 +60,21 @@ test.describe("Sitemap-listed pages carry correct, unique SEO metadata", () => {
       if (h1Count !== 1) failures.push(`${path}: has ${h1Count} <h1> elements, expected exactly 1`);
 
       if (canonical) {
-        // Compare against the final URL actually served, not the originally
-        // requested sitemap path: the Cloudflare Workers Assets binding
-        // (exercised only against a real deployed/built Worker, not Astro's
-        // dev server — confirmed while briefly testing CI against
-        // wrangler dev --local, see docs/status/KNOWN_RISKS.md) 307-redirects
-        // extension-less paths to their trailing-slash form (e.g. /about ->
-        // /about/, confirmed the same on production). Trailing slash itself
-        // is normalized away before comparing: canonical generation is
-        // inconsistent across page types today (static pages include the
-        // trailing slash the assets binding redirects to; content-collection
-        // pages don't) — a real, pre-existing, cosmetic inconsistency (see
-        // docs/status/KNOWN_RISKS.md), not something this infra-focused pass
-        // should silently paper over by asserting exact equality, or block
-        // release-flow CI on fixing.
-        const normalize = (pathname: string) => pathname.replace(/\/$/, "") || "/";
-        const canonicalPath = normalize(new URL(canonical).pathname);
-        const finalPath = normalize(new URL(response.url()).pathname);
-        if (canonicalPath !== finalPath) {
-          failures.push(`${path}: canonical points to "${canonicalPath}", expected "${finalPath}"`);
+        // Phase 20 canonical URL contract: every sitemap-listed URL IS the
+        // canonical URL (trailing slash, "/" excepted) and must be served
+        // directly at 200 with no redirect — so the canonical tag must match
+        // both the originally requested sitemap path and the final served
+        // URL exactly. No normalization: a mismatch here is a real defect,
+        // not a cosmetic one (see docs/baseline/2026-09-07-phase20/CANONICAL_URL_CONTRACT.md).
+        const canonicalPath = new URL(canonical).pathname;
+        const finalPath = new URL(response.url()).pathname;
+        if (canonicalPath !== path) {
+          failures.push(`${path}: canonical is "${canonicalPath}", expected exactly "${path}"`);
+        }
+        if (finalPath !== path) {
+          failures.push(
+            `${path}: served at "${finalPath}" without a redirect, expected "${path}" (sitemap URL was not canonical — it redirected)`,
+          );
         }
       }
 

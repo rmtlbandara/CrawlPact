@@ -5,10 +5,11 @@ import { describe, expect, it, vi } from "vitest";
 vi.mock("astro:middleware", () => ({ defineMiddleware: (fn: unknown) => fn }));
 vi.mock("./lib/env", () => ({ getEnv: () => ({ PUBLIC_APP_ENV: "production" }) }));
 
-const { onRequest } = await import("./middleware");
+const { onRequest, needsTrailingSlashRedirect } = await import("./middleware");
 
-function fakeContext(pathname: string): { url: URL } {
-  return { url: new URL(`https://crawlpact.com${pathname}`) };
+function fakeContext(pathname: string, method = "GET"): { url: URL; request: Request } {
+  const url = new URL(`https://crawlpact.com${pathname}`);
+  return { url, request: new Request(url, { method }) };
 }
 
 /**
@@ -36,8 +37,11 @@ describe("middleware Cache-Control default", () => {
     const next = async () =>
       new Response("ok", { headers: { "Cache-Control": "public, max-age=300" } });
     const response = (await onRequest(
+      // Canonical trailing-slash form — Phase 20's needsTrailingSlashRedirect
+      // would otherwise short-circuit this request with a 301 before next()
+      // ever runs.
       // @ts-expect-error minimal fake context, only .url is read by this middleware
-      fakeContext("/changelog"),
+      fakeContext("/changelog/"),
       next,
     )) as Response;
     expect(response.headers.get("Cache-Control")).toBe("public, max-age=300");
@@ -64,6 +68,110 @@ describe("middleware Cache-Control default", () => {
       next,
     )) as Response;
     expect(response.headers.get("Cache-Control")).toBe("private, no-store");
+  });
+});
+
+/**
+ * Phase 20 canonical URL contract (docs/baseline/2026-09-07-phase20/CANONICAL_URL_CONTRACT.md):
+ * trailing slash is canonical for every indexable page. These SSR pages
+ * have no static asset at all, so nothing has ever redirected them before —
+ * both `/pricing` and `/pricing/` independently returned 200 in production
+ * (confirmed live, 2026-09-07). `needsTrailingSlashRedirect` is the pure
+ * decision function; `onRequest` is exercised end-to-end to prove the
+ * actual redirect response it produces.
+ */
+describe("needsTrailingSlashRedirect", () => {
+  it("requires a redirect for every SSR indexable exact route missing its slash", () => {
+    for (const path of [
+      "/pricing",
+      "/status",
+      "/changelog",
+      "/scanner",
+      "/observatory",
+      "/observatory/registry",
+    ]) {
+      expect(needsTrailingSlashRedirect(path)).toBe(true);
+    }
+  });
+
+  it("requires a redirect for a dynamic vertical/research route missing its slash", () => {
+    expect(needsTrailingSlashRedirect("/for/agencies")).toBe(true);
+    expect(needsTrailingSlashRedirect("/research/some-slug")).toBe(true);
+  });
+
+  it("does not redirect a route that already has its trailing slash, or the root", () => {
+    expect(needsTrailingSlashRedirect("/pricing/")).toBe(false);
+    expect(needsTrailingSlashRedirect("/for/agencies/")).toBe(false);
+    expect(needsTrailingSlashRedirect("/")).toBe(false);
+  });
+
+  it("never touches API, app, admin, auth, sign-in, pay, or audit routes", () => {
+    for (const path of [
+      "/api/audit",
+      "/app/domains",
+      "/admin",
+      "/sign-in",
+      "/pay",
+      "/audit/some-id",
+      "/api/auth/google/begin",
+    ]) {
+      expect(needsTrailingSlashRedirect(path)).toBe(false);
+    }
+  });
+});
+
+describe("middleware trailing-slash redirect (end-to-end)", () => {
+  const next = async () => new Response("should not be reached");
+
+  it("301-redirects a GET request for a bare SSR route to its trailing-slash form", async () => {
+    const response = (await onRequest(
+      // @ts-expect-error minimal fake context
+      fakeContext("/pricing"),
+      next,
+    )) as Response;
+    expect(response.status).toBe(301);
+    expect(response.headers.get("Location")).toBe("https://crawlpact.com/pricing/");
+  });
+
+  it("preserves the query string across the redirect", async () => {
+    const response = (await onRequest(
+      // @ts-expect-error minimal fake context
+      fakeContext("/for/agencies?utm_source=test"),
+      next,
+    )) as Response;
+    expect(response.status).toBe(301);
+    expect(response.headers.get("Location")).toBe(
+      "https://crawlpact.com/for/agencies/?utm_source=test",
+    );
+  });
+
+  it("301-redirects HEAD the same way as GET", async () => {
+    const response = (await onRequest(
+      // @ts-expect-error minimal fake context
+      fakeContext("/status", "HEAD"),
+      next,
+    )) as Response;
+    expect(response.status).toBe(301);
+  });
+
+  it("does not redirect a POST (method/body semantics must be preserved on mutating routes)", async () => {
+    const postNext = async () => new Response("posted");
+    const response = (await onRequest(
+      // @ts-expect-error minimal fake context
+      fakeContext("/pricing", "POST"),
+      postNext,
+    )) as Response;
+    expect(response.status).toBe(200);
+    expect(await response.text()).toBe("posted");
+  });
+
+  it("passes an already-canonical request straight through to next()", async () => {
+    const response = (await onRequest(
+      // @ts-expect-error minimal fake context
+      fakeContext("/pricing/"),
+      next,
+    )) as Response;
+    expect(response.status).toBe(200);
   });
 });
 

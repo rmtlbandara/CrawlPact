@@ -81,6 +81,23 @@
       // Distinct bucket from production, same reasoning as the D1/KV
       // separation above — never reuse the production bucket here.
       "r2_buckets": [{ "binding": "AGENCY_LOGOS", "bucket_name": "crawlpact-preview" }],
+      // Phase 20, P0: full `assets` block redeclared (not just a
+      // `run_worker_first` fragment) because Wrangler's non-inheritable-key
+      // rule for named environments is ambiguous from the docs for `assets`
+      // specifically — redeclaring `directory`/`binding` alongside it avoids
+      // relying on inheritance semantics either way. `run_worker_first: true`
+      // routes every preview request (including ones that would otherwise be
+      // served directly as a static asset, bypassing the Worker entirely)
+      // through `src/worker.ts` first, so its preview-only
+      // `X-Robots-Tag: noindex` wrapper can actually see and stamp every
+      // response — see that file's `fetchWithPreviewSearchIsolation` comment.
+      // Production does not set this, so production asset-serving
+      // performance is unaffected.
+      "assets": {
+        "directory": "./dist",
+        "binding": "ASSETS",
+        "run_worker_first": true,
+      },
       // CrawlPact-owned Custom Domain migration (from the workers.dev
       // fallback below) — required before Google OAuth preview testing can
       // be registered, since Google Auth Platform needs a stable origin.
