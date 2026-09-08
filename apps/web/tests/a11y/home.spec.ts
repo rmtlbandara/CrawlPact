@@ -298,6 +298,6 @@ test("breadcrumb navigation on a guide page is a labelled landmark with correct 
   await page.goto("/guides/applebot-vs-applebot-extended");
   const breadcrumb = page.getByRole("navigation", { name: "Breadcrumb" });
   await expect(breadcrumb).toBeVisible();
-  await expect(breadcrumb.getByText("Guides")).toHaveAttribute("href", "/guides");
+  await expect(breadcrumb.getByText("Guides")).toHaveAttribute("href", "/guides/");
   await expect(breadcrumb.locator('[aria-current="page"]')).toBeVisible();
 });

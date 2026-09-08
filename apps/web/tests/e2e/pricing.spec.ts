@@ -119,10 +119,10 @@ test.describe("Pricing page comparison", () => {
     await page.goto("/pricing");
     await expect(
       page.locator("#free").getByRole("link", { name: "Scan a website" }),
-    ).toHaveAttribute("href", "/audit");
+    ).toHaveAttribute("href", "/audit/");
     await expect(page.getByRole("link", { name: "Audit a domain free" })).toHaveAttribute(
       "href",
-      "/audit",
+      "/audit/",
     );
   });
 });
