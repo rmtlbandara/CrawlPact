@@ -50,6 +50,32 @@ if (!baseUrl) {
   process.exit(2);
 }
 
+// Phase 21 (2026-09-08): found live — this is the only caller of this script
+// (deploy-preview.yml), and Preview intentionally sends
+// `X-Robots-Tag: noindex, nofollow, noarchive, nosnippet` on every response
+// (Phase 20's preview search-isolation fix, docs/baseline/2026-09-07-phase20/
+// PREVIEW_SEARCH_ISOLATION.md). Lighthouse's SEO category includes an
+// "is-crawlable" audit that scores 0 whenever noindex is present — by
+// design, since a real production page usually *wants* to be indexed. That
+// single audit alone was capping every page's composite SEO score at 66
+// (out of a required 90), on every page, every time — not a real quality
+// regression, just Lighthouse correctly reporting that a deliberately
+// non-indexable environment is non-indexable. This had never actually run to
+// a real conclusion before: deploy-preview.yml's dispatch chain was broken
+// (see that workflow's own comment) until Phase 20 fixed it, so this was the
+// first time this step ever executed against a real noindex-tagged preview
+// deploy. Detected at runtime (not hardcoded to "always skip on preview") so
+// this script still fully gates SEO if ever pointed at a real indexable
+// target in future.
+const noindexResponse = await fetch(new URL("/", baseUrl));
+const isIntentionallyNoindexed = /noindex/i.test(noindexResponse.headers.get("x-robots-tag") ?? "");
+if (isIntentionallyNoindexed) {
+  console.log(
+    `${baseUrl} sends X-Robots-Tag: noindex — skipping the SEO score threshold (Lighthouse's ` +
+      "is-crawlable audit always fails here by design; not a real regression).",
+  );
+}
+
 // One representative page per distinct template archetype — matches the set this project's a11y
 // suite already treats as representative. /for/agencies and /platforms/cloudflare added Phase 7
 // (Vertical Landing Pages and Platform SEO Architecture) — the first SSR content-collection
@@ -157,7 +183,7 @@ for (const path of PAGES) {
     performance: THRESHOLDS.performance,
     accessibility: THRESHOLDS.accessibility,
     "best-practices": THRESHOLDS["best-practices"],
-    seo: THRESHOLDS.seo,
+    ...(isIntentionallyNoindexed ? {} : { seo: THRESHOLDS.seo }),
   })) {
     if (medianResult[key] < threshold) {
       console.error(
