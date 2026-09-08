@@ -20,12 +20,12 @@ dependency, or new pixel-diff tooling (ADR-0008 stays intact).
 
 ## What was fixed
 
-| # | Finding | Files | Verified by |
-| - | - | - | - |
-| 1 | `DataTable` long identifiers inflate row height at narrow widths (216.5px vs ~50px normal) | `packages/ui/src/components/DataTable.tsx` (+`xl` hideBelow tier) and 9 admin manager components (`break-all` on identifier spans) | Direct DOM measurement (216.5px → 72.5px); new regression test |
-| 2 | Super Admin header overflow at 768px ("Back to public site") | `apps/web/src/components/admin/AdminNav.astro` | `scrollWidth`/`clientWidth` measured equal at 360/768/1024/1280px; existing `responsive-smoke.spec.ts` test |
-| 3 | Unbounded display-name width in both app headers | `AdminNav.astro`, `apps/web/src/components/app/AppNav.astro` | Same measurement as #2 |
-| 4 | Raw User-Agent string shown verbatim in Sessions list | `apps/web/src/lib/user-agent-summary.ts` (new), `apps/web/src/components/app/SessionsManager.tsx` | 6 new unit tests |
+| #   | Finding                                                                                    | Files                                                                                                                              | Verified by                                                                                                 |
+| --- | ------------------------------------------------------------------------------------------ | ---------------------------------------------------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------- |
+| 1   | `DataTable` long identifiers inflate row height at narrow widths (216.5px vs ~50px normal) | `packages/ui/src/components/DataTable.tsx` (+`xl` hideBelow tier) and 9 admin manager components (`break-all` on identifier spans) | Direct DOM measurement (216.5px → 72.5px); new regression test                                              |
+| 2   | Super Admin header overflow at 768px ("Back to public site")                               | `apps/web/src/components/admin/AdminNav.astro`                                                                                     | `scrollWidth`/`clientWidth` measured equal at 360/768/1024/1280px; existing `responsive-smoke.spec.ts` test |
+| 3   | Unbounded display-name width in both app headers                                           | `AdminNav.astro`, `apps/web/src/components/app/AppNav.astro`                                                                       | Same measurement as #2                                                                                      |
+| 4   | Raw User-Agent string shown verbatim in Sessions list                                      | `apps/web/src/lib/user-agent-summary.ts` (new), `apps/web/src/components/app/SessionsManager.tsx`                                  | 6 new unit tests                                                                                            |
 
 Full detail, including what was investigated and ruled out as a false positive (a locale-driven
 Google Sign-In button label, and the Astro dev toolbar appearing in dev-only screenshots), is in
@@ -35,24 +35,24 @@ Google Sign-In button label, and the Astro dev toolbar appearing in dev-only scr
 
 Run locally against this changeset (not against a hypothetical clean tree):
 
-| Check | Result |
-| - | - |
-| `pnpm run format:check` | ✅ Pass |
-| `pnpm run lint` | ✅ Pass (`--max-warnings=0`) |
-| `pnpm run typecheck` | ✅ Pass (0 errors across all packages; pre-existing Zod-deprecation hints unrelated to this change) |
-| `pnpm run test:unit` | ✅ 531/531 passed (incl. 6 new tests) |
-| `pnpm run test:integration` | See below |
-| `pnpm run db:validate` | ✅ 56 tables verified consistent |
-| `pnpm run build` | ✅ Succeeds |
-| `pnpm exec playwright test apps/web/tests/e2e/responsive-smoke.spec.ts --project=chromium` | ✅ 44/44 passed (incl. new row-height regression test) |
-| `pnpm exec playwright test --config=playwright.a11y.config.ts --project=chromium -g "Super Admin\|authenticated"` | 6/7 passed — see below |
+| Check                                                                                                             | Result                                                                                              |
+| ----------------------------------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------- |
+| `pnpm run format:check`                                                                                           | ✅ Pass                                                                                             |
+| `pnpm run lint`                                                                                                   | ✅ Pass (`--max-warnings=0`)                                                                        |
+| `pnpm run typecheck`                                                                                              | ✅ Pass (0 errors across all packages; pre-existing Zod-deprecation hints unrelated to this change) |
+| `pnpm run test:unit`                                                                                              | ✅ 531/531 passed (incl. 6 new tests)                                                               |
+| `pnpm run test:integration`                                                                                       | See below                                                                                           |
+| `pnpm run db:validate`                                                                                            | ✅ 56 tables verified consistent                                                                    |
+| `pnpm run build`                                                                                                  | ✅ Succeeds                                                                                         |
+| `pnpm exec playwright test apps/web/tests/e2e/responsive-smoke.spec.ts --project=chromium`                        | ✅ 44/44 passed (incl. new row-height regression test)                                              |
+| `pnpm exec playwright test --config=playwright.a11y.config.ts --project=chromium -g "Super Admin\|authenticated"` | 6/7 passed — see below                                                                              |
 
 **test:integration**: run twice this session. First run: 20 failed test files. Second run
 (nothing else competing for local resources): 7 failed test files, 354/355 individual tests
 passed. Every single failure in both runs — all 21 distinct occurrences — carries the identical
 signature: `Hook timed out in 10000ms` inside `createD1TestHarness()`'s `beforeAll`/`beforeEach`,
 cascading into `TypeError: dispose is not a function` in the corresponding `afterAll`/`afterEach`
-— on a *different, random subset* of files each run, spread across domains with nothing in common
+— on a _different, random subset_ of files each run, spread across domains with nothing in common
 (billing, CSRF, monitoring, registry, admin capacity/findings, pilots, auth-flow, status feed) and
 zero overlap with any file this changeset touches. Not one failure is a real assertion failure
 anywhere in either run. That pattern — a fixed startup-timeout signature hitting a random subset

@@ -51,7 +51,7 @@ actually happened — no finding here is left ambiguous.
   element's own code comment, which explicitly documents a "112px header-bar overflow at
   360/768px" fix) — this element was simply missed in that earlier sweep.
 - **Disposition**: **Fixed.** The link now shows only "←" (with `aria-label`/`title="Back to
-  public site"`) from `sm` (480px) up, and reveals the text label only from `xl` (1024px) —
+public site"`) from `sm` (480px) up, and reveals the text label only from `xl` (1024px) —
   mirroring the existing "Customer view" icon-then-label pattern exactly. Re-measured: no overflow
   at 360/768/1024/1280px.
 - **Regression test**: already covered by the pre-existing `responsive-smoke.spec.ts` "Super Admin
@@ -78,7 +78,7 @@ actually happened — no finding here is left ambiguous.
 - **Where confirmed**: `/app/account`, "Sessions" section, at 360px.
 - **Evidence**: A real session's `navigator.userAgent` rendered as literal text — e.g.
   `"Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko)
-  HeadlessChrome/151.0.7922.34 Safari/537.36"` — wrapping across 5 lines on a narrow viewport, with
+HeadlessChrome/151.0.7922.34 Safari/537.36"` — wrapping across 5 lines on a narrow viewport, with
   no attempt to summarise it for a non-technical reader.
 - **Disposition**: **Fixed.** Added `apps/web/src/lib/user-agent-summary.ts`
   (`summarizeUserAgent()`), a small dependency-free heuristic that recognises the common
@@ -105,6 +105,6 @@ actually happened — no finding here is left ambiguous.
 - **`/admin/operations` showing "Loading…" in one screenshot.** The screenshot was taken before the
   page's client-side data fetch resolved (a fixed 600ms wait in the ad-hoc capture script was too
   short for this specific island). Confirmed not a hang: `page.getByRole("heading", { name:
-  "Operations summary" })` resolves within the existing test suite's own 10-second timeout, which
+"Operations summary" })` resolves within the existing test suite's own 10-second timeout, which
   is what `home.spec.ts`'s existing "Phase 14: Super Admin operations dashboard" a11y test already
   relies on and passes against.

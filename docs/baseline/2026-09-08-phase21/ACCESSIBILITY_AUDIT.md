@@ -9,7 +9,7 @@ otherwise have the entire raw UA string read aloud.
 ## Suites run against the changed code
 
 - `pnpm exec playwright test --config=playwright.a11y.config.ts --project=chromium -g "Super
-  Admin|authenticated"`: **6 passed, 1 failed** (the "real saved-domain detail page" test, which
+Admin|authenticated"`: **6 passed, 1 failed** (the "real saved-domain detail page" test, which
   requires a real completed scan against the `e2e-fixture.crawlpact.com` fixture domain — this
   failed on a `page.waitForURL` timeout waiting for the scan to complete, consistent with this
   local session's `AUDIT_ENGINE_ENABLED` not being enabled via a local `.env` file, which is an

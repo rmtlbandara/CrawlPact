@@ -4,7 +4,7 @@
 
 `packages/ui/src/components/DataTable.tsx`'s `hideBelow` option only supported `"sm" | "md" |
 "lg"` — under this project's remapped breakpoint scale, `lg` is 768px, which was already the
-*widest* tier available. Any column that genuinely needed to stay hidden until desktop (1024px,
+_widest_ tier available. Any column that genuinely needed to stay hidden until desktop (1024px,
 `xl`) had no way to express that; the closest available option (`lg`) made it appear exactly at
 the tablet width where — as FINDING-01 in `UX_FINDING_REGISTER.md` shows — a table with several
 other columns already visible often doesn't have room for a sentence-length column yet.
