@@ -1,14 +1,14 @@
 ---
 Document owner: Engineering owner
 Status: current-authoritative
-Last verified: 2026-08-18
-Repository commit: e72d7242d08ffdfbbb028f62b8379b7f9cbb6d4b (main, post-Phase-19-pricing-comparison-deploy)
-Production deployment identifier: crawlpact-web (Cloudflare Worker), https://crawlpact.com — Worker version 9efd4c33-9b64-4959-94f8-2f79a7d50294
-Database migration version: 0037_registry_token_case_insensitive_uniqueness.sql (37/37 applied to production, confirmed via a direct read-only D1 query against `d1_migrations` 2026-08-17)
-Crawler registry version: 2026.07.3 (active release, unchanged by Phase 17's deploy — the Amazon/Google/Bingbot corrections are independently re-verified and ready in `packages/database/seed/reference-data.sql`, still awaiting a real Super Admin session to publish; see docs/registry/CRAWLER_REGISTRY_GOVERNANCE.md and the Phase 15 completion report)
-Phase 0 baseline reference: docs/baseline/2026-08-03/ (superseded on billing/migration facts by Phases 5–6 below; not re-run this pass)
+Last verified: 2026-09-07 (Phase 20 — Authoritative Baseline, Production Parity & Search Foundation)
+Repository commit: 0698829389d39ab4a91bf6fc0a578a5b88f9a38a (main, post-ADR-0009 Google Sign-In real-account confirmation; the two commits after the last deployed code change, `cfb3f3b` and `0698829`, are docs-only — see docs/baseline/2026-09-07-phase20/PRODUCTION_PARITY_MATRIX.md)
+Production deployment identifier: crawlpact-web (Cloudflare Worker), https://crawlpact.com — Worker version 4f775d19-7654-4af5-ab2e-b43cfb705e54 (deployed 2026-09-07T11:04:51Z, confirmed live via `wrangler deployments list` against the real account)
+Database migration version: 0038_google_oauth.sql (38/38 applied to production, confirmed via a direct read-only D1 query against `d1_migrations` 2026-09-07)
+Crawler registry version: 2026.07.3 (active release, unchanged since Phase 17 — not re-verified this pass; see docs/registry/CRAWLER_REGISTRY_GOVERNANCE.md and the Phase 15 completion report)
+Phase 0 baseline reference: docs/baseline/2026-08-03/ (superseded on billing/migration facts by Phases 5–6; superseded on production-parity/search-foundation facts by docs/baseline/2026-09-07-phase20/)
 Review frequency: Every release, or monthly
-Next review date: 2026-09-13 (or sooner, at the next release)
+Next review date: 2026-10-07 (or sooner, at the next release)
 ---
 
 # Current State
@@ -102,6 +102,24 @@ and an evidence backlog were all established — see
 (no Google-authenticated tool available, confirmed, not fabricated) — remains an open, documented
 owner action. **This is a foundation, not a completion** — Phase 19 governance continues
 indefinitely per its own §3.
+
+Phase 20 (Authoritative Baseline, Production Parity & Search Foundation, evidence gathered and
+fixes implemented 2026-09-07) fixed two real, live technical defects found by direct production
+testing, neither previously fully documented: (1) `preview.crawlpact.com` was not search-isolated
+at all (no `noindex`, no robots.txt disallow — a P0, since the connected Search Console property
+is domain-scoped) and (2) canonical trailing-slash handling was inconsistent and, for every
+non-prerendered marketing page (`/pricing`, `/status`, `/changelog`, `/scanner`, `/observatory`,
+`/for/*`), entirely absent — both the slash and non-slash form served `200` independently.
+Trailing slash was chosen as the sitewide canonical form (matching existing content-collection
+URLs and Cloudflare's own default behavior for prerendered pages) and is now enforced with
+permanent (301) redirects everywhere, from one shared route registry
+(`apps/web/src/lib/route-registry.ts`). Also reconciled: RISK-032 (Search Console — a property is
+now connected, per the product owner's own evidence) and this file's own header, which had drifted
+one deployment behind (migration `0037`→`0038`, Worker version, commit) despite `main` having no
+undeployed application-code drift. No database schema change. Not yet deployed — see
+`docs/baseline/2026-09-07-phase20/` for full evidence and
+`docs/reports/PHASE_20_AUTHORITATIVE_BASELINE_PRODUCTION_PARITY_SEARCH_FOUNDATION_COMPLETION_REPORT.md`
+for the completion report.
 
 Phase 16 (Policy Observatory and Research Authority, deployed 2026-08-11) added a Registry
 Observatory (`/observatory`, `/observatory/registry`, `/observatory/methodology`) computed
@@ -432,16 +450,19 @@ Status vocabulary: `verified-live` · `verified-disabled` · `verified-partial` 
 
 ## Version status
 
-- **Application commit**: `4637e1a` (main, post-Phase-7-merge)
-- **Migration version**: 21/21 applied (`0021_plan_prices.sql` latest), zero drift between local,
-  preview, and production
-- **Registry version**: `2026.07.3` active (23 crawlers seeded; a correction adding two Amazon
-  crawlers is pending publication as a new release — see
-  `docs/registry/CRAWLER_REGISTRY_GOVERNANCE.md`)
+- **Application commit**: `0698829` (main; last application-code-affecting commit `72a8630`, ADR-0009
+  Google Sign-In transport fix — confirmed via `git diff --stat`, see
+  `docs/baseline/2026-09-07-phase20/PRODUCTION_PARITY_MATRIX.md`)
+- **Migration version**: 38/38 applied (`0038_google_oauth.sql` latest), confirmed via a live
+  read-only D1 query against production 2026-09-07 — zero drift between repository and production
+- **Production Worker version**: `4f775d19-7654-4af5-ab2e-b43cfb705e54`, deployed
+  2026-09-07T11:04:51Z (confirmed via `wrangler deployments list` against the real account)
+- **Registry version**: `2026.07.3` active — not re-verified this pass (unchanged since Phase 17;
+  see `docs/registry/CRAWLER_REGISTRY_GOVERNANCE.md`)
 - **Billing configuration**: live, DB-backed Paddle catalog (Phase 6) — Solo $9/mo or $89/yr, Pro
   $19/mo or $189/yr, Agency $39/mo or $389/yr — see
-  `docs/billing/APPROVED_PRICING_AND_ENTITLEMENT_MATRIX.md`; deployed to production as Worker
-  version `7ed25286-f394-4517-aca6-5fe5168b41a4`
+  `docs/billing/APPROVED_PRICING_AND_ENTITLEMENT_MATRIX.md`; not re-verified this pass (unchanged
+  since Phase 6/17)
 - **Public content verification date**: 2026-07-31 (content/trust/SEO pass) — see
   `docs/reports/CRAWLPACT_PRODUCTION_CONTENT_TRUST_SEO_COMPLETION_REPORT.md` (historical);
   re-checked 2026-08-04 for Phase 7's new `/for/*`/`/platforms/*` content via `pnpm trust:validate`

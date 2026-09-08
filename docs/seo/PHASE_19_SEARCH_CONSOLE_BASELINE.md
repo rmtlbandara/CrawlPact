@@ -1,7 +1,13 @@
 # Phase 19 Search Console Baseline
 
-Status: current-authoritative, 2026-08-14. Records the Phase 19 attempt to connect Search Console
-per §24-28.
+> **Superseded 2026-09-07 (Phase 20).** A Search Console property has since been connected (per
+> evidence supplied for Phase 20's execution — see
+> `docs/baseline/2026-09-07-phase20/SEARCH_CONSOLE_BASELINE.md` for the current state and
+> `docs/risks/ACTIVE_RISKS.md`'s RISK-032 for its disposition). The record below remains accurate
+> to what was true on 2026-08-14 and is preserved as history, not rewritten.
+
+Status: historical (superseded by Phase 20, 2026-09-07). Records the Phase 19 attempt to connect
+Search Console per §24-28.
 
 ## Attempt result
 
