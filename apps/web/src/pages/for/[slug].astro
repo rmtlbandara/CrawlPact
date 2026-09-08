@@ -87,7 +87,7 @@ if (entry) {
       publishedDate={entry.data.publishedDate}
       updatedDate={entry.data.updatedDate}
       breadcrumbs={[
-        { name: "Use cases", url: "/for/agencies" },
+        { name: "Use cases", url: "/for/agencies/" },
         { name: entry.data.audience, url: `/for/${entry.id}/` },
       ]}
     >
@@ -100,14 +100,14 @@ if (entry) {
 
         <div class="mt-6 flex flex-wrap gap-4">
           <a
-            href="/audit"
+            href="/audit/"
             data-analytics-event="vertical_audit_cta_clicked"
             class="rounded-control bg-brand-600 px-5 py-2.5 text-body font-medium text-white hover:bg-brand-700"
           >
             Audit a domain
           </a>
           <a
-            href="/sample-report"
+            href="/sample-report/"
             data-analytics-event="vertical_sample_report_clicked"
             class="rounded-control border border-neutral-300 px-5 py-2.5 text-body font-medium text-neutral-800 hover:bg-neutral-50"
           >

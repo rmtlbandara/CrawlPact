@@ -253,7 +253,7 @@ export function PricingPlans({
           Not ready to choose? Start with the free audit and upgrade when you need monitoring.
         </p>
         <a
-          href="/audit"
+          href="/audit/"
           onClick={() => track("plan_selected", { planId: "free", interval })}
           className="mt-3 inline-block rounded-control border border-neutral-300 bg-white px-4 py-2 text-body font-medium text-neutral-800 hover:bg-neutral-100"
         >

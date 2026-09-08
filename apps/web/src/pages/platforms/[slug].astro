@@ -46,7 +46,7 @@ const CATEGORY_LABEL: Record<string, string> = {
   publishedDate={platform.data.publishedDate}
   updatedDate={platform.data.updatedDate}
   breadcrumbs={[
-    { name: "Platforms", url: "/platforms" },
+    { name: "Platforms", url: "/platforms/" },
     { name: platform.data.platformName, url: `/platforms/${platform.id}/` },
   ]}
 >
@@ -69,7 +69,7 @@ const CATEGORY_LABEL: Record<string, string> = {
 
     <div class="mt-6">
       <a
-        href="/audit"
+        href="/audit/"
         data-analytics-event="platform_audit_cta_clicked"
         class="rounded-control bg-brand-600 px-5 py-2.5 text-body font-medium text-white hover:bg-brand-700"
       >

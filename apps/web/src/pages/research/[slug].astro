@@ -39,8 +39,8 @@ const content = row ? parsePublicationContent(row) : null;
   breadcrumbs={row
     ? [
         { name: "Home", url: "/" },
-        { name: "Observatory", url: "/observatory" },
-        { name: "Research", url: "/research" },
+        { name: "Observatory", url: "/observatory/" },
+        { name: "Research", url: "/research/" },
         { name: row.title, url: `/research/${row.slug}` },
       ]
     : [{ name: "Home", url: "/" }]}
@@ -183,16 +183,16 @@ const content = row ? parsePublicationContent(row) : null;
           </section>
 
           <section class="mt-10 flex flex-wrap gap-4 text-supporting">
-            <a href="/observatory/methodology" class="text-brand-700 underline underline-offset-2">
+            <a href="/observatory/methodology/" class="text-brand-700 underline underline-offset-2">
               Methodology
             </a>
-            <a href="/observatory/registry" class="text-brand-700 underline underline-offset-2">
+            <a href="/observatory/registry/" class="text-brand-700 underline underline-offset-2">
               Registry Observatory
             </a>
             <a href="/methodology#corrections" class="text-brand-700 underline underline-offset-2">
               Report a correction
             </a>
-            <a href="/tools" class="text-brand-700 underline underline-offset-2">
+            <a href="/tools/" class="text-brand-700 underline underline-offset-2">
               Audit a domain free
             </a>
           </section>

@@ -25,7 +25,7 @@ const publications = await listPublishedResearchPublications(db);
   canonicalPath="/observatory"
   breadcrumbs={[
     { name: "Home", url: "/" },
-    { name: "Observatory", url: "/observatory" },
+    { name: "Observatory", url: "/observatory/" },
   ]}
 >
   <AnalyticsBeacon client:load eventName="observatory_viewed" />
@@ -35,7 +35,7 @@ const publications = await listPublishedResearchPublications(db);
       CrawlPact's public, reproducible research and measurement layer for understanding how AI
       crawler-policy signals and crawler-registry information change over time. This is a different
       concept from the product's Evidence Observatory UI — see the
-      <a href="/observatory/methodology" class="text-brand-700 underline underline-offset-2"
+      <a href="/observatory/methodology/" class="text-brand-700 underline underline-offset-2"
         >methodology page</a
       > for the distinction.
     </p>
@@ -56,7 +56,7 @@ const publications = await listPublishedResearchPublications(db);
               operators, from registry release {observatory.versionLabel}.
             </p>
             <a
-              href="/observatory/registry"
+              href="/observatory/registry/"
               class="mt-3 inline-block text-supporting font-medium text-brand-700 underline underline-offset-2"
             >
               View full Registry Observatory report
@@ -73,7 +73,7 @@ const publications = await listPublishedResearchPublications(db);
       <p class="mt-2 text-body text-neutral-700">
         Not yet published. A website-level policy benchmark requires a separately governed,
         versioned research corpus with its own privacy and methodology review — see the{" "}
-        <a href="/observatory/methodology" class="text-brand-700 underline underline-offset-2">
+        <a href="/observatory/methodology/" class="text-brand-700 underline underline-offset-2">
           methodology page
         </a>{" "}
         for the current corpus decision. Publishing a Registry Observatory first, rather than a weak or
@@ -119,12 +119,12 @@ const publications = await listPublishedResearchPublications(db);
 
     <section class="mt-10 grid gap-4 sm:grid-cols-3">
       <a
-        href="/observatory/methodology"
+        href="/observatory/methodology/"
         class="rounded-card border border-neutral-200 p-4 text-supporting font-medium text-brand-700 underline underline-offset-2"
         >Methodology &amp; definitions</a
       >
       <a
-        href="/changelog"
+        href="/changelog/"
         class="rounded-card border border-neutral-200 p-4 text-supporting font-medium text-brand-700 underline underline-offset-2"
         >Registry releases</a
       >
