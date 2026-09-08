@@ -1,12 +1,10 @@
 # Phase 22 — GSC-Driven SEO, Search Intent Ownership & High-Value Content Strengthening — Completion Report
 
-**Verdict: READY_FOR_PRODUCTION_DEPLOYMENT**
+**Verdict: PASS**
 
-Analysis, intent-ownership resolution, and implementation are complete; CI-equivalent local
-quality gate and Preview-equivalent local validation both pass. Production deployment itself was
-not performed this turn — this phase's prompt (Section 90) does not authorize it, and `CLAUDE.md`
-requires a fresh, explicit, in-the-moment authorization regardless of any prior phase's
-authorization.
+Analysis, intent-ownership resolution, and implementation are complete. This changeset was
+subsequently deployed to Production with explicit, in-the-moment owner authorization and
+independently verified live, closing the loop this report originally left open.
 
 ## Prerequisite (Section 1)
 
@@ -15,19 +13,44 @@ Phase 21 was already deployed to Production and independently verified live in t
 arrived — the prompt's own snapshot describing Phase 21 as `READY_FOR_PRODUCTION_DEPLOYMENT` was a
 few minutes stale relative to reality, not a genuine unmet gate. See
 `docs/baseline/2026-09-08-phase22/README.md` for the full reasoning and
-`PHASE_21_WHOLE_PRODUCT_UI_UX_RESPONSIVENESS_CONVERSION_OPTIMIZATION_COMPLETION_REPORT.md` (its
-verdict updated to `PASS` in this same changeset, per the owner's instruction to bundle that
-pending docs commit with this phase rather than push it separately) for the deployment record.
+`PHASE_21_WHOLE_PRODUCT_UI_UX_RESPONSIVENESS_CONVERSION_OPTIMIZATION_COMPLETION_REPORT.md` (verdict
+`PASS`) for the deployment record.
 
 ## Repository
 
 - **Starting SHA**: `72414dd872286e73bf88885191913aaab5aeff81` (main, post-Phase-21).
 - **Branch**: `docs/phase21-deployment-record` (continued from the pending Phase 21 docs commit,
-  per the owner's explicit instruction — Phase 22's changes are appended to the same branch rather
+  per the owner's explicit instruction — Phase 22's changes were appended to the same branch rather
   than opened separately).
-- **Ending SHA**: not yet committed as of this report's drafting — see the commit immediately
-  following this file's creation.
-- **PR / CI**: not yet opened — pending this report's finalization.
+- **Ending SHA (this changeset)**: `5d999ce` on the branch, merged into `main` as `9a2fe87ac9d72d847d3b08691d8eb67475472818` (PR #166).
+- **PR / CI**: [PR #166](https://github.com/rmtlbandara/CrawlPact/pull/166) — CI passed, merged via `merge-when-green`.
+
+## Deployment
+
+Followed the same trusted workflow as Phases 20-21:
+
+1. PR #166 opened (bundling this Phase 22 changeset with the pending Phase 21 deployment-record
+   docs commit, per the owner's instruction) — CI passed, merged via `merge-when-green` into `main`
+   at commit `9a2fe87ac9d72d847d3b08691d8eb67475472818`.
+2. Preview redeployed automatically for that commit — full pipeline green, including the Lighthouse
+   budget check (run `34244284830`, success).
+3. **Production deployment**, explicitly authorized by the owner in this session: dispatched
+   `deploy-production.yml` for commit `9a2fe87a` (confirmed an ancestor of `origin/main`, confirmed
+   CI — including browser-smoke — had succeeded for that exact SHA). Every step passed: typed
+   confirmation guard, ancestor check, CI-succeeded check, full quality-gate re-run, production
+   environment-contract validation, build, migrations, reference-data seed, Worker deploy, binding
+   verification, and the production smoke test. Run `34247233897`, **success**.
+   - **Deployed Worker version**: `73373d98-cc3a-4342-83f5-8eff5e43f321`
+   - **Build artifact checksum**: `4d6e9463b2eab9d81171d4d3932a14d088f1dd8717baebcaaa0248a0093822a7`
+     (identical to Phase 21's deployment — this checksum covers only the Worker's deployment
+     manifest/bindings, which neither phase's changes touched, not the page content)
+4. **Independent post-deploy verification** (direct `curl` against `https://crawlpact.com`): home
+   200 with no `X-Robots-Tag`/environment banner; `/crawlers/amazonbot/` 200 with the new "Related
+   crawlers" section live; the new comparison guide
+   (`/guides/amazonbot-vs-amzn-searchbot-vs-amzn-user/`) 200; `/crawlers/perplexity-user/` 200 with
+   the corrected "generally ignores [robots.txt]" fact live; `robots.txt` correct (`Sitemap:` line,
+   crawling allowed); `sitemap.xml` 200 with 80 URLs; Microsoft Clarity correctly gated (no script
+   on a cookie-less first visit) with the CSP correctly including `clarity.ms`/`c.bing.com`.
 
 ## GSC evidence
 

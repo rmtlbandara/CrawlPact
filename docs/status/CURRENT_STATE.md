@@ -1,9 +1,9 @@
 ---
 Document owner: Engineering owner
 Status: current-authoritative
-Last verified: 2026-09-08 (Phase 21 — Whole-Product UI, UX, Responsiveness & Conversion Optimization — deployed)
-Repository commit: 72414dd872286e73bf88885191913aaab5aeff81 (main; production runs this exact commit, CI-verified including browser-smoke — deploy-production.yml run 34214659536)
-Production deployment identifier: crawlpact-web (Cloudflare Worker), https://crawlpact.com — Worker version 7641c131-3a10-4502-99ca-99a6733eb7d8 (deployed 2026-09-08T10:30Z, confirmed live via the deploy workflow's own binding verification + production smoke test, plus independent post-deploy curl checks against the real account: home/pricing/sign-in 200, no `X-Robots-Tag`/environment banner on production, robots.txt correctly allows crawling with a `Sitemap:` line)
+Last verified: 2026-09-08 (Phase 22 — GSC-Driven SEO, Search Intent Ownership & High-Value Content Strengthening — deployed)
+Repository commit: 9a2fe87ac9d72d847d3b08691d8eb67475472818 (main; production runs this exact commit, CI-verified including browser-smoke — deploy-production.yml run 34247233897)
+Production deployment identifier: crawlpact-web (Cloudflare Worker), https://crawlpact.com — Worker version 73373d98-cc3a-4342-83f5-8eff5e43f321 (deployed 2026-09-08T16:02Z, confirmed live via the deploy workflow's own binding verification + production smoke test, plus independent post-deploy curl checks: home/amazonbot/new-comparison-guide/perplexity-user all 200, no `X-Robots-Tag`/environment banner, robots.txt/sitemap correct, Microsoft Clarity correctly gated pre-consent)
 Database migration version: 0038_google_oauth.sql (38/38 applied to production — unchanged; Phase 21 required no migration)
 Crawler registry version: 2026.07.3 (active release, unchanged since Phase 17 — not re-verified this pass; see docs/registry/CRAWLER_REGISTRY_GOVERNANCE.md and the Phase 15 completion report)
 Phase 0 baseline reference: docs/baseline/2026-08-03/ (superseded on billing/migration facts by Phases 5–6; superseded on production-parity/search-foundation facts by docs/baseline/2026-09-07-phase20/)
@@ -457,14 +457,14 @@ Status vocabulary: `verified-live` · `verified-disabled` · `verified-partial` 
 
 ## Version status
 
-- **Application commit**: `72414dd872286e73bf88885191913aaab5aeff81` (deployed to production;
+- **Application commit**: `9a2fe87ac9d72d847d3b08691d8eb67475472818` (deployed to production;
   matches `main`'s tip — see
-  `docs/reports/PHASE_21_WHOLE_PRODUCT_UI_UX_RESPONSIVENESS_CONVERSION_OPTIMIZATION_COMPLETION_REPORT.md`'s
-  deployment addendum)
-- **Migration version**: 38/38 applied (`0038_google_oauth.sql` latest) — unchanged; Phase 21
+  `docs/reports/PHASE_22_GSC_DRIVEN_SEO_SEARCH_INTENT_OWNERSHIP_HIGH_VALUE_CONTENT_STRENGTHENING_COMPLETION_REPORT.md`'s
+  deployment section)
+- **Migration version**: 38/38 applied (`0038_google_oauth.sql` latest) — unchanged; Phase 22
   required no migration
-- **Production Worker version**: `7641c131-3a10-4502-99ca-99a6733eb7d8`, deployed
-  2026-09-08T10:30Z (confirmed via `deploy-production.yml`'s own binding verification and
+- **Production Worker version**: `73373d98-cc3a-4342-83f5-8eff5e43f321`, deployed
+  2026-09-08T16:02Z (confirmed via `deploy-production.yml`'s own binding verification and
   production smoke test, plus independent post-deploy curl checks)
 - **Registry version**: `2026.07.3` active — not re-verified this pass (unchanged since Phase 17;
   see `docs/registry/CRAWLER_REGISTRY_GOVERNANCE.md`)
