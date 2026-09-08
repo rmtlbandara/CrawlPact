@@ -1,10 +1,10 @@
 ---
 Document owner: Engineering owner
 Status: current-authoritative
-Last verified: 2026-09-08 (Phase 20 — Authoritative Baseline, Production Parity & Search Foundation — deployed)
-Repository commit: f85c5ac04d3feb807dcba53762d087c657ba8a14 (main; production runs `4996b889362810e9f8e6a2c5038a8737e23fca4d`, the exact CI-verified commit Phase 20 was deployed from — everything after it on `main` is CI/CD-tooling-only, not application code: gitleaks allowlist, deploy-preview dispatch-chain fix, smoke-test fix — see the Phase 20 completion report's "Day 4" section)
-Production deployment identifier: crawlpact-web (Cloudflare Worker), https://crawlpact.com — Worker version fd7f5c16-fad9-4642-af11-261617c8f941 (deployed 2026-09-08T05:49:48Z, confirmed live via `wrangler deployments list` and 34/34 independent smoke checks against the real account)
-Database migration version: 0038_google_oauth.sql (38/38 applied to production, confirmed via a direct read-only D1 query against `d1_migrations` 2026-09-08, post-deploy — unchanged; Phase 20 required no migration)
+Last verified: 2026-09-08 (Phase 21 — Whole-Product UI, UX, Responsiveness & Conversion Optimization — deployed)
+Repository commit: 72414dd872286e73bf88885191913aaab5aeff81 (main; production runs this exact commit, CI-verified including browser-smoke — deploy-production.yml run 34214659536)
+Production deployment identifier: crawlpact-web (Cloudflare Worker), https://crawlpact.com — Worker version 7641c131-3a10-4502-99ca-99a6733eb7d8 (deployed 2026-09-08T10:30Z, confirmed live via the deploy workflow's own binding verification + production smoke test, plus independent post-deploy curl checks against the real account: home/pricing/sign-in 200, no `X-Robots-Tag`/environment banner on production, robots.txt correctly allows crawling with a `Sitemap:` line)
+Database migration version: 0038_google_oauth.sql (38/38 applied to production — unchanged; Phase 21 required no migration)
 Crawler registry version: 2026.07.3 (active release, unchanged since Phase 17 — not re-verified this pass; see docs/registry/CRAWLER_REGISTRY_GOVERNANCE.md and the Phase 15 completion report)
 Phase 0 baseline reference: docs/baseline/2026-08-03/ (superseded on billing/migration facts by Phases 5–6; superseded on production-parity/search-foundation facts by docs/baseline/2026-09-07-phase20/)
 Review frequency: Every release, or monthly
@@ -457,16 +457,15 @@ Status vocabulary: `verified-live` · `verified-disabled` · `verified-partial` 
 
 ## Version status
 
-- **Application commit**: `4996b889362810e9f8e6a2c5038a8737e23fca4d` (deployed to production;
-  `main`'s tip, `f85c5ac`, is 3 CI/CD-tooling-only commits ahead — no application code — see
-  `docs/reports/PHASE_20_AUTHORITATIVE_BASELINE_PRODUCTION_PARITY_SEARCH_FOUNDATION_COMPLETION_REPORT.md`'s
-  "Day 4" section)
-- **Migration version**: 38/38 applied (`0038_google_oauth.sql` latest), confirmed via a live
-  read-only D1 query against production 2026-09-08 (post-Phase-20-deploy) — zero drift, no
-  migration required or applied by Phase 20
-- **Production Worker version**: `fd7f5c16-fad9-4642-af11-261617c8f941`, deployed
-  2026-09-08T05:49:48Z (confirmed via `wrangler deployments list` and 34/34 independent smoke
-  checks against the real account)
+- **Application commit**: `72414dd872286e73bf88885191913aaab5aeff81` (deployed to production;
+  matches `main`'s tip — see
+  `docs/reports/PHASE_21_WHOLE_PRODUCT_UI_UX_RESPONSIVENESS_CONVERSION_OPTIMIZATION_COMPLETION_REPORT.md`'s
+  deployment addendum)
+- **Migration version**: 38/38 applied (`0038_google_oauth.sql` latest) — unchanged; Phase 21
+  required no migration
+- **Production Worker version**: `7641c131-3a10-4502-99ca-99a6733eb7d8`, deployed
+  2026-09-08T10:30Z (confirmed via `deploy-production.yml`'s own binding verification and
+  production smoke test, plus independent post-deploy curl checks)
 - **Registry version**: `2026.07.3` active — not re-verified this pass (unchanged since Phase 17;
   see `docs/registry/CRAWLER_REGISTRY_GOVERNANCE.md`)
 - **Billing configuration**: live, DB-backed Paddle catalog (Phase 6) — Solo $9/mo or $89/yr, Pro
