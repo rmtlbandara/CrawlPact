@@ -63,7 +63,7 @@ export function UsersManager() {
     {
       key: "id",
       header: "User ID",
-      render: (row) => <span className="font-mono text-supporting">{row.id}</span>,
+      render: (row) => <span className="break-all font-mono text-supporting">{row.id}</span>,
       hideBelow: "md",
     },
     { key: "plan", header: "Plan", render: (row) => row.planId, hideBelow: "sm" },

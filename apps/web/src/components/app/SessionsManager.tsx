@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import { Button, StatusChip } from "@crawlpact/ui";
+import { summarizeUserAgent } from "../../lib/user-agent-summary";
 
 type SessionSummary = {
   sessionId: string;
@@ -42,8 +43,8 @@ export function SessionsManager() {
               className="flex items-center justify-between gap-3 px-4 py-3"
             >
               <div>
-                <p className="text-body text-neutral-900">
-                  {session.userAgent ?? "Unknown device"}
+                <p className="text-body text-neutral-900" title={session.userAgent ?? undefined}>
+                  {summarizeUserAgent(session.userAgent)}
                 </p>
                 <p className="text-supporting text-neutral-600">
                   Last active {new Date(session.lastSeenAt).toLocaleString()}

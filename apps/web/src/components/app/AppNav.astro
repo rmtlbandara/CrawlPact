@@ -60,7 +60,10 @@ function isActive(href: string): boolean {
     </div>
     <div class="flex items-center gap-3">
       <PilotFeedbackLink client:idle />
-      <span class="hidden text-supporting text-neutral-600 sm:inline">{displayName}</span>
+      <span
+        class="hidden max-w-[9rem] truncate text-supporting text-neutral-600 sm:inline"
+        title={displayName}>{displayName}</span
+      >
       <SignOutButton client:load />
     </div>
   </div>

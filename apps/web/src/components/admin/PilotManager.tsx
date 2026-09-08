@@ -291,7 +291,7 @@ export function PilotManager() {
     {
       key: "userId",
       header: "User ID",
-      render: (p) => <span className="font-mono text-caption">{p.userId}</span>,
+      render: (p) => <span className="break-all font-mono text-caption">{p.userId}</span>,
     },
     { key: "segment", header: "Segment", render: (p) => p.segment.replace("_", " ") },
     {

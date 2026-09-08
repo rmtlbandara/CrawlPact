@@ -77,7 +77,7 @@ export function RuntimeConfigManager() {
     {
       key: "key",
       header: "Setting",
-      render: (r) => <span className="font-mono text-supporting">{r.key}</span>,
+      render: (r) => <span className="break-all font-mono text-supporting">{r.key}</span>,
     },
     { key: "value", header: "Value", render: (r) => r.value },
     {
@@ -91,7 +91,7 @@ export function RuntimeConfigManager() {
             : "—",
       hideBelow: "md",
     },
-    { key: "description", header: "Description", render: (r) => r.description, hideBelow: "lg" },
+    { key: "description", header: "Description", render: (r) => r.description, hideBelow: "xl" },
     {
       key: "actions",
       header: "",

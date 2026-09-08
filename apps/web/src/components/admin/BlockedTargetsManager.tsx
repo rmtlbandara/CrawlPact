@@ -94,7 +94,7 @@ export function BlockedTargetsManager() {
     {
       key: "pattern",
       header: "Target pattern",
-      render: (row) => <span className="font-mono">{row.target.targetPattern}</span>,
+      render: (row) => <span className="break-all font-mono">{row.target.targetPattern}</span>,
     },
     { key: "reason", header: "Reason", render: (row) => row.target.reason },
     {

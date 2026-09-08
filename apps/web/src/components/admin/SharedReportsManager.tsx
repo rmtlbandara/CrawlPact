@@ -79,7 +79,7 @@ export function SharedReportsManager() {
     {
       key: "scanId",
       header: "Scan",
-      render: (r) => <span className="font-mono text-supporting">{r.share.scanId}</span>,
+      render: (r) => <span className="break-all font-mono text-supporting">{r.share.scanId}</span>,
       hideBelow: "md",
     },
     {

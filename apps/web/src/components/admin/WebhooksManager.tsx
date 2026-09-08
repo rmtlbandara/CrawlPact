@@ -93,7 +93,9 @@ export function WebhooksManager() {
     {
       key: "eventId",
       header: "Event ID",
-      render: (row) => <span className="font-mono text-supporting">{row.paddleEventId}</span>,
+      render: (row) => (
+        <span className="break-all font-mono text-supporting">{row.paddleEventId}</span>
+      ),
       hideBelow: "lg",
     },
     {

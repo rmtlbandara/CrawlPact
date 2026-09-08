@@ -138,15 +138,34 @@ function isActive(href: string): boolean {
           >
             {env.label}
           </span>
+          {
+            /* Text label only from `xl` (1024px) — at 768px ("lg", where the sidebar itself
+              first appears) there isn't room for this alongside the env badge, the display
+              name and the Customer-view/Sign-out controls on the right: a real, measured
+              45px horizontal overflow at exactly 768px (scrollWidth 813 vs clientWidth 768)
+              once this link's text was kept on one line instead of the previous ugly wrap. */
+          }
           <a
             href="/"
-            class="hidden text-supporting text-neutral-500 hover:text-neutral-800 sm:inline"
+            aria-label="Back to public site"
+            title="Back to public site"
+            class="hidden items-center whitespace-nowrap text-supporting text-neutral-500 hover:text-neutral-800 sm:flex"
           >
-            ← Back to public site
+            <span aria-hidden="true">←</span>
+            <span class="hidden xl:inline">&nbsp;Back to public site</span>
           </a>
         </div>
         <div class="flex items-center gap-3">
-          <span class="hidden text-supporting text-neutral-600 sm:inline">{displayName}</span>
+          {
+            /* A long display name (this project has no length cap on it — see
+              lib/auth/register.ts) must not push "← Back to public site" into an ugly
+              multi-line wrap the way an E2E-fixture-length name did at 768px: truncated
+              with a `title` so the full value is still one hover/focus away. */
+          }
+          <span
+            class="hidden max-w-[9rem] truncate text-supporting text-neutral-600 sm:inline"
+            title={displayName}>{displayName}</span
+          >
           {
             /* Icon always visible (so mobile admins can still reach it — AdminMobileNav's
               drawer only lists admin sections, not this), label only at `xl` (1024px in

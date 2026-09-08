@@ -52,7 +52,7 @@ export function FindingAnalyticsDashboard() {
           )}
           {data.mostFrequent.map((f) => (
             <li key={f.code} className="flex items-center justify-between gap-4 px-4 py-3">
-              <span className="font-mono text-body text-neutral-800">{f.code}</span>
+              <span className="break-all font-mono text-body text-neutral-800">{f.code}</span>
               <span className="text-supporting text-neutral-600">{f.count}</span>
             </li>
           ))}
