@@ -103,7 +103,16 @@ async function run(): Promise<void> {
   // slash, so this also implicitly confirms the page didn't regress back to a prerendered static
   // file (which would 404 on a bare, non-index path check like this one only if misconfigured).
   await checkPage("Pricing page", `${base}/pricing/`, 200);
-  await checkPage("robots.txt", `${base}/robots.txt`, 200, ["Sitemap:"]);
+  // Phase 20 (docs/baseline/2026-09-07-phase20/PREVIEW_SEARCH_ISOLATION.md):
+  // preview's robots.txt deliberately disallows everything and omits the
+  // Sitemap: line — nothing on preview should ever be discoverable via a
+  // sitemap submission. Production keeps the real declaration.
+  await checkPage(
+    "robots.txt",
+    `${base}/robots.txt`,
+    200,
+    target === "preview" ? ["Disallow: /"] : ["Sitemap:"],
+  );
   await checkPage("sitemap.xml", `${base}/sitemap.xml`, 200);
   await checkPage("Sign-in / registration entry point", `${base}/sign-in`, 200, [
     "Sign in with passkey",
