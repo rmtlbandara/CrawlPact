@@ -4,11 +4,22 @@ name: Deploy preview
 # builds or tests anything itself, it only builds *for deployment* and
 # deploys trusted, already-validated code. A commit that failed CI can
 # never reach this workflow.
+#
+# Phase 20 (2026-09-08): the trigger-level `branches: [main]` filter this
+# used to carry never matched a CI run dispatched by merge-when-green.yml's
+# own `workflow_dispatch` re-run step (actor `github-actions[bot]`) — found
+# live: `gh api .../runs/<id>` on that exact completed run confirmed
+# `head_branch: "main"` (an exact string match against the filter), yet no
+# "Deploy preview" run was ever created, while `merge-when-green.yml`'s own
+# `workflow_run` listener on the same "CI" workflow — which carries no
+# trigger-level `branches` filter at all — fired correctly for the
+# identical event both times it was exercised. The branch check is done in
+# the job's own `if:` condition below instead, mirroring the pattern that
+# workflow already proves works for this exact upstream-run shape.
 on:
   workflow_run:
     workflows: ["CI"]
     types: [completed]
-    branches: [main]
 
 concurrency:
   # A newer preview deploy always wins — an in-flight deploy of an older
@@ -19,7 +30,7 @@ concurrency:
 jobs:
   deploy:
     name: Build, deploy and verify preview
-    if: github.event.workflow_run.conclusion == 'success'
+    if: github.event.workflow_run.conclusion == 'success' && github.event.workflow_run.head_branch == 'main'
     runs-on: ubuntu-latest
     environment: preview
     permissions:
