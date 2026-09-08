@@ -1,10 +1,10 @@
 ---
 Document owner: Engineering owner
 Status: current-authoritative
-Last verified: 2026-09-07 (Phase 20 — Authoritative Baseline, Production Parity & Search Foundation)
-Repository commit: 0698829389d39ab4a91bf6fc0a578a5b88f9a38a (main, post-ADR-0009 Google Sign-In real-account confirmation; the two commits after the last deployed code change, `cfb3f3b` and `0698829`, are docs-only — see docs/baseline/2026-09-07-phase20/PRODUCTION_PARITY_MATRIX.md)
-Production deployment identifier: crawlpact-web (Cloudflare Worker), https://crawlpact.com — Worker version 4f775d19-7654-4af5-ab2e-b43cfb705e54 (deployed 2026-09-07T11:04:51Z, confirmed live via `wrangler deployments list` against the real account)
-Database migration version: 0038_google_oauth.sql (38/38 applied to production, confirmed via a direct read-only D1 query against `d1_migrations` 2026-09-07)
+Last verified: 2026-09-08 (Phase 20 — Authoritative Baseline, Production Parity & Search Foundation — deployed)
+Repository commit: f85c5ac04d3feb807dcba53762d087c657ba8a14 (main; production runs `4996b889362810e9f8e6a2c5038a8737e23fca4d`, the exact CI-verified commit Phase 20 was deployed from — everything after it on `main` is CI/CD-tooling-only, not application code: gitleaks allowlist, deploy-preview dispatch-chain fix, smoke-test fix — see the Phase 20 completion report's "Day 4" section)
+Production deployment identifier: crawlpact-web (Cloudflare Worker), https://crawlpact.com — Worker version fd7f5c16-fad9-4642-af11-261617c8f941 (deployed 2026-09-08T05:49:48Z, confirmed live via `wrangler deployments list` and 34/34 independent smoke checks against the real account)
+Database migration version: 0038_google_oauth.sql (38/38 applied to production, confirmed via a direct read-only D1 query against `d1_migrations` 2026-09-08, post-deploy — unchanged; Phase 20 required no migration)
 Crawler registry version: 2026.07.3 (active release, unchanged since Phase 17 — not re-verified this pass; see docs/registry/CRAWLER_REGISTRY_GOVERNANCE.md and the Phase 15 completion report)
 Phase 0 baseline reference: docs/baseline/2026-08-03/ (superseded on billing/migration facts by Phases 5–6; superseded on production-parity/search-foundation facts by docs/baseline/2026-09-07-phase20/)
 Review frequency: Every release, or monthly
@@ -116,10 +116,17 @@ permanent (301) redirects everywhere, from one shared route registry
 (`apps/web/src/lib/route-registry.ts`). Also reconciled: RISK-032 (Search Console — a property is
 now connected, per the product owner's own evidence) and this file's own header, which had drifted
 one deployment behind (migration `0037`→`0038`, Worker version, commit) despite `main` having no
-undeployed application-code drift. No database schema change. Not yet deployed — see
-`docs/baseline/2026-09-07-phase20/` for full evidence and
+undeployed application-code drift. No database schema change. **Deployed to production 2026-09-08
+(Worker `fd7f5c16-…`, commit `4996b889…`, explicit owner authorization)**, independently validated
+live (canonical redirects, sitemap, robots.txt, preview isolation, 34/34 production smoke checks),
+and confirmed by a real post-deployment Google URL Inspection showing canonical mismatches drop
+from 20/19/1 to zero. Also found and fixed, along the way, three pre-existing CI/CD automation gaps
+unrelated to Phase 20's own code (a gitleaks full-history false positive; `deploy-preview.yml`
+never actually firing after an automerge, due to a GitHub `GITHUB_TOKEN` anti-recursion limit two
+hops deep; a stale smoke-test assertion) — see
+`docs/baseline/2026-09-07-phase20/` and `docs/baseline/2026-09-08-phase20/` for full evidence and
 `docs/reports/PHASE_20_AUTHORITATIVE_BASELINE_PRODUCTION_PARITY_SEARCH_FOUNDATION_COMPLETION_REPORT.md`
-for the completion report.
+for the completion report (verdict: **PASS**).
 
 Phase 16 (Policy Observatory and Research Authority, deployed 2026-08-11) added a Registry
 Observatory (`/observatory`, `/observatory/registry`, `/observatory/methodology`) computed
@@ -450,13 +457,16 @@ Status vocabulary: `verified-live` · `verified-disabled` · `verified-partial` 
 
 ## Version status
 
-- **Application commit**: `0698829` (main; last application-code-affecting commit `72a8630`, ADR-0009
-  Google Sign-In transport fix — confirmed via `git diff --stat`, see
-  `docs/baseline/2026-09-07-phase20/PRODUCTION_PARITY_MATRIX.md`)
+- **Application commit**: `4996b889362810e9f8e6a2c5038a8737e23fca4d` (deployed to production;
+  `main`'s tip, `f85c5ac`, is 3 CI/CD-tooling-only commits ahead — no application code — see
+  `docs/reports/PHASE_20_AUTHORITATIVE_BASELINE_PRODUCTION_PARITY_SEARCH_FOUNDATION_COMPLETION_REPORT.md`'s
+  "Day 4" section)
 - **Migration version**: 38/38 applied (`0038_google_oauth.sql` latest), confirmed via a live
-  read-only D1 query against production 2026-09-07 — zero drift between repository and production
-- **Production Worker version**: `4f775d19-7654-4af5-ab2e-b43cfb705e54`, deployed
-  2026-09-07T11:04:51Z (confirmed via `wrangler deployments list` against the real account)
+  read-only D1 query against production 2026-09-08 (post-Phase-20-deploy) — zero drift, no
+  migration required or applied by Phase 20
+- **Production Worker version**: `fd7f5c16-fad9-4642-af11-261617c8f941`, deployed
+  2026-09-08T05:49:48Z (confirmed via `wrangler deployments list` and 34/34 independent smoke
+  checks against the real account)
 - **Registry version**: `2026.07.3` active — not re-verified this pass (unchanged since Phase 17;
   see `docs/registry/CRAWLER_REGISTRY_GOVERNANCE.md`)
 - **Billing configuration**: live, DB-backed Paddle catalog (Phase 6) — Solo $9/mo or $89/yr, Pro
