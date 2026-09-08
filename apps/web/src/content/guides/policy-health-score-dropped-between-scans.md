@@ -24,12 +24,12 @@ policy files without anyone directly editing them.
    `active`, or being marked `deprecated` with a replacement), your score can change even though
    your `robots.txt` file is byte-for-byte identical. CrawlPact's registry changelog records
    exactly this kind of change, separately from any change to a scanned website — see
-   [changelog](/changelog).
+   [changelog](/changelog/).
 3. **A new finding was introduced.** A change that creates a new conflict (for example, a broad
    wildcard rule newly overriding a specific one) lowers the score even if the specific line that
    changed looks minor.
 4. **The scan was incomplete.** A scan that couldn't fully reach your site (see
-   [Resource unavailable troubleshooting](/guides/crawler-shows-resource-unavailable)) is scored
+   [Resource unavailable troubleshooting](/guides/crawler-shows-resource-unavailable/)) is scored
    differently from a fully completed one, since an incomplete result reflects missing
    information, not a confirmed policy state.
 

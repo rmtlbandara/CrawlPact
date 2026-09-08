@@ -16,4 +16,4 @@ content for training its Claude models.
 
 Anthropic documents standard `robots.txt` support for disallowing `ClaudeBot`. As with other
 training-purpose crawlers, blocking it is a declared-policy signal only — see
-[/limitations](/limitations) for what a `robots.txt` rule can and cannot guarantee.
+[/limitations](/limitations/) for what a `robots.txt` rule can and cannot guarantee.

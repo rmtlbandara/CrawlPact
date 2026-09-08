@@ -45,13 +45,19 @@ export const TRUST_CONFIG = {
   infrastructureProviders: ["Cloudflare"],
   billingProvider: "Paddle",
   analyticsProvider: "Google Analytics",
+  // Phase 22 addendum: behavioural UX analytics (session recordings/heatmaps), gated identically
+  // to analyticsProvider above (same consent cookie, same marketing-page allowlist, same
+  // production-only rule) — see MicrosoftClarity.astro and MarketingLayout.astro's
+  // `shouldRenderClarity`. Named separately from analyticsProvider because the two are distinct
+  // third parties disclosed individually below, not a single combined "analytics" concept.
+  behavioralAnalyticsProvider: "Microsoft Clarity",
 
   // Kept in sync by hand with each page's own "Effective and last updated" line
   // (privacy.astro, terms.astro, acceptable-use.astro) — duplicated here so a
   // future consumer (e.g. a trust-summary page) doesn't have to re-derive it
   // by parsing page content. A review date may only change when the relevant document receives
   // a substantive review — never bumped automatically during an unrelated build.
-  policyEffectiveDate: "2026-07-30",
+  policyEffectiveDate: "2026-09-08",
   methodologyLastSubstantiveUpdate: "2026-07-31",
   securityPolicyLastReviewed: "2026-08-03",
 

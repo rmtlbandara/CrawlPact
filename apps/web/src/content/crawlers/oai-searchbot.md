@@ -17,7 +17,7 @@ ChatGPT's search features, distinct from the training-focused `GPTBot`.
 Disallowing `OAI-SearchBot` removes this content from ChatGPT's search-style results. It does
 not affect `GPTBot` (OpenAI's training crawler) or `ChatGPT-User` (fetches made in direct
 response to a user's request inside ChatGPT) — both evaluated as separate tokens. See
-[/limitations](/limitations) for what a `robots.txt` rule can and cannot guarantee.
+[/limitations](/limitations/) for what a `robots.txt` rule can and cannot guarantee.
 
 ## Why the distinction matters
 

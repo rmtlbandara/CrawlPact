@@ -38,6 +38,41 @@ describe("Google Analytics never reaches authenticated/admin output", () => {
   });
 });
 
+/** Phase 22: Microsoft Clarity mirrors every one of the GA boundary checks above. */
+describe("Microsoft Clarity never reaches authenticated/admin output", () => {
+  it("AppLayout.astro never imports MicrosoftClarity or references clarity.ms", () => {
+    const content = readLayout("AppLayout.astro");
+    expect(content).not.toMatch(/MicrosoftClarity/);
+    expect(content).not.toMatch(/clarity\.ms/);
+  });
+
+  it("AdminLayout.astro never imports MicrosoftClarity or references clarity.ms", () => {
+    const content = readLayout("AdminLayout.astro");
+    expect(content).not.toMatch(/MicrosoftClarity/);
+    expect(content).not.toMatch(/clarity\.ms/);
+  });
+
+  it("BaseLayout.astro (shared by every layout) never itself renders MicrosoftClarity", () => {
+    const content = readLayout("BaseLayout.astro");
+    expect(content).not.toMatch(/MicrosoftClarity/);
+    expect(content).not.toMatch(/clarity\.ms/);
+  });
+});
+
+describe("MarketingLayout.astro gates MicrosoftClarity on the same conditions as GoogleAnalytics", () => {
+  const content = readLayout("MarketingLayout.astro");
+
+  it("only renders MicrosoftClarity behind a computed shouldRenderClarity flag, never unconditionally", () => {
+    expect(content).toMatch(/\{shouldRenderClarity\s*&&\s*<MicrosoftClarity\s*\/>\}/);
+  });
+
+  it("derives shouldRenderClarity from shouldRenderGa (the same production + route + consent gate), not a separate weaker check", () => {
+    const match = /const shouldRenderClarity\s*=\s*([^;]+);/.exec(content);
+    expect(match).not.toBeNull();
+    expect(match?.[1]?.trim()).toBe("shouldRenderGa");
+  });
+});
+
 describe("MarketingLayout.astro gates GoogleAnalytics on route eligibility and granted consent", () => {
   const content = readLayout("MarketingLayout.astro");
 
@@ -85,5 +120,15 @@ describe("Phase 14: Google Analytics never reaches /status or its Atom feed", ()
     const feedRoute = readPage("../pages/status/feed.xml.ts");
     expect(feedRoute).not.toMatch(/gtag/i);
     expect(feedRoute).not.toMatch(/googletagmanager\.com/);
+  });
+
+  it("status.astro never references clarity.ms either (Clarity shares GA's allowlist)", () => {
+    const statusPage = readPage("../pages/status.astro");
+    expect(statusPage).not.toMatch(/clarity\.ms/);
+  });
+
+  it("the public status Atom feed never references clarity.ms", () => {
+    const feedRoute = readPage("../pages/status/feed.xml.ts");
+    expect(feedRoute).not.toMatch(/clarity\.ms/);
   });
 });

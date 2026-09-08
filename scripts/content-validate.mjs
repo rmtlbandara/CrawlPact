@@ -266,6 +266,61 @@ function main() {
   }
   void verticalIds; // reserved for future cross-collection checks
 
+  // Phase 22: found live — the Phase 20 canonical-URL sweep (trailing slash for every indexable
+  // page except "/") covered .astro files only, missing every content-collection Markdown body
+  // entirely. 49 files across crawlers/guides/platforms/verticals had at least one internal link
+  // pointing at the pre-Phase-20 bare form (e.g. "](/limitations)" instead of "](/limitations/)")
+  // — harmless today only because public/_redirects 301s the bare form, but exactly the
+  // noncanonical-internal-link regression Phase 20 explicitly prohibits reintroducing. Bare
+  // top-level routes (matching PRERENDERED_ROUTES/SSR_INDEXABLE_ROUTES in
+  // apps/web/src/lib/route-registry.ts) and any /crawlers/, /guides/, /platforms/ collection link
+  // must always carry the trailing slash in a content body.
+  const CANONICAL_BARE_PAGES = [
+    "about",
+    "contact",
+    "audit",
+    "sample-report",
+    "crawlers",
+    "tools",
+    "tools/ai-crawler-checker",
+    "tools/robots-txt-ai-validator",
+    "tools/rsl-validator",
+    "tools/llms-txt-validator",
+    "tools/content-signals-checker",
+    "guides",
+    "platforms",
+    "methodology",
+    "scoring",
+    "observatory/methodology",
+    "security",
+    "privacy",
+    "terms",
+    "acceptable-use",
+    "limitations",
+    "pricing",
+    "status",
+    "changelog",
+    "scanner",
+    "observatory",
+    "observatory/registry",
+  ];
+  const barePagePattern = new RegExp(
+    `\\]\\(/(?:${CANONICAL_BARE_PAGES.map((p) => p.replace(/\//g, "\\/")).join("|")})\\)`,
+  );
+  const bareCollectionPattern = /\]\(\/(?:crawlers|guides|platforms)\/[a-z0-9-]+\)/;
+  for (const entry of [...verticals, ...platforms, ...guides, ...crawlers]) {
+    if (barePagePattern.test(entry.body)) {
+      errors.push(
+        `${entry.file}: contains a body link to a canonical page missing its trailing slash (e.g. "](/limitations)" instead of "](/limitations/)")`,
+      );
+    }
+    if (bareCollectionPattern.test(entry.body)) {
+      errors.push(
+        `${entry.file}: contains a body link to a crawler/guide/platform page missing its trailing slash`,
+      );
+    }
+  }
+
   if (warnings.length > 0) {
     console.warn(`\n${warnings.length} warning(s):`);
     for (const w of warnings) console.warn(`  - ${w}`);

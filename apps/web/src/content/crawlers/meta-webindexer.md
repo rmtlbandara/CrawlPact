@@ -25,5 +25,5 @@ capitalisation convention used consistently across this directory.
 Disallowing `Meta-WebIndexer` affects this content's relevance and accuracy in Meta AI's search
 results specifically. It does not affect `Meta-ExternalAgent` (AI training), `Meta-ExternalAds`
 (advertising validation), or `Meta-ExternalFetcher` (user-triggered agent fetches) — each is
-governed by its own separate token. See [/limitations](/limitations) for what a `robots.txt` rule
+governed by its own separate token. See [/limitations](/limitations/) for what a `robots.txt` rule
 can and cannot guarantee.

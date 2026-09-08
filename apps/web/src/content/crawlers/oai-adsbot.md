@@ -27,5 +27,5 @@ supporting standard `robots.txt` disallow rules.
 
 ## Site-owner controls
 
-Standard `robots.txt` disallow rules apply. See [/limitations](/limitations) for what a
+Standard `robots.txt` disallow rules apply. See [/limitations](/limitations/) for what a
 `robots.txt` rule can and cannot guarantee.

@@ -28,4 +28,4 @@ User-agent: Claude-SearchBot
 Disallow: /
 ```
 
-See [/limitations](/limitations) for what a `robots.txt` rule can and cannot guarantee.
+See [/limitations](/limitations/) for what a `robots.txt` rule can and cannot guarantee.

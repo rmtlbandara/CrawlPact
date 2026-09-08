@@ -108,8 +108,8 @@ header configuration — including one introduced by a `netlify.toml` change.
 
 ## Related tools and crawler pages
 
-See [robots.txt vs. meta robots vs. X-Robots-Tag](/guides/robots-txt-vs-meta-robots-vs-x-robots-tag)
-for how these signal layers relate, and the [crawler directory](/crawlers) for documented AI
+See [robots.txt vs. meta robots vs. X-Robots-Tag](/guides/robots-txt-vs-meta-robots-vs-x-robots-tag/)
+for how these signal layers relate, and the [crawler directory](/crawlers/) for documented AI
 crawler tokens.
 
 ## Frequently asked questions

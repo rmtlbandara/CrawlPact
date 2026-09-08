@@ -34,6 +34,6 @@ operate at different scopes. Using the wrong one for the job is a common source 
 Adding a meta robots or `X-Robots-Tag` "noindex" directive to a page that's also disallowed in
 `robots.txt` for the same crawler is redundant, and can create a false sense of double protection
 — since the crawler never reaches the page to see the tag at all. CrawlPact's
-[Content Signals checker](/tools/content-signals-checker) surfaces the meta robots tag,
+[Content Signals checker](/tools/content-signals-checker/) surfaces the meta robots tag,
 `X-Robots-Tag` header, and canonical URL together, alongside the `robots.txt` result, so you can
 see whether they actually agree.

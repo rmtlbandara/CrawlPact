@@ -57,7 +57,7 @@ a deploy rather than waiting for the next scheduled monitoring cycle.
 
 Once a domain is saved, automatic monitoring (Solo: monthly, Pro/Agency: weekly) rechecks it on a
 schedule and flags a change — including one caused by a platform update or CDN change with no
-corresponding commit. See [Platform guides](/platforms) for what's independently verifiable about
+corresponding commit. See [Platform guides](/platforms/) for what's independently verifiable about
 how specific hosting platforms and CDNs handle these signals.
 
 ## Current plan positioning
@@ -65,7 +65,7 @@ how specific hosting platforms and CDNs handle these signals.
 Solo (1 saved domain minimum via Free, 5 on Solo) typically fits an individual developer or a
 single project — monthly automatic monitoring, a private Atom feed for change alerts, and 5 manual
 re-scans per domain per month for post-deploy verification. Teams managing several projects or
-client sites usually fit Pro or Agency instead — see [pricing](/pricing) for the full comparison.
+client sites usually fit Pro or Agency instead — see [pricing](/pricing/) for the full comparison.
 
 ## What this does not include
 
@@ -78,8 +78,8 @@ immediately after a specific deploy.
 
 ## Methodology
 
-See [Methodology](/methodology) for exactly what CrawlPact evaluates and how, and
-[Scanner information](/scanner) for the technical detail behind the fetch/evaluation process
+See [Methodology](/methodology/) for exactly what CrawlPact evaluates and how, and
+[Scanner information](/scanner/) for the technical detail behind the fetch/evaluation process
 itself.
 
 ## Frequently asked questions

@@ -6,12 +6,12 @@ publishedDate: "2026-07-24"
 ---
 
 This is the practical, step-by-step version of the decision covered in
-[Blocking AI training while staying visible in AI search](/guides/blocking-ai-training-while-staying-visible-in-ai-search) —
+[Blocking AI training while staying visible in AI search](/guides/blocking-ai-training-while-staying-visible-in-ai-search/) —
 how to actually write the `robots.txt` groups.
 
 ## Step 1: List the training-purpose tokens you want to restrict
 
-Using CrawlPact's [crawler directory](/crawlers), identify which documented crawlers are
+Using CrawlPact's [crawler directory](/crawlers/), identify which documented crawlers are
 categorised `training` for the operators relevant to you. As of this registry version, that
 includes at minimum `GPTBot`, `ClaudeBot`, `Google-Extended`, `Applebot-Extended`, and
 `Meta-ExternalAgent`.
@@ -48,11 +48,11 @@ visible, since an exact-token match always takes precedence over the wildcard gr
 
 ## Step 4: Verify
 
-Run CrawlPact's [AI crawler checker](/tools/ai-crawler-checker) against your domain. It shows the
+Run CrawlPact's [AI crawler checker](/tools/ai-crawler-checker/) against your domain. It shows the
 declared result for every crawler in the registry — training-purpose tokens should show
 "Blocked," and search/user-triggered tokens should show "Allowed" or "No explicit rule."
 
 ## What this doesn't do
 
-This is a declared instruction, not enforcement — see [/limitations](/limitations) for what a
+This is a declared instruction, not enforcement — see [/limitations](/limitations/) for what a
 `robots.txt` rule can and cannot guarantee.

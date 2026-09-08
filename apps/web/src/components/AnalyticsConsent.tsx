@@ -62,6 +62,53 @@ function clearGaCookies() {
   }
 }
 
+/**
+ * Phase 22 addendum: Microsoft Clarity's project snippet, copied verbatim
+ * (see MicrosoftClarity.astro's doc comment) — this is the client-side
+ * equivalent of that same server-rendered component, needed because a
+ * first-time visitor who clicks "Accept" during the current page view has no
+ * consent cookie yet on this request, so the SSR component never rendered;
+ * without this, Clarity would only start on that visitor's *next* page load,
+ * not the one where they actually granted consent. Guarded by checking for
+ * `window.clarity` first, matching `loadGoogleAnalytics()`'s own
+ * already-injected guard.
+ */
+type ClarityQueue = { (...args: unknown[]): void; q?: unknown[] };
+
+function loadMicrosoftClarity() {
+  const w = window as unknown as { clarity?: ClarityQueue };
+  if (typeof w.clarity !== "undefined") return;
+
+  const queue: ClarityQueue = (...args: unknown[]) => {
+    queue.q = queue.q || [];
+    queue.q.push(args);
+  };
+  w.clarity = queue;
+
+  const script = document.createElement("script");
+  script.async = true;
+  script.src = "https://www.clarity.ms/tag/yf18yfb8m9";
+  const existingScript = document.getElementsByTagName("script")[0];
+  if (existingScript?.parentNode) {
+    existingScript.parentNode.insertBefore(script, existingScript);
+  } else {
+    document.head.appendChild(script);
+  }
+}
+
+/** Best-effort, mirroring clearGaCookies() above: Clarity's own documented
+ * cookies (learn.microsoft.com/en-us/clarity/setup-and-installation/clarity-csp)
+ * are `_clck` and `_clsk`. */
+function clearClarityCookies() {
+  const names = document.cookie
+    .split(";")
+    .map((c) => c.split("=")[0]?.trim())
+    .filter((name): name is string => name === "_clck" || name === "_clsk");
+  for (const name of names) {
+    document.cookie = `${name}=; Path=/; Max-Age=0; SameSite=Lax`;
+  }
+}
+
 function loadGoogleAnalytics() {
   if (document.getElementById("ga-gtag-script")) return;
   const loader = document.createElement("script");
@@ -118,7 +165,10 @@ export function AnalyticsConsent({ gaEligible, initialConsentState }: Props) {
     const existing = readConsentCookie();
     setConsent(existing);
     setHasDecided(existing !== null);
-    if (existing === "granted" && gaEligible) loadGoogleAnalytics();
+    if (existing === "granted" && gaEligible) {
+      loadGoogleAnalytics();
+      loadMicrosoftClarity();
+    }
   }, [gaEligible]);
 
   function record(
@@ -141,7 +191,10 @@ export function AnalyticsConsent({ gaEligible, initialConsentState }: Props) {
     setConsent("granted");
     setHasDecided(true);
     setPanelOpen(false);
-    if (gaEligible) loadGoogleAnalytics();
+    if (gaEligible) {
+      loadGoogleAnalytics();
+      loadMicrosoftClarity();
+    }
     record(wasDecided ? "analytics_consent_changed" : "analytics_consent_granted");
   }
 
@@ -153,6 +206,7 @@ export function AnalyticsConsent({ gaEligible, initialConsentState }: Props) {
     setPanelOpen(false);
     denyGaIfLoaded();
     clearGaCookies();
+    clearClarityCookies();
     record(wasDecided ? "analytics_consent_changed" : "analytics_consent_declined");
   }
 
@@ -179,9 +233,10 @@ export function AnalyticsConsent({ gaEligible, initialConsentState }: Props) {
             <div>
               <p className="text-body font-semibold text-neutral-950">Analytics preferences</p>
               <p className="mt-1 max-w-2xl text-supporting text-neutral-600">
-                CrawlPact uses optional Google Analytics on public marketing pages to understand
-                which content is useful. It is not used in the authenticated app or admin areas. You
-                can accept or decline analytics without affecting the service.
+                CrawlPact uses optional Google Analytics and Microsoft Clarity on public marketing
+                pages to understand which content is useful and how visitors actually use it.
+                Neither is used in the authenticated app or admin areas. You can accept or decline
+                analytics without affecting the service.
               </p>
               {hasDecided && (
                 <p className="mt-1 text-metadata text-neutral-500">

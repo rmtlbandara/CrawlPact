@@ -21,7 +21,7 @@ search-purpose `OAI-SearchBot` — a website can restrict one without restrictin
 
 ## Site-owner controls
 
-Standard `robots.txt` disallow rules apply. See [/limitations](/limitations) for what a
+Standard `robots.txt` disallow rules apply. See [/limitations](/limitations/) for what a
 `robots.txt` rule can and cannot guarantee.
 
 ## Note on this page's source

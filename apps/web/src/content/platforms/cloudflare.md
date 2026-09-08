@@ -120,8 +120,8 @@ managed rules, without you needing to remember to manually recheck after a dashb
 
 ## Related tools and crawler pages
 
-See the [crawler directory](/crawlers) for documented AI crawler tokens, and
-[Block only AI training crawlers](/guides/how-to-block-only-ai-training-crawlers) for a
+See the [crawler directory](/crawlers/) for documented AI crawler tokens, and
+[Block only AI training crawlers](/guides/how-to-block-only-ai-training-crawlers/) for a
 platform-neutral rule-writing guide.
 
 ## Frequently asked questions

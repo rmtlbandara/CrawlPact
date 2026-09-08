@@ -1,13 +1,11 @@
 # Phase 21 — Whole-Product UI, UX, Responsiveness & Conversion Optimization — Completion Report
 
-**Verdict: READY_FOR_PRODUCTION_DEPLOYMENT**
+**Verdict: PASS**
 
-All quality-gate checks pass locally, the changes are validated against real (not mocked)
-authenticated sessions, and every finding is backed by a concrete measurement. Production
-deployment itself was not performed this phase — consistent with `CLAUDE.md`'s standing rule that
-requires a fresh, explicit, in-the-moment authorization for every production deployment regardless
-of any prior session's authorization, and consistent with this phase's own prompt repeating that
-same requirement.
+All quality-gate checks pass, the changes were validated against real (not mocked) authenticated
+sessions, every finding is backed by a concrete measurement, and the changeset has since been
+deployed to production with explicit, in-the-moment owner authorization and independently
+verified live. See "Deployment" below for the full record.
 
 ## Scope actually delivered
 
@@ -86,11 +84,50 @@ authoritative gate, matching the same category of local-environment limitation P
 Not touched. No changes in this diff affect routing, redirects, `robots.txt`, `sitemap.xml`, or
 `apps/web/src/lib/analytics.ts`/GA4 wiring.
 
-## Path to Production
+## Deployment
 
-This changeset has not been deployed anywhere yet (not even Preview, as of this report's initial
-draft — see the addendum below once that happens). Deployment follows the same trusted workflow
-established in Phase 20: PR → CI → `merge-when-green` (owner-authored, `automerge`-labelled) →
-`main` → auto-dispatched Preview deploy → smoke-tested. **Production deployment itself requires a
-fresh, explicit, in-the-moment authorization from the owner**, per `CLAUDE.md` and this phase's own
-prompt — it does not happen automatically even after Preview validates cleanly.
+Followed the same trusted workflow established in Phase 20, across two PRs:
+
+1. **PR #164** (the Phase 21 UI/UX fixes) — CI passed (after one fixup commit for a Prettier
+   formatting miss in the new evidence docs, caught by CI, not by local `format:check`, which had
+   been run before those docs were finished — a process gap on my part, corrected immediately),
+   merged via `merge-when-green` into `main` at commit `05cc6227fd6b224cf5991b4ebbd6644c0f74acc8`.
+2. Preview redeployed automatically for that commit. Deploy/migrate/bindings/smoke-test all
+   passed, but the Lighthouse budget check failed on **every** page with an identical SEO score
+   (66/100, threshold 90) — traced to a real, pre-existing gap this Phase 21 changeset did not
+   cause: Preview intentionally sends `X-Robots-Tag: noindex` (Phase 20's search-isolation
+   feature), which fails Lighthouse's `is-crawlable` audit by design. This was the _first time_
+   this Lighthouse step had ever run to a real conclusion — `deploy-preview.yml`'s dispatch chain
+   was broken until Phase 20 fixed it days earlier, so the conflict between two previously-correct
+   features (search isolation and the SEO budget gate) had never actually been exercised before.
+3. **PR #165** — a small, separately-disclosed fix: `scripts/lighthouse-check.mjs` now detects
+   `noindex` at runtime (a real request to the target, not a hardcoded "always skip on preview"
+   assumption) and skips only the SEO threshold when it's present, leaving
+   performance/accessibility/best-practices/LCP/CLS fully gated. Verified locally against live
+   Preview before pushing (performance 99-100, accessibility 100, best-practices 92, LCP
+   ~1.5-1.8s, CLS ~0.0001 — all passing). CI passed, merged via `merge-when-green` into `main` at
+   commit `72414dd872286e73bf88885191913aaab5aeff81`.
+4. Preview redeployed again for that commit — **full pipeline green end to end**, including
+   Lighthouse (run `34212855569`, 17m48s): performance 100, accessibility 100, best-practices 92,
+   SEO correctly skipped (66, not gated), LCP ~1.46-1.5s, CLS ~0.0001 across all 6 representative
+   pages. "Lighthouse check passed for all pages."
+5. **Production deployment**, explicitly authorized by the owner in this session ("Okay, Release
+   production correctly"): dispatched `deploy-production.yml` for commit `72414dd8...` (`main`'s
+   tip at the time, confirmed an ancestor of `origin/main`, confirmed CI — including
+   browser-smoke — had succeeded for that exact SHA). Every step passed: typed-confirmation guard,
+   ancestor check, CI-succeeded check, full quality-gate re-run, production environment-contract
+   validation, build, migrations (38/38, no new migration needed), reference-data seed, Worker
+   deploy, binding verification, and the production smoke test. Run `34214659536`, 12m51s,
+   **success**.
+   - **Deployed Worker version**: `7641c131-3a10-4502-99ca-99a6733eb7d8`
+   - **Build artifact checksum**: `4d6e9463b2eab9d81171d4d3932a14d088f1dd8717baebcaaa0248a0093822a7`
+   - **Deployed commit**: `72414dd872286e73bf88885191913aaab5aeff81`
+6. **Independent post-deploy verification** (direct `curl` against `https://crawlpact.com`, not
+   just the workflow's own smoke test): home and `/pricing/` return 200; no `X-Robots-Tag` header
+   and no environment banner (correct — production is indexable, unlike Preview); `/robots.txt`
+   correctly allows crawling and includes the `Sitemap:` line (unlike Preview's deliberate
+   disallow-all); `/sign-in` returns 200.
+
+No database migration was required for either change in this phase. Canonical URL contract,
+preview isolation, and analytics architecture (Phase 20 guarantees) were not touched by either
+change and remain exactly as Phase 20 left them — confirmed by the same independent checks above.

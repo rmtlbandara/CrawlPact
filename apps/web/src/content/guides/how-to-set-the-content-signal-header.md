@@ -56,7 +56,7 @@ the same everywhere.
 
 ## Step 3: Verify
 
-Run CrawlPact's [Content Signals checker](/tools/content-signals-checker). It reports whether a
+Run CrawlPact's [Content Signals checker](/tools/content-signals-checker/). It reports whether a
 `Content-Signal` header was detected on your homepage, and which recognised keys and values it
 found.
 
@@ -68,5 +68,5 @@ the same site, since a crawler reading only one of the two could reach either co
 
 ## What this doesn't do
 
-Content Signals is a declaration, not technical enforcement — see [/limitations](/limitations).
+Content Signals is a declaration, not technical enforcement — see [/limitations](/limitations/).
 Adoption by AI crawler operators varies, since this is still an emerging convention.

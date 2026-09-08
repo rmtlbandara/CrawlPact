@@ -14,7 +14,7 @@ declarations.
 A crawler matches the most specific `User-agent` group that names its token exactly; if no exact
 match exists, it falls back to the wildcard (`User-agent: *`) group. Within a matching group, the
 longest matching path rule wins when `Allow` and `Disallow` rules conflict for the same path —
-this is the RFC 9309 behaviour CrawlPact's parser follows (see [/methodology](/methodology)).
+this is the RFC 9309 behaviour CrawlPact's parser follows (see [/methodology](/methodology/)).
 
 ## Adding an AI-specific rule
 

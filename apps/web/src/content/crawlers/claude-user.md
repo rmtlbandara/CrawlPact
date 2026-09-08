@@ -20,5 +20,5 @@ CrawlPact's "Allow Search, Block Training" preset relies on exactly this kind of
 
 ## Site-owner controls
 
-Standard `robots.txt` disallow rules apply. See [/limitations](/limitations) for what a
+Standard `robots.txt` disallow rules apply. See [/limitations](/limitations/) for what a
 `robots.txt` rule can and cannot guarantee.

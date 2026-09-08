@@ -35,7 +35,7 @@ single expectation fits.
 ## What this can't guarantee
 
 A `robots.txt` rule is a declared instruction, not an enforcement mechanism — see
-[/limitations](/limitations). It also can't retroactively affect content already used in a prior
+[/limitations](/limitations/). It also can't retroactively affect content already used in a prior
 training run, and it has no effect on crawlers CrawlPact's registry doesn't yet track (an unknown
 or newly-introduced token, which the registry lists as `unverified` rather than presenting a
 guess).
