@@ -133,3 +133,21 @@ jobs:
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: gh workflow run ci.yml --repo "${{ github.repository }}" --ref main
+
+      - name: Dispatch a preview deploy for the resulting main commit
+        # Phase 20 (2026-09-08): found live that deploy-preview.yml's
+        # `workflow_run` listener on "CI" never fires for the run dispatched
+        # by the step above — GitHub's GITHUB_TOKEN anti-recursion
+        # protection applies transitively, so a workflow_dispatch run
+        # started by a GITHUB_TOKEN action (that CI dispatch) cannot itself
+        # trigger a further workflow_run listener. Dispatching
+        # deploy-preview.yml directly, the same documented-exception way
+        # ci.yml is dispatched above, sidesteps the chain entirely instead
+        # of depending on a second hop that can never fire.
+        if: steps.guard.outputs.should_merge == 'true'
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          merge_sha=$(git ls-remote https://github.com/${{ github.repository }} main | cut -f1)
+          gh workflow run deploy-preview.yml --repo "${{ github.repository }}" --ref main \
+            -f commit_sha="$merge_sha"

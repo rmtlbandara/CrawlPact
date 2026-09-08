@@ -11,15 +11,29 @@ name: Deploy preview
 # live: `gh api .../runs/<id>` on that exact completed run confirmed
 # `head_branch: "main"` (an exact string match against the filter), yet no
 # "Deploy preview" run was ever created, while `merge-when-green.yml`'s own
-# `workflow_run` listener on the same "CI" workflow — which carries no
-# trigger-level `branches` filter at all — fired correctly for the
-# identical event both times it was exercised. The branch check is done in
-# the job's own `if:` condition below instead, mirroring the pattern that
-# workflow already proves works for this exact upstream-run shape.
+# `workflow_run` listener on the same "CI" workflow fired correctly for a
+# *different* upstream run (the PR branch's own pull_request-triggered CI,
+# not the main-branch dispatch). The real cause, found after that first fix
+# still didn't produce a run: GitHub's anti-recursion protection for the
+# default GITHUB_TOKEN applies transitively — a `workflow_dispatch` run
+# started BY a GITHUB_TOKEN action (merge-when-green.yml's own re-dispatch
+# of ci.yml) can itself complete normally (workflow_dispatch is the one
+# documented exception that lets it start at all — see ci.yml's own
+# comment), but *its* completion cannot trigger a further `workflow_run`
+# listener; that second hop is exactly what the recursion guard blocks. No
+# branch-filter fix can work around this. `workflow_dispatch` is added
+# here as a second, direct trigger for the same reason ci.yml already uses
+# it — merge-when-green.yml now dispatches this workflow the same way it
+# dispatches ci.yml, and it can also be run manually.
 on:
   workflow_run:
     workflows: ["CI"]
     types: [completed]
+  workflow_dispatch:
+    inputs:
+      commit_sha:
+        description: "Commit SHA on main to deploy to preview (defaults to main's current tip)"
+        required: false
 
 concurrency:
   # A newer preview deploy always wins — an in-flight deploy of an older
@@ -30,7 +44,7 @@ concurrency:
 jobs:
   deploy:
     name: Build, deploy and verify preview
-    if: github.event.workflow_run.conclusion == 'success' && github.event.workflow_run.head_branch == 'main'
+    if: github.event_name == 'workflow_dispatch' || (github.event.workflow_run.conclusion == 'success' && github.event.workflow_run.head_branch == 'main')
     runs-on: ubuntu-latest
     environment: preview
     permissions:
@@ -38,10 +52,14 @@ jobs:
     env:
       CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
       CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+      # Resolves to the right commit regardless of which trigger fired this run:
+      # an explicit workflow_dispatch input, the workflow_run event's own head
+      # commit, or (workflow_dispatch with no input given) main's current tip.
+      DEPLOY_SHA: ${{ github.event.inputs.commit_sha || github.event.workflow_run.head_sha || github.sha }}
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
-          ref: ${{ github.event.workflow_run.head_sha }}
+          ref: ${{ env.DEPLOY_SHA }}
 
       - uses: pnpm/action-setup@0977fd99725f1db4007ccb2928dbb4e90d06cc86 # v6.0.10
         with:
@@ -102,7 +120,7 @@ jobs:
         if: always()
         uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
         with:
-          name: lighthouse-results-${{ github.event.workflow_run.head_sha }}
+          name: lighthouse-results-${{ env.DEPLOY_SHA }}
           path: ${{ runner.temp }}/lighthouse/lighthouse-results.json
           retention-days: 30
           if-no-files-found: ignore
@@ -112,7 +130,7 @@ jobs:
         run: |
           {
             echo "### Preview deployment"
-            echo "- Commit: \`${{ github.event.workflow_run.head_sha }}\`"
+            echo "- Commit: \`${{ env.DEPLOY_SHA }}\`"
             echo "- URL: https://preview.crawlpact.com"
           } >> "$GITHUB_STEP_SUMMARY"
 
@@ -120,7 +138,7 @@ jobs:
         if: failure()
         uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
         with:
-          name: preview-deploy-failure-${{ github.event.workflow_run.head_sha }}
+          name: preview-deploy-failure-${{ env.DEPLOY_SHA }}
           path: apps/web/dist/server/wrangler.json
           retention-days: 14
           if-no-files-found: ignore
