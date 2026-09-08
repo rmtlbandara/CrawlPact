@@ -308,7 +308,7 @@ export function AuditReportView({
           )}
           <p className="mt-3 text-supporting text-neutral-500">
             RSL is a machine-readable declaration, not technical enforcement — see{" "}
-            <a href="/limitations" className="text-brand-700 underline underline-offset-2">
+            <a href="/limitations/" className="text-brand-700 underline underline-offset-2">
               limitations
             </a>
             .
@@ -438,7 +438,7 @@ export function AuditReportView({
             categoryBreakdown={
               report.score.state === "scored" ? report.score.categoryBreakdown : undefined
             }
-            methodologyHref="/scoring"
+            methodologyHref="/scoring/"
           />
         </div>
       </section>

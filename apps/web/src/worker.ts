@@ -5,6 +5,7 @@ import { runDataRetentionPurge } from "./lib/data-retention";
 import { applyDueScheduledDowngrades } from "./lib/billing/scheduled-downgrades";
 import { reconcileMissingPolicyChangeNotifications } from "./lib/notification-reconciliation";
 import { evaluateOperationalAlerts } from "./lib/admin/operational-alerts";
+import { needsTrailingSlashRedirectPreview } from "./lib/route-registry";
 
 /**
  * Custom Worker entry point (ADR-0001). Delegates ordinary requests to
@@ -24,7 +25,7 @@ import { evaluateOperationalAlerts } from "./lib/admin/operational-alerts";
  * that isn't wired for real billing.
  */
 export default {
-  fetch: handle,
+  fetch: fetchWithPreviewSearchIsolation,
 
   async scheduled(controller, env, ctx) {
     const db = createDb(env.DB);
@@ -282,6 +283,59 @@ async function isMaintenanceMode(db: D1Database): Promise<boolean> {
   return (row as { value: string } | null)?.value === "true";
 }
 
+/**
+ * Phase 20, P0: preview.crawlpact.com must never compete with production in
+ * Google Search. `apps/web/src/middleware.ts` already sets `X-Robots-Tag` for
+ * specific non-indexable path prefixes, but that only runs for SSR
+ * responses — prerendered marketing pages (home, pricing's static siblings,
+ * guides, crawlers, etc.) are served directly off the Workers Assets binding
+ * and never reach Astro middleware at all (see that file's own doc comment).
+ * `env.preview.assets.run_worker_first` (wrangler.jsonc) forces every
+ * preview request through this Worker first — including ones that would
+ * otherwise be served as a static asset — specifically so this wrapper can
+ * unconditionally stamp every preview response, regardless of rendering
+ * mode, before anything is returned to the client. Production does not set
+ * `run_worker_first`, so this wrapper's preview branch is never reached in
+ * production and asset-serving performance there is unaffected.
+ *
+ * `run_worker_first` has a second, confirmed side effect (verified locally,
+ * 2026-09-07): it bypasses Cloudflare's edge-level `_redirects`/
+ * `html_handling` processing for asset-matched paths entirely, since those
+ * only run in front of the default asset-first dispatcher — a Worker's own
+ * internal asset lookup doesn't re-trigger them. That would silently
+ * regress the Phase 20 canonical trailing-slash redirect for every
+ * prerendered page, on preview only, the moment `run_worker_first` is
+ * enabled — so this wrapper redirects those paths itself, before ever
+ * calling `handle()`, using the broader `needsTrailingSlashRedirectPreview`
+ * (production keeps relying on `public/_redirects` alone; see that
+ * function's doc comment in `route-registry.ts`).
+ */
+export async function fetchWithPreviewSearchIsolation(
+  request: Request,
+  env: Env,
+  ctx: ExecutionContext,
+): Promise<Response> {
+  if (env.PUBLIC_APP_ENV === "preview") {
+    const url = new URL(request.url);
+    if (
+      (request.method === "GET" || request.method === "HEAD") &&
+      needsTrailingSlashRedirectPreview(url.pathname)
+    ) {
+      const target = new URL(`${url.pathname}/`, url.origin);
+      target.search = url.search;
+      return Response.redirect(target.toString(), 301);
+    }
+  }
+
+  const response = await handle(request, env, ctx);
+  if (env.PUBLIC_APP_ENV !== "preview") {
+    return response;
+  }
+  const isolated = new Response(response.body, response);
+  isolated.headers.set("X-Robots-Tag", "noindex, nofollow, noarchive, nosnippet");
+  return isolated;
+}
+
 type Env = {
   DB: D1Database;
   AUDIT_ENGINE_ENABLED: string;
@@ -289,4 +343,5 @@ type Env = {
   PADDLE_API_KEY: string;
   PADDLE_ENVIRONMENT: "sandbox" | "production";
   AGENCY_LOGOS: R2Bucket;
+  PUBLIC_APP_ENV: string;
 };

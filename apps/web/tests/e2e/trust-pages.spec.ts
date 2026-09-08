@@ -86,12 +86,12 @@ test.describe("Public Country Reference and Contact Messaging Correction (2026-0
 
 test.describe("Footer trust navigation", () => {
   for (const [label, href] of [
-    ["About CrawlPact", "/about"],
-    ["Contact", "/contact"],
-    ["Privacy policy", "/privacy"],
-    ["Terms of service", "/terms"],
-    ["Security", "/security"],
-    ["Status", "/status"],
+    ["About CrawlPact", "/about/"],
+    ["Contact", "/contact/"],
+    ["Privacy policy", "/privacy/"],
+    ["Terms of service", "/terms/"],
+    ["Security", "/security/"],
+    ["Status", "/status/"],
   ] as const) {
     test(`homepage footer links to ${label}`, async ({ page }) => {
       await page.goto("/");

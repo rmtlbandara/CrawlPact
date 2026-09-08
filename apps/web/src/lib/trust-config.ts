@@ -80,12 +80,12 @@ export const TRUST_CONFIG = {
   // Canonical relative paths for the trust surfaces this config's facts feed — reused so a
   // route rename only needs updating in one place.
   routes: {
-    privacy: "/privacy",
-    terms: "/terms",
-    security: "/security",
-    contact: "/contact",
-    status: "/status",
-    methodology: "/methodology",
+    privacy: "/privacy/",
+    terms: "/terms/",
+    security: "/security/",
+    contact: "/contact/",
+    status: "/status/",
+    methodology: "/methodology/",
     securityTxt: "/.well-known/security.txt",
   },
 } as const;

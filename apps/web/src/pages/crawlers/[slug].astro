@@ -37,7 +37,7 @@ const relatedGuides = allGuides.filter((guide) =>
   ogType="article"
   publishedDate={crawler.data.lastVerified}
   breadcrumbs={[
-    { name: "Crawler directory", url: "/crawlers" },
+    { name: "Crawler directory", url: "/crawlers/" },
     { name: crawler.data.name, url: `/crawlers/${crawler.id}/` },
   ]}
 >
@@ -162,7 +162,7 @@ Disallow: /</code></pre>
         > to check this one crawler specifically.
       </p>
       <a
-        href="/audit"
+        href="/audit/"
         class="mt-4 inline-block rounded-control bg-brand-600 px-5 py-2.5 text-body font-medium text-white hover:bg-brand-700"
       >
         Audit a domain

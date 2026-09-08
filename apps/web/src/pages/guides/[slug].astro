@@ -44,7 +44,7 @@ const howToJsonLd =
   publishedDate={guide.data.publishedDate}
   updatedDate={guide.data.updatedDate}
   breadcrumbs={[
-    { name: "Guides", url: "/guides" },
+    { name: "Guides", url: "/guides/" },
     { name: guide.data.title, url: `/guides/${guide.id}/` },
   ]}
   extraJsonLd={howToJsonLd ? [howToJsonLd] : []}
@@ -116,7 +116,7 @@ const howToJsonLd =
         Run a free audit to check your declared AI crawler policy against your own domain.
       </p>
       <a
-        href="/audit"
+        href="/audit/"
         class="mt-4 inline-block rounded-control bg-brand-600 px-5 py-2.5 text-body font-medium text-white hover:bg-brand-700"
       >
         Audit a domain

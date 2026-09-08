@@ -112,7 +112,7 @@ async function run(): Promise<void> {
   await checkPage("/pay (no _ptxn, safe state)", `${base}/pay`, 200, ["Complete your payment"]);
   await checkPage("Known 404", `${base}/this-page-does-not-exist`, 404);
 
-  const statusBody = await checkPage("Status page", `${base}/status`, 200, [
+  const statusBody = await checkPage("Status page", `${base}/status/`, 200, [
     "Free audit (real scan)",
   ]);
   // Preview always ships AUDIT_ENGINE_ENABLED=false; production enabled it

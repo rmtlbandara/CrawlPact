@@ -18,12 +18,12 @@ const noindex = publications.length === 0;
 <MarketingLayout
   title="Research | CrawlPact"
   description="Published Policy Observatory research: reproducible, source-backed findings about the AI crawler ecosystem."
-  canonicalPath="/research"
+  canonicalPath="/research/"
   noindex={noindex}
   breadcrumbs={[
     { name: "Home", url: "/" },
-    { name: "Observatory", url: "/observatory" },
-    { name: "Research", url: "/research" },
+    { name: "Observatory", url: "/observatory/" },
+    { name: "Research", url: "/research/" },
   ]}
 >
   <AnalyticsBeacon client:load eventName="research_index_viewed" />
@@ -32,7 +32,7 @@ const noindex = publications.length === 0;
     <p class="mt-3 text-body text-neutral-700">
       Published Policy Observatory research. Every publication states its dataset, methodology,
       exact numerators and denominators, and limitations — see{" "}
-      <a href="/observatory/methodology" class="text-brand-700 underline underline-offset-2">
+      <a href="/observatory/methodology/" class="text-brand-700 underline underline-offset-2">
         methodology
       </a>.
     </p>
@@ -41,7 +41,7 @@ const noindex = publications.length === 0;
       publications.length === 0 ? (
         <p class="mt-8 rounded-card border border-neutral-200 bg-neutral-50 p-4 text-body text-neutral-700">
           CrawlPact hasn't published Policy Observatory research yet. In the meantime, explore the{" "}
-          <a href="/observatory/registry" class="text-brand-700 underline underline-offset-2">
+          <a href="/observatory/registry/" class="text-brand-700 underline underline-offset-2">
             Registry Observatory
           </a>{" "}
           for current registry statistics.
@@ -55,7 +55,7 @@ const noindex = publications.length === 0;
                 {pub.status === "corrected" && <span class="ml-2 text-amber-700">(corrected)</span>}
               </p>
               <a
-                href={`/research/${pub.slug}`}
+                href={`/research/${pub.slug}/`}
                 class="mt-1 block text-card-heading text-neutral-950 underline underline-offset-2"
               >
                 {pub.title}

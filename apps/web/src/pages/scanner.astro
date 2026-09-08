@@ -25,7 +25,7 @@ const auditEngineEnabled = getEnv().AUDIT_ENGINE_ENABLED === "true";
           The live scanner is enabled in this environment. Submitting the audit form runs a real
           scan against the target's declared AI crawler policy, following the behaviour and safety
           boundaries described below. See{" "}
-          <a href="/status" class="text-brand-700 underline underline-offset-2">
+          <a href="/status/" class="text-brand-700 underline underline-offset-2">
             status
           </a>{" "}
           for the current development phase.
@@ -35,7 +35,7 @@ const auditEngineEnabled = getEnv().AUDIT_ENGINE_ENABLED === "true";
           The live scanner is not enabled in this environment. Submitting the audit form currently
           returns a clear "not enabled" response rather than any scan result — CrawlPact never
           presents mocked or fabricated data as a real audit. See{" "}
-          <a href="/status" class="text-brand-700 underline underline-offset-2">
+          <a href="/status/" class="text-brand-700 underline underline-offset-2">
             status
           </a>{" "}
           for the current development phase.
@@ -77,7 +77,7 @@ const auditEngineEnabled = getEnv().AUDIT_ENGINE_ENABLED === "true";
     <p class="mt-3 text-body text-neutral-700">
       Private, authenticated, and internal systems are excluded by design, not by omission — a
       public policy audit has no legitimate reason to reach them. See{" "}
-      <a href="/privacy" class="text-brand-700 underline underline-offset-2">privacy</a> for how long
+      <a href="/privacy/" class="text-brand-700 underline underline-offset-2">privacy</a> for how long
       retrieved evidence is kept.
     </p>
 
@@ -97,7 +97,7 @@ const auditEngineEnabled = getEnv().AUDIT_ENGINE_ENABLED === "true";
     <p class="mt-3 text-body text-neutral-700">
       Every outbound request the scanner makes goes through a single, isolated safe-fetch module
       responsible for target validation — see{" "}
-      <a href="/security" class="text-brand-700 underline underline-offset-2">security</a>{" "}
+      <a href="/security/" class="text-brand-700 underline underline-offset-2">security</a>{" "}
       and the architecture decision record for scanner isolation.
     </p>
   </article>

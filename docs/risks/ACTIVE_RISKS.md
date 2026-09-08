@@ -295,10 +295,20 @@ extended platform guides), RISK-032 (no Search Console property connected), and 
   customer-data prerequisite, so it no longer blocks the first production release. It remains a
   real, undone task — see `docs/release/PHASE_18_SEARCH_CONSOLE_REQUIRED_ACTION.md` for the exact
   manual owner steps, unchanged from before this reclassification.
-- **Status**: accepted (POST-LAUNCH)
-- **Acceptance criteria for closure**: A Search Console property is connected and the manual
-  verification checklist in `PHASE_07_SEARCH_PERFORMANCE_BASELINE.md` is completed at least once —
-  owned by Phase 19, not a pre-launch requirement.
+- **Status**: **resolved and independently verified (2026-09-08, Phase 20)** — a Search Console
+  property (`sc-domain:crawlpact.com`, Domain property, `siteOwner` permission) is connected.
+  2026-09-07's session had no GSC API/OAuth tool available and recorded this as supplied,
+  unverified evidence; 2026-09-08's session had direct read-only API access
+  (`~/.config/crawlpact-gsc/`) and independently confirmed the connection, queried real 28-day and
+  90-day performance data, and analyzed a pre-existing 79-URL bulk Inspection snapshot — see
+  `docs/baseline/2026-09-08-phase20/SEARCH_CONSOLE_BASELINE.md`. The trigger condition this risk
+  tracked ("no property connected") is fully resolved; ongoing search-performance monitoring (not
+  connection status) is the live concern going forward and does not itself need tracking here.
+- **Acceptance criteria for closure**: A Search Console property is connected (met) and the manual
+  verification checklist in `PHASE_07_SEARCH_PERFORMANCE_BASELINE.md` is completed at least once
+  (met, 2026-09-08 — real API access used for 28d/90d performance, device/country, brand/non-brand,
+  and analysis of a 79-URL bulk Inspection snapshot; see
+  `docs/baseline/2026-09-08-phase20/SEARCH_CONSOLE_BASELINE.md`). **Fully closed.**
 
 ### RISK-034 — `listDomains()`'s open-findings count is an N+1 query pattern (pre-existing, found during Phase 8)
 

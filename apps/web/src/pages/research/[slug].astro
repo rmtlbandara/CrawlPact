@@ -31,7 +31,7 @@ const content = row ? parsePublicationContent(row) : null;
 <MarketingLayout
   title={row ? `${row.title} | CrawlPact Research` : "Not found | CrawlPact"}
   description={content?.summary ?? "This research publication could not be found."}
-  canonicalPath={row ? `/research/${row.slug}` : undefined}
+  canonicalPath={row ? `/research/${row.slug}/` : undefined}
   noindex={!row || row.status === "withdrawn"}
   ogType={row ? "article" : "website"}
   publishedDate={row?.publishedAt ?? undefined}
@@ -39,9 +39,9 @@ const content = row ? parsePublicationContent(row) : null;
   breadcrumbs={row
     ? [
         { name: "Home", url: "/" },
-        { name: "Observatory", url: "/observatory" },
-        { name: "Research", url: "/research" },
-        { name: row.title, url: `/research/${row.slug}` },
+        { name: "Observatory", url: "/observatory/" },
+        { name: "Research", url: "/research/" },
+        { name: row.title, url: `/research/${row.slug}/` },
       ]
     : [{ name: "Home", url: "/" }]}
 >
@@ -53,7 +53,10 @@ const content = row ? parsePublicationContent(row) : null;
           <p class="mt-3 text-body text-neutral-700">
             This research publication doesn't exist, or hasn't been published yet.
           </p>
-          <a href="/research" class="mt-4 inline-block text-brand-700 underline underline-offset-2">
+          <a
+            href="/research/"
+            class="mt-4 inline-block text-brand-700 underline underline-offset-2"
+          >
             Back to research
           </a>
         </>
@@ -183,16 +186,16 @@ const content = row ? parsePublicationContent(row) : null;
           </section>
 
           <section class="mt-10 flex flex-wrap gap-4 text-supporting">
-            <a href="/observatory/methodology" class="text-brand-700 underline underline-offset-2">
+            <a href="/observatory/methodology/" class="text-brand-700 underline underline-offset-2">
               Methodology
             </a>
-            <a href="/observatory/registry" class="text-brand-700 underline underline-offset-2">
+            <a href="/observatory/registry/" class="text-brand-700 underline underline-offset-2">
               Registry Observatory
             </a>
             <a href="/methodology#corrections" class="text-brand-700 underline underline-offset-2">
               Report a correction
             </a>
-            <a href="/tools" class="text-brand-700 underline underline-offset-2">
+            <a href="/tools/" class="text-brand-700 underline underline-offset-2">
               Audit a domain free
             </a>
           </section>

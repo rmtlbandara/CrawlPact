@@ -35,8 +35,8 @@ describe("CrawlerPurposeSection.astro", () => {
     }
   });
 
-  it("links to the crawler directory", () => {
-    expect(content).toContain('href="/crawlers"');
+  it("links to the crawler directory (canonical trailing-slash form)", () => {
+    expect(content).toContain('href="/crawlers/"');
   });
 });
 

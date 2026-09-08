@@ -36,7 +36,7 @@ export const GET: APIRoute = async ({ site }) => {
   const report = await getPublicStatus(db);
   const base = site ?? new URL(getEnv().PUBLIC_SITE_URL);
   const feedUrl = new URL("/status/feed.xml", base).toString();
-  const statusPageUrl = new URL("/status", base).toString();
+  const statusPageUrl = new URL("/status/", base).toString();
 
   const allIncidents = [
     ...report.currentIncidents,

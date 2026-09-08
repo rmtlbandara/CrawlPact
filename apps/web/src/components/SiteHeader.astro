@@ -5,12 +5,12 @@ import { BRAND } from "../config/brand";
 
 const links = [
   { label: "Product", href: "/#product" },
-  { label: "Free tools", href: "/tools" },
-  { label: "AI crawlers", href: "/crawlers" },
-  { label: "Guides", href: "/guides" },
-  { label: "Platforms", href: "/platforms" },
-  { label: "Pricing", href: "/pricing" },
-  { label: "Methodology", href: "/methodology" },
+  { label: "Free tools", href: "/tools/" },
+  { label: "AI crawlers", href: "/crawlers/" },
+  { label: "Guides", href: "/guides/" },
+  { label: "Platforms", href: "/platforms/" },
+  { label: "Pricing", href: "/pricing/" },
+  { label: "Methodology", href: "/methodology/" },
 ];
 
 const currentPath = Astro.url.pathname;
@@ -68,7 +68,7 @@ function isCurrentSection(href: string): boolean {
     <div class="hidden items-center gap-3 xl:flex">
       <a href="/sign-in" class="text-body text-neutral-700 hover:text-brand-700">Sign in</a>
       <a
-        href="/audit"
+        href="/audit/"
         class="rounded-control bg-brand-600 px-4 py-2.5 text-body font-medium text-white hover:bg-brand-700"
       >
         Audit a domain
@@ -78,7 +78,7 @@ function isCurrentSection(href: string): boolean {
     <MobileNav
       client:idle
       links={[...links, { label: "Sign in", href: "/sign-in" }]}
-      ctaHref="/audit"
+      ctaHref="/audit/"
       ctaLabel="Audit a domain"
       currentPath={currentPath}
     />

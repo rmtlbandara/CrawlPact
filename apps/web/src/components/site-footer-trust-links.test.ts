@@ -8,15 +8,24 @@ import { describe, expect, it } from "vitest";
  * others). No Astro component-rendering harness exists in this repo (see
  * `apps/web/src/lib/robots-txt.test.ts` for the same source-inspection approach used elsewhere),
  * so this guards against the footer regressing to omit a required trust link.
+ *
+ * Hrefs assert the canonical trailing-slash form (Phase 20,
+ * docs/baseline/2026-09-07-phase20/CANONICAL_URL_CONTRACT.md) — a bare href here would cost every
+ * page-load an avoidable redirect hop through the sitewide footer.
  */
 describe("SiteFooter.astro required trust links", () => {
   const footerPath = fileURLToPath(new URL("./SiteFooter.astro", import.meta.url));
   const content = readFileSync(footerPath, "utf-8");
 
-  it.each(["/about", "/contact", "/privacy", "/terms", "/acceptable-use", "/security", "/status"])(
-    "links to %s",
-    (href) => {
-      expect(content).toContain(`href: "${href}"`);
-    },
-  );
+  it.each([
+    "/about/",
+    "/contact/",
+    "/privacy/",
+    "/terms/",
+    "/acceptable-use/",
+    "/security/",
+    "/status/",
+  ])("links to %s", (href) => {
+    expect(content).toContain(`href: "${href}"`);
+  });
 });

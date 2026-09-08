@@ -1,0 +1,36 @@
+# Phase 20 canonical URL contract (docs/baseline/2026-09-07-phase20/CANONICAL_URL_CONTRACT.md):
+# trailing slash is canonical for every indexable page. Cloudflare's static-assets
+# binding already redirects these bare paths to their trailing-slash form by
+# default (`html_handling: auto-trailing-slash`), but as a 307 Temporary Redirect —
+# confirmed live in production, 2026-09-07 — which Google treats differently from a
+# permanent move. These explicit rules force a 301 instead, one hop, for exactly the
+# prerendered routes listed in `apps/web/src/lib/route-registry.ts`'s
+# `PRERENDERED_ROUTES` (kept in sync by `route-registry.test.ts`). SSR pages have no
+# static asset and are handled separately in `middleware.ts`.
+#
+# Exact-match rules first, wildcard/placeholder rules last — `wrangler` warns that
+# placing a splat/placeholder rule above an exact one makes matching less efficient.
+/about /about/ 301
+/contact /contact/ 301
+/audit /audit/ 301
+/sample-report /sample-report/ 301
+/crawlers /crawlers/ 301
+/tools /tools/ 301
+/tools/ai-crawler-checker /tools/ai-crawler-checker/ 301
+/tools/robots-txt-ai-validator /tools/robots-txt-ai-validator/ 301
+/tools/rsl-validator /tools/rsl-validator/ 301
+/tools/llms-txt-validator /tools/llms-txt-validator/ 301
+/tools/content-signals-checker /tools/content-signals-checker/ 301
+/guides /guides/ 301
+/platforms /platforms/ 301
+/methodology /methodology/ 301
+/scoring /scoring/ 301
+/observatory/methodology /observatory/methodology/ 301
+/security /security/ 301
+/privacy /privacy/ 301
+/terms /terms/ 301
+/acceptable-use /acceptable-use/ 301
+/limitations /limitations/ 301
+/crawlers/:slug /crawlers/:slug/ 301
+/guides/:slug /guides/:slug/ 301
+/platforms/:slug /platforms/:slug/ 301

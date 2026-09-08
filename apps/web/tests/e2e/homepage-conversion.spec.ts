@@ -18,7 +18,7 @@ test.describe("Homepage sections and conversion links", () => {
   test("sample report preview links to the full sample report", async ({ page }) => {
     await page.goto("/");
     const link = page.getByRole("link", { name: "View the full sample report →" });
-    await expect(link).toHaveAttribute("href", "/sample-report");
+    await expect(link).toHaveAttribute("href", "/sample-report/");
   });
 
   test("crawler-purpose section links to the crawler directory", async ({ page }) => {
@@ -45,11 +45,11 @@ test.describe("Homepage sections and conversion links", () => {
     await page.goto("/");
     const main = page.locator("#main-content");
     for (const [name, href] of [
-      ["Methodology", "/methodology"],
-      ["Crawler directory", "/crawlers"],
-      ["Status", "/status"],
-      ["Security", "/security"],
-      ["About", "/about"],
+      ["Methodology", "/methodology/"],
+      ["Crawler directory", "/crawlers/"],
+      ["Status", "/status/"],
+      ["Security", "/security/"],
+      ["About", "/about/"],
       ["Corrections process", "/methodology#corrections"],
     ] as const) {
       await expect(main.getByRole("link", { name, exact: true })).toHaveAttribute("href", href);

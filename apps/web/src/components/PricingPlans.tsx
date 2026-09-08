@@ -69,7 +69,7 @@ export function PricingPlans({
   const [interval, setInterval] = useState<"month" | "year">("year");
 
   function ctaHref(plan: PricingPlanEntry): string {
-    if (plan.id === "free") return "/audit";
+    if (plan.id === "free") return "/audit/";
     return isAuthenticated
       ? `/app/billing?plan=${plan.id}&interval=${interval}`
       : `/sign-in?plan=${plan.id}&interval=${interval}`;
@@ -253,7 +253,7 @@ export function PricingPlans({
           Not ready to choose? Start with the free audit and upgrade when you need monitoring.
         </p>
         <a
-          href="/audit"
+          href="/audit/"
           onClick={() => track("plan_selected", { planId: "free", interval })}
           className="mt-3 inline-block rounded-control border border-neutral-300 bg-white px-4 py-2 text-body font-medium text-neutral-800 hover:bg-neutral-100"
         >

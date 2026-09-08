@@ -190,7 +190,10 @@ function main() {
   const footerPath = "apps/web/src/components/SiteFooter.astro";
   if (existsSync(path.join(REPO_ROOT, footerPath))) {
     const content = readFileSync(path.join(REPO_ROOT, footerPath), "utf8");
-    for (const href of ["/about", "/contact", "/privacy", "/terms", "/security", "/status"]) {
+    // Phase 20 canonical URL contract: trailing slash is canonical for every indexable page
+    // (docs/baseline/2026-09-07-phase20/CANONICAL_URL_CONTRACT.md) — a bare href here would cost
+    // every page-load an avoidable redirect hop through the sitewide footer.
+    for (const href of ["/about/", "/contact/", "/privacy/", "/terms/", "/security/", "/status/"]) {
       if (!content.includes(`href: "${href}"`)) {
         errors.push(`${footerPath} is missing required footer link: ${href}`);
       }

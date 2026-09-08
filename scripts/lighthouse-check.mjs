@@ -58,11 +58,11 @@ if (!baseUrl) {
 // page in this list before, despite being a primary conversion surface (SRS §30, Phase 4).
 const PAGES = [
   "/",
-  "/pricing",
-  "/sample-report",
-  "/crawlers/amazonbot",
-  "/for/agencies",
-  "/platforms/cloudflare",
+  "/pricing/",
+  "/sample-report/",
+  "/crawlers/amazonbot/",
+  "/for/agencies/",
+  "/platforms/cloudflare/",
 ];
 
 const RUNS_PER_PAGE = 3;

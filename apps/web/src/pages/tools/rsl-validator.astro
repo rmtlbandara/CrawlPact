@@ -9,7 +9,7 @@ import { AuditForm } from "../../components/AuditForm";
   description="Validate supported RSL syntax and view declared permissions, prohibitions, and licensing terms for a domain."
   ogImage="/og/tools.png"
   breadcrumbs={[
-    { name: "Free tools", url: "/tools" },
+    { name: "Free tools", url: "/tools/" },
     { name: "RSL validator", url: "/tools/rsl-validator/" },
   ]}
 >
@@ -19,7 +19,7 @@ import { AuditForm } from "../../components/AuditForm";
       Enter a domain to discover its RSL declaration at <code>/.well-known/rsl.xml</code> and see its
       declared permits, prohibits, and payment terms. RSL is a machine-readable declaration, not technical
       enforcement — see{" "}
-      <a href="/limitations" class="text-brand-700 underline underline-offset-2">limitations</a>.
+      <a href="/limitations/" class="text-brand-700 underline underline-offset-2">limitations</a>.
     </p>
     <div class="mt-8 flex justify-center">
       <AuditForm client:load idPrefix="rsl-validator" focus="rsl" />
@@ -43,7 +43,7 @@ import { AuditForm } from "../../components/AuditForm";
         read or respect it. This also does not check whether the declaration agrees with the
         domain's{" "}
         <code>robots.txt</code> or Content Signals; see the comparison guide below and{" "}
-        <a href="/limitations" class="text-brand-700 underline underline-offset-2">limitations</a>.
+        <a href="/limitations/" class="text-brand-700 underline underline-offset-2">limitations</a>.
       </p>
 
       <h2 class="mt-8 text-h3 text-neutral-950">Related</h2>
@@ -79,7 +79,7 @@ import { AuditForm } from "../../components/AuditForm";
         Score.
       </p>
       <a
-        href="/audit"
+        href="/audit/"
         class="mt-4 inline-block rounded-control bg-brand-600 px-5 py-2.5 text-body font-medium text-white hover:bg-brand-700"
       >
         Run the full audit
