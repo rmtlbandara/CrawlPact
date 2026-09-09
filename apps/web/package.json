@@ -21,7 +21,7 @@
     "@crawlpact/robots": "workspace:*",
     "@crawlpact/scanner": "workspace:*",
     "@crawlpact/ui": "workspace:*",
-    "@paddle/paddle-js": "1.6.4",
+    "@paddle/paddle-js": "1.6.5",
     "@simplewebauthn/browser": "13.3.0",
     "@simplewebauthn/server": "13.3.2",
     "@tailwindcss/vite": "4.3.3",
