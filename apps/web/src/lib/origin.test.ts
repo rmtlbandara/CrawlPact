@@ -95,11 +95,25 @@ describe("lib/origin.ts — trusted CrawlPact origin registry (Phase 2, ADR-0010
       expect(classifyOrigin("https://attacker.example")).toBe("unknown");
     });
 
-    it("classifyRequestOrigin reads the request's own URL, not a header", () => {
+    it("classifyRequestOrigin reads the request's Host header, ignoring the unrelated Origin request header", () => {
       withBothOrigins();
       const request = new Request("https://app.crawlpact.com/domains", {
         headers: { Origin: "https://crawlpact.com" },
       });
+      expect(classifyRequestOrigin(request)).toBe("app");
+    });
+
+    it("classifyRequestOrigin trusts the Host header even when request.url's own host differs (astro dev's local Node server can resolve request.url to a socket address like [::1]:4321 instead of the literal Host the client sent)", () => {
+      withBothOrigins();
+      const request = new Request("https://[::1]:4321/sign-in", {
+        headers: { host: "app.crawlpact.com" },
+      });
+      expect(classifyRequestOrigin(request)).toBe("app");
+    });
+
+    it("classifyRequestOrigin falls back to request.url's own origin when Host is absent", () => {
+      withBothOrigins();
+      const request = new Request("https://app.crawlpact.com/domains");
       expect(classifyRequestOrigin(request)).toBe("app");
     });
   });
@@ -120,6 +134,15 @@ describe("lib/origin.ts — trusted CrawlPact origin registry (Phase 2, ADR-0010
         method: "POST",
       });
       expect(getValidatedRequestOrigin(request)).toBeNull();
+    });
+
+    it("resolves from the Host header when request.url's own host is a local socket address (astro dev)", () => {
+      mockEnv = { PUBLIC_SITE_URL: "https://crawlpact.com" };
+      const request = new Request("https://[::1]:4321/sign-in", {
+        method: "POST",
+        headers: { host: "crawlpact.com" },
+      });
+      expect(getValidatedRequestOrigin(request)).toBe("https://crawlpact.com");
     });
   });
 

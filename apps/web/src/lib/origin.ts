@@ -7,9 +7,25 @@ import { getEnv } from "./env";
  * pinning (`auth/webauthn.ts`), and the Worker-level host boundary
  * (`worker.ts`, `middleware.ts`) — reads through this module instead of
  * comparing hostname strings inline. Trust is always derived from validated
- * environment configuration (`PUBLIC_SITE_URL`, `PUBLIC_APP_URL`), never from
- * a request header — headers like `X-Forwarded-Host` are client-influenceable
- * and are never treated as an authorization source here.
+ * environment configuration (`PUBLIC_SITE_URL`, `PUBLIC_APP_URL`) compared
+ * against the request's own arrival origin — never from a client-suppliable
+ * hop-by-hop header like `X-Forwarded-Host`, which a proxy in front of the
+ * real edge could set to anything.
+ *
+ * The arrival origin itself is read from the request's `Host` header, not
+ * `new URL(request.url).origin`. In a real deployed Cloudflare Worker these
+ * are equivalent — Cloudflare constructs `request.url` directly from the
+ * actual Host the client requested. In `astro dev`'s local Node-based
+ * request pipeline they are **not** reliably equivalent: `request.url`'s
+ * host can reflect the resolved local socket address (e.g. `[::1]:4321`
+ * when a client's "localhost" resolves to the IPv6 loopback) rather than
+ * the literal host string the client sent, which silently misclassified
+ * every request as "unknown" during Phase 2 development and made
+ * `/sign-in`, `/app`, and `/admin` 404 outright — found and root-caused via
+ * `docs/baseline/2026-09-09-app-subdomain-phase3/` CI investigation. `Host`
+ * is exactly what a real Cloudflare Custom Domain match is keyed on in the
+ * first place, so reading it directly here is not a weaker trust boundary —
+ * it is the more accurate one, in every environment.
  */
 
 export type HostSurface = "public" | "app" | "unknown";
@@ -68,9 +84,27 @@ export function classifyOrigin(origin: string | null | undefined): HostSurface {
   return "unknown";
 }
 
-/** Classifies the origin a request itself arrived on (from its own validated URL, never a spoofable header). */
+/**
+ * The origin a request actually arrived on: `Host` header + the request
+ * URL's own scheme. See this module's doc comment for why `Host` is used
+ * instead of `new URL(request.url).origin` directly. Falls back to the
+ * request URL's own origin only if `Host` is somehow absent (malformed
+ * request) — a degraded-but-non-throwing default, not a trust decision.
+ */
+function requestArrivalOrigin(request: Request): string {
+  const requestUrl = new URL(request.url);
+  const host = request.headers.get("host");
+  if (!host) return requestUrl.origin;
+  try {
+    return new URL(`${requestUrl.protocol}//${host}`).origin;
+  } catch {
+    return requestUrl.origin;
+  }
+}
+
+/** Classifies the origin a request itself arrived on. */
 export function classifyRequestOrigin(request: Request): HostSurface {
-  return classifyOrigin(new URL(request.url).origin);
+  return classifyOrigin(requestArrivalOrigin(request));
 }
 
 /**
@@ -81,7 +115,7 @@ export function classifyRequestOrigin(request: Request): HostSurface {
  * `docs/baseline/2026-09-09-app-subdomain-phase1/CLOUDFLARE_HOST_BOUNDARY_DESIGN.md`).
  */
 export function getValidatedRequestOrigin(request: Request): string | null {
-  const origin = new URL(request.url).origin;
+  const origin = requestArrivalOrigin(request);
   return isTrustedOrigin(origin) ? origin : null;
 }
 
