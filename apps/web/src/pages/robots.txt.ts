@@ -1,5 +1,6 @@
 import type { APIRoute } from "astro";
 import { getEnv } from "../lib/env";
+import { classifyRequestOrigin } from "../lib/origin";
 
 export const prerender = false;
 
@@ -36,7 +37,27 @@ export const PREVIEW_ROBOTS_TXT = `User-agent: *
 Disallow: /
 `;
 
-export const GET: APIRoute = () => {
-  const body = getEnv().PUBLIC_APP_ENV === "preview" ? PREVIEW_ROBOTS_TXT : PRODUCTION_ROBOTS_TXT;
+// Phase 2 of the app-subdomain migration (ADR-0010): app.crawlpact.com must
+// never be crawled or carry a Sitemap line — it owns no public/indexable
+// content at all (docs/baseline/2026-09-09-app-subdomain-phase1/
+// ORIGIN_AND_ROUTE_OWNERSHIP_MATRIX.md). Textually identical to
+// PREVIEW_ROBOTS_TXT today but kept as its own named export because they
+// answer different questions ("this is a non-production environment" vs.
+// "this host owns no public content") and could diverge later. This is
+// defense-in-depth alongside noindex/authentication, never a substitute for
+// either — a disallowed page can still be *linked to* and *not indexed* via
+// noindex; robots.txt only asks well-behaved crawlers not to fetch it.
+export const APP_ROBOTS_TXT = `User-agent: *
+Disallow: /
+`;
+
+export const GET: APIRoute = ({ request }) => {
+  const env = getEnv();
+  const body =
+    env.PUBLIC_APP_ENV === "preview"
+      ? PREVIEW_ROBOTS_TXT
+      : classifyRequestOrigin(request) === "app"
+        ? APP_ROBOTS_TXT
+        : PRODUCTION_ROBOTS_TXT;
   return new Response(body, { headers: { "Content-Type": "text/plain" } });
 };

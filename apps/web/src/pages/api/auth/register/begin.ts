@@ -26,7 +26,11 @@ export const POST: APIRoute = async ({ request }) => {
       });
     }
 
-    const { challengeToken, options } = await beginPasskeyRegistration(parsed.data.displayName, []);
+    const { challengeToken, options } = await beginPasskeyRegistration(
+      request,
+      parsed.data.displayName,
+      [],
+    );
 
     return jsonResponse(
       ok({ challengeId: challengeToken, publicKeyCredentialCreationOptions: options }, requestId),

@@ -52,16 +52,26 @@ const KID = "test-key-1";
 
 let privateKey: CryptoKey;
 
+// Phase 2 of the app-subdomain migration (ADR-0010): see the identical
+// comment in auth-flow.integration.test.ts — `assertSameOrigin` now trusts
+// a request's own arrival origin, so every URL below is rewritten onto
+// `ORIGIN` (matching this file's `PUBLIC_SITE_URL` mock) rather than
+// whatever placeholder host the caller passed.
+function withTestOrigin(url: string): string {
+  const parsed = new URL(url);
+  return new URL(`${parsed.pathname}${parsed.search}`, ORIGIN).toString();
+}
+
 function jsonRequest(url: string, body: unknown, cookie?: string): Request {
   const headers: Record<string, string> = { "Content-Type": "application/json", Origin: ORIGIN };
   if (cookie) headers["Cookie"] = cookie;
-  return new Request(url, { method: "POST", headers, body: JSON.stringify(body) });
+  return new Request(withTestOrigin(url), { method: "POST", headers, body: JSON.stringify(body) });
 }
 
 function getRequest(url: string, cookie?: string): Request {
   const headers: Record<string, string> = {};
   if (cookie) headers["Cookie"] = cookie;
-  return new Request(url, { method: "GET", headers });
+  return new Request(withTestOrigin(url), { method: "GET", headers });
 }
 
 async function signIdToken(claims: {
@@ -118,7 +128,7 @@ function googleCallbackRequest(params: {
           ...(params.state !== undefined ? { state: params.state } : {}),
         });
 
-  return new Request("http://x/api/auth/google", { method: "POST", headers, body });
+  return new Request("http://localhost:4321/api/auth/google", { method: "POST", headers, body });
 }
 
 /** Full happy-path helper: begin (signin or signup), sign a matching token, post the callback. */
@@ -731,7 +741,7 @@ describe("Google authentication (real D1 + real JWT cryptography)", () => {
     it("an unauthenticated caller cannot start a link operation", async () => {
       const response = await googleLinkBegin(
         ctx(
-          new Request("http://x/api/account/google/link/begin", {
+          new Request("http://localhost:4321/api/account/google/link/begin", {
             method: "POST",
             headers: { Origin: ORIGIN },
           }),
@@ -745,7 +755,7 @@ describe("Google authentication (real D1 + real JWT cryptography)", () => {
       const linkBegin = await readJson<{ nonce: string; state: string }>(
         await googleLinkBegin(
           ctx(
-            new Request("http://x/api/account/google/link/begin", {
+            new Request("http://localhost:4321/api/account/google/link/begin", {
               method: "POST",
               headers: { Origin: ORIGIN, Cookie: cookie },
             }),
@@ -774,7 +784,7 @@ describe("Google authentication (real D1 + real JWT cryptography)", () => {
 
       const linkBeginResponse = await googleLinkBegin(
         ctx(
-          new Request("http://x/api/account/google/link/begin", {
+          new Request("http://localhost:4321/api/account/google/link/begin", {
             method: "POST",
             headers: { Origin: ORIGIN, Cookie: passkeyCookie },
           }),
@@ -825,7 +835,7 @@ describe("Google authentication (real D1 + real JWT cryptography)", () => {
       const cookie = await createPasskeyAccount("Body Injection Test");
       const response = await googleLinkBegin(
         ctx(
-          new Request("http://x/api/account/google/link/begin", {
+          new Request("http://localhost:4321/api/account/google/link/begin", {
             method: "POST",
             headers: { Origin: ORIGIN, Cookie: cookie, "Content-Type": "application/json" },
             body: JSON.stringify({ userId: "someone-elses-id", redirectTo: "/app" }),
@@ -846,7 +856,7 @@ describe("Google authentication (real D1 + real JWT cryptography)", () => {
       const firstLinkBegin = await readJson<{ nonce: string; state: string }>(
         await googleLinkBegin(
           ctx(
-            new Request("http://x/api/account/google/link/begin", {
+            new Request("http://localhost:4321/api/account/google/link/begin", {
               method: "POST",
               headers: { Origin: ORIGIN, Cookie: firstAccountCookie },
             }),
@@ -870,7 +880,7 @@ describe("Google authentication (real D1 + real JWT cryptography)", () => {
       const secondLinkBegin = await readJson<{ nonce: string; state: string }>(
         await googleLinkBegin(
           ctx(
-            new Request("http://x/api/account/google/link/begin", {
+            new Request("http://localhost:4321/api/account/google/link/begin", {
               method: "POST",
               headers: { Origin: ORIGIN, Cookie: secondAccountCookie },
             }),
@@ -906,7 +916,7 @@ describe("Google authentication (real D1 + real JWT cryptography)", () => {
         const linkBegin = await readJson<{ nonce: string; state: string }>(
           await googleLinkBegin(
             ctx(
-              new Request("http://x/api/account/google/link/begin", {
+              new Request("http://localhost:4321/api/account/google/link/begin", {
                 method: "POST",
                 headers: { Origin: ORIGIN, Cookie: cookie },
               }),
@@ -935,7 +945,7 @@ describe("Google authentication (real D1 + real JWT cryptography)", () => {
 
       const response = await googleDisconnect(
         ctx(
-          new Request("http://x/api/account/google/disconnect", {
+          new Request("http://localhost:4321/api/account/google/disconnect", {
             method: "POST",
             headers: { Origin: ORIGIN, Cookie: cookie },
           }),
@@ -957,7 +967,7 @@ describe("Google authentication (real D1 + real JWT cryptography)", () => {
       const linkBegin = await readJson<{ nonce: string; state: string }>(
         await googleLinkBegin(
           ctx(
-            new Request("http://x/api/account/google/link/begin", {
+            new Request("http://localhost:4321/api/account/google/link/begin", {
               method: "POST",
               headers: { Origin: ORIGIN, Cookie: cookie },
             }),
@@ -974,7 +984,7 @@ describe("Google authentication (real D1 + real JWT cryptography)", () => {
 
       const disconnectResponse = await googleDisconnect(
         ctx(
-          new Request("http://x/api/account/google/disconnect", {
+          new Request("http://localhost:4321/api/account/google/disconnect", {
             method: "POST",
             headers: { Origin: ORIGIN, Cookie: cookie },
           }),
@@ -1002,7 +1012,7 @@ describe("Google authentication (real D1 + real JWT cryptography)", () => {
         const linkBegin = await readJson<{ nonce: string; state: string }>(
           await googleLinkBegin(
             ctx(
-              new Request("http://x/api/account/google/link/begin", {
+              new Request("http://localhost:4321/api/account/google/link/begin", {
                 method: "POST",
                 headers: { Origin: ORIGIN, Cookie: cookie },
               }),
@@ -1025,7 +1035,7 @@ describe("Google authentication (real D1 + real JWT cryptography)", () => {
       await link();
       await googleDisconnect(
         ctx(
-          new Request("http://x/api/account/google/disconnect", {
+          new Request("http://localhost:4321/api/account/google/disconnect", {
             method: "POST",
             headers: { Origin: ORIGIN, Cookie: cookie },
           }),
@@ -1052,7 +1062,7 @@ describe("Google authentication (real D1 + real JWT cryptography)", () => {
 
       const response = await googleLinkBegin(
         ctx(
-          new Request("http://x/api/account/google/link/begin", {
+          new Request("http://localhost:4321/api/account/google/link/begin", {
             method: "POST",
             headers: { Origin: ORIGIN, Cookie: cookie },
           }),

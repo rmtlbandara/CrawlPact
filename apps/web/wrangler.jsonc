@@ -4,9 +4,33 @@
   "main": "./src/worker.ts",
   "compatibility_date": "2026-07-01",
   "compatibility_flags": ["nodejs_compat"],
+  // Phase 2 of the app-subdomain migration (ADR-0010,
+  // docs/baseline/2026-09-09-app-subdomain-phase1/CLOUDFLARE_HOST_BOUNDARY_DESIGN.md):
+  // production previously had no `run_worker_first`, so a prerendered public
+  // page could be served directly off this ASSETS binding before
+  // `src/worker.ts` ever ran — meaning the new app-host boundary check there
+  // would never see the request. This selective array runs the Worker first
+  // for every document/navigation path (closing that gap) while leaving the
+  // handful of genuinely immutable, non-HTML, non-hostname-sensitive build
+  // assets asset-first for performance, exactly mirroring Cloudflare's own
+  // documented pattern (`["/api/*", "!/api/docs/*"]`). Re-derive this
+  // exclusion list from `apps/web/public/`'s actual contents if it changes.
+  // NOTE: this is a real production behavior change (every prerendered page
+  // now runs through the Worker before being served) — it must be deployed
+  // deliberately, with the regression evidence in
+  // docs/baseline/2026-09-09-app-subdomain-phase2/, not silently alongside
+  // an unrelated change.
   "assets": {
     "directory": "./dist",
     "binding": "ASSETS",
+    "run_worker_first": [
+      "/*",
+      "!/_astro/*",
+      "!/branding/*",
+      "!/og/*",
+      "!/favicon.png",
+      "!/og-image.svg",
+    ],
   },
   "d1_databases": [
     {
@@ -57,6 +81,12 @@
     // Part 3 Step 26's production configuration prep.
     "WEBAUTHN_RP_ID": "crawlpact.com",
     "WEBAUTHN_RP_ORIGIN": "https://crawlpact.com",
+    // Phase 1 of the app-subdomain migration (ADR-0010): reserved future
+    // application origin. Not yet attached as a Cloudflare Custom Domain
+    // (no DNS record exists for it — verified 2026-09-09) and not read by
+    // any route/redirect/CSRF/WebAuthn logic yet. Setting it here now is
+    // purely non-behavioral configuration prep for Phase 2.
+    "PUBLIC_APP_URL": "https://app.crawlpact.com",
   },
   "env": {
     "preview": {
@@ -126,6 +156,13 @@
         // rpId/origin against the page actually serving the request, so
         // these must exactly match wherever preview is really deployed.
         "PUBLIC_SITE_URL": "https://preview.crawlpact.com",
+        // Phase 1 (ADR-0010): documented future preview app hostname only —
+        // "app-preview.crawlpact.com" has no DNS record or Custom Domain
+        // attached yet (do not attach it until Phase 2 host enforcement
+        // exists, per the migration's static-assets-bypass hard gate).
+        // Read by nothing today; kept in sync with the production `vars`
+        // block above purely so config isn't ambiguous.
+        "PUBLIC_APP_URL": "https://app-preview.crawlpact.com",
         "WEBAUTHN_RP_ID": "preview.crawlpact.com",
         "WEBAUTHN_RP_ORIGIN": "https://preview.crawlpact.com",
         // Same public Google Web OAuth Client ID as production's top-level

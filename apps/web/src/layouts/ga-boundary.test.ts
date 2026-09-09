@@ -36,6 +36,17 @@ describe("Google Analytics never reaches authenticated/admin output", () => {
     expect(content).not.toMatch(/gtag/i);
     expect(content).not.toMatch(/googletagmanager\.com/);
   });
+
+  // Phase 2 of the app-subdomain migration (ADR-0010): AuthLayout replaced
+  // MarketingLayout on sign-in.astro specifically because MarketingLayout's
+  // header/footer/consent-banner apparatus doesn't belong on an
+  // authentication page reachable from either trusted CrawlPact origin.
+  it("AuthLayout.astro never imports GoogleAnalytics or references gtag/googletagmanager", () => {
+    const content = readLayout("AuthLayout.astro");
+    expect(content).not.toMatch(/GoogleAnalytics/);
+    expect(content).not.toMatch(/gtag/i);
+    expect(content).not.toMatch(/googletagmanager\.com/);
+  });
 });
 
 /** Phase 22: Microsoft Clarity mirrors every one of the GA boundary checks above. */
@@ -56,6 +67,42 @@ describe("Microsoft Clarity never reaches authenticated/admin output", () => {
     const content = readLayout("BaseLayout.astro");
     expect(content).not.toMatch(/MicrosoftClarity/);
     expect(content).not.toMatch(/clarity\.ms/);
+  });
+
+  it("AuthLayout.astro never imports MicrosoftClarity or references clarity.ms", () => {
+    const content = readLayout("AuthLayout.astro");
+    expect(content).not.toMatch(/MicrosoftClarity/);
+    expect(content).not.toMatch(/clarity\.ms/);
+  });
+});
+
+describe("AuthLayout.astro (Phase 2, ADR-0010) never renders any marketing analytics apparatus", () => {
+  const content = readLayout("AuthLayout.astro");
+
+  it("never imports AnalyticsConsent", () => {
+    expect(content).not.toMatch(/AnalyticsConsent/);
+  });
+
+  it("always sets noindex", () => {
+    expect(content).toMatch(/noindex=\{true\}/);
+  });
+
+  it("resolves its public navigation links (home, privacy, terms, security) against the public origin, not a bare relative path", () => {
+    expect(content).toMatch(/toPublicUrl\("\/"\)/);
+    expect(content).toMatch(/toPublicUrl\("\/privacy"\)/);
+    expect(content).toMatch(/toPublicUrl\("\/terms"\)/);
+    expect(content).toMatch(/toPublicUrl\("\/security"\)/);
+  });
+});
+
+describe("sign-in.astro uses the dedicated AuthLayout, not MarketingLayout", () => {
+  it("imports AuthLayout and never MarketingLayout", () => {
+    const content = readFileSync(
+      fileURLToPath(new URL("../pages/sign-in.astro", import.meta.url)),
+      "utf-8",
+    );
+    expect(content).toMatch(/import AuthLayout from "\.\.\/layouts\/AuthLayout\.astro"/);
+    expect(content).not.toMatch(/MarketingLayout/);
   });
 });
 

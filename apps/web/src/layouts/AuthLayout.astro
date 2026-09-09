@@ -1,0 +1,55 @@
+---
+import BaseLayout from "./BaseLayout.astro";
+import { BRAND } from "../config/brand";
+import { toPublicUrl } from "../lib/origin";
+
+/**
+ * Dedicated authentication layout (Phase 2 of the app-subdomain migration,
+ * ADR-0010, Workstream G). Replaces the marketing layout on `sign-in.astro`
+ * — Phase 1 found that page inheriting the full marketing header/footer and
+ * the analytics-consent banner island, even though the marketing analytics
+ * scripts themselves were already excluded from this route
+ * (`docs/baseline/2026-09-09-app-subdomain-phase1/ORIGIN_AND_ROUTE_OWNERSHIP_MATRIX.md`'s
+ * "Major finding"). This layout deliberately never imports any marketing
+ * analytics component — see `ga-boundary.test.ts`, extended in Phase 2 to
+ * assert this file specifically has none of them.
+ *
+ * Navigation links here always resolve to the public origin
+ * (`lib/origin.ts`'s `toPublicUrl`), never a relative path — this page is
+ * reachable from either trusted CrawlPact origin during the Phase 2/3
+ * migration-compatibility window, and "Home"/"Privacy"/"Terms"/"Security"
+ * are public-surface pages regardless of which host is currently serving
+ * the auth form itself.
+ */
+
+export type Props = { title: string; description: string };
+const { title, description } = Astro.props;
+---
+
+<BaseLayout title={title} description={description} noindex={true}>
+  <div class="flex min-h-screen flex-col bg-neutral-50">
+    <header class="border-b border-neutral-200 bg-white">
+      <div class="mx-auto flex max-w-[480px] items-center justify-center px-4 py-6 sm:px-6">
+        <a
+          href={toPublicUrl("/")}
+          class="text-h4 font-semibold text-neutral-950 hover:text-brand-700"
+          aria-label={`${BRAND.productName} home`}
+        >
+          {BRAND.productName}
+        </a>
+      </div>
+    </header>
+    <main id="main-content" tabindex="-1" class="flex-1">
+      <slot />
+    </main>
+    <footer class="border-t border-neutral-200 bg-white">
+      <div
+        class="mx-auto flex max-w-[480px] flex-wrap items-center justify-center gap-x-6 gap-y-2 px-4 py-6 text-supporting text-neutral-500 sm:px-6"
+      >
+        <a href={toPublicUrl("/privacy")} class="hover:text-neutral-700">Privacy</a>
+        <a href={toPublicUrl("/terms")} class="hover:text-neutral-700">Terms</a>
+        <a href={toPublicUrl("/security")} class="hover:text-neutral-700">Security</a>
+      </div>
+    </footer>
+  </div>
+</BaseLayout>

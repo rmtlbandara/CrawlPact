@@ -16,6 +16,7 @@ This directory records material architectural decisions for CrawlPact, in line w
 | [ADR-0007](./ADR-0007-DEPLOYMENT-PIPELINE.md)             | Deployment pipeline                    | Accepted |
 | [ADR-0008](./ADR-0008-REMOVE-PIXEL-VISUAL-REGRESSION.md)  | Remove pixel visual regression         | Accepted |
 | [ADR-0009](./ADR-0009-GOOGLE-FEDERATED-AUTHENTICATION.md) | Google federated authentication        | Accepted |
+| [ADR-0010](./ADR-0010-PUBLIC-APP-ORIGIN-SEPARATION.md)    | Public/app origin separation           | Accepted |
 
 ## Process
 

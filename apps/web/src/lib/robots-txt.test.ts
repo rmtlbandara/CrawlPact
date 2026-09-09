@@ -1,8 +1,19 @@
 import { describe, expect, it, vi } from "vitest";
 
-vi.mock("./env", () => ({ getEnv: () => ({ PUBLIC_APP_ENV: "production" }) }));
+const PUBLIC_ORIGIN = "https://crawlpact.com";
+const APP_ORIGIN = "https://app.crawlpact.com";
 
-const { PREVIEW_ROBOTS_TXT, PRODUCTION_ROBOTS_TXT } = await import("../pages/robots.txt");
+let mockEnv: { PUBLIC_APP_ENV: string; PUBLIC_SITE_URL: string; PUBLIC_APP_URL?: string };
+vi.mock("./env", () => ({ getEnv: () => mockEnv }));
+
+const { PREVIEW_ROBOTS_TXT, PRODUCTION_ROBOTS_TXT, APP_ROBOTS_TXT, GET } =
+  await import("../pages/robots.txt");
+
+mockEnv = {
+  PUBLIC_APP_ENV: "production",
+  PUBLIC_SITE_URL: PUBLIC_ORIGIN,
+  PUBLIC_APP_URL: APP_ORIGIN,
+};
 
 /**
  * Asserts on the actual content served by `apps/web/src/pages/robots.txt.ts`
@@ -74,5 +85,54 @@ describe("preview robots.txt (Phase 20, P0 search isolation)", () => {
 
   it("is a strictly different, more restrictive document than production", () => {
     expect(content).not.toBe(PRODUCTION_ROBOTS_TXT);
+  });
+});
+
+// Phase 2 of the app-subdomain migration (ADR-0010, Workstream Q):
+// app.crawlpact.com must never be crawled and must never carry a Sitemap
+// line — it owns no public/indexable content at all.
+describe("app-host robots.txt (Phase 2, ADR-0010)", () => {
+  const content = APP_ROBOTS_TXT;
+
+  it("disallows crawling entirely", () => {
+    expect(content).toMatch(/User-agent: \*\s*\n\s*Disallow: \/\s*$/);
+  });
+
+  it("declares no sitemap", () => {
+    expect(content).not.toContain("Sitemap:");
+  });
+});
+
+describe("GET /robots.txt dispatches by host, not just environment", () => {
+  it("serves PRODUCTION_ROBOTS_TXT for a request arriving on the public origin", async () => {
+    mockEnv = {
+      PUBLIC_APP_ENV: "production",
+      PUBLIC_SITE_URL: PUBLIC_ORIGIN,
+      PUBLIC_APP_URL: APP_ORIGIN,
+    };
+    const response = await GET({ request: new Request(`${PUBLIC_ORIGIN}/robots.txt`) } as never);
+    expect(await response.text()).toBe(PRODUCTION_ROBOTS_TXT);
+  });
+
+  it("serves APP_ROBOTS_TXT for a request arriving on the app origin", async () => {
+    mockEnv = {
+      PUBLIC_APP_ENV: "production",
+      PUBLIC_SITE_URL: PUBLIC_ORIGIN,
+      PUBLIC_APP_URL: APP_ORIGIN,
+    };
+    const response = await GET({ request: new Request(`${APP_ORIGIN}/robots.txt`) } as never);
+    expect(await response.text()).toBe(APP_ROBOTS_TXT);
+  });
+
+  it("serves PREVIEW_ROBOTS_TXT on preview regardless of which host the request claims", async () => {
+    mockEnv = {
+      PUBLIC_APP_ENV: "preview",
+      PUBLIC_SITE_URL: "https://preview.crawlpact.com",
+      PUBLIC_APP_URL: "https://app-preview.crawlpact.com",
+    };
+    const response = await GET({
+      request: new Request("https://app-preview.crawlpact.com/robots.txt"),
+    } as never);
+    expect(await response.text()).toBe(PREVIEW_ROBOTS_TXT);
   });
 });

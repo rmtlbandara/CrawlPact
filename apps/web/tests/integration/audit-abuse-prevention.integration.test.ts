@@ -105,7 +105,7 @@ describe("audit abuse prevention (real D1)", () => {
 
     const first = await auditRoute(
       ctx(
-        new Request("http://x/api/audit", {
+        new Request("http://localhost:4321/api/audit", {
           method: "POST",
           headers: { "Content-Type": "application/json", ...ipHeaders },
           body: JSON.stringify({ target: "example.com" }),
@@ -117,7 +117,7 @@ describe("audit abuse prevention (real D1)", () => {
 
     const second = await auditRoute(
       ctx(
-        new Request("http://x/api/audit", {
+        new Request("http://localhost:4321/api/audit", {
           method: "POST",
           headers: { "Content-Type": "application/json", ...ipHeaders },
           body: JSON.stringify({ target: "example.com" }),
@@ -139,7 +139,7 @@ describe("audit abuse prevention (real D1)", () => {
 
     await auditRoute(
       ctx(
-        new Request("http://x/api/audit", {
+        new Request("http://localhost:4321/api/audit", {
           method: "POST",
           headers: { "Content-Type": "application/json", "CF-Connecting-IP": "203.0.113.9" },
           body: JSON.stringify({ target: "example.com" }),

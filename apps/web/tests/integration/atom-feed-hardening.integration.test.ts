@@ -196,7 +196,9 @@ describe("private Atom feed hardening (real D1)", () => {
 
   it("an invalid, revoked, and entitlement-blocked token all produce the identical generic 404 with the same private headers", async () => {
     const invalid = await feedRoute(
-      ctx(new Request("http://x/feed/not-a-real-token.xml"), { token: "not-a-real-token" }),
+      ctx(new Request("http://localhost:4321/feed/not-a-real-token.xml"), {
+        token: "not-a-real-token",
+      }),
     );
     expect(invalid.status).toBe(404);
     expect(invalid.headers.get("cache-control")).toBe("private, no-store");

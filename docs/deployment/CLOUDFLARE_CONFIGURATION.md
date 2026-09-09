@@ -79,6 +79,12 @@ aren't secrets, but getting them wrong breaks real functionality, not just cosme
 - `PUBLIC_SITE_URL` — used by the CSRF Origin check, Atom feed URLs, and share links. If preview
   silently inherits production's value, preview-generated links/CSRF checks reference the wrong
   domain.
+- `PUBLIC_APP_URL` — reserved for the app-subdomain origin-separation migration (Phase 1,
+  2026-09-09, `docs/architecture/adr/ADR-0010-PUBLIC-APP-ORIGIN-SEPARATION.md`). Optional in the
+  schema and **not read by any route, redirect, CSRF, session, or WebAuthn logic yet** — the values
+  set in `wrangler.jsonc` are documented future targets only. `app.crawlpact.com` and
+  `app-preview.crawlpact.com` have no DNS records or Cloudflare Custom Domains attached (verified
+  2026-09-09). See `docs/baseline/2026-09-09-app-subdomain-phase1/` for the full migration contract.
 - `WEBAUTHN_RP_ID` / `WEBAUTHN_RP_ORIGIN` — **passkey auth fails outright for every user if these
   don't exactly match the domain the app is actually served from**, since the browser strictly
   validates `rpId`/origin against the real page origin during the WebAuthn ceremony. Preview's

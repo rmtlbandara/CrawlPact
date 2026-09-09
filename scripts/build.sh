@@ -30,8 +30,12 @@ fi
 if [[ "$target" == "preview" ]]; then
   export CLOUDFLARE_ENV=preview
   export PUBLIC_SITE_URL="https://preview.crawlpact.com"
+  # Phase 1 of the app-subdomain migration (ADR-0010) — reserved, unread by
+  # any build-time or runtime code yet. See apps/web/wrangler.jsonc.
+  export PUBLIC_APP_URL="https://app-preview.crawlpact.com"
 else
   export PUBLIC_SITE_URL="https://crawlpact.com"
+  export PUBLIC_APP_URL="https://app.crawlpact.com"
 fi
 
 pnpm --filter @crawlpact/web run build

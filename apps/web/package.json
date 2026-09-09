@@ -4,7 +4,7 @@
   "private": true,
   "type": "module",
   "scripts": {
-    "dev": "astro dev",
+    "dev": "node ../../scripts/generate-dev-wrangler-config.mjs && astro dev",
     "build": "astro check && astro build",
     "preview": "wrangler dev",
     "typecheck": "astro check",

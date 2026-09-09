@@ -13,6 +13,9 @@ type CloudflareRuntimeEnv = {
   AGENCY_LOGOS: R2Bucket;
   PUBLIC_APP_ENV: "local" | "preview" | "production";
   PUBLIC_SITE_URL: string;
+  // Reserved for Phase 2 of the app-subdomain migration (ADR-0010) — not
+  // read anywhere yet.
+  PUBLIC_APP_URL?: string;
   SESSION_SIGNING_SECRET: string;
   ABUSE_MONITORING_SECRET: string;
   WEBAUTHN_RP_ID: string;

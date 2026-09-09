@@ -132,6 +132,7 @@ echo "==> Writing temporary CI-local .dev.vars (restored to what was there befor
 cat > "$DEV_VARS_PATH" << 'DEVVARS'
 PUBLIC_APP_ENV=local
 PUBLIC_SITE_URL=http://localhost:4321
+PUBLIC_APP_URL=http://localhost:4321
 SESSION_SIGNING_SECRET=ci-placeholder-secret-value-not-real-00000000
 ABUSE_MONITORING_SECRET=ci-placeholder-abuse-secret-value-not-real-0000
 WEBAUTHN_RP_ID=localhost

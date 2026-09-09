@@ -3,6 +3,7 @@ import { createDb } from "@crawlpact/database";
 import { getEnv } from "../../lib/env";
 import { getFeedAccessByToken, listNotifications } from "../../lib/notifications";
 import { sha256Hex } from "../../lib/persist-scan";
+import { getAppOrigin } from "../../lib/origin";
 
 export const prerender = false;
 
@@ -41,13 +42,22 @@ export const GET: APIRoute = async ({ params, site }) => {
 
   const { items } = await listNotifications(db, access.userId, { limit: FEED_ITEM_LIMIT });
   const base = site ?? new URL(getEnv().PUBLIC_SITE_URL);
+  // Phase 2 of the app-subdomain migration (ADR-0010,
+  // PUBLIC_SITE_URL_USAGE_AUDIT.md): the feed's own identity (`feedUrl`
+  // below) stays on the public origin — only the per-entry deep links into
+  // the dashboard should move to the app origin, since that's where
+  // `/app/domains/:id` will actually live once `PUBLIC_APP_URL` is
+  // configured for this environment. Falls back to the public origin
+  // (today's behavior) until then — `/app/domains/:id` is still reachable
+  // there during the Phase 2/3 migration-compatibility window.
+  const dashboardBase = getAppOrigin() ?? base;
   const feedUrl = new URL(`/feed/${token}.xml`, base).toString();
   const updated = items[0]?.createdAt ?? new Date().toISOString();
 
   const entries = items
     .map((item) => {
       const link = item.domainId
-        ? new URL(`/app/domains/${item.domainId}`, base).toString()
+        ? new URL(`/app/domains/${item.domainId}`, dashboardBase).toString()
         : undefined;
       return [
         "  <entry>",
