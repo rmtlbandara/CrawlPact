@@ -35,7 +35,7 @@ test.describe("Homepage sections and conversion links", () => {
     ).toBeVisible();
     await expect(page.getByRole("link", { name: "Review Agency pricing" })).toHaveAttribute(
       "href",
-      "/pricing#agency",
+      "/pricing/#agency",
     );
   });
 
@@ -50,7 +50,7 @@ test.describe("Homepage sections and conversion links", () => {
       ["Status", "/status/"],
       ["Security", "/security/"],
       ["About", "/about/"],
-      ["Corrections process", "/methodology#corrections"],
+      ["Corrections process", "/methodology/#corrections"],
     ] as const) {
       await expect(main.getByRole("link", { name, exact: true })).toHaveAttribute("href", href);
     }
@@ -61,7 +61,7 @@ test.describe("Homepage sections and conversion links", () => {
     await expect(page.getByRole("heading", { name: "Pricing", exact: true })).toBeVisible();
     await expect(page.getByRole("link", { name: "Choose Pro" })).toHaveAttribute(
       "href",
-      "/pricing#pro",
+      "/pricing/#pro",
     );
   });
 

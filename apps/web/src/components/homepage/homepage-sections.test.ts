@@ -71,7 +71,7 @@ describe("PricingPreviewSection.astro", () => {
   });
 
   it("links each plan CTA to the full, always-live pricing page", () => {
-    expect(content).toContain("href={`/pricing#${id}`}");
+    expect(content).toContain("href={`/pricing/#${id}`}");
   });
 });
 
