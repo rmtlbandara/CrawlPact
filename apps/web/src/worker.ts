@@ -5,7 +5,7 @@ import { runDataRetentionPurge } from "./lib/data-retention";
 import { applyDueScheduledDowngrades } from "./lib/billing/scheduled-downgrades";
 import { reconcileMissingPolicyChangeNotifications } from "./lib/notification-reconciliation";
 import { evaluateOperationalAlerts } from "./lib/admin/operational-alerts";
-import { needsTrailingSlashRedirectPreview } from "./lib/route-registry";
+import { resolveCanonicalRedirectTarget } from "./lib/route-registry";
 import { classifyRequestOrigin, toPublicUrl } from "./lib/origin";
 import { isPublicOnlyPath, isSensitivePath } from "./lib/route-ownership";
 
@@ -287,12 +287,16 @@ async function isMaintenanceMode(db: D1Database): Promise<boolean> {
 
 const SAFE_METHODS = new Set(["GET", "HEAD"]);
 
-/** True if `pathname` needs the Phase 20 canonical trailing slash, given the broader (prerendered + SSR) coverage `run_worker_first` requires once it intercepts document requests before static-asset dispatch. */
+/**
+ * The real canonical destination for `pathname`, given the broader
+ * (prerendered + SSR + literal-alias) coverage `run_worker_first` requires
+ * once it intercepts document requests before static-asset dispatch. Falls
+ * back to `pathname` unchanged when it's already canonical (or isn't a
+ * route this registry recognizes at all) — see
+ * `resolveCanonicalRedirectTarget`'s doc comment.
+ */
 function canonicalPublicPath(pathname: string): string {
-  if (pathname !== "/" && needsTrailingSlashRedirectPreview(pathname)) {
-    return `${pathname}/`;
-  }
-  return pathname;
+  return resolveCanonicalRedirectTarget(pathname) ?? pathname;
 }
 
 /**
@@ -363,7 +367,16 @@ function notFound(): Response {
  * asset-matched path once the Worker's own internal asset lookup handles it
  * — verified locally, 2026-09-07). Phase 2 generalizes that trailing-slash
  * reimplementation to production too, since production's own
- * `run_worker_first` array now intercepts the same prerendered paths.
+ * `run_worker_first` array now intercepts the same prerendered paths. Found
+ * live, 2026-09-09 (real Custom Domain attachment validation): this
+ * reimplementation was itself incomplete — it only recognized a prerendered
+ * page's bare path, not a real Static Assets alias of it
+ * (`/about/index.html`, `/about.html`, ...), which is exactly as capable of
+ * bypassing this whole boundary as the bare form is. `canonicalPublicPath`
+ * and the trailing-slash check below both now go through
+ * `resolveCanonicalRedirectTarget` (`route-registry.ts`), the single place
+ * that recognizes every alias shape for a route this registry actually
+ * owns — see that function's doc comment.
  */
 export async function fetchWithPreviewSearchIsolation(
   request: Request,
@@ -392,13 +405,13 @@ export async function fetchWithPreviewSearchIsolation(
   }
 
   const effectiveUrl = new URL(effectiveRequest.url);
-  if (
-    SAFE_METHODS.has(request.method) &&
-    needsTrailingSlashRedirectPreview(effectiveUrl.pathname)
-  ) {
-    const target = new URL(`${effectiveUrl.pathname}/`, url.origin);
-    target.search = url.search;
-    return Response.redirect(target.toString(), 301);
+  if (SAFE_METHODS.has(request.method)) {
+    const canonicalTarget = resolveCanonicalRedirectTarget(effectiveUrl.pathname);
+    if (canonicalTarget) {
+      const target = new URL(canonicalTarget, url.origin);
+      target.search = url.search;
+      return Response.redirect(target.toString(), 301);
+    }
   }
 
   const response = await handle(effectiveRequest, env, ctx);
