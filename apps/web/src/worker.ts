@@ -6,6 +6,8 @@ import { applyDueScheduledDowngrades } from "./lib/billing/scheduled-downgrades"
 import { reconcileMissingPolicyChangeNotifications } from "./lib/notification-reconciliation";
 import { evaluateOperationalAlerts } from "./lib/admin/operational-alerts";
 import { needsTrailingSlashRedirectPreview } from "./lib/route-registry";
+import { classifyRequestOrigin, toPublicUrl } from "./lib/origin";
+import { isPublicOnlyPath, isSensitivePath } from "./lib/route-ownership";
 
 /**
  * Custom Worker entry point (ADR-0001). Delegates ordinary requests to
@@ -283,51 +285,123 @@ async function isMaintenanceMode(db: D1Database): Promise<boolean> {
   return (row as { value: string } | null)?.value === "true";
 }
 
+const SAFE_METHODS = new Set(["GET", "HEAD"]);
+
+/** True if `pathname` needs the Phase 20 canonical trailing slash, given the broader (prerendered + SSR) coverage `run_worker_first` requires once it intercepts document requests before static-asset dispatch. */
+function canonicalPublicPath(pathname: string): string {
+  if (pathname !== "/" && needsTrailingSlashRedirectPreview(pathname)) {
+    return `${pathname}/`;
+  }
+  return pathname;
+}
+
 /**
- * Phase 20, P0: preview.crawlpact.com must never compete with production in
- * Google Search. `apps/web/src/middleware.ts` already sets `X-Robots-Tag` for
- * specific non-indexable path prefixes, but that only runs for SSR
- * responses — prerendered marketing pages (home, pricing's static siblings,
- * guides, crawlers, etc.) are served directly off the Workers Assets binding
- * and never reach Astro middleware at all (see that file's own doc comment).
- * `env.preview.assets.run_worker_first` (wrangler.jsonc) forces every
- * preview request through this Worker first — including ones that would
- * otherwise be served as a static asset — specifically so this wrapper can
- * unconditionally stamp every preview response, regardless of rendering
- * mode, before anything is returned to the client. Production does not set
- * `run_worker_first`, so this wrapper's preview branch is never reached in
- * production and asset-serving performance there is unaffected.
+ * Rewrites `request` to a new pathname, preserving method, headers, query
+ * string, and body untouched. Used only for the one deliberate internal
+ * rewrite this Worker performs (see `handleHostBoundary`'s doc comment) —
+ * never driven by anything client-controllable beyond the Host header that
+ * already decided *whether* to rewrite in the first place.
+ */
+function rewritePathname(request: Request, pathname: string): Request {
+  const url = new URL(request.url);
+  url.pathname = pathname;
+  return new Request(url.toString(), request);
+}
+
+function notFound(): Response {
+  return new Response("Not Found", { status: 404 });
+}
+
+/**
+ * Phase 2 of the app-subdomain migration (ADR-0010,
+ * `docs/baseline/2026-09-09-app-subdomain-phase1/CLOUDFLARE_HOST_BOUNDARY_DESIGN.md`):
+ * the Worker-level enforcement that makes "reaching the Worker" insufficient
+ * to become a trusted CrawlPact origin. Runs before `handle()` — i.e. before
+ * any Astro routing or Workers Assets lookup — for every request this
+ * function's `run_worker_first` configuration intercepts (see
+ * `wrangler.jsonc`'s production `assets.run_worker_first` array and the
+ * pre-existing preview `run_worker_first: true`).
  *
- * `run_worker_first` has a second, confirmed side effect (verified locally,
- * 2026-09-07): it bypasses Cloudflare's edge-level `_redirects`/
- * `html_handling` processing for asset-matched paths entirely, since those
- * only run in front of the default asset-first dispatcher — a Worker's own
- * internal asset lookup doesn't re-trigger them. That would silently
- * regress the Phase 20 canonical trailing-slash redirect for every
- * prerendered page, on preview only, the moment `run_worker_first` is
- * enabled — so this wrapper redirects those paths itself, before ever
- * calling `handle()`, using the broader `needsTrailingSlashRedirectPreview`
- * (production keeps relying on `public/_redirects` alone; see that
- * function's doc comment in `route-registry.ts`).
+ * Three decisions, always in this order:
+ *
+ * 1. **Unknown host + sensitive path → fail closed.** A request whose Host
+ *    doesn't match any currently configured trusted origin (`lib/origin.ts`)
+ *    — an unattached hostname, a stray `*.workers.dev` request, a typo —
+ *    must never be allowed to reach `/sign-in`, `/app*`, `/admin*`, or
+ *    `/api/*`. This does not affect public marketing content: an unknown
+ *    host requesting a public page still gets it, unchanged from today,
+ *    since there is no security boundary to enforce there.
+ * 2. **App surface `/` → the existing app entry point.** `app.crawlpact.com/`
+ *    must render the authenticated dashboard (or its sign-in redirect), never
+ *    the public homepage — but the public homepage *is* `/` in this build.
+ *    This is the one internal rewrite Phase 2 implements: `/` becomes `/app`
+ *    before `handle()` runs, invisibly to the browser. Every other app-host
+ *    path (`/sign-in`, `/app/**`, `/admin/**`, `/api/**`) already resolves
+ *    correctly without a rewrite, because those pages already live at those
+ *    exact paths. Phase 1's ADR-0010 deliberately left full URL de-prefixing
+ *    (`/domains` instead of `/app/domains`) undecided rather than mandating
+ *    it — Phase 2 does not implement it; see `PHASE_2_COMPLETION_REPORT.md`
+ *    for that scope decision.
+ * 3. **App surface + public-only path → redirect or reject.** The hard gate:
+ *    `app.crawlpact.com/about/` must never render the public About page.
+ *    GET/HEAD permanently redirect (308) to the canonical public URL,
+ *    preserving path and query; every other method is rejected outright
+ *    (404) rather than replayed against the public origin — the Wrong-Host
+ *    Policy never turns a mutation into a cross-origin request.
+ *
+ * Deliberately absent: the reverse direction (public host serving `/sign-in`
+ * or `/app/**`) is untouched. `crawlpact.com` continues to serve the
+ * existing application during the Phase 2/3 migration-compatibility window
+ * by design (ADR-0010) — only Phase 4's controlled cutover introduces a
+ * permanent apex→app redirect for that direction, and only once every gate
+ * in `PHASE_2_TEST_CONTRACT.md`/Phase 3's direct-host validation has passed.
+ *
+ * This function also retains its original Phase 20 responsibility: on
+ * preview, it stamps `X-Robots-Tag: noindex` on every response and
+ * reimplements the canonical trailing-slash redirect that `run_worker_first`
+ * bypasses at the edge (`_redirects`/`html_handling` never run for an
+ * asset-matched path once the Worker's own internal asset lookup handles it
+ * — verified locally, 2026-09-07). Phase 2 generalizes that trailing-slash
+ * reimplementation to production too, since production's own
+ * `run_worker_first` array now intercepts the same prerendered paths.
  */
 export async function fetchWithPreviewSearchIsolation(
   request: Request,
   env: Env,
   ctx: ExecutionContext,
 ): Promise<Response> {
-  if (env.PUBLIC_APP_ENV === "preview") {
-    const url = new URL(request.url);
-    if (
-      (request.method === "GET" || request.method === "HEAD") &&
-      needsTrailingSlashRedirectPreview(url.pathname)
-    ) {
-      const target = new URL(`${url.pathname}/`, url.origin);
-      target.search = url.search;
-      return Response.redirect(target.toString(), 301);
+  const url = new URL(request.url);
+  const surface = classifyRequestOrigin(request);
+
+  if (surface === "unknown" && isSensitivePath(url.pathname)) {
+    return notFound();
+  }
+
+  let effectiveRequest = request;
+
+  if (surface === "app") {
+    if (url.pathname === "/") {
+      effectiveRequest = rewritePathname(request, "/app");
+    } else if (isPublicOnlyPath(url.pathname)) {
+      if (!SAFE_METHODS.has(request.method)) {
+        return notFound();
+      }
+      const target = new URL(toPublicUrl(canonicalPublicPath(url.pathname), url.search));
+      return Response.redirect(target.toString(), 308);
     }
   }
 
-  const response = await handle(request, env, ctx);
+  const effectiveUrl = new URL(effectiveRequest.url);
+  if (
+    SAFE_METHODS.has(request.method) &&
+    needsTrailingSlashRedirectPreview(effectiveUrl.pathname)
+  ) {
+    const target = new URL(`${effectiveUrl.pathname}/`, url.origin);
+    target.search = url.search;
+    return Response.redirect(target.toString(), 301);
+  }
+
+  const response = await handle(effectiveRequest, env, ctx);
   if (env.PUBLIC_APP_ENV !== "preview") {
     return response;
   }

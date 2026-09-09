@@ -45,6 +45,7 @@ export const POST: APIRoute = async ({ request }) => {
     }
 
     const outcome = await finishPasskeyAuthentication(
+      request,
       parsed.data.challengeId,
       credentialResponse,
       toWebAuthnCredential(row),

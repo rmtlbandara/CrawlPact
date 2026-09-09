@@ -27,6 +27,17 @@ export const envSchema = z
   .object({
     PUBLIC_APP_ENV: z.enum(["local", "preview", "production"]).default("local"),
     PUBLIC_SITE_URL: z.string().url(),
+    // App-subdomain origin-separation migration (ADR-0010). Introduced
+    // optional/unconsumed in Phase 1 (2026-09-09); Phase 2 (2026-09-09) is
+    // the first code to read it — `lib/origin.ts`'s trusted-origin registry,
+    // consumed by CSRF (`auth/same-origin.ts`) and WebAuthn ceremony pinning
+    // (`auth/webauthn.ts`). Stays optional: an environment that hasn't
+    // configured it yet simply has no second trusted surface (every request
+    // classifies as "public" or "unknown"), which is what keeps every
+    // existing test fixture that never set this working unchanged. No
+    // Cloudflare Custom Domain is attached for `app.crawlpact.com` yet
+    // (Phase 3) — configuring this value alone moves no real traffic.
+    PUBLIC_APP_URL: z.string().url().optional(),
 
     SESSION_SIGNING_SECRET: z.string().min(16),
     // Phase 12 (RISK-022): dedicated key for target-frequency abuse-detection
@@ -34,6 +45,13 @@ export const envSchema = z
     // docs/security/TARGET_ABUSE_MONITORING_DESIGN.md.
     ABUSE_MONITORING_SECRET: z.string().min(16),
     WEBAUTHN_RP_ID: z.string().min(1),
+    // Phase 2 of the app-subdomain migration (ADR-0010) replaced the single
+    // fixed expected-origin model with per-ceremony origin pinning
+    // (`auth/webauthn.ts` signs the *validated request origin* into each
+    // challenge token instead) — `webauthn.ts` no longer reads this value.
+    // Left in the schema, still required, so every existing deployment/test
+    // config stays valid without a mechanical edit; safe to remove in a
+    // later cleanup once the dual-origin migration window closes (Phase 4).
     WEBAUTHN_RP_ORIGIN: z.string().url(),
 
     GOOGLE_CLIENT_ID: z

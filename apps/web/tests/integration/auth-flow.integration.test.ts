@@ -40,16 +40,31 @@ const redeemRecoveryCode = (await import("../../src/pages/api/auth/recovery-code
 const RP_ID = "localhost";
 const ORIGIN = "http://localhost:4321";
 
+// Phase 2 of the app-subdomain migration (ADR-0010) made `assertSameOrigin`
+// self-referential: it trusts a request's own arrival origin
+// (`new URL(request.url).origin`), not just a fixed configured value — see
+// `lib/auth/same-origin.ts`. Every call site below historically passed an
+// arbitrary placeholder host (e.g. "http://x/register/begin"), which was
+// harmless under the old fixed-origin check but would now make the
+// request's own arrival origin untrusted, rejecting it regardless of a
+// matching `Origin` header. Rewriting just the origin here to `ORIGIN`
+// (matching this file's `PUBLIC_SITE_URL` mock) keeps every call site below
+// working unchanged while making the constructed `Request` realistic.
+function withTestOrigin(url: string): string {
+  const parsed = new URL(url);
+  return new URL(`${parsed.pathname}${parsed.search}`, ORIGIN).toString();
+}
+
 function jsonRequest(url: string, body: unknown, cookie?: string): Request {
   const headers: Record<string, string> = { "Content-Type": "application/json", Origin: ORIGIN };
   if (cookie) headers["Cookie"] = cookie;
-  return new Request(url, { method: "POST", headers, body: JSON.stringify(body) });
+  return new Request(withTestOrigin(url), { method: "POST", headers, body: JSON.stringify(body) });
 }
 
 function getRequest(url: string, cookie?: string): Request {
   const headers: Record<string, string> = {};
   if (cookie) headers["Cookie"] = cookie;
-  return new Request(url, { method: "GET", headers });
+  return new Request(withTestOrigin(url), { method: "GET", headers });
 }
 
 function ctx(request: Request, params: Record<string, string | undefined> = {}) {
@@ -548,7 +563,7 @@ describe("passkey authentication (real D1 + real WebAuthn crypto)", () => {
     const request = () =>
       redeemRecoveryCode(
         ctx(
-          new Request("http://x/api/auth/recovery-codes/redeem", {
+          new Request("http://localhost:4321/api/auth/recovery-codes/redeem", {
             method: "POST",
             headers: { "Content-Type": "application/json", "CF-Connecting-IP": "203.0.113.9" },
             body: JSON.stringify({ code: "WRONG-WRONG-WRONG" }),
@@ -569,7 +584,7 @@ describe("passkey authentication (real D1 + real WebAuthn crypto)", () => {
   it("signs out and invalidates the session cookie", async () => {
     const response = await logout(
       ctx(
-        new Request("http://x/api/auth/logout", {
+        new Request("http://localhost:4321/api/auth/logout", {
           method: "POST",
           headers: { Cookie: sessionCookie },
         }),
@@ -593,7 +608,7 @@ describe("passkey authentication (real D1 + real WebAuthn crypto)", () => {
 
     const response = await revokeAllSessions(
       ctx(
-        new Request("http://x/api/auth/sessions/revoke-all", {
+        new Request("http://localhost:4321/api/auth/sessions/revoke-all", {
           method: "POST",
           headers: { Cookie: cookie, Origin: ORIGIN },
         }),

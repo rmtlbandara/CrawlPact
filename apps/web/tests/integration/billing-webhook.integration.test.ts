@@ -55,7 +55,7 @@ async function postWebhook(
   const signature = options.badSignature
     ? `ts=${ts};h1=${"0".repeat(64)}`
     : await signBody(body, ts);
-  const request = new Request("http://x/api/billing/webhook", {
+  const request = new Request("http://localhost:4321/api/billing/webhook", {
     method: "POST",
     headers: { "Content-Type": "application/json", "Paddle-Signature": signature },
     body,

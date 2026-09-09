@@ -69,7 +69,7 @@ async function signUpTestUser(displayName: string): Promise<{ cookie: string; us
 function importPreviewRequest(csvText: string, cookie: string): Request {
   const formData = new FormData();
   formData.set("file", new File([csvText], "import.csv", { type: "text/csv" }));
-  return new Request("http://x/api/workspace/import/preview", {
+  return new Request("http://localhost:4321/api/workspace/import/preview", {
     method: "POST",
     headers: { Origin: ORIGIN, Cookie: cookie },
     body: formData,
@@ -587,7 +587,7 @@ describe("Phase 9: agency workspace and portfolio workflows (real D1)", () => {
     formData.set("file", new File([REAL_PNG_BYTES], "logo.png", { type: "image/png" }));
     const uploadResponse = await logoUploadRoute(
       ctx(
-        new Request("http://x/api/agency-branding/logo", {
+        new Request("http://localhost:4321/api/agency-branding/logo", {
           method: "POST",
           headers: { Origin: ORIGIN, Cookie: cookie },
           body: formData,

@@ -41,7 +41,7 @@ async function postWebhook(payload: unknown): Promise<Response> {
   const body = JSON.stringify(payload);
   const ts = Math.floor(Date.now() / 1000);
   const signature = await signBody(body, ts);
-  const request = new Request("http://x/api/billing/webhook", {
+  const request = new Request("http://localhost:4321/api/billing/webhook", {
     method: "POST",
     headers: { "Content-Type": "application/json", "Paddle-Signature": signature },
     body,

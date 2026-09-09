@@ -12,10 +12,10 @@ export const prerender = false;
  * origin; login/finish.ts identifies the account from the credential ID the
  * browser returns, not from anything the caller supplies here.
  */
-export const POST: APIRoute = async () => {
+export const POST: APIRoute = async ({ request }) => {
   const requestId = crypto.randomUUID();
   try {
-    const { challengeToken, options } = await beginPasskeyAuthentication();
+    const { challengeToken, options } = await beginPasskeyAuthentication(request);
     return jsonResponse(
       ok({ challengeId: challengeToken, publicKeyCredentialRequestOptions: options }, requestId),
       200,

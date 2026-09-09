@@ -1,6 +1,6 @@
 ---
 export const prerender = false;
-import MarketingLayout from "../layouts/MarketingLayout.astro";
+import AuthLayout from "../layouts/AuthLayout.astro";
 import { PasskeyAuth } from "../components/auth/PasskeyAuth";
 import { createDb, schema } from "@crawlpact/database";
 import { eq } from "drizzle-orm";
@@ -81,10 +81,9 @@ const heading = continuationDomain
 const initialMode = continuationDomain || requestedPlan ? "signup" : "signin";
 ---
 
-<MarketingLayout
+<AuthLayout
   title="Sign in | CrawlPact"
   description="Sign in with Google or a passkey. CrawlPact does not use passwords."
-  noindex={true}
 >
   <div class="mx-auto max-w-[480px] px-4 py-20 sm:px-6">
     <h1 class="text-h1 text-neutral-950">{heading}</h1>
@@ -119,4 +118,4 @@ const initialMode = continuationDomain || requestedPlan ? "signup" : "signin";
       />
     </div>
   </div>
-</MarketingLayout>
+</AuthLayout>

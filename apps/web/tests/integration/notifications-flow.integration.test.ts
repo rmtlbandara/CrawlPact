@@ -250,7 +250,9 @@ describe("notification centre and private Atom feed (real D1)", () => {
 
     // An invalid token gets a generic 404.
     const badFeed = await feedRoute(
-      ctx(new Request("http://x/feed/not-a-real-token.xml"), { token: "not-a-real-token" }),
+      ctx(new Request("http://localhost:4321/feed/not-a-real-token.xml"), {
+        token: "not-a-real-token",
+      }),
     );
     expect(badFeed.status).toBe(404);
 
@@ -261,11 +263,11 @@ describe("notification centre and private Atom feed (real D1)", () => {
     const reissuedBody = await readJson<{ token: string }>(reissued);
     if (!reissuedBody.ok) throw new Error("reissue failed");
     const oldTokenFeed = await feedRoute(
-      ctx(new Request("http://x/feed/x.xml"), { token: issuedBody.data.token }),
+      ctx(new Request("http://localhost:4321/feed/x.xml"), { token: issuedBody.data.token }),
     );
     expect(oldTokenFeed.status).toBe(404);
     const newTokenFeed = await feedRoute(
-      ctx(new Request("http://x/feed/x.xml"), { token: reissuedBody.data.token }),
+      ctx(new Request("http://localhost:4321/feed/x.xml"), { token: reissuedBody.data.token }),
     );
     expect(newTokenFeed.status).toBe(200);
 
@@ -274,7 +276,7 @@ describe("notification centre and private Atom feed (real D1)", () => {
       ctx(mutatingRequest("http://x/api/notifications/feed-token", "DELETE", cookie)),
     );
     const afterRevoke = await feedRoute(
-      ctx(new Request("http://x/feed/x.xml"), { token: reissuedBody.data.token }),
+      ctx(new Request("http://localhost:4321/feed/x.xml"), { token: reissuedBody.data.token }),
     );
     expect(afterRevoke.status).toBe(404);
   });

@@ -454,6 +454,20 @@ Status vocabulary: `verified-live` · `verified-disabled` · `verified-partial` 
   catalog, `AUDIT_ENGINE_ENABLED=true`, `BILLING_ENABLED=true`. No secret values are recorded
   here — see `docs/baseline/2026-08-03/ENVIRONMENT_AND_BINDING_INVENTORY.md` for names/purposes
   only.
+- **App-subdomain migration (in progress, started 2026-09-09)**: a second production origin,
+  `app.crawlpact.com`, is planned per ADR-0010, served by this same Worker (no second Worker, no
+  Cloudflare Pages split). Phase 1 (baseline/design) and Phase 2 (application-origin code
+  implementation — host boundary, CSRF, WebAuthn origin pinning, dedicated AuthLayout) are both
+  complete. `app.crawlpact.com` still has **no DNS record and no Cloudflare Custom Domain
+  attached** — it does not exist in production. No production application-origin cutover has
+  occurred: no root→app redirect is enabled, no WebAuthn origin was narrowed, no session-cookie
+  scope changed, no Paddle endpoint moved. The one real deployable change Phase 2 produced (a
+  selective `run_worker_first` array for production Workers Static Assets, required before the app
+  Custom Domain can ever be safely attached) has been implemented and tested but **not deployed** —
+  deploying it requires separate, explicit authorization. External owner actions (Cloudflare
+  Custom Domain attachment, Google Authorized JavaScript Origin, Paddle checkout-domain approval)
+  remain queued for Phase 3. See `docs/baseline/2026-09-09-app-subdomain-phase1/` and
+  `docs/baseline/2026-09-09-app-subdomain-phase2/` for the full evidence sets.
 
 ## Version status
 

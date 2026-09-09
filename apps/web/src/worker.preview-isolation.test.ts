@@ -5,7 +5,17 @@ vi.mock("@astrojs/cloudflare/handler", () => ({
     async () => new Response("<html></html>", { headers: { "Content-Type": "text/html" } }),
   ),
 }));
-vi.mock("./lib/env", () => ({ getEnv: () => ({}) }));
+// Phase 2 of the app-subdomain migration (ADR-0010): `worker.ts`'s
+// host-boundary logic reads `PUBLIC_SITE_URL`/`PUBLIC_APP_URL` via
+// `lib/origin.ts` (backed by this same `getEnv()` mock) to classify which
+// surface a request arrived on. Every request in this file targets
+// `preview.crawlpact.com`, so `PUBLIC_SITE_URL` must match that for these
+// pre-existing preview-isolation assertions to keep classifying as
+// "public" (unaffected by the new app-surface/unknown-host logic tested in
+// `worker.host-boundary.test.ts`).
+vi.mock("./lib/env", () => ({
+  getEnv: () => ({ PUBLIC_SITE_URL: "https://preview.crawlpact.com" }),
+}));
 
 const { fetchWithPreviewSearchIsolation } = await import("./worker");
 

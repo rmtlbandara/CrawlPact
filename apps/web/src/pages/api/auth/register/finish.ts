@@ -34,6 +34,7 @@ export const POST: APIRoute = async ({ request }) => {
     }
 
     const outcome = await finishPasskeyRegistration(
+      request,
       parsed.data.challengeId,
       parsed.data.credential as unknown as RegistrationResponseJSON,
     );

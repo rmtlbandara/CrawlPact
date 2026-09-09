@@ -13,6 +13,14 @@ import { cookieFromResponse, ctx, jsonRequest, readJson } from "./test-helpers";
 
 const RP_ID = "localhost";
 const ORIGIN = "http://localhost:4321";
+// Phase 2 of the app-subdomain migration (ADR-0010): a second trusted
+// CrawlPact origin. Used below to prove `assertSameOrigin` rejects a
+// *sibling*-origin mutation (one trusted CrawlPact origin's Origin header
+// presented on a request that arrived on the *other* trusted origin) — the
+// specific weakness a naive `[PUBLIC_SITE_URL, PUBLIC_APP_URL].includes(origin)`
+// allowlist would have, and which `lib/auth/same-origin.ts` explicitly
+// avoids by checking the request's own arrival origin instead.
+const APP_ORIGIN = "https://app.crawlpact.test";
 
 let mockEnv: Cloudflare.Env;
 vi.mock("../../src/lib/env", () => ({ getEnv: () => mockEnv }));
@@ -34,6 +42,7 @@ describe("CSRF: cross-site requests are rejected on authenticated mutating endpo
       AGENCY_LOGOS: createFakeR2Bucket(),
       PUBLIC_APP_ENV: "local",
       PUBLIC_SITE_URL: ORIGIN,
+      PUBLIC_APP_URL: APP_ORIGIN,
       SESSION_SIGNING_SECRET: "integration-test-secret-value-long-enough",
       ABUSE_MONITORING_SECRET: "integration-test-abuse-secret-value-long-enough",
       WEBAUTHN_RP_ID: RP_ID,
@@ -80,7 +89,7 @@ describe("CSRF: cross-site requests are rejected on authenticated mutating endpo
   });
 
   it("allows a same-origin GET even with an attacker's Origin header (read-only, exempt)", async () => {
-    const request = new Request("http://x/api/account", {
+    const request = new Request("http://localhost:4321/api/account", {
       headers: { Cookie: cookie, Origin: "https://attacker.example" },
     });
     const response = await getAccountRoute(ctx(request));
@@ -88,7 +97,7 @@ describe("CSRF: cross-site requests are rejected on authenticated mutating endpo
   });
 
   it("rejects a mutating request whose Origin does not match the site", async () => {
-    const request = new Request("http://x/api/account", {
+    const request = new Request("http://localhost:4321/api/account", {
       method: "PATCH",
       headers: {
         "Content-Type": "application/json",
@@ -104,14 +113,14 @@ describe("CSRF: cross-site requests are rejected on authenticated mutating endpo
 
     // Confirm the mutation genuinely did not apply.
     const getResponse = await getAccountRoute(
-      ctx(new Request("http://x/api/account", { headers: { Cookie: cookie } })),
+      ctx(new Request("http://localhost:4321/api/account", { headers: { Cookie: cookie } })),
     );
     const account = await readJson<{ displayName: string }>(getResponse);
     if (account.ok) expect(account.data.displayName).not.toBe("Hijacked");
   });
 
   it("rejects a mutating request with no Origin or Referer at all", async () => {
-    const request = new Request("http://x/api/account", {
+    const request = new Request("http://localhost:4321/api/account", {
       method: "PATCH",
       headers: { "Content-Type": "application/json", Cookie: cookie },
       body: JSON.stringify({ displayName: "Hijacked Again" }),
@@ -121,7 +130,7 @@ describe("CSRF: cross-site requests are rejected on authenticated mutating endpo
   });
 
   it("falls back to a matching Referer when Origin is absent", async () => {
-    const request = new Request("http://x/api/account", {
+    const request = new Request("http://localhost:4321/api/account", {
       method: "PATCH",
       headers: {
         "Content-Type": "application/json",
@@ -132,5 +141,57 @@ describe("CSRF: cross-site requests are rejected on authenticated mutating endpo
     });
     const response = await patchAccountRoute(ctx(request));
     expect(response.status).toBe(200);
+  });
+
+  // Phase 2 of the app-subdomain migration (ADR-0010): the sibling-origin
+  // case. Both ORIGIN and APP_ORIGIN are trusted CrawlPact origins — a naive
+  // `origins.includes(header)` allowlist would wrongly accept either one
+  // regardless of which origin the request actually arrived on.
+  // `assertSameOrigin` must reject whenever the Origin header doesn't match
+  // *this request's own* arrival origin, even if it's the *other* trusted one.
+  it("rejects a mutation that arrived on the app origin but claims the public origin as its Origin header", async () => {
+    const request = new Request(`${APP_ORIGIN}/api/account`, {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json", Cookie: cookie, Origin: ORIGIN },
+      body: JSON.stringify({ displayName: "Sibling Hijacked" }),
+    });
+    const response = await patchAccountRoute(ctx(request));
+    expect(response.status).toBe(403);
+    const body = await readJson(response);
+    if (!body.ok) expect(body.error.code).toBe("FORBIDDEN");
+  });
+
+  it("rejects a mutation that arrived on the public origin but claims the app origin as its Origin header", async () => {
+    const request = new Request(`${ORIGIN}/api/account`, {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json", Cookie: cookie, Origin: APP_ORIGIN },
+      body: JSON.stringify({ displayName: "Sibling Hijacked Reverse" }),
+    });
+    const response = await patchAccountRoute(ctx(request));
+    expect(response.status).toBe(403);
+  });
+
+  it("accepts a mutation that arrives on the app origin with a matching app Origin header", async () => {
+    const request = new Request(`${APP_ORIGIN}/api/account`, {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json", Cookie: cookie, Origin: APP_ORIGIN },
+      body: JSON.stringify({ displayName: "Ada On App Origin" }),
+    });
+    const response = await patchAccountRoute(ctx(request));
+    expect(response.status).toBe(200);
+  });
+
+  it("rejects a sibling-origin Referer fallback the same way", async () => {
+    const request = new Request(`${APP_ORIGIN}/api/account`, {
+      method: "PATCH",
+      headers: {
+        "Content-Type": "application/json",
+        Cookie: cookie,
+        Referer: `${ORIGIN}/app/account`,
+      },
+      body: JSON.stringify({ displayName: "Sibling Referer Hijacked" }),
+    });
+    const response = await patchAccountRoute(ctx(request));
+    expect(response.status).toBe(403);
   });
 });

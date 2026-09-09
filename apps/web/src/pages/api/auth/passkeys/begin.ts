@@ -34,6 +34,7 @@ export const POST: APIRoute = async ({ request }) => {
 
     const existing = await listActiveCredentials(db, user.id);
     const { challengeToken, options } = await beginPasskeyRegistration(
+      request,
       user.displayName,
       existing.map((row) => ({ credentialId: row.credentialId })),
       parsed.data.displayName,

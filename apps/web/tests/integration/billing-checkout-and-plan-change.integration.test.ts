@@ -178,7 +178,7 @@ describe("Checkout price resolution (real D1)", () => {
   });
 
   it("rejects a cross-origin request (CSRF defence-in-depth)", async () => {
-    const request = new Request("http://x/api/billing/checkout", {
+    const request = new Request("http://localhost:4321/api/billing/checkout", {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
