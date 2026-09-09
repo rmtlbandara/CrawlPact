@@ -22,7 +22,7 @@
     "@crawlpact/scanner": "workspace:*",
     "@crawlpact/ui": "workspace:*",
     "@paddle/paddle-js": "1.6.4",
-    "@simplewebauthn/browser": "13.3.0",
+    "@simplewebauthn/browser": "14.0.0",
     "@simplewebauthn/server": "13.3.2",
     "@tailwindcss/vite": "4.3.3",
     "astro": "7.2.10",
