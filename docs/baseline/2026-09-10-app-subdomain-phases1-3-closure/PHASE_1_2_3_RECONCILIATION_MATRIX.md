@@ -53,6 +53,7 @@ have connected (Google OAuth console, GSC/GA4/CrUX), a human/production-state de
 (`workers.dev` disablement), or live authenticated proof against real production (new passkey
 registration, cookie-isolation inspection, sibling-origin CSRF, Google Sign-In end-to-end, recovery
 flow, authenticated app/admin smoke, audit/billing continuation) — see the rows above. None of
-these were skipped, guessed at, or marked PASS without evidence — see `PHASE_4_READINESS_REPORT.md`
-(to follow, once Preview validation of PR #173 and a Production closure deployment are complete)
-for the strict verdict.
+these were skipped, guessed at, or marked PASS without evidence — see
+[`PHASE_4_READINESS_REPORT.md`](./PHASE_4_READINESS_REPORT.md) (PR #173 has since deployed to
+Preview and Production) for the strict verdict: `BLOCKED_PENDING_OWNER_VALIDATION`, not
+`PASS — PHASE 4 READY`.
