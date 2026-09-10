@@ -246,12 +246,9 @@ The following need a manual dashboard check (Cloudflare dashboard → the `crawl
    on" here without a plan upgrade, which is a cost/product decision, not a technical default to
    silently leave unexamined. Review against the abuse-sensitive routes listed in
    `docs/security/THREAT_MODEL.md` (auth/passkey endpoints, anonymous audit submission, admin
-   actions) with this constraint in mind. Separately, exactly 1 Configuration Rule exists
-   (`http_config_settings`): a narrowly-scoped Browser Integrity Check exception for
-   `app.crawlpact.com`'s `/`, `/sign-in`, `/robots.txt` only, added 2026-09-10 for Paddle
-   checkout-domain review — see
-   `docs/baseline/2026-09-09-app-subdomain-phase3/PADDLE_REACHABILITY_REMEDIATION_REPORT.md`.
-   Zone-wide `security_level` (`medium`) and `browser_check` (`on`) are both unaffected by it.
+   actions) with this constraint in mind. Separately, exactly 1 Configuration Rule exists — an
+   intentional, Paddle-approved Browser Integrity Check exception; see its own dedicated section
+   below rather than duplicating the detail here.
 5. **Cache Rules** — confirm no domain-wide "Cache Everything" rule exists; dynamic/authenticated
    routes must never be edge-cached (see `docs/deployment/CDN_CACHE_POLICY.md`).
 6. **`workers.dev` exposure** — both `crawlpact-web` and `crawlpact-web-preview` currently have
@@ -267,6 +264,58 @@ The following need a manual dashboard check (Cloudflare dashboard → the `crawl
    "Domains" above, but preview is not in scope for this change) — do not disable it there.
 7. **DNSSEC** — not confirmed either way; only enable once registrar-side DS record handling can
    be completed (Namecheap is the registrar of record).
+
+### Browser Integrity Check exception for `app.crawlpact.com` (intentional, Paddle-approved)
+
+**This is an intentional, narrowly-scoped Paddle compatibility exception, not a temporary
+workaround or a general security reduction.** Paddle's automated checkout-domain reviewer twice
+reported it could not reach `app.crawlpact.com` (`ACTION_REQUIRED`) despite the domain being
+independently confirmed HTTPS-reachable — see
+`docs/baseline/2026-09-09-app-subdomain-phase3/PADDLE_REACHABILITY_REMEDIATION_REPORT.md` for the
+full investigation. This Configuration Rule was the second-round remediation, added 2026-09-10.
+**Paddle subsequently approved `app.crawlpact.com` with this exact configuration in place**
+(confirmed via the Paddle API 2026-09-10 — see
+`docs/baseline/2026-09-10-app-subdomain-phases1-3-closure/PHASE_1_2_3_RECONCILIATION_MATRIX.md`),
+so this exact scope is now a known-good, load-bearing configuration and must not be narrowed,
+widened, or recreated without a specific reason — see the hardening note at the end of this
+section.
+
+- **Configuration Rule ID**: `689db52e511b4346a1b142aefc9c11ce`
+- **Ruleset ID**: `09d08617a0e649918f1ad9a6465c98c9` (phase `http_config_settings`, zone
+  `699fe9ba2a9a84e7e06ffbf7cd384ab5`)
+- **Hostname condition**: `http.host eq "app.crawlpact.com"` — exact match, this host only; never
+  matches `crawlpact.com`, `preview.crawlpact.com`, or any other hostname
+- **Path condition**: `http.request.uri.path in {"/" "/sign-in" "/robots.txt"}` — exact-match set
+  membership, **not** a prefix/wildcard match; matches only these three literal paths
+- **Action**: `set_config` with `action_parameters: { bic: false }` — disables Browser Integrity
+  Check for matching requests only
+- **Purpose**: let Paddle's automated checkout-domain reviewer reach and verify
+  `app.crawlpact.com`'s public review surfaces without being challenged
+- **Current enabled state**: `enabled: true` — confirmed live 2026-09-10 (Phase 1–3 closure
+  review), unchanged since creation, no drift
+- **Scope verified, re-confirmed 2026-09-10**:
+  - zone-wide `browser_check` remains `on` (BIC is only disabled for the 3 exact matched
+    requests above, nothing else)
+  - zone-wide `security_level` remains `medium` (not globally reduced)
+  - exactly 1 rule exists in the `http_config_settings` phase — no additional/overlapping rules
+  - Custom firewall rules (`http_request_firewall_custom`): 0, unaffected by this rule
+  - Cloudflare's baseline L7 DDoS protection is unaffected (applies automatically at every plan
+    tier, independent of any Configuration Rule) — see item 4 above for the separate, pre-existing
+    fact that this account's Free-plan tier has no Managed WAF ruleset to begin with (never
+    present, not something this rule disabled)
+  - no wildcard or prefix expansion exists anywhere in the rule's expression
+- **Rollback procedure**: delete rule `689db52e511b4346a1b142aefc9c11ce` from ruleset
+  `09d08617a0e649918f1ad9a6465c98c9` (`DELETE /zones/699fe9ba2a9a84e7e06ffbf7cd384ab5/rulesets/09d08617a0e649918f1ad9a6465c98c9/rules/689db52e511b4346a1b142aefc9c11ce`),
+  or set `enabled: false` on it, to immediately restore zone-default BIC behavior on
+  `app.crawlpact.com`. No other configuration depends on this rule's existence.
+- **Review condition — do not act on this without a specific trigger**: reassess only after Phase
+  4 cutover has completed successfully and the application has stabilized. Prefer testing
+  restoration of BIC on `/sign-in` first, since the public app-shell at `/` is what Paddle's
+  checklist actually needs continuously reachable. **Do not change this Paddle-approved
+  configuration during the migration solely for configuration neatness** — Paddle approved
+  `app.crawlpact.com` with this exact rule in place, so narrowing it now risks re-triggering review
+  friction for a purely cosmetic gain. This is recorded as a **non-blocking post-migration
+  hardening item**, not a Phase 4 gate.
 
 ### General requirements (already satisfied, restated for future reference)
 
