@@ -1,6 +1,7 @@
 import {
   ALL_STATIC_INDEXABLE_ROUTES,
   PRERENDERED_COLLECTION_PREFIXES,
+  resolveStaticAssetAlias,
   SSR_INDEXABLE_PREFIXES,
 } from "./route-registry";
 
@@ -51,7 +52,15 @@ const STATIC_INDEXABLE_SET = new Set(ALL_STATIC_INDEXABLE_ROUTES);
  * must never be served directly through the app origin. Trailing-slash
  * insensitive: both `/about` and `/about/` match, since the app-host
  * enforcement in `worker.ts` runs *before* canonical trailing-slash
- * normalization and must catch either form.
+ * normalization and must catch either form. Also catches a genuine literal
+ * Static Assets alias of an owned page (`/about/index.html`,
+ * `/crawlers/gptbot.html`, ...) — found live, 2026-09-09, serving real
+ * public HTML directly through `app.crawlpact.com` because this function
+ * didn't yet recognize that shape at all; see `resolveStaticAssetAlias`'s
+ * doc comment in `route-registry.ts` for why that alias surface exists and
+ * why recognizing it can't weaken any other classification (it returns
+ * `null`, changing nothing here, for any path this registry doesn't
+ * already own).
  */
 export function isPublicOnlyPath(pathname: string): boolean {
   const bare = pathname.endsWith("/") && pathname !== "/" ? pathname.slice(0, -1) : pathname;
@@ -68,7 +77,7 @@ export function isPublicOnlyPath(pathname: string): boolean {
     if (pathname.startsWith(prefix)) return true;
   }
 
-  return false;
+  return resolveStaticAssetAlias(pathname) !== null;
 }
 
 /**

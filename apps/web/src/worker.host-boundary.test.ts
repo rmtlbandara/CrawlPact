@@ -58,6 +58,87 @@ describe("fetchWithPreviewSearchIsolation — Phase 2 host boundary", () => {
       expect(response.headers.get("Location")).toBe(`${PUBLIC_SITE_URL}/about/`);
     });
 
+    /**
+     * Found live, 2026-09-09, validating the real Custom Domain attachment:
+     * `app.crawlpact.com/about/index.html` (and the other literal Static
+     * Assets alias forms) returned the real public page directly — 200, no
+     * redirect — instead of hitting this boundary at all, because
+     * `isPublicOnlyPath` didn't yet recognize that path shape. These are
+     * direct regression guards for that finding, exercised through the same
+     * `fetchWithPreviewSearchIsolation` entry point as every other case
+     * here — a real Static-Assets-backed run of the same paths happens
+     * separately in `tests/integration/static-asset-alias-boundary` against
+     * a genuine built Worker + Assets binding, per this repo's own
+     * "don't rely only on mocked-`handle()` unit tests" rule for this class
+     * of bug.
+     */
+    it("redirects the root's literal alias forms to the apex root, single hop", async () => {
+      for (const alias of ["/index.html", "/index"]) {
+        const request = new Request(`${PUBLIC_APP_URL}${alias}`);
+        const response = await fetchWithPreviewSearchIsolation(request, env, ctx);
+        expect(response.status).toBe(308);
+        expect(response.headers.get("Location")).toBe(`${PUBLIC_SITE_URL}/`);
+      }
+    });
+
+    it("redirects every literal alias form of an exact public route to its canonical apex URL, single hop, preserving query", async () => {
+      for (const alias of ["/about/index.html", "/about/index", "/about.html"]) {
+        const request = new Request(`${PUBLIC_APP_URL}${alias}?utm_source=x`);
+        const response = await fetchWithPreviewSearchIsolation(request, env, ctx);
+        expect(response.status).toBe(308);
+        expect(response.headers.get("Location")).toBe(`${PUBLIC_SITE_URL}/about/?utm_source=x`);
+        expect(handleMock).not.toHaveBeenCalled();
+      }
+    });
+
+    it("redirects every literal alias form of a collection detail page to its canonical apex URL, single hop (the exact bug this replaces: the old logic redirected to an intermediate .../index.html/-shaped URL)", async () => {
+      for (const alias of [
+        "/crawlers/gptbot/index.html",
+        "/crawlers/gptbot/index",
+        "/crawlers/gptbot.html",
+      ]) {
+        const request = new Request(`${PUBLIC_APP_URL}${alias}`);
+        const response = await fetchWithPreviewSearchIsolation(request, env, ctx);
+        expect(response.status).toBe(308);
+        expect(response.headers.get("Location")).toBe(`${PUBLIC_SITE_URL}/crawlers/gptbot/`);
+      }
+    });
+
+    it("redirects every literal alias form of a collection root page to its canonical apex URL, single hop", async () => {
+      for (const alias of ["/crawlers/index.html", "/crawlers/index", "/crawlers.html"]) {
+        const request = new Request(`${PUBLIC_APP_URL}${alias}`);
+        const response = await fetchWithPreviewSearchIsolation(request, env, ctx);
+        expect(response.status).toBe(308);
+        expect(response.headers.get("Location")).toBe(`${PUBLIC_SITE_URL}/crawlers/`);
+      }
+    });
+
+    it("rejects (404) a non-GET/HEAD request for a literal public-page alias rather than replaying it to the public origin", async () => {
+      const request = new Request(`${PUBLIC_APP_URL}/about/index.html`, { method: "POST" });
+      const response = await fetchWithPreviewSearchIsolation(request, env, ctx);
+      expect(response.status).toBe(404);
+      expect(handleMock).not.toHaveBeenCalled();
+    });
+
+    it("does not treat an alias-shaped path under a sensitive/private prefix as public (the alias fix must not weaken app/api/admin classification)", async () => {
+      for (const path of [
+        "/app/index.html",
+        "/admin.html",
+        "/sign-in/index",
+        "/api/domains.html",
+      ]) {
+        handleMock.mockClear();
+        const request = new Request(`${PUBLIC_APP_URL}${path}`);
+        const response = await fetchWithPreviewSearchIsolation(request, env, ctx);
+        expect(response.status).toBe(200);
+        expect(handleMock).toHaveBeenCalledWith(
+          expect.objectContaining({ url: `${PUBLIC_APP_URL}${path}` }),
+          env,
+          ctx,
+        );
+      }
+    });
+
     it("rejects (404) a non-GET/HEAD request for a public-only path rather than replaying it to the public origin", async () => {
       const request = new Request(`${PUBLIC_APP_URL}/about/`, { method: "POST" });
       const response = await fetchWithPreviewSearchIsolation(request, env, ctx);
@@ -151,6 +232,47 @@ describe("fetchWithPreviewSearchIsolation — Phase 2 host boundary", () => {
         const response = await fetchWithPreviewSearchIsolation(request, env, ctx);
         expect(response.status).toBe(200);
       }
+    });
+
+    /**
+     * The pre-existing apex alias, corrected using the same
+     * `resolveCanonicalRedirectTarget` mechanism as the app-host case above
+     * — not a second, competing canonical scheme. Found live, 2026-09-09:
+     * `crawlpact.com/about/index.html` also returned 200 directly (this was
+     * never app-host-specific), and `crawlpact.com/crawlers/gptbot/index.html`
+     * redirected to the broken `/crawlers/gptbot/index.html/`.
+     */
+    it("redirects the apex's own literal alias forms to the single canonical destination, 301, one hop", async () => {
+      for (const [alias, canonical] of [
+        ["/index.html", "/"],
+        ["/index", "/"],
+        ["/about/index.html", "/about/"],
+        ["/about.html", "/about/"],
+        ["/crawlers/gptbot/index.html", "/crawlers/gptbot/"],
+        ["/crawlers/gptbot.html", "/crawlers/gptbot/"],
+        ["/crawlers/index.html", "/crawlers/"],
+      ] as const) {
+        handleMock.mockClear();
+        const request = new Request(`${PUBLIC_SITE_URL}${alias}`);
+        const response = await fetchWithPreviewSearchIsolation(request, env, ctx);
+        expect(response.status).toBe(301);
+        expect(response.headers.get("Location")).toBe(`${PUBLIC_SITE_URL}${canonical}`);
+        expect(handleMock).not.toHaveBeenCalled();
+      }
+    });
+
+    it("preserves query string through the apex alias canonicalization", async () => {
+      const request = new Request(`${PUBLIC_SITE_URL}/about/index.html?ref=abc`);
+      const response = await fetchWithPreviewSearchIsolation(request, env, ctx);
+      expect(response.status).toBe(301);
+      expect(response.headers.get("Location")).toBe(`${PUBLIC_SITE_URL}/about/?ref=abc`);
+    });
+
+    it("does not redirect a POST to an apex alias path (unsafe methods fall through unchanged, matching existing bare-path behavior)", async () => {
+      const request = new Request(`${PUBLIC_SITE_URL}/about/index.html`, { method: "POST" });
+      const response = await fetchWithPreviewSearchIsolation(request, env, ctx);
+      expect(response.status).toBe(200);
+      expect(handleMock).toHaveBeenCalled();
     });
   });
 

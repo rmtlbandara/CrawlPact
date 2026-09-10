@@ -93,24 +93,104 @@ export function needsTrailingSlashRedirect(pathname: string): boolean {
 
 /**
  * Broader than `needsTrailingSlashRedirect`: also covers every prerendered
- * route. `wrangler.jsonc` sets `env.preview.assets.run_worker_first: true`
- * so preview's Worker (`worker.ts`) can stamp every response with a
- * search-isolation header, regardless of rendering mode — but that setting
- * has a real, confirmed side effect: it also bypasses Cloudflare's
- * edge-level `_redirects`/`html_handling` processing for asset-matched
- * paths entirely (verified locally, 2026-09-07 — with `run_worker_first`
- * enabled, a bare `/about` request returned 200 directly instead of the
- * 301 `_redirects` declares, because the Worker's own internal asset lookup
- * doesn't re-run the edge dispatcher's redirect rules). Preview therefore
- * needs its own Worker-level trailing-slash redirect covering prerendered
- * paths too, or it would silently regress the exact canonical-URL defect
- * Phase 20 fixed — on preview only. Production does not set
- * `run_worker_first`, so production is unaffected and keeps relying on
- * `public/_redirects` alone.
+ * route. `wrangler.jsonc` sets `run_worker_first` for both preview
+ * (`true`) and, since Phase 2 of the app-subdomain migration (ADR-0010),
+ * production too (a selective array) — either setting has the same
+ * confirmed side effect: it bypasses Cloudflare's edge-level
+ * `_redirects`/`html_handling` processing for asset-matched paths entirely
+ * (verified locally, 2026-09-07 — with `run_worker_first` enabled, a bare
+ * `/about` request returned 200 directly instead of the 301 `_redirects`
+ * declares, because the Worker's own internal asset lookup doesn't re-run
+ * the edge dispatcher's redirect rules). `worker.ts` therefore needs its
+ * own Worker-level trailing-slash redirect covering prerendered paths too,
+ * in every environment that sets `run_worker_first`, or it would silently
+ * regress the exact canonical-URL defect Phase 20 fixed. (Despite the
+ * name — kept for now to avoid an unrelated rename — this covers
+ * production as much as preview.)
  */
 export function needsTrailingSlashRedirectPreview(pathname: string): boolean {
   if (pathname === "/" || pathname.endsWith("/")) return false;
   if (PRERENDERED_ROUTES.includes(pathname)) return true;
   if (PRERENDERED_COLLECTION_PREFIXES.some((prefix) => pathname.startsWith(prefix))) return true;
   return needsTrailingSlashRedirect(pathname);
+}
+
+/**
+ * A request path that Cloudflare's Static Assets binding will resolve to
+ * `route`'s real underlying file (`<route>/index.html`) via a synonym
+ * other than the canonical trailing-slash form — verified live against
+ * production, 2026-09-09, before this function existed: `/about/index.html`,
+ * `/about/index`, and `/about.html` all returned the real page directly
+ * (200, no redirect), because `run_worker_first` routes them to this
+ * Worker like any other path, and — unlike the plain bare form `/about`,
+ * which `needsTrailingSlashRedirectPreview` already recognized — nothing
+ * recognized these as needing a redirect at all, so they fell through to
+ * `handle()`'s Astro-routing-miss fallback, which serves the literal static
+ * file (Cloudflare's default `html_handling: auto-trailing-slash` resolves
+ * all three forms to the same asset key). Every generated prerendered page
+ * is confirmed to be named exactly `index.html` (never `<name>.html`) —
+ * see `apps/web/dist/client/**\/*.html` — so this covers the complete
+ * literal-alias surface for every prerendered route this registry owns.
+ */
+const INDEX_ALIAS_SUFFIXES = ["/index.html", "/index", ".html"];
+
+/**
+ * If `pathname` is a Static Assets alias (see `INDEX_ALIAS_SUFFIXES`'s doc
+ * comment) of a page this registry actually owns — an exact
+ * `PRERENDERED_ROUTES`/`SSR_INDEXABLE_ROUTES` entry, the site root, or a
+ * `PRERENDERED_COLLECTION_PREFIXES`-owned detail/collection page — returns
+ * that page's real canonical path (always trailing-slash-terminated, `/`
+ * for the root). Returns `null` for everything else, including a path that
+ * merely *looks* alias-shaped but isn't a route this registry owns
+ * (`/app/index.html`, `/api/foo.html`, `/sign-in/index`): this function
+ * only recognizes a known synonym for an *already-registered* route, it
+ * never invents ownership — callers that gate a security/classification
+ * decision on this (`route-ownership.ts`'s `isPublicOnlyPath`) stay exactly
+ * as precise as before for every path this returns `null` for.
+ *
+ * SSR routes/prefixes are deliberately excluded from the alias check even
+ * though they're in scope for `needsTrailingSlashRedirect`: they're
+ * rendered on demand and have no literal file in the Assets store at all
+ * (confirmed live: `/pricing/index.html` 404s, it was never a bypass
+ * vector), so there is no alias surface to recognize for them.
+ */
+export function resolveStaticAssetAlias(pathname: string): string | null {
+  if (pathname === "/index.html" || pathname === "/index") return "/";
+
+  for (const suffix of INDEX_ALIAS_SUFFIXES) {
+    if (!pathname.endsWith(suffix)) continue;
+    const base = pathname.slice(0, -suffix.length);
+    if (!base) continue; // "/index.html" / "/index" already handled above.
+    if (PRERENDERED_ROUTES.includes(base)) return `${base}/`;
+    if (PRERENDERED_COLLECTION_PREFIXES.some((prefix) => base.startsWith(prefix)))
+      return `${base}/`;
+  }
+  return null;
+}
+
+/**
+ * The single canonical-redirect resolver for any request path that would
+ * otherwise bypass Astro's SSR routing — a prerendered page served
+ * straight off the Workers Assets binding, in either its bare form
+ * (`/about`) or any literal Static Assets alias of it
+ * (`/about/index.html`, `/about.html`, `/crawlers/gptbot/index`, ...) —
+ * plus the SSR bare-path case `needsTrailingSlashRedirectPreview` already
+ * covered. Returns the exact trailing-slash destination to redirect to, or
+ * `null` if `pathname` needs no redirect at all. Resolves in one hop:
+ * `/crawlers/gptbot/index.html` canonicalizes directly to
+ * `/crawlers/gptbot/`, never through an intermediate
+ * `/crawlers/gptbot/index.html/`-shaped URL (the exact bug this function
+ * replaces — the old bare-append logic didn't distinguish a real
+ * `PRERENDERED_COLLECTION_PREFIXES` slug from an alias suffix landing under
+ * the same prefix, and appended a trailing slash to the alias verbatim).
+ * `worker.ts`'s two call sites (the apex/shared trailing-slash enforcement,
+ * and the app-host public-ownership redirect-target construction) both go
+ * through this one function so they can never independently drift.
+ */
+export function resolveCanonicalRedirectTarget(pathname: string): string | null {
+  if (pathname === "/" || pathname.endsWith("/")) return null;
+  const alias = resolveStaticAssetAlias(pathname);
+  if (alias) return alias;
+  if (needsTrailingSlashRedirectPreview(pathname)) return `${pathname}/`;
+  return null;
 }

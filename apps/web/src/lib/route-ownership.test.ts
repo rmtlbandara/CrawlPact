@@ -64,6 +64,67 @@ describe("isPublicOnlyPath — Phase 2 executable form of the route ownership ma
     expect(isPublicOnlyPath("/about")).toBe(isPublicOnlyPath("/about/"));
     expect(isPublicOnlyPath("/crawlers/googlebot")).toBe(isPublicOnlyPath("/crawlers/googlebot/"));
   });
+
+  /**
+   * Found live, 2026-09-09: `/about/index.html` (a real Static Assets alias
+   * of the canonical `/about/` page) returned the real public page directly
+   * through `app.crawlpact.com` because `isPublicOnlyPath` didn't recognize
+   * it at all — the app-host boundary branch in `worker.ts` never fired, so
+   * the request fell through to the raw asset. See
+   * `resolveStaticAssetAlias`'s doc comment in `route-registry.ts`.
+   */
+  it("classifies a literal Static Assets alias of an exact public route as public-only", () => {
+    for (const path of [
+      "/index.html",
+      "/index",
+      "/about/index.html",
+      "/about/index",
+      "/about.html",
+    ]) {
+      expect(isPublicOnlyPath(path)).toBe(true);
+    }
+  });
+
+  it("classifies a literal Static Assets alias of a collection root/detail page as public-only", () => {
+    for (const path of [
+      "/crawlers/index.html",
+      "/crawlers.html",
+      "/crawlers/gptbot/index.html",
+      "/crawlers/gptbot/index",
+      "/crawlers/gptbot.html",
+    ]) {
+      expect(isPublicOnlyPath(path)).toBe(true);
+    }
+  });
+
+  it("does NOT classify an alias-shaped path under a sensitive/private prefix as public-only (the alias check must not weaken app/api/admin classification)", () => {
+    for (const path of [
+      "/app/index.html",
+      "/app.html",
+      "/admin/index.html",
+      "/admin.html",
+      "/sign-in/index.html",
+      "/sign-in.html",
+      "/api/domains/index.html",
+      "/api/domains.html",
+    ]) {
+      expect(isPublicOnlyPath(path)).toBe(false);
+    }
+  });
+
+  it("does NOT classify an alias-shaped path for an SSR-indexable route as public-only via the alias check alone changing the outcome (still public via the existing exact-route check, just not via a nonexistent Static Assets file)", () => {
+    // /pricing/index.html has no literal file (SSR, confirmed live 404) —
+    // isPublicOnlyPath still correctly returns false here since bare
+    // "/pricing/index.html" isn't itself an indexable route or prefix match,
+    // matching the real live behavior (this path 404s, it never bypasses
+    // anything worth redirecting).
+    expect(isPublicOnlyPath("/pricing/index.html")).toBe(false);
+  });
+
+  it("does not false-positive on a path that merely looks alias-shaped but matches no known route", () => {
+    expect(isPublicOnlyPath("/apparently-fine.html")).toBe(false);
+    expect(isPublicOnlyPath("/apparently-fine/index.html")).toBe(false);
+  });
 });
 
 describe("isSensitivePath — the narrow unknown-host fail-closed set", () => {
