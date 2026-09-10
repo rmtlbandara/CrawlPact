@@ -184,9 +184,9 @@ server is currently unreachable (DNS resolution failure for
 `mcp.paddle.com` — a connection failure, not "unconfigured"). Independent
 of that, Paddle's own public API reference states plainly that checkout
 domains cannot be created via the API on a standard (non-Partner-Program)
-account: *"You can't add a checkout domain using the API. To submit a new
+account: _"You can't add a checkout domain using the API. To submit a new
 domain for approval, go to Paddle > Checkout > Website approval > Domain
-approval in your dashboard."* This is genuinely Dashboard-only for this
+approval in your dashboard."_ This is genuinely Dashboard-only for this
 account. **Minimal owner action:** in the Paddle Dashboard, Checkout →
 Website approval → Domain approval, submit `app.crawlpact.com`; typical
 review is a few minutes to a few hours per Paddle's own docs.
@@ -234,7 +234,7 @@ a decision; not implemented.
 ## Not attempted — sequenced behind other gates
 
 - New passkey registration/testing, cookie-isolation proof, and
-  sibling-origin CSRF proof against a *real authenticated session* are
+  sibling-origin CSRF proof against a _real authenticated session_ are
   sequenced to follow the existing-passkey test per this task's own
   ordering (Sections 18–20). Not performed yet — doing so means creating
   additional real test credentials/sessions in production, which warrants
