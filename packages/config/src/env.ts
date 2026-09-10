@@ -31,12 +31,14 @@ export const envSchema = z
     // optional/unconsumed in Phase 1 (2026-09-09); Phase 2 (2026-09-09) is
     // the first code to read it — `lib/origin.ts`'s trusted-origin registry,
     // consumed by CSRF (`auth/same-origin.ts`) and WebAuthn ceremony pinning
-    // (`auth/webauthn.ts`). Stays optional: an environment that hasn't
-    // configured it yet simply has no second trusted surface (every request
-    // classifies as "public" or "unknown"), which is what keeps every
-    // existing test fixture that never set this working unchanged. No
-    // Cloudflare Custom Domain is attached for `app.crawlpact.com` yet
-    // (Phase 3) — configuring this value alone moves no real traffic.
+    // (`auth/webauthn.ts`). Phase 3 (2026-09-10) attached the real
+    // `app.crawlpact.com` Custom Domain and production has genuinely
+    // consumed a real value here ever since — the field itself stays
+    // `.optional()` at the type level (only `local` single-origin
+    // development is exempt from actually needing it; see the `superRefine`
+    // below for `preview`/`production`), so this comment no longer describes
+    // current reality and is corrected here rather than left stale
+    // (Phase 1–3 closure review, 2026-09-10).
     PUBLIC_APP_URL: z.string().url().optional(),
 
     SESSION_SIGNING_SECRET: z.string().min(16),
@@ -113,6 +115,48 @@ export const envSchema = z
             code: z.ZodIssueCode.custom,
             path: [field],
             message: `${field} must be a real Paddle credential, not a placeholder value, when BILLING_ENABLED=true.`,
+          });
+        }
+      }
+    }
+
+    // Phase 1–3 closure review (2026-09-10, ADR-0010): a deployed environment
+    // (preview or production) that lacks a valid, HTTPS, distinct app origin
+    // silently degrades — `lib/origin.ts` treats every request as either
+    // "public" or "unknown", so the app-subdomain boundary this migration
+    // built simply never engages, with no error anywhere. `local` stays
+    // exempt on purpose: single-origin local development legitimately sets
+    // `PUBLIC_APP_URL` equal to `PUBLIC_SITE_URL` (both `http://localhost:...`,
+    // see `.env.example`), which is correct there and would be a real bug
+    // everywhere else.
+    if (value.PUBLIC_APP_ENV !== "local") {
+      if (!value.PUBLIC_SITE_URL.startsWith("https://")) {
+        ctx.addIssue({
+          code: z.ZodIssueCode.custom,
+          path: ["PUBLIC_SITE_URL"],
+          message: `PUBLIC_SITE_URL must be an HTTPS URL when PUBLIC_APP_ENV is "${value.PUBLIC_APP_ENV}".`,
+        });
+      }
+
+      if (!value.PUBLIC_APP_URL) {
+        ctx.addIssue({
+          code: z.ZodIssueCode.custom,
+          path: ["PUBLIC_APP_URL"],
+          message: `PUBLIC_APP_URL is required when PUBLIC_APP_ENV is "${value.PUBLIC_APP_ENV}" — only local single-origin development may omit it.`,
+        });
+      } else {
+        if (!value.PUBLIC_APP_URL.startsWith("https://")) {
+          ctx.addIssue({
+            code: z.ZodIssueCode.custom,
+            path: ["PUBLIC_APP_URL"],
+            message: `PUBLIC_APP_URL must be an HTTPS URL when PUBLIC_APP_ENV is "${value.PUBLIC_APP_ENV}".`,
+          });
+        }
+        if (value.PUBLIC_APP_URL === value.PUBLIC_SITE_URL) {
+          ctx.addIssue({
+            code: z.ZodIssueCode.custom,
+            path: ["PUBLIC_APP_URL"],
+            message: `PUBLIC_APP_URL must differ from PUBLIC_SITE_URL when PUBLIC_APP_ENV is "${value.PUBLIC_APP_ENV}" — they may only be equal in local single-origin development.`,
           });
         }
       }

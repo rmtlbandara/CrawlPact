@@ -19,6 +19,12 @@ const validEnv = {
   AUDIT_ENGINE_ENABLED: "false",
 };
 
+/** A deployed (non-local) environment additionally needs a real, HTTPS, distinct app origin. */
+const deployedOrigins = {
+  PUBLIC_SITE_URL: "https://crawlpact.com",
+  PUBLIC_APP_URL: "https://app.crawlpact.com",
+};
+
 const realProductionPaddle = {
   PADDLE_API_KEY: "pdl_real_key",
   PADDLE_WEBHOOK_SECRET: "whsec_real",
@@ -94,6 +100,7 @@ describe("parseEnv", () => {
     expect(() =>
       parseEnv({
         ...validEnv,
+        ...deployedOrigins,
         PUBLIC_APP_ENV: "production",
         PADDLE_ENVIRONMENT: "production",
         BILLING_ENABLED: "true",
@@ -110,7 +117,11 @@ describe("parseEnv", () => {
   });
 
   it("rejects missing Paddle values in production when BILLING_ENABLED=true", () => {
-    const { PADDLE_API_KEY: _omitted, ...rest } = { ...validEnv, ...realProductionPaddle };
+    const { PADDLE_API_KEY: _omitted, ...rest } = {
+      ...validEnv,
+      ...deployedOrigins,
+      ...realProductionPaddle,
+    };
     expect(() =>
       parseEnv({
         ...rest,
@@ -124,6 +135,7 @@ describe("parseEnv", () => {
   it("reports billing configured when production has every required real value", () => {
     const env = parseEnv({
       ...validEnv,
+      ...deployedOrigins,
       PUBLIC_APP_ENV: "production",
       PADDLE_ENVIRONMENT: "production",
       BILLING_ENABLED: "true",
@@ -131,5 +143,98 @@ describe("parseEnv", () => {
     });
     expect(env.BILLING_ENABLED).toBe(true);
     expect(env.PUBLIC_PADDLE_CLIENT_TOKEN).toBe("live_real_token");
+  });
+
+  /**
+   * Phase 1–3 closure review (2026-09-10, ADR-0010): production has genuinely
+   * consumed a real `PUBLIC_APP_URL` since Phase 3's Custom Domain
+   * attachment, but the schema still let a deployed environment silently
+   * omit it — the app-subdomain host boundary would just never engage, with
+   * no error. `local` is the sole exemption (single-origin dev legitimately
+   * sets both URLs equal).
+   */
+  describe("app-origin invariants for deployed (non-local) environments", () => {
+    it("requires PUBLIC_APP_URL in production", () => {
+      expect(() =>
+        parseEnv({
+          ...validEnv,
+          PUBLIC_SITE_URL: "https://crawlpact.com",
+          PUBLIC_APP_ENV: "production",
+        }),
+      ).toThrow(InvalidEnvironmentError);
+    });
+
+    it("requires PUBLIC_APP_URL in preview", () => {
+      expect(() =>
+        parseEnv({
+          ...validEnv,
+          PUBLIC_SITE_URL: "https://preview.crawlpact.com",
+          PUBLIC_APP_ENV: "preview",
+        }),
+      ).toThrow(InvalidEnvironmentError);
+    });
+
+    it("does not require PUBLIC_APP_URL in local", () => {
+      const env = parseEnv({ ...validEnv, PUBLIC_APP_ENV: "local" });
+      expect(env.PUBLIC_APP_URL).toBeUndefined();
+    });
+
+    it("rejects a non-HTTPS PUBLIC_SITE_URL outside local", () => {
+      expect(() =>
+        parseEnv({
+          ...validEnv,
+          ...deployedOrigins,
+          PUBLIC_APP_ENV: "production",
+          PUBLIC_SITE_URL: "http://crawlpact.com",
+        }),
+      ).toThrow(InvalidEnvironmentError);
+    });
+
+    it("rejects a non-HTTPS PUBLIC_APP_URL outside local", () => {
+      expect(() =>
+        parseEnv({
+          ...validEnv,
+          ...deployedOrigins,
+          PUBLIC_APP_ENV: "production",
+          PUBLIC_APP_URL: "http://app.crawlpact.com",
+        }),
+      ).toThrow(InvalidEnvironmentError);
+    });
+
+    it("rejects PUBLIC_APP_URL equal to PUBLIC_SITE_URL outside local", () => {
+      expect(() =>
+        parseEnv({
+          ...validEnv,
+          PUBLIC_APP_ENV: "production",
+          PUBLIC_SITE_URL: "https://crawlpact.com",
+          PUBLIC_APP_URL: "https://crawlpact.com",
+        }),
+      ).toThrow(InvalidEnvironmentError);
+    });
+
+    it("allows PUBLIC_APP_URL equal to PUBLIC_SITE_URL in local (single-origin dev)", () => {
+      const env = parseEnv({
+        ...validEnv,
+        PUBLIC_APP_ENV: "local",
+        PUBLIC_SITE_URL: "http://localhost:4321",
+        PUBLIC_APP_URL: "http://localhost:4321",
+      });
+      expect(env.PUBLIC_APP_URL).toBe("http://localhost:4321");
+    });
+
+    it("accepts a fully valid deployed two-origin production environment", () => {
+      const env = parseEnv({ ...validEnv, ...deployedOrigins, PUBLIC_APP_ENV: "production" });
+      expect(env.PUBLIC_APP_URL).toBe("https://app.crawlpact.com");
+    });
+
+    it("accepts a fully valid deployed two-origin preview environment", () => {
+      const env = parseEnv({
+        ...validEnv,
+        PUBLIC_APP_ENV: "preview",
+        PUBLIC_SITE_URL: "https://preview.crawlpact.com",
+        PUBLIC_APP_URL: "https://app.preview.crawlpact.com",
+      });
+      expect(env.PUBLIC_APP_URL).toBe("https://app.preview.crawlpact.com");
+    });
   });
 });

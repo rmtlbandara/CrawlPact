@@ -79,19 +79,29 @@ aren't secrets, but getting them wrong breaks real functionality, not just cosme
 - `PUBLIC_SITE_URL` — used by the CSRF Origin check, Atom feed URLs, and share links. If preview
   silently inherits production's value, preview-generated links/CSRF checks reference the wrong
   domain.
-- `PUBLIC_APP_URL` — reserved for the app-subdomain origin-separation migration (Phase 1,
-  2026-09-09, `docs/architecture/adr/ADR-0010-PUBLIC-APP-ORIGIN-SEPARATION.md`). Optional in the
-  schema and **not read by any route, redirect, CSRF, session, or WebAuthn logic yet** — the values
-  set in `wrangler.jsonc` are documented future targets only. `app.crawlpact.com` and
-  `app-preview.crawlpact.com` have no DNS records or Cloudflare Custom Domains attached (verified
-  2026-09-09). See `docs/baseline/2026-09-09-app-subdomain-phase1/` for the full migration contract.
+- `PUBLIC_APP_URL` — the app-subdomain origin-separation migration's app origin
+  (`docs/architecture/adr/ADR-0010-PUBLIC-APP-ORIGIN-SEPARATION.md`). ~~Optional in the schema and
+  not read by any route, redirect, CSRF, session, or WebAuthn logic yet... `app.crawlpact.com` has
+  no DNS record or Cloudflare Custom Domain attached (verified 2026-09-09)~~ **Superseded
+  2026-09-10.** Phase 2 (2026-09-09) made `lib/origin.ts`/CSRF/WebAuthn origin pinning genuinely
+  consume this value; Phase 3 (2026-09-10) attached `app.crawlpact.com` as a real, live Custom
+  Domain of the production Worker — confirmed live via a direct Cloudflare API read this session.
+  The schema still marks the field `.optional()` (local single-origin dev is the sole exemption),
+  but a `superRefine` added 2026-09-10 fails fast if a deployed (`preview`/`production`)
+  environment lacks a valid, HTTPS, distinct value. Preview's value is
+  `https://app.preview.crawlpact.com` — corrected the same day from `app-preview.crawlpact.com`,
+  which paired invalidly with `WEBAUTHN_RP_ID=preview.crawlpact.com` (see the next bullet); no
+  Custom Domain is attached for it yet. See `docs/baseline/2026-09-10-app-subdomain-phases1-3-closure/`
+  for the full reconciliation.
 - `WEBAUTHN_RP_ID` / `WEBAUTHN_RP_ORIGIN` — **passkey auth fails outright for every user if these
   don't exactly match the domain the app is actually served from**, since the browser strictly
   validates `rpId`/origin against the real page origin during the WebAuthn ceremony. Preview's
-  values now point at the CrawlPact-owned Custom Domain `preview.crawlpact.com` (migration
-  in progress — see `CLOUDFLARE_ENVIRONMENT_MATRIX.md`'s Notes section), but that hostname isn't
-  live yet: the Cloudflare Custom Domain still needs to be attached by an account owner before
-  preview passkey ceremonies against it will actually work.
+  values point at the CrawlPact-owned Custom Domain `preview.crawlpact.com`, **live and confirmed**
+  as of 2026-09-10 (see `CLOUDFLARE_ENVIRONMENT_MATRIX.md`'s Notes section) — preview passkey
+  ceremonies against it work. WebAuthn additionally constrains any future nested Preview app
+  origin: `WEBAUTHN_RP_ID` must be the origin's effective domain or a valid label-suffix of it,
+  which is why the app-preview candidate above was corrected to a genuine subdomain
+  (`app.preview.crawlpact.com`) rather than a sibling hostname.
 
 ## Secrets (never in `wrangler.jsonc`)
 
@@ -164,13 +174,19 @@ fired: a real file-upload feature replaced the old URL-only branding field) and
 
 ## DNS, SSL, and domain configuration (Phase 14)
 
-**Confirmed live, 2026-07-26.** The `crawlpact.com` zone is active in the same Cloudflare account
-as the Worker (nameservers delegated from Namecheap to Cloudflare, zone status `active`), with a
-Worker Custom Domain already attached (`crawlpact.com` → `crawlpact-web`, production).
+**Confirmed live, 2026-07-26; re-confirmed 2026-09-10.** The `crawlpact.com` zone is active in the
+same Cloudflare account as the Worker (nameservers delegated from Namecheap to Cloudflare, zone
+status `active`), with Worker Custom Domains attached (`crawlpact.com` → `crawlpact-web`,
+production; `app.crawlpact.com` → the same `crawlpact-web` Worker, since Phase 3, 2026-09-10).
 
 ### Domains
 
 - `crawlpact.com` — canonical apex, production. **Live**, serving the real app as of 2026-07-26.
+- `app.crawlpact.com` — the authenticated application origin (ADR-0010). **Live**, attached to the
+  same `crawlpact-web` Worker, confirmed 2026-09-10 via a direct Cloudflare API read (domain id
+  `c909200bba9caff022fd8c73b44ac99d6ad39c58`). See
+  `docs/baseline/2026-09-09-app-subdomain-phase3/` for the attachment record and
+  `docs/baseline/2026-09-10-app-subdomain-phases1-3-closure/` for the current reconciliation.
 - `www.crawlpact.com` — permanently redirects (301) to the apex. **Confirmed working**, one hop,
   both `http://` and `https://` variants, path and query string preserved.
 - `e2e-fixture.crawlpact.com` — a separate, minimal, static Cloudflare Worker
@@ -178,15 +194,13 @@ Worker Custom Domain already attached (`crawlpact.com` → `crawlpact-web`, prod
   CrawlPact-controlled scan target for two required e2e tests (`auth-and-account.spec.ts`) that
   need a genuine, publicly-resolvable HTTP origin — see `docs/status/KNOWN_RISKS.md`'s "SSRF-safe
   deterministic scanner test target" entry. Never referenced by production app code.
-- `preview.crawlpact.com` — the CrawlPact-owned Custom Domain preview is migrating to.
-  `apps/web/wrangler.jsonc`'s `env.preview` now declares it as a `routes`/`custom_domain: true`
-  entry and points `WEBAUTHN_RP_ID`/`WEBAUTHN_RP_ORIGIN`/`PUBLIC_SITE_URL` at it, but **it is not
-  yet provisioned in Cloudflare** — an account owner still needs to attach the Custom Domain
-  (Workers & Pages → `crawlpact-web-preview` → Settings → Domains & Routes → Add → Custom Domain)
-  before it resolves. Until then, preview remains reachable only via its `*.workers.dev` subdomain
-  (`crawlpact-web-preview.<account-subdomain>.workers.dev`), which is kept as a temporary
-  operational fallback during the migration — see "Non-secret environment vars" above and
-  `CLOUDFLARE_ENVIRONMENT_MATRIX.md`'s Notes section.
+- `preview.crawlpact.com` — ~~the CrawlPact-owned Custom Domain preview is migrating to... it is
+  not yet provisioned in Cloudflare...~~ **Live, confirmed 2026-09-10** — attached to the
+  `crawlpact-web-preview` Worker (domain id `18bdcde0ffbbda79ef37fe35748a3455b20317e8`), enabled.
+  `apps/web/wrangler.jsonc`'s `env.preview` declares it as a `routes`/`custom_domain: true` entry
+  and points `WEBAUTHN_RP_ID`/`WEBAUTHN_RP_ORIGIN`/`PUBLIC_SITE_URL` at it, all working. Its
+  `*.workers.dev` subdomain remains additionally reachable (see "`workers.dev` exposure" below);
+  see "Non-secret environment vars" above and `CLOUDFLARE_ENVIRONMENT_MATRIX.md`'s Notes section.
 
 ### Confirmed via live HTTP checks (2026-07-26)
 
@@ -221,17 +235,36 @@ The following need a manual dashboard check (Cloudflare dashboard → the `crawl
 3. **HSTS** — do not enable a long-duration/preload policy until the redirect chain above has been
    re-confirmed post-review of item 1; start with a short `max-age`, no `preload`/
    `includeSubDomains`.
-4. **WAF managed rules, custom rules, and rate limiting** — none confirmed configured either way;
-   review against the abuse-sensitive routes listed in `docs/security/THREAT_MODEL.md` (auth/
-   passkey endpoints, anonymous audit submission, admin actions).
+4. ~~WAF managed rules, custom rules, and rate limiting — none confirmed configured either way~~
+   **Confirmed live, 2026-09-10** (direct Rulesets API reads, Phase 1–3 closure review): zone plan
+   is **Free Website** — the Cloudflare Managed Ruleset (OWASP-style managed WAF) is not merely
+   unconfigured, it is **not available to enable at all on this plan** (a paid-tier feature). Zero
+   custom firewall rules (`http_request_firewall_custom`). No rate-limiting ruleset. DDoS L7 has no
+   _custom override_ ruleset, but Cloudflare's baseline L7 DDoS protection applies automatically at
+   every plan tier regardless. This is a pre-existing, account-level fact unrelated to the
+   app-subdomain migration — nothing in that migration touched it, and there is nothing to "turn
+   on" here without a plan upgrade, which is a cost/product decision, not a technical default to
+   silently leave unexamined. Review against the abuse-sensitive routes listed in
+   `docs/security/THREAT_MODEL.md` (auth/passkey endpoints, anonymous audit submission, admin
+   actions) with this constraint in mind. Separately, exactly 1 Configuration Rule exists
+   (`http_config_settings`): a narrowly-scoped Browser Integrity Check exception for
+   `app.crawlpact.com`'s `/`, `/sign-in`, `/robots.txt` only, added 2026-09-10 for Paddle
+   checkout-domain review — see
+   `docs/baseline/2026-09-09-app-subdomain-phase3/PADDLE_REACHABILITY_REMEDIATION_REPORT.md`.
+   Zone-wide `security_level` (`medium`) and `browser_check` (`on`) are both unaffected by it.
 5. **Cache Rules** — confirm no domain-wide "Cache Everything" rule exists; dynamic/authenticated
    routes must never be edge-cached (see `docs/deployment/CDN_CACHE_POLICY.md`).
 6. **`workers.dev` exposure** — both `crawlpact-web` and `crawlpact-web-preview` currently have
-   `workers.dev` enabled by default (Wrangler's own default when `workers_dev` isn't explicitly
-   set in config). Production has a working Custom Domain, so `workers.dev` for production is
-   redundant public surface — consider explicitly setting `"workers_dev": false` for production
-   once confirmed unneeded. Preview currently _depends_ on `workers.dev` (no preview custom domain
-   exists) — do not disable it there.
+   `workers.dev` enabled (confirmed live 2026-09-10:
+   `GET .../workers/scripts/crawlpact-web/subdomain` → `{"enabled":true,"previews_enabled":true}`).
+   Production has a working Custom Domain, so `workers.dev` for production is redundant public
+   surface — the Phase 1–3 closure directive flagged disabling it via `"workers_dev": false` in
+   `wrangler.jsonc` (a repository-governed setting, not a dashboard-only toggle Wrangler could
+   silently re-enable). **Not yet done**: this is a real, account-level Cloudflare change being
+   held for explicit owner sign-off, not made unilaterally from a reconciliation pass — see
+   `docs/baseline/2026-09-10-app-subdomain-phases1-3-closure/`. Preview currently _depends_ on
+   `workers.dev` (no preview custom domain existed when this was written — one now does, see
+   "Domains" above, but preview is not in scope for this change) — do not disable it there.
 7. **DNSSEC** — not confirmed either way; only enable once registrar-side DS record handling can
    be completed (Namecheap is the registrar of record).
 

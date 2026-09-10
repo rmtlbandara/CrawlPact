@@ -8,7 +8,14 @@ below rather than duplicated. Do not maintain a third active-risk list anywhere 
 
 Statuses: `open` · `mitigating` · `accepted` · `blocked` · `monitoring`.
 
-Last reviewed: 2026-09-09 (App-Subdomain Migration Phase 1). Added RISK-036 (WebAuthn/CSRF/session
+Last reviewed: 2026-09-10 (App-Subdomain Migration Phases 1–3 closure reconciliation). Updated
+RISK-036: severity reduced P2→P3, impact/mitigation corrected to reflect that origin-pinned
+WebAuthn, self-referential CSRF, and the Cloudflare host boundary are now implemented and
+live-attached (Phase 2/3), not merely designed — closure still gated on Phase 4's remaining live
+authenticated proof (new passkey registration, cookie-attribute inspection, sibling-origin CSRF
+mutation against a real session). No other risk status changed in this pass; full detail in
+`docs/baseline/2026-09-10-app-subdomain-phases1-3-closure/`. Prior review: 2026-09-09
+(App-Subdomain Migration Phase 1). Added RISK-036 (WebAuthn/CSRF/session
 origin coupling during the planned `crawlpact.com`/`app.crawlpact.com` split — see
 `docs/baseline/2026-09-09-app-subdomain-phase1/` and ADR-0010). No other risk status changed in
 this pass. Prior review: 2026-08-17 (master engineering closure pass). Closed RISK-033 (see
@@ -370,41 +377,47 @@ extended platform guides), RISK-032 (no Search Console property connected), and 
   built to read live from `registry_version_entries` from the start, so it carries none of this
   risk. Option A/B were still not applied to the existing `/crawlers` pages.
 
-### RISK-036 — App-subdomain origin separation is designed but not implemented; WebAuthn/CSRF/session are single-origin until Phase 2-4 land
+### RISK-036 — App-subdomain origin separation: implemented and live-attached; full dual-origin authenticated proof still pending Phase 4
 
 - **Category**: Architecture, Security (WebAuthn origin binding, CSRF, session cookie scope) ·
-  **Severity**: P2 · **Probability**: Certain to matter the moment Phase 2 implementation starts;
-  zero risk today since no code or config behavior has changed
-- **Impact**: CrawlPact's authentication is currently single-origin by design
-  (`WEBAUTHN_RP_ORIGIN`, `assertSameOrigin`'s CSRF check, and the session cookie's host-only scope
-  all assume exactly one trusted CrawlPact origin). A planned migration introduces a second trusted
-  production origin (`app.crawlpact.com`, alongside `crawlpact.com`). If that migration's Phase 2
-  implementation ever widens WebAuthn's `expectedOrigin` to an unpinned array of both origins, or
-  widens the CSRF check to accept either origin for every route indiscriminately, it would
-  introduce a real WebAuthn dual-origin ceremony-replay gap and/or a sibling-subdomain CSRF gap —
-  neither of which exists today, precisely because there is only one trusted origin today.
-- **Evidence**: `docs/baseline/2026-09-09-app-subdomain-phase1/` (full Phase 1 evidence set:
-  `AUTHORITATIVE_BASELINE.md`, `ORIGIN_AND_ROUTE_OWNERSHIP_MATRIX.md`,
-  `PUBLIC_SITE_URL_USAGE_AUDIT.md`, `CLOUDFLARE_HOST_BOUNDARY_DESIGN.md`,
-  `WEBAUTHN_MIGRATION_CONTRACT.md`, `EXTERNAL_PREREQUISITES.md`, `PHASE_2_TEST_CONTRACT.md`,
-  `PHASE_1_COMPLETION_REPORT.md`) and `docs/architecture/adr/ADR-0010-PUBLIC-APP-ORIGIN-SEPARATION.md`.
-- **Current mitigation**: Phase 1 (2026-09-09) completed design-only work: an explicit
-  origin-pinned dual-window WebAuthn design (challenge tokens carry a signed `origin` field,
-  verification is bound to exactly the origin a ceremony began on, never an unpinned array), an
-  explicit per-route CSRF-surface design (`APP_ONLY` routes require the app origin, `PUBLIC_ONLY`
-  routes require the public origin, exactly one enumerated `SHARED_SAME_ORIGIN_SURFACE` exception),
-  and a Cloudflare host-boundary design proving no public/app content duplication is possible
-  before any Custom Domain is attached. No code implementing any of this exists yet;
-  `WEBAUTHN_RP_ID`/`WEBAUTHN_RP_ORIGIN`/`assertSameOrigin`/the session cookie are all unmodified.
-- **Owner**: Engineering owner · **Trigger**: Phase 2 implementation work begins
-- **Review date**: Start and end of Phase 2 · **Target phase**: Phase 2 (implementation),
-  Phase 3 (compatibility-deployment proof), Phase 4 (cutover)
+  **Severity**: P2 → **P3, reduced 2026-09-10** (Phase 1–3 closure review) — the coupling this risk
+  originally warned about is now implemented correctly and partially live-proven, not merely
+  designed; residual risk is "the remaining unverified-live cases turn out to be wrong," not "the
+  mechanism doesn't exist."
+- **Impact**: ~~CrawlPact's authentication is currently single-origin by design... no code
+  implementing any of this exists yet~~ **Superseded.** `app.crawlpact.com` is a real, live
+  Cloudflare Custom Domain of the same Worker as of Phase 3 (2026-09-10). WebAuthn ceremonies are
+  origin-pinned per-ceremony (never an unpinned two-origin array — confirmed by source and by two
+  real cross-origin replay tests using a live software authenticator in Phase 2); CSRF is
+  self-referential to the request's own validated arrival origin, confirmed rejecting the sibling
+  origin via 4 dedicated integration tests. The residual gap is proof, not design: a **new**
+  passkey registered directly against the live `app.crawlpact.com` origin, a live authenticated
+  cookie-attribute inspection, and a live authenticated sibling-origin CSRF mutation attempt have
+  not yet been performed against real production — Phase 3's own completion report says so
+  explicitly, and the Phase 1–3 closure pass did not perform them either (they require either a
+  real customer/test account and physical passkey interaction, or a specific owner go-ahead to
+  mutate real production auth/session state — held for that rather than done unilaterally).
+- **Evidence**: `docs/baseline/2026-09-09-app-subdomain-phase1/` (design), `docs/baseline/2026-09-09-app-subdomain-phase2/`
+  (implementation + cross-origin replay test evidence, `TEST_EVIDENCE.md`), `docs/baseline/2026-09-09-app-subdomain-phase3/`
+  (Custom Domain attachment, real pre-migration passkey continuity test — PASS), and
+  `docs/baseline/2026-09-10-app-subdomain-phases1-3-closure/` (this reconciliation) —
+  and `docs/architecture/adr/ADR-0010-PUBLIC-APP-ORIGIN-SEPARATION.md`.
+- **Current mitigation**: Origin-pinned WebAuthn (`auth/webauthn.ts`), self-referential CSRF
+  (`auth/same-origin.ts`), and the Cloudflare host boundary (`worker.ts`, `lib/origin.ts`,
+  `lib/route-ownership.ts`) are all implemented, unit/integration-tested (host-boundary, CSRF
+  sibling-origin, WebAuthn cross-origin-replay suites all green), and live-attached in production.
+  `WEBAUTHN_RP_ID` remains `crawlpact.com`, unchanged and unnarrowed. The one real human
+  continuity test performed live (existing pre-migration passkey sign-in against the real attached
+  domain) passed with no anomalies.
+- **Owner**: Engineering owner · **Trigger**: Phase 4 cutover planning
+- **Review date**: Phase 1–3 closure (2026-09-10, this review) · **Target phase**: Phase 4 (cutover)
+  for the remaining live authenticated proof and final closure
 - **Status**: monitoring
-- **Acceptance criteria for closure**: Phase 4 cutover completes with the mandatory negative tests
-  in `PHASE_2_TEST_CONTRACT.md` passing — specifically, a WebAuthn ceremony begun at one trusted
-  origin provably cannot be completed at the other, and a CSRF mutation using the _other_ trusted
-  CrawlPact origin's `Origin` header is provably rejected on both hosts — not merely that positive
-  "it works" tests pass.
+- **Acceptance criteria for closure**: the remaining live proof gap closes — a new passkey
+  registered and later used to authenticate against the real `app.crawlpact.com` origin, a live
+  authenticated session's cookie attributes independently confirmed host-only with no `Domain`
+  attribute, and a live authenticated sibling-origin CSRF mutation attempt confirmed rejected — in
+  addition to the mandatory negative tests in `PHASE_2_TEST_CONTRACT.md`, which already pass.
 
 ---
 

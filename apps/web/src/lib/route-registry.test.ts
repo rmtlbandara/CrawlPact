@@ -231,4 +231,43 @@ describe("resolveCanonicalRedirectTarget — single centralized canonicalization
       expect(resolveCanonicalRedirectTarget(path)).toBeNull();
     }
   });
+
+  /**
+   * Phase 1–3 closure review (2026-09-10): `/for/*` and `/research/*` are
+   * `SSR_INDEXABLE_PREFIXES`, which matched a request's *prefix* only,
+   * regardless of whether the remainder was itself alias-shaped — so a
+   * synthetic `.html`/`/index`/`/index.html`-suffixed request under one of
+   * these prefixes previously got a raw `/` appended to the whole path,
+   * producing a malformed `.../index.html/`-shaped canonical (the exact bug
+   * `resolveStaticAssetAlias` already prevents for prerendered pages, in a
+   * shape it doesn't check). This never happened via any real Cloudflare
+   * request — `/for/*`/`/research/*` have no literal Assets file to alias —
+   * but the URL was reachable and malformed, so it's fixed here rather than
+   * left as a known gap.
+   */
+  describe("SSR_INDEXABLE_PREFIXES synthetic alias forms (/for/*, /research/*)", () => {
+    for (const prefix of SSR_INDEXABLE_PREFIXES) {
+      const slug = `${prefix}some-real-looking-slug`;
+
+      it(`resolves ${prefix} bare and every alias form to the identical single-hop destination`, () => {
+        expect(resolveCanonicalRedirectTarget(slug)).toBe(`${slug}/`);
+        expect(resolveCanonicalRedirectTarget(`${slug}/index.html`)).toBe(`${slug}/`);
+        expect(resolveCanonicalRedirectTarget(`${slug}/index`)).toBe(`${slug}/`);
+        expect(resolveCanonicalRedirectTarget(`${slug}.html`)).toBe(`${slug}/`);
+      });
+
+      it(`never produces a two-hop / malformed target for ${prefix}`, () => {
+        for (const variant of [slug, `${slug}/index.html`, `${slug}/index`, `${slug}.html`]) {
+          const target = resolveCanonicalRedirectTarget(variant);
+          expect(target).not.toMatch(/\.html\/$/);
+          expect(target).not.toMatch(/\/index\/$/);
+          expect(target?.endsWith("//")).toBe(false);
+        }
+      });
+
+      it(`returns null once ${prefix}'s slug is already canonical`, () => {
+        expect(resolveCanonicalRedirectTarget(`${slug}/`)).toBeNull();
+      });
+    }
+  });
 });

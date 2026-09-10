@@ -31,8 +31,11 @@ if [[ "$target" == "preview" ]]; then
   export CLOUDFLARE_ENV=preview
   export PUBLIC_SITE_URL="https://preview.crawlpact.com"
   # Phase 1 of the app-subdomain migration (ADR-0010) — reserved, unread by
-  # any build-time or runtime code yet. See apps/web/wrangler.jsonc.
-  export PUBLIC_APP_URL="https://app-preview.crawlpact.com"
+  # any build-time or runtime code yet. Kept in sync with
+  # apps/web/wrangler.jsonc; see that file's comment for why this is
+  # "app.preview.crawlpact.com", not "app-preview.crawlpact.com" (WebAuthn
+  # RP ID validity, corrected 2026-09-10).
+  export PUBLIC_APP_URL="https://app.preview.crawlpact.com"
 else
   export PUBLIC_SITE_URL="https://crawlpact.com"
   export PUBLIC_APP_URL="https://app.crawlpact.com"
