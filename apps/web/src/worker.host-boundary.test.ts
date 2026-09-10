@@ -175,8 +175,35 @@ describe("fetchWithPreviewSearchIsolation — Phase 2 host boundary", () => {
       handleMock.mockClear();
     });
 
-    it("rewrites '/' to the existing /app dashboard implementation before calling handle()", async () => {
+    /**
+     * Found live, 2026-09-10 (owner decision,
+     * docs/baseline/2026-09-09-app-subdomain-phase3/): Paddle's own
+     * automated checkout-domain review reported it "could not reach"
+     * app.crawlpact.com — an anonymous visitor (no session cookie, exactly
+     * like any real crawler/reviewer) hitting `/` was silently routed to
+     * `/app`, which then redirects to `/sign-in`, a bare auth form with no
+     * product description or policy links. `/` now rewrites to a real
+     * public landing page (`/app-shell`) instead whenever no session cookie
+     * is present at all — a cheap, DB-free `Request`-header check, not a
+     * real session validation (an expired/invalid cookie still reaches
+     * `/app`'s own real check and redirects to `/sign-in`, unchanged).
+     */
+    it("rewrites '/' to the new public app-shell landing page when no session cookie is present", async () => {
       const request = new Request(`${PUBLIC_APP_URL}/`);
+      const response = await fetchWithPreviewSearchIsolation(request, env, ctx);
+      expect(response.status).toBe(200);
+      expect(handleMock).toHaveBeenCalledWith(
+        expect.objectContaining({ url: `${PUBLIC_APP_URL}/app-shell` }),
+        env,
+        ctx,
+      );
+      expect(await response.text()).toBe("handled:/app-shell");
+    });
+
+    it("rewrites '/' to the existing /app dashboard implementation when a session cookie is present (unchanged for real signed-in visitors)", async () => {
+      const request = new Request(`${PUBLIC_APP_URL}/`, {
+        headers: { cookie: "crawlpact_session=some-opaque-token" },
+      });
       const response = await fetchWithPreviewSearchIsolation(request, env, ctx);
       expect(response.status).toBe(200);
       expect(handleMock).toHaveBeenCalledWith(

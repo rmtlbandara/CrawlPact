@@ -8,6 +8,7 @@ import { evaluateOperationalAlerts } from "./lib/admin/operational-alerts";
 import { resolveCanonicalRedirectTarget } from "./lib/route-registry";
 import { classifyRequestOrigin, toPublicUrl } from "./lib/origin";
 import { isPublicOnlyPath, isSensitivePath } from "./lib/route-ownership";
+import { readSessionToken } from "./lib/auth/session";
 
 /**
  * Custom Worker entry point (ADR-0001). Delegates ordinary requests to
@@ -335,17 +336,33 @@ function notFound(): Response {
  *    `/api/*`. This does not affect public marketing content: an unknown
  *    host requesting a public page still gets it, unchanged from today,
  *    since there is no security boundary to enforce there.
- * 2. **App surface `/` → the existing app entry point.** `app.crawlpact.com/`
- *    must render the authenticated dashboard (or its sign-in redirect), never
- *    the public homepage — but the public homepage *is* `/` in this build.
- *    This is the one internal rewrite Phase 2 implements: `/` becomes `/app`
- *    before `handle()` runs, invisibly to the browser. Every other app-host
- *    path (`/sign-in`, `/app/**`, `/admin/**`, `/api/**`) already resolves
- *    correctly without a rewrite, because those pages already live at those
- *    exact paths. Phase 1's ADR-0010 deliberately left full URL de-prefixing
- *    (`/domains` instead of `/app/domains`) undecided rather than mandating
- *    it — Phase 2 does not implement it; see `PHASE_2_COMPLETION_REPORT.md`
- *    for that scope decision.
+ * 2. **App surface `/` → the existing app entry point, or a public shell.**
+ *    `app.crawlpact.com/` must render the authenticated dashboard for an
+ *    already-signed-in visitor, never the public homepage — but the public
+ *    homepage *is* `/` in this build. Phase 2 rewrote `/` straight to
+ *    `/app` unconditionally; Phase 3 (2026-09-10, owner decision,
+ *    docs/baseline/2026-09-09-app-subdomain-phase3/) found that
+ *    unconditional rewrite is itself the reason Paddle's own automated
+ *    checkout-domain review reported it "could not reach"
+ *    `app.crawlpact.com`: an anonymous visitor (no session cookie — every
+ *    real crawler/reviewer) got silently routed to `/app`, which then
+ *    redirects to `/sign-in`, a bare auth form with no product
+ *    description or policy links Paddle's own review checklist requires.
+ *    This branch now checks for the mere *presence* of a session cookie
+ *    (`readSessionToken` — a `Request`-header read, no DB round-trip) to
+ *    decide the rewrite target: present → `/app` as before (unchanged for
+ *    every real signed-in visitor; an expired/invalid cookie still reaches
+ *    `/app`'s own real session check and redirects to `/sign-in` exactly as
+ *    before); absent → `/app-shell`, a new, genuinely public, unauthenticated
+ *    landing page (200, no redirect) carrying the product description and
+ *    Terms/Privacy/Refund links Paddle needs, reachable in a single hop.
+ *    Every other app-host path (`/sign-in`, `/app/**`, `/admin/**`,
+ *    `/api/**`) already resolves correctly without a rewrite, because those
+ *    pages already live at those exact paths. Phase 1's ADR-0010
+ *    deliberately left full URL de-prefixing (`/domains` instead of
+ *    `/app/domains`) undecided rather than mandating it — Phase 2 does not
+ *    implement it; see `PHASE_2_COMPLETION_REPORT.md` for that scope
+ *    decision.
  * 3. **App surface + public-only path → redirect or reject.** The hard gate:
  *    `app.crawlpact.com/about/` must never render the public About page.
  *    GET/HEAD permanently redirect (308) to the canonical public URL,
@@ -394,7 +411,10 @@ export async function fetchWithPreviewSearchIsolation(
 
   if (surface === "app") {
     if (url.pathname === "/") {
-      effectiveRequest = rewritePathname(request, "/app");
+      effectiveRequest = rewritePathname(
+        request,
+        readSessionToken(request) ? "/app" : "/app-shell",
+      );
     } else if (isPublicOnlyPath(url.pathname)) {
       if (!SAFE_METHODS.has(request.method)) {
         return notFound();

@@ -17,9 +17,14 @@ import { toPublicUrl } from "../lib/origin";
  * Navigation links here always resolve to the public origin
  * (`lib/origin.ts`'s `toPublicUrl`), never a relative path — this page is
  * reachable from either trusted CrawlPact origin during the Phase 2/3
- * migration-compatibility window, and "Home"/"Privacy"/"Terms"/"Security"
- * are public-surface pages regardless of which host is currently serving
- * the auth form itself.
+ * migration-compatibility window, and "Home"/"Privacy"/"Terms"/"Refund
+ * Policy"/"Security" are public-surface pages regardless of which host is
+ * currently serving the auth form itself. The Refund Policy link points at
+ * `/terms#refunds` — CrawlPact has no separate refund-policy page; refunds
+ * are section 12 of Terms (added 2026-09-10 alongside `app-shell.astro`,
+ * for the same Paddle domain-review reason: Paddle's own checkout-domain
+ * review checklist for a soft decline explicitly names "Terms, privacy
+ * notice, and refund policy exist" as a page-level requirement).
  */
 
 export type Props = { title: string; description: string };
@@ -48,6 +53,8 @@ const { title, description } = Astro.props;
       >
         <a href={toPublicUrl("/privacy")} class="hover:text-neutral-700">Privacy</a>
         <a href={toPublicUrl("/terms")} class="hover:text-neutral-700">Terms</a>
+        <a href={`${toPublicUrl("/terms")}#refunds`} class="hover:text-neutral-700">Refund Policy</a
+        >
         <a href={toPublicUrl("/security")} class="hover:text-neutral-700">Security</a>
       </div>
     </footer>

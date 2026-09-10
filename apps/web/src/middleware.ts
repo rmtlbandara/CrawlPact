@@ -67,7 +67,7 @@ export const onRequest = defineMiddleware(async (context, next) => {
   const isNonIndexableRoute =
     path.startsWith("/admin") ||
     path.startsWith("/api/") ||
-    path.startsWith("/app") ||
+    path.startsWith("/app") || // also covers the new public /app-shell landing page
     path.startsWith("/audit/") ||
     path.startsWith("/shared/") ||
     path.startsWith("/dev/") ||

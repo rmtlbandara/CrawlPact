@@ -1,0 +1,49 @@
+---
+export const prerender = false;
+import AuthLayout from "../layouts/AuthLayout.astro";
+import { BRAND } from "../config/brand";
+import { toPublicUrl } from "../lib/origin";
+
+/**
+ * The public, unauthenticated landing shell for the app surface
+ * (`app.crawlpact.com/`) — added 2026-09-10 (owner decision,
+ * docs/baseline/2026-09-09-app-subdomain-phase3/) after Paddle reported it
+ * could not reliably reach `app.crawlpact.com` for checkout-domain review.
+ * Before this page existed, an unauthenticated visitor to the app host's
+ * root was internally rewritten straight to `/app` (the dashboard), which
+ * then redirected to `/sign-in` with no policy links, no product
+ * description, and nothing an automated domain-verification check could
+ * reasonably confirm as "a real, reachable application."
+ *
+ * `worker.ts`'s app-surface root handling now serves this page directly
+ * (200, no redirect at all) whenever the request carries no session cookie,
+ * and continues rewriting to `/app` unchanged whenever one is present — see
+ * that file's doc comment. Reuses `AuthLayout` on purpose: no marketing
+ * analytics, no marketing nav, and the existing `noindex` behavior all
+ * carry over automatically, matching the owner's approved indexing policy
+ * (`docs/baseline/2026-09-09-app-subdomain-phase3/`) unchanged — this page
+ * must never become Search inventory any more than `/sign-in` should.
+ */
+const title = `${BRAND.productName} — Sign in`;
+const description = BRAND.descriptions.oneSentence;
+---
+
+<AuthLayout title={title} description={description}>
+  <div class="mx-auto max-w-[480px] px-4 py-16 text-center sm:px-6">
+    <h1 class="text-h1 text-neutral-950">{BRAND.productName}</h1>
+    <p class="mt-4 text-body text-neutral-700">{description}</p>
+    <a
+      href="/sign-in"
+      class="mt-8 inline-block rounded-control bg-brand-600 px-6 py-3 text-body font-medium text-white hover:bg-brand-700"
+    >
+      Sign in
+    </a>
+    <p class="mt-6 text-supporting text-neutral-500">
+      New to {BRAND.productName}? <a href="/sign-in" class="text-brand-700 underline"
+        >Create an account</a
+      > or learn more at <a href={toPublicUrl("/")} class="text-brand-700 underline"
+        >crawlpact.com</a
+      >.
+    </p>
+  </div>
+</AuthLayout>

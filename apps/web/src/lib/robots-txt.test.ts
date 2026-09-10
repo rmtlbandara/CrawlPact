@@ -88,18 +88,52 @@ describe("preview robots.txt (Phase 20, P0 search isolation)", () => {
   });
 });
 
-// Phase 2 of the app-subdomain migration (ADR-0010, Workstream Q):
-// app.crawlpact.com must never be crawled and must never carry a Sitemap
-// line — it owns no public/indexable content at all.
-describe("app-host robots.txt (Phase 2, ADR-0010)", () => {
+// Phase 2 of the app-subdomain migration (ADR-0010, Workstream Q), revised
+// 2026-09-10 (owner decision, docs/baseline/2026-09-09-app-subdomain-phase3/):
+// app.crawlpact.com must never carry a Sitemap line or become indexable —
+// but a blanket `Disallow: /` actively defeats that goal per Google's own
+// guidance, since a page robots.txt blocks never has its `noindex` signal
+// observed at all, and separately caused Paddle's own automated
+// checkout-domain review to report it "could not reach" this host at all.
+// `/` (the public app-shell landing page) and `/sign-in` — the two real
+// content-bearing pages this host serves an unauthenticated visitor — must
+// stay crawlable specifically so their independent noindex signals
+// (middleware.ts's X-Robots-Tag, AuthLayout's meta tag) are actually seen.
+// `/` gets an explicit `Allow` (defensive — this file exists because an
+// unknown, non-search-engine parser failed to reach this host, so nothing
+// here should depend on a parser correctly implementing robots.txt's
+// unwritten default-allow rule); `/sign-in` needs no explicit rule since it
+// matches none of the `Disallow` prefixes below. Everything else stays
+// blocked — real application route prefixes only.
+describe("app-host robots.txt (Phase 2 ADR-0010, revised Phase 3)", () => {
   const content = APP_ROBOTS_TXT;
 
-  it("disallows crawling entirely", () => {
-    expect(content).toMatch(/User-agent: \*\s*\n\s*Disallow: \/\s*$/);
+  it("allows crawling the root explicitly, so Paddle's and Googlebot's noindex observation can't depend on an implicit default-allow rule", () => {
+    expect(content).toMatch(/^Allow: \/$/m);
   });
 
-  it("declares no sitemap", () => {
+  it("does not disallow /sign-in (allowed implicitly — it matches no Disallow prefix below)", () => {
+    for (const prefix of ["/app", "/admin", "/api/", "/audit/", "/shared/", "/dev/"]) {
+      expect("/sign-in".startsWith(prefix)).toBe(false);
+    }
+  });
+
+  it("disallows admin, api, app, audit, shared, and dev — real application route prefixes only", () => {
+    for (const path of ["/app", "/admin", "/api/", "/audit/", "/shared/", "/dev/"]) {
+      expect(content).toContain(`Disallow: ${path}\n`);
+    }
+  });
+
+  it("declares no sitemap — crawlable-enough for noindex to be seen is not the same as indexable", () => {
     expect(content).not.toContain("Sitemap:");
+  });
+
+  it("does not broaden the Allow beyond the root", () => {
+    expect(content.match(/^Allow:/gm)).toHaveLength(1);
+  });
+
+  it("does not restore a blanket Disallow: /", () => {
+    expect(content).not.toMatch(/^Disallow: \/\s*$/m);
   });
 });
 
