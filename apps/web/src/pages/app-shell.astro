@@ -23,26 +23,47 @@ import { toPublicUrl } from "../lib/origin";
  * carry over automatically, matching the owner's approved indexing policy
  * (`docs/baseline/2026-09-09-app-subdomain-phase3/`) unchanged — this page
  * must never become Search inventory any more than `/sign-in` should.
+ *
+ * Revised 2026-09-10 (owner decision, second Paddle ACTION_REQUIRED pass):
+ * Paddle re-reviewed after the fix above and still reported "we can't reach
+ * your domain," even though production verification already proved the
+ * root is HTTPS-reachable and returns 200 with no session — the title
+ * ("CrawlPact — Sign in") and the single, sign-in-first layout below it
+ * could read to an automated reviewer as a login wall rather than a real
+ * product front door. The title now leads with the same canonical product
+ * positioning (`BRAND.tagline`) the marketing homepage itself uses, never
+ * "Sign in"; the body leads with what the product actually does
+ * (`BRAND.descriptions.medium`, not a shorter/vaguer line) before offering
+ * Sign in and a link to the marketing site as two equally visible actions,
+ * not one dominant CTA. `/sign-in` itself is untouched — it's still the
+ * real, dedicated sign-in route and keeps its own sign-in-specific title.
  */
-const title = `${BRAND.productName} — Sign in`;
-const description = BRAND.descriptions.oneSentence;
+const title = `${BRAND.productName} — ${BRAND.tagline}`;
+const description = BRAND.descriptions.medium;
 ---
 
 <AuthLayout title={title} description={description}>
-  <div class="mx-auto max-w-[480px] px-4 py-16 text-center sm:px-6">
+  <div class="mx-auto max-w-[560px] px-4 py-16 text-center sm:px-6">
     <h1 class="text-h1 text-neutral-950">{BRAND.productName}</h1>
+    <p class="mt-2 text-body-lg font-medium text-brand-700">{BRAND.tagline}</p>
     <p class="mt-4 text-body text-neutral-700">{description}</p>
-    <a
-      href="/sign-in"
-      class="mt-8 inline-block rounded-control bg-brand-600 px-6 py-3 text-body font-medium text-white hover:bg-brand-700"
-    >
-      Sign in
-    </a>
+    <div class="mt-8 flex flex-wrap items-center justify-center gap-4">
+      <a
+        href="/sign-in"
+        class="inline-block rounded-control bg-brand-600 px-6 py-3 text-body font-medium text-white hover:bg-brand-700"
+      >
+        Sign in
+      </a>
+      <a
+        href={toPublicUrl("/")}
+        class="inline-block rounded-control border border-neutral-300 px-6 py-3 text-body font-medium text-neutral-800 hover:bg-neutral-50"
+      >
+        Visit crawlpact.com
+      </a>
+    </div>
     <p class="mt-6 text-supporting text-neutral-500">
       New to {BRAND.productName}? <a href="/sign-in" class="text-brand-700 underline"
         >Create an account</a
-      > or learn more at <a href={toPublicUrl("/")} class="text-brand-700 underline"
-        >crawlpact.com</a
       >.
     </p>
   </div>
