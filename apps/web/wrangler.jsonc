@@ -156,13 +156,22 @@
         // rpId/origin against the page actually serving the request, so
         // these must exactly match wherever preview is really deployed.
         "PUBLIC_SITE_URL": "https://preview.crawlpact.com",
-        // Phase 1 (ADR-0010): documented future preview app hostname only —
-        // "app-preview.crawlpact.com" has no DNS record or Custom Domain
-        // attached yet (do not attach it until Phase 2 host enforcement
-        // exists, per the migration's static-assets-bypass hard gate).
-        // Read by nothing today; kept in sync with the production `vars`
-        // block above purely so config isn't ambiguous.
-        "PUBLIC_APP_URL": "https://app-preview.crawlpact.com",
+        // Phase 1–3 closure review (2026-09-10): the original candidate here
+        // was "app-preview.crawlpact.com" — a sibling of, not a subdomain
+        // of, "preview.crawlpact.com". WebAuthn requires the RP ID below to
+        // equal the origin's effective domain or a valid registrable-domain
+        // *label* suffix of it; "preview.crawlpact.com" is not a label
+        // suffix of "app-preview.crawlpact.com" ("app-preview" is one label,
+        // not "app" + "-" + "preview" split at a domain boundary), so that
+        // pairing would have silently failed every WebAuthn ceremony the
+        // moment it was ever attached as a real Custom Domain. Corrected to
+        // "app.preview.crawlpact.com" — a genuine subdomain of
+        // "preview.crawlpact.com", which the unchanged RP ID below validly
+        // covers. Still has no DNS record or Custom Domain attached (do not
+        // attach it until Phase 4 planning explicitly revisits nested
+        // Preview app-origin support); read by nothing today, kept only so
+        // config isn't ambiguous or wrong if it's ever wired up.
+        "PUBLIC_APP_URL": "https://app.preview.crawlpact.com",
         "WEBAUTHN_RP_ID": "preview.crawlpact.com",
         "WEBAUTHN_RP_ORIGIN": "https://preview.crawlpact.com",
         // Same public Google Web OAuth Client ID as production's top-level

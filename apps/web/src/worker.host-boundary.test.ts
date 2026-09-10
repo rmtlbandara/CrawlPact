@@ -113,6 +113,18 @@ describe("fetchWithPreviewSearchIsolation — Phase 2 host boundary", () => {
       }
     });
 
+    it("redirects /for/*, /research/* alias forms on the app host to the single clean apex destination, preserving query (same fix as the apex case, same underlying function)", async () => {
+      for (const prefix of ["/for/", "/research/"]) {
+        const slug = `${prefix}agencies`;
+        for (const alias of [`${slug}/index.html`, `${slug}/index`, `${slug}.html`]) {
+          const request = new Request(`${PUBLIC_APP_URL}${alias}?ref=abc`);
+          const response = await fetchWithPreviewSearchIsolation(request, env, ctx);
+          expect(response.status).toBe(308);
+          expect(response.headers.get("Location")).toBe(`${PUBLIC_SITE_URL}${slug}/?ref=abc`);
+        }
+      }
+    });
+
     it("rejects (404) a non-GET/HEAD request for a literal public-page alias rather than replaying it to the public origin", async () => {
       const request = new Request(`${PUBLIC_APP_URL}/about/index.html`, { method: "POST" });
       const response = await fetchWithPreviewSearchIsolation(request, env, ctx);
@@ -300,6 +312,43 @@ describe("fetchWithPreviewSearchIsolation — Phase 2 host boundary", () => {
       const response = await fetchWithPreviewSearchIsolation(request, env, ctx);
       expect(response.status).toBe(200);
       expect(handleMock).toHaveBeenCalled();
+    });
+
+    /**
+     * Phase 1–3 closure review (2026-09-10): `/for/*`/`/research/*` are SSR
+     * content-collection prefixes with no literal Assets file (unlike
+     * `/about`/`/crawlers/*` above) — `resolveStaticAssetAlias` never
+     * recognizes them, so a synthetic alias-shaped request under one of
+     * these prefixes used to fall through to the raw prefix-match trailing-
+     * slash branch and get a malformed `.../index.html/`-shaped redirect
+     * target. Exercised end-to-end here (not just the unit-level
+     * `route-registry.test.ts` coverage) on the apex, since that's where
+     * `/for/`/`/research/` actually serve real content.
+     */
+    it("redirects /for/*, /research/* bare and every alias form to the single clean canonical destination, GET and HEAD, preserving query", async () => {
+      for (const prefix of ["/for/", "/research/"]) {
+        const slug = `${prefix}agencies`;
+        for (const alias of [slug, `${slug}/index.html`, `${slug}/index`, `${slug}.html`]) {
+          for (const method of ["GET", "HEAD"]) {
+            handleMock.mockClear();
+            const request = new Request(`${PUBLIC_SITE_URL}${alias}?ref=abc`, { method });
+            const response = await fetchWithPreviewSearchIsolation(request, env, ctx);
+            expect(response.status).toBe(301);
+            expect(response.headers.get("Location")).toBe(`${PUBLIC_SITE_URL}${slug}/?ref=abc`);
+            expect(handleMock).not.toHaveBeenCalled();
+          }
+        }
+      }
+    });
+
+    it("does not redirect a POST to a /for/*, /research/* alias path (unsafe methods fall through unchanged)", async () => {
+      for (const alias of ["/for/agencies/index.html", "/research/agencies.html"]) {
+        handleMock.mockClear();
+        const request = new Request(`${PUBLIC_SITE_URL}${alias}`, { method: "POST" });
+        const response = await fetchWithPreviewSearchIsolation(request, env, ctx);
+        expect(response.status).toBe(200);
+        expect(handleMock).toHaveBeenCalled();
+      }
     });
   });
 

@@ -186,11 +186,45 @@ export function resolveStaticAssetAlias(pathname: string): string | null {
  * `worker.ts`'s two call sites (the apex/shared trailing-slash enforcement,
  * and the app-host public-ownership redirect-target construction) both go
  * through this one function so they can never independently drift.
+ *
+ * `SSR_INDEXABLE_PREFIXES` (`/for/`, `/research/`) had the identical bug in
+ * a different shape, found during Phase 1–3 closure review (2026-09-10):
+ * `resolveStaticAssetAlias` deliberately never recognizes these prefixes
+ * (they have no literal Assets file — see its doc comment), but
+ * `needsTrailingSlashRedirect`'s prefix match only checks the *prefix*, not
+ * whether the rest of the path is itself alias-shaped — so
+ * `/for/agencies/index.html` matched the prefix and got a raw `/` appended,
+ * producing the same malformed `.../index.html/` shape this function exists
+ * to prevent. Stripping a known alias suffix before appending the slash
+ * fixes both prefixes in one hop; Astro's own SSR routing then 404s
+ * normally if the resulting slug isn't real, exactly as it already would
+ * for a direct request to that clean URL.
  */
 export function resolveCanonicalRedirectTarget(pathname: string): string | null {
   if (pathname === "/" || pathname.endsWith("/")) return null;
   const alias = resolveStaticAssetAlias(pathname);
   if (alias) return alias;
-  if (needsTrailingSlashRedirectPreview(pathname)) return `${pathname}/`;
+  if (needsTrailingSlashRedirectPreview(pathname)) {
+    const isSsrPrefixMatch = SSR_INDEXABLE_PREFIXES.some((prefix) => pathname.startsWith(prefix));
+    return `${isSsrPrefixMatch ? stripKnownAliasSuffix(pathname) : pathname}/`;
+  }
   return null;
+}
+
+/**
+ * Strips one `INDEX_ALIAS_SUFFIXES` suffix from `pathname` if present
+ * (longest/most specific first, matching `resolveStaticAssetAlias`'s own
+ * check order), returning `pathname` unchanged otherwise. Only meaningful
+ * for a path that has no literal Assets file to alias-check against —
+ * `resolveCanonicalRedirectTarget`'s `SSR_INDEXABLE_PREFIXES` branch is the
+ * sole caller.
+ */
+function stripKnownAliasSuffix(pathname: string): string {
+  for (const suffix of INDEX_ALIAS_SUFFIXES) {
+    if (pathname.endsWith(suffix)) {
+      const base = pathname.slice(0, -suffix.length);
+      if (base) return base;
+    }
+  }
+  return pathname;
 }

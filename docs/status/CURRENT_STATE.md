@@ -1,9 +1,9 @@
 ---
 Document owner: Engineering owner
 Status: current-authoritative
-Last verified: 2026-09-08 (Phase 22 — GSC-Driven SEO, Search Intent Ownership & High-Value Content Strengthening — deployed)
-Repository commit: 9a2fe87ac9d72d847d3b08691d8eb67475472818 (main; production runs this exact commit, CI-verified including browser-smoke — deploy-production.yml run 34247233897)
-Production deployment identifier: crawlpact-web (Cloudflare Worker), https://crawlpact.com — Worker version 73373d98-cc3a-4342-83f5-8eff5e43f321 (deployed 2026-09-08T16:02Z, confirmed live via the deploy workflow's own binding verification + production smoke test, plus independent post-deploy curl checks: home/amazonbot/new-comparison-guide/perplexity-user all 200, no `X-Robots-Tag`/environment banner, robots.txt/sitemap correct, Microsoft Clarity correctly gated pre-consent)
+Last verified: 2026-09-08 (Phase 22 — GSC-Driven SEO, Search Intent Ownership & High-Value Content Strengthening — deployed); repository commit/deployment identifier lines below corrected 2026-09-10 (Phase 1–3 app-subdomain closure review) — the narrative sections further down were not fully re-verified phase-by-phase past Phase 22 in this pass, see the App-subdomain migration entry above for what was.
+Repository commit: 011b93970c4c98a4f2f3e2c0d909991983a56da1 (main; production runs this exact commit — see docs/baseline/2026-09-09-app-subdomain-phase3/PADDLE_REACHABILITY_REMEDIATION_REPORT.md's deployment record)
+Production deployment identifier: crawlpact-web (Cloudflare Worker), https://crawlpact.com and https://app.crawlpact.com (same Worker, two Custom Domains since Phase 3) — Worker version 5aacab1e-4e29-46ca-8f0c-886ee1f9794c (deployed 2026-09-10T05:42:23Z, reconfirmed live via a direct Cloudflare API read 2026-09-10)
 Database migration version: 0038_google_oauth.sql (38/38 applied to production — unchanged; Phase 21 required no migration)
 Crawler registry version: 2026.07.3 (active release, unchanged since Phase 17 — not re-verified this pass; see docs/registry/CRAWLER_REGISTRY_GOVERNANCE.md and the Phase 15 completion report)
 Phase 0 baseline reference: docs/baseline/2026-08-03/ (superseded on billing/migration facts by Phases 5–6; superseded on production-parity/search-foundation facts by docs/baseline/2026-09-07-phase20/)
@@ -454,20 +454,29 @@ Status vocabulary: `verified-live` · `verified-disabled` · `verified-partial` 
   catalog, `AUDIT_ENGINE_ENABLED=true`, `BILLING_ENABLED=true`. No secret values are recorded
   here — see `docs/baseline/2026-08-03/ENVIRONMENT_AND_BINDING_INVENTORY.md` for names/purposes
   only.
-- **App-subdomain migration (in progress, started 2026-09-09)**: a second production origin,
-  `app.crawlpact.com`, is planned per ADR-0010, served by this same Worker (no second Worker, no
-  Cloudflare Pages split). Phase 1 (baseline/design) and Phase 2 (application-origin code
-  implementation — host boundary, CSRF, WebAuthn origin pinning, dedicated AuthLayout) are both
-  complete. `app.crawlpact.com` still has **no DNS record and no Cloudflare Custom Domain
-  attached** — it does not exist in production. No production application-origin cutover has
-  occurred: no root→app redirect is enabled, no WebAuthn origin was narrowed, no session-cookie
-  scope changed, no Paddle endpoint moved. The one real deployable change Phase 2 produced (a
-  selective `run_worker_first` array for production Workers Static Assets, required before the app
-  Custom Domain can ever be safely attached) has been implemented and tested but **not deployed** —
-  deploying it requires separate, explicit authorization. External owner actions (Cloudflare
-  Custom Domain attachment, Google Authorized JavaScript Origin, Paddle checkout-domain approval)
-  remain queued for Phase 3. See `docs/baseline/2026-09-09-app-subdomain-phase1/` and
-  `docs/baseline/2026-09-09-app-subdomain-phase2/` for the full evidence sets.
+- **App-subdomain migration (Phases 1–3 implemented and live; Phase 4 cutover not started)**: a
+  second production origin, `app.crawlpact.com`, per ADR-0010, served by the same Worker (no
+  second Worker, no Cloudflare Pages split) — ~~planned... still has no DNS record and no
+  Cloudflare Custom Domain attached — it does not exist in production~~ **superseded 2026-09-10**:
+  `app.crawlpact.com` is a real, live Cloudflare Custom Domain of `crawlpact-web`, attached in
+  Phase 3 (2026-09-10) and reconfirmed live via a direct Cloudflare API read during the Phase 1–3
+  closure review the same day. Host-boundary enforcement, self-referential CSRF, and per-ceremony
+  WebAuthn origin pinning (Phase 2) are implemented, tested, and live. No production
+  application-origin _cutover_ has occurred: no permanent root→app redirect is enabled, no
+  WebAuthn origin was narrowed (`WEBAUTHN_RP_ID` remains `crawlpact.com`), no session-cookie scope
+  changed, no Paddle endpoint moved — `crawlpact.com` continues serving the existing application
+  during this migration-compatibility window by design. A subsequent Paddle checkout-domain
+  reachability issue (Paddle's automated reviewer twice reported it could not reach
+  `app.crawlpact.com` despite confirmed HTTPS 200 reachability) was remediated across two rounds:
+  a public unauthenticated app-shell landing page, a corrected `robots.txt` policy, product-
+  oriented landing copy, and one narrowly-scoped Cloudflare Configuration Rule (Browser Integrity
+  Check disabled only for `app.crawlpact.com`'s `/`, `/sign-in`, `/robots.txt`) — all deployed and
+  independently reverified in production; Paddle resubmission itself remains an owner action, not
+  yet confirmed approved as of this update. Google's Authorized JavaScript Origin and GSC/GA4/CrUX
+  state could not be verified this session (no connected tooling). See
+  `docs/baseline/2026-09-09-app-subdomain-phase1/`, `-phase2/`, `-phase3/` (including
+  `PADDLE_REACHABILITY_REMEDIATION_REPORT.md`), and `docs/baseline/2026-09-10-app-subdomain-phases1-3-closure/`
+  for the full evidence sets.
 
 ## Version status
 

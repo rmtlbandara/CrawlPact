@@ -162,10 +162,10 @@ describe("GET /robots.txt dispatches by host, not just environment", () => {
     mockEnv = {
       PUBLIC_APP_ENV: "preview",
       PUBLIC_SITE_URL: "https://preview.crawlpact.com",
-      PUBLIC_APP_URL: "https://app-preview.crawlpact.com",
+      PUBLIC_APP_URL: "https://app.preview.crawlpact.com",
     };
     const response = await GET({
-      request: new Request("https://app-preview.crawlpact.com/robots.txt"),
+      request: new Request("https://app.preview.crawlpact.com/robots.txt"),
     } as never);
     expect(await response.text()).toBe(PREVIEW_ROBOTS_TXT);
   });
