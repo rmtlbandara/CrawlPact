@@ -88,6 +88,25 @@
     // purely non-behavioral configuration prep for Phase 2.
     "PUBLIC_APP_URL": "https://app.crawlpact.com",
   },
+  // Pre-Phase-4 observability step 2 (2026-09-11): enables Cloudflare Workers
+  // Logs for Production, mirroring env.preview's already-deployed,
+  // already-verified configuration exactly (see
+  // docs/baseline/2026-09-11-app-subdomain-final-pre-phase4/OBSERVABILITY_READINESS.md).
+  // 100% head sampling is safe on this account's Free-plan 200,000
+  // events/day allowance: Production's observed 7-day peak was 3,328
+  // requests/day (1.66% of the allowance), and a 10x cutover-traffic safety
+  // multiplier still leaves 83% headroom — see that doc's Step 2 sampling
+  // calculation. The path-embedded-bearer-token privacy question this raised
+  // (two routes, `/feed/[token].xml` and `/shared/[token]`, embed a token in
+  // the URL path) is resolved: a controlled Preview experiment with
+  // synthetic tokens proved Cloudflare Workers Logs automatically redacts
+  // high-entropy path/query values by platform default — no
+  // `invocation_logs` override or other field is needed. No `traces` key,
+  // matching Preview.
+  "observability": {
+    "enabled": true,
+    "head_sampling_rate": 1,
+  },
   "env": {
     "preview": {
       // Distinct D1 database from production (SRS §28.20/§33: "separate
