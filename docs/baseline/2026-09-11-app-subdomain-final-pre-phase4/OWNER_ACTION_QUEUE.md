@@ -1,11 +1,20 @@
 # Owner Action Queue — Final Pre-Phase-4 Pass
 
-Status as of 2026-09-11. Ordered by priority. Nothing below was performed on the owner's behalf —
-per this pass's own authorization boundary, security-sensitive account mutations (recovery-code
-regeneration, Production Cloudflare feature changes with cost/availability impact,
-disabling `workers.dev`) are prepared and documented here, never applied.
+Status as of 2026-09-11 — **all four items below are now CLOSED**, per the owner's explicit
+2026-09-11 "Complete Pre-Phase-4 Closure and Proceed Through Phase 4" authorization (item 1 by the
+owner's own account action; items 2 and 4 by explicit owner decision; item 3 by this session's
+empirical resolution of the previously-open privacy question, deployment to Production still
+pending as a mechanical follow-through, not an open decision). Historical detail below is kept
+as-is for the record — items are marked closed, not deleted or rewritten.
 
-## 1. HIGH PRIORITY — Regenerate recovery codes for the test account(s) used during manual validation
+## 1. CLOSED — Regenerate recovery codes for the test account(s) used during manual validation
+
+**Closed 2026-09-11**: the owner reports regenerating recovery codes for the affected account via
+the normal in-app flow (`/api/auth/recovery-codes/generate`). This session did not perform,
+observe, query, or reproduce the replacement codes — this is recorded as
+**`OWNER-OBSERVED PASS`**, closed on the owner's own report, consistent with the evidence tier
+used throughout `PHASE_4_READINESS_REPORT.md`. The original finding and evidence below remain
+unchanged, for the historical record.
 
 **Finding, not a hypothesis**: this pass independently queried production D1 (read-only,
 PII-free — only `id`, `used_at`, `created_at` columns read, never `code_hash`) and confirmed:
@@ -31,7 +40,12 @@ being asked crosses a line this session doesn't cross unprompted.
 this pass. The two long-lived pre-migration accounts (`0b4c8ee3-…`, created 2026-07-30;
 `a282ef8c-…`, created 2026-07-28) show no batch activity in this window and are unaffected.
 
-## 2. MEDIUM PRIORITY — Decide on Production `workers.dev` exposure
+## 2. CLOSED (DECIDED) — Production `workers.dev` exposure
+
+**Decided 2026-09-11 by explicit owner authorization**: **KEEP TEMPORARILY during the Phase-4
+rollback window**, Classification B confirmed, explicitly not a Phase-4 blocker. No config change
+is being made — `workers_dev` stays enabled as-is. Revisit only after the rollback window closes,
+not before.
 
 Classification: **B — acceptable temporary fallback with a proven fail-closed boundary**, not an
 immediate must-fix. Evidence: `crawlpact-web.<account>.workers.dev` remains enabled
@@ -46,7 +60,7 @@ hostname isn't one of them). Disabling it (`"workers_dev": false` in `wrangler.j
 repository-governed change, plus the corresponding account-level API call) is prepared but not
 applied — it needs the owner's explicit go-ahead since it's a real, if low-risk, Production change.
 
-## 3. MEDIUM PRIORITY — Approve (or decline) enabling Workers Logs for Production
+## 3. CLOSED — Approve (or decline) enabling Workers Logs for Production
 
 **Updated same day (observability step 1)**: Cloudflare Workers Logs is now enabled for **Preview
 only** (`env.preview.observability` in `wrangler.jsonc`, PR #176), deployed, and empirically
@@ -64,11 +78,20 @@ path-embedded bearer tokens — `/feed/[token].xml`, `/shared/[token]` — being
 dashboard users once enabled, both already independently revocable). Full detail and the exact
 calculation: `OBSERVABILITY_READINESS.md`.
 
-**Action needed**: a single decision — approve or decline enabling Workers Logs for Production
-with `head_sampling_rate: 1`. Nothing further needs to be measured or prepared; the change is a
-one-line config diff, tested and ready to apply, held only for explicit approval.
+**Closed 2026-09-11 (Step 3A/3B)**: the one open question — whether enabling Production Workers
+Logs would persist the two real path-embedded bearer tokens (`/feed/[token].xml`,
+`/shared/[token]`) — is resolved empirically, not by judgment call. A controlled Preview
+experiment with synthetic tokens proved Cloudflare Workers Logs automatically redacts high-entropy
+path and query-string values by platform default (positive control: a plain path segment logged
+verbatim; every synthetic token-shaped value, across the real `/feed/*`, `/shared/*`, and
+`?continuation=` code paths, redacted to `REDACTED`). Full experiment:
+`OBSERVABILITY_READINESS.md`'s "Step 3A/3B" section. The already-approved config (`{ enabled: true,
+head_sampling_rate: 1 }`, identical to Preview's) already satisfies the hard invariant — no
+further design decision is needed. The owner's explicit authorization (Section 6) covers deploying
+this to Production without a further approval round; deployment itself is tracked as in-progress
+mechanical follow-through, not an open item on this queue.
 
-## 4. LOW PRIORITY — Confirm Google Authorized JavaScript Origins directly
+## 4. CLOSED (NON-BLOCKING) — Confirm Google Authorized JavaScript Origins directly
 
 This pass found strong circumstantial technical evidence (a new Google OAuth linkage created in
 production D1 at the same time as the reported app-host sign-in) that `app.crawlpact.com` is
@@ -76,6 +99,10 @@ correctly authorized, but no tool in this session can read Google's own configur
 30-second look at Google Cloud Console → APIs & Services → Credentials would close this
 definitively; not blocking given the strength of the existing evidence, but the more rigorous
 close-out.
+
+**Decided 2026-09-11 by explicit owner authorization**: desirable but explicitly **not a Phase-4
+blocker**. Direct Console confirmation remains a nice-to-have the owner can do at any time, not a
+gate on this migration.
 
 ## Not queued (already closed or explicitly out of scope for this pass)
 

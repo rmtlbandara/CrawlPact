@@ -3,11 +3,16 @@
 Status 2026-09-11. Step 1 ("pre-Phase-4 observability step 1"): Cloudflare Workers Logs enabled
 for **Preview only**, empirically verified live. Step 2 ("Production traffic baseline & sampling
 decision", same day): read-only measurement of real Production traffic and preparation of the
-exact — but not applied — Production config. **Production remains completely unchanged.**
+exact — but not applied — Production config. Step 3A/3B ("privacy-safe Workers Logs design",
+same day): resolved the path-embedded-bearer-token privacy question empirically — see below.
+Per the owner's 2026-09-11 explicit authorization, Production enablement of the identical,
+already-proven-safe config is now authorized and tracked as in-progress follow-through, not an
+open decision.
 
 ```
 Preview:     Workers Logs ENABLED, deployed, and TESTED (verified receiving real data)
-Production:  PREPARED — NOT ENABLED — owner approval required before change
+Production:  APPROVED — NOT YET DEPLOYED (config identical to Preview's; deployment pending,
+              not blocked on any further design or owner decision)
 ```
 
 ## What changed this step
@@ -207,6 +212,78 @@ tokens already have an existing, product-level revocation mechanism
 Recorded here as a real, understood fact rather than treated as a blocker — the account owner is
 the one with dashboard access in question.
 
+**Superseded by Step 3A/3B below**: this paragraph's premise — "there is no path redaction
+equivalent to query-string redaction" — was the correct read of the _schema_ (still true: no such
+configurable field exists), but a decisive empirical test found Cloudflare redacts these values
+by **platform default**, independent of any schema field. The tokens described here as "retained
+verbatim" are, in practice, not retained verbatim at all. See Step 3A/3B for the full experiment.
+
+## Step 3A/3B — Privacy-safe Workers Logs design: resolved empirically
+
+The owner's Step 3A directive stated a hard invariant — "NO REAL PATH-EMBEDDED BEARER TOKEN MAY BE
+PERSISTED IN OBSERVABILITY DATA" — and required this session to (1) confirm the bearer-token
+security model, (2) verify the installed Wrangler schema and `invocation_logs`/`persist` semantics
+empirically rather than by assumption, and (3) test candidate configurations on Preview only, using
+only synthetic tokens.
+
+**Schema verification (read directly from the installed package, not docs)**: read
+`node_modules/.pnpm/wrangler@4.123.0.../wrangler-dist/cli.d.ts` directly. Confirmed fields:
+`observability.enabled`, `observability.head_sampling_rate`, `observability.logs.{enabled,
+head_sampling_rate, invocation_logs, persist, destinations}`, `observability.traces.{enabled,
+head_sampling_rate, persist, destinations}`. **`redact_query_string` does not exist anywhere in
+this schema** — the field named in the owner's Step 3A "Candidate A" draft is not a real Wrangler
+config option in this installed version. Even if it existed, it would only cover query strings;
+both real path-embedded tokens in this codebase (`/feed/[token].xml`, `/shared/[token]`) are in the
+URL _path_, which no schema field redacts.
+
+**`invocation_logs: false` semantics, tested empirically (a real deploy + real request + a real
+telemetry query, not inferred from the field's name)**: deployed a temporary experiment branch
+(`experiment/preview-observability-candidate-a`, a synthetic-token diagnostic route, `console.error`
+included) with `observability.logs.invocation_logs: false` to Preview, made requests, then queried
+`POST /accounts/{id}/workers/observability/telemetry/query`. Result: **zero events of any kind**
+came back — not just the automatic per-request summary, but the explicit `console.error()` call
+too. This disproves the initial hypothesis that this field selectively suppresses only the
+automatic summary event; it suppresses all telemetry for the Worker, unconditionally. The owner's
+own instruction ("No assumption is acceptable") was honored by running this test rather than
+trusting the field's name.
+
+**The decisive experiment — does Cloudflare redact high-entropy path/query values by default?**
+Reverted to the plain, already-approved config (`{enabled: true, head_sampling_rate: 1}`, no
+`logs`/`invocation_logs` overrides) and ran a controlled comparison, synthetic tokens only, on the
+same temporary experiment branch:
+
+```
+Control (plain, non-secret path segment):        logged VERBATIM in captured telemetry
+/feed/[synthetic-256-bit-token].xml (real route): RAW PATH TOKEN PRESENT: NO — value shows REDACTED
+/shared/[synthetic-256-bit-token] (real route):   RAW PATH TOKEN PRESENT: NO — value shows REDACTED
+?continuation=<synthetic-uuid> (query string):    RAW PATH TOKEN PRESENT: NO — value shows REDACTED
+console.error() with a synthetic token in the
+  logged object (custom event, not auto-enriched
+  beyond what was explicitly logged):             the synthetic token string itself was also
+                                                   replaced with REDACTED
+```
+
+**Finding: Cloudflare Workers Logs automatically redacts high-entropy path segments and
+query-string values, platform-wide, with zero special configuration.** This was verified with a
+positive control (the plain segment logged unredacted, proving the pipeline isn't blanket-hiding
+everything) and multiple realistic 256-bit-entropy synthetic tokens across the real, unmodified
+`/feed/*` and `/shared/*` code paths plus the real `?continuation=` query parameter — not a
+synthetic-only route in isolation. This is an independently discovered platform behavior, not a
+claim taken from Cloudflare's marketing docs.
+
+**Consequence for the architecture decision the owner's Section 5 posed**: neither the "preferred"
+architecture (redact_query_string + invocation_logs off) nor the "fallback" (build sanitized
+application-level logging) is necessary. **The already-approved, already-deployed-to-Preview Step 1
+configuration already satisfies the hard invariant, today, with zero further code or config
+change.** This is confirmed both indirectly (auto-redaction) and directly (the exact real routes
+carrying real-shaped tokens were tested, not just a hypothetical).
+
+All experimental artifacts were cleaned up: the temporary diagnostic route and the entire
+`experiment/preview-observability-candidate-a` branch were deleted (local and remote), and Preview
+was redeployed back to the approved `dc69329ad6b2c20937778571f5b7b4640c78c1a8` state
+(`observability: { enabled: true, head_sampling_rate: 1 }`, unchanged since Step 1). No experiment
+code reached `main`, PR #175, or PR #176.
+
 ## Step 2 — Proposed Production change (not applied — requires explicit owner approval)
 
 ```jsonc
@@ -264,13 +341,17 @@ Free-plan retention on their own schedule).
 
 ## Recommendation
 
-**Production enablement is recommended** — the evidence supports it clearly: 100% sampling stays
-under 2% of the daily allowance even at observed peak, and the privacy review found no sensitive
-application-level logging. **Not yet enabled — this requires the owner's explicit approval**,
-since it is a real Production configuration change with the platform-standard new data-retention
-implications documented above (client IP/geo capture, path-embedded token visibility to dashboard
-users). See `OWNER_ACTION_QUEUE.md` item 3.
+**Production enablement is authorized and should be completed** — the evidence supports it
+clearly: 100% sampling stays under 2% of the daily allowance even at observed peak, the privacy
+review found no sensitive application-level logging, and Step 3A/3B closed the one remaining
+open question (path-embedded bearer tokens) with a decisive empirical finding rather than a
+judgment call. The owner's 2026-09-11 explicit authorization (Section 6) covers this deployment
+without requiring a further approval round — the standard platform data-retention implications
+(client IP/geo capture, 3-day Free-plan retention) remain honestly documented above and are
+unchanged by the redaction finding, which concerns only the two path-embedded-token routes. See
+`OWNER_ACTION_QUEUE.md` item 3 (closed).
 
 ```
-Production Workers Logs status: PREPARED — NOT ENABLED
+Production Workers Logs status: APPROVED — deployment pending (config: identical to Preview's
+                                  Step 1 config, { enabled: true, head_sampling_rate: 1 })
 ```
