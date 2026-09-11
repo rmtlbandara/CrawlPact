@@ -280,9 +280,45 @@ CrUX: not queried this pass (no connected tooling); owner-observed validation ac
 owner's 2026-09-11 explicit authorization (Section 2.2), not reopened. Lighthouse: the Preview
 deploy's own budget check ran and passed against this exact SHA (Section E) — no material
 performance regression introduced by this reconciliation's changes (route-registry.ts logic and
-env-schema validation are both effectively invisible to page-load performance). A fresh 3-run-
-median Lighthouse pass across the four canonical URLs (Section 7 of the owner's authorization) is
-tracked separately, still to be run before Phase 4 cutover deployment.
+env-schema validation are both effectively invisible to page-load performance).
+
+**Section 7's 3-run-median Lighthouse reconciliation, run 2026-09-11 against live Production**
+(devtools throttling, same methodology as `scripts/lighthouse-check.mjs`, 3 runs per URL,
+median reported):
+
+| URL                                 | Perf | A11y | Best Practices | SEO | LCP (median) | CLS     |
+| ----------------------------------- | ---- | ---- | -------------- | --- | ------------ | ------- |
+| `https://crawlpact.com/`            | 98   | 100  | 92             | 100 | 1882ms       | ~0.0001 |
+| `https://crawlpact.com/pricing/`    | 99   | 100  | 92             | 100 | 1599ms       | ~0.0001 |
+| `https://app.crawlpact.com/`        | 100  | 100  | 92             | 66  | 1379ms       | 0       |
+| `https://app.crawlpact.com/sign-in` | 99   | 100  | 92             | 66  | 1367ms       | 0.0228  |
+
+**This resolves the prior single-run homepage "Mobile 79" concern**: a fresh 3-run median shows
+98 (individual runs: 99, 98, 98) — consistent with this script's own documented rationale (a
+single Lighthouse run can swing dramatically from network/test-machine variance; the median of 3
+is the reliable number, not any single run). All four URLs clear their performance/accessibility
+thresholds with room to spare; LCP stays under 2s on every URL.
+
+The two app-host URLs' **SEO score of 66 is by design, not a regression**: both send
+`X-Robots-Tag: noindex` (Section S/T), and Lighthouse's `is-crawlable` audit always scores 0 for a
+deliberately non-indexable page — the identical mechanism already documented in
+`scripts/lighthouse-check.mjs`'s own Phase 21 comment for Preview. Not a Phase 4 concern.
+
+**Root-caused the "Best Practices 92" finding** (identical across all four URLs, both hosts): a
+direct inspection of the full Lighthouse report (not just the category score) shows the same two
+audits failing everywhere — `errors-in-console` and `inspector-issues` — both for the identical
+underlying cause: the site's own CSP (`script-src 'self' 'unsafe-inline' https://cdn.paddle.com
+https://www.googletagmanager.com https://accounts.google.com/gsi/client https://www.clarity.ms`)
+correctly **blocks** an unexpected script load attempt from
+`static.cloudflareinsights.com/beacon.min.js` — Cloudflare's own zone-level "Web Analytics" beacon,
+which is not part of this project's reviewed/approved analytics stack (GA4/Clarity, see
+[[project_no_third_party_analytics]]) and was never added to the CSP allowlist. **This is the CSP
+correctly doing its job, not a defect** — a third-party script outside the explicit allowlist is
+being rejected exactly as designed. Non-blocking, sitewide, unrelated to this migration's changes;
+if the owner wants a clean Best Practices 100, the fix is either adding
+`static.cloudflareinsights.com` to `script-src` (only if the Cloudflare Web Analytics beacon is
+wanted) or disabling that zone-level toggle in the Cloudflare dashboard (Speed → Web Analytics) —
+neither was done this pass, since it's cosmetic and outside this migration's scope.
 
 ## R. Monitoring/observability
 
