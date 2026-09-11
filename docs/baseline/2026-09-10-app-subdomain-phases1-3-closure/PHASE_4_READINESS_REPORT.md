@@ -2,8 +2,24 @@
 
 Status as of 2026-09-10, immediately following PR #173's Production compatibility deployment;
 updated 2026-09-11 with the owner's completed manual validation and this session's independent
-technical corroboration of it. This report supersedes the **status** claims of every earlier
-Phase 1–3 document where they conflict — it does not rewrite or remove any historical evidence.
+technical corroboration of it; updated again 2026-09-11 (final pre-Phase-4 pass) with the
+remainder of the owner's live validation round (cookie isolation, CSRF, Paddle checkout, recovery,
+admin, continuation, pricing/billing) and one HIGH-PRIORITY security finding surfaced during
+corroboration. This report supersedes the **status** claims of every earlier Phase 1–3 document
+where they conflict — it does not rewrite or remove any historical evidence. Full evidence for the
+2026-09-11 final pass: `docs/baseline/2026-09-11-app-subdomain-final-pre-phase4/`.
+
+## ⚠ HIGH-PRIORITY SECURITY FINDING (owner action required, not applied this pass)
+
+While independently corroborating the owner's reported recovery-authentication test, a read-only,
+PII-free production D1 query found that the test account's recovery-code batch (created
+`2026-09-11T02:14:27Z`, likely the batch shown in the screenshots referenced during this
+validation round) has **never been regenerated** — it is the only batch ever recorded for that
+account, and 9 of its 10 codes remain valid and unused right now. If those codes were shown in a
+screenshot, they are currently still usable by anyone who saw it. **This session did not and will
+not regenerate codes on the owner's behalf** — see
+`docs/baseline/2026-09-11-app-subdomain-final-pre-phase4/OWNER_ACTION_QUEUE.md` item 1 for the
+full evidence and the exact action needed (regenerate via the normal in-app flow, before Phase 4).
 
 ## A. Verdict
 
@@ -25,20 +41,24 @@ collapsing them into a single "done":
 
 ```
 OWNER MANUAL VALIDATION — COMPLETE
-  The owner reports completing new passkey registration and Google Sign-In on the app host.
+  The owner reports completing new passkey registration, Google Sign-In, cookie-isolation
+  inspection, sibling-origin CSRF testing, a live Paddle checkout open/cancel, recovery-code
+  generation and redemption, authenticated app and admin smoke, public-audit continuation, and
+  pricing-to-billing continuation — the full validation round across two owner sessions.
 
-TECHNICAL CORROBORATION — COMPLETE
-  This session independently cross-checked that report against a read-only, aggregate-only,
-  PII-free production D1 query (Section I, J) and found real, timestamped evidence consistent
-  with it: a new passkey credential, a new Google OAuth linkage, no anomalies, nothing deleted.
+TECHNICAL CORROBORATION — COMPLETE where a technical proxy exists
+  This session independently cross-checked what has a database or API footprint: new passkey
+  credential (Section J), new Google OAuth linkage (Section I), Paddle checkout-domain approval
+  unchanged (Section H), admin route names verified to exist in the codebase (Section M). One
+  HIGH-PRIORITY finding surfaced doing this: the recovery-code batch used in testing shows no
+  evidence of ever being regenerated (see the callout at the top of this report).
 
-LIVE/AUTOMATED VALIDATION — STILL PENDING
-  Cookie-isolation and sibling-origin-CSRF proof have no D1-observable consequence at all — no
-  amount of database inspection can substitute for actually observing them, and neither browser
-  automation nor a direct owner observation occurred this pass. Google Search Console, GA4,
-  Clarity, and CrUX verification remain entirely unverified — no tooling for any of them is
-  connected to this session. Live Paddle checkout, recovery, authenticated app/admin smoke, and
-  continuation flows were not attempted (Sections H, M, N).
+LIVE/AUTOMATED VALIDATION — STILL PENDING (genuinely, not by oversight)
+  Cookie-isolation and sibling-origin-CSRF have no D1-observable consequence at all, live Paddle
+  checkout UI/recovery UI/admin UI/continuation flows have no technical proxy beyond what's noted
+  above — none of these were independently re-observed by browser automation, because none is
+  connected to this session. Google Search Console, GA4, Clarity, and CrUX verification remain
+  entirely unverified — no tooling for any of them is connected to this session either.
 ```
 
 **Technical corroboration is not the same as independent live proof, and this report does not
@@ -123,11 +143,16 @@ touched.
 
 ## H. Paddle checkout evidence
 
-**Not attempted this pass.** Opening a live Paddle checkout overlay on `app.crawlpact.com`
-requires browser automation (none connected to this session — confirmed by direct tool-catalog
-search) or the owner's own live interaction. Server-side price resolution (`plan-mapping.ts`) is
-unchanged by PR #173 and was not touched. **Blocks Phase 4** per the directive's own gate list —
-genuinely not performed, not assumed passing.
+**OWNER-OBSERVED (2026-09-11)**: the owner reports opening a live Solo/yearly checkout from
+`app.crawlpact.com/app/billing` — app checkout API 200, Paddle transaction/checkout init 201,
+correct `$89/year` presentation, no domain-approval error, cancelled before payment, account
+remained Free, no payment completed. This session did not observe it directly (no browser
+automation connected), but independently re-confirmed via the Paddle API that
+`app.crawlpact.com`'s checkout-domain approval is unchanged (`chedom_01m24mn1cqys7mcn80rgt6t4t2`,
+still `approved`) — a "domain not approved" error would have been structurally impossible to avoid
+otherwise. Server-side price resolution (`plan-mapping.ts`) is unchanged by PR #173/#174/#175.
+**Recorded as owner-observed, corroborated by Paddle-domain-state; not independently browser-tested
+this pass.**
 
 ## I. Google configuration and E2E evidence
 
@@ -183,37 +208,58 @@ code path.
 
 ## K. Session-cookie evidence
 
-**Still not independently observed live** — D1 cannot see cookie attributes (they never reach
-persistent storage), and no browser automation is connected. The owner did not report a direct
-cookie inspection. Source-level guarantee re-read and confirmed unchanged:
-`buildSessionCookie`/`buildClearedSessionCookie` in `apps/web/src/lib/auth/session.ts` remain
-host-only (`Path=/`, `HttpOnly`, `Secure` outside local, `SameSite=Lax`, no `Domain` attribute) —
-zero lines of that file have changed since Phase 2. "Expected by code reading" and "verified live"
-are kept distinct, per this repo's own established practice. **Still blocks Phase 4's own stated
-RISK-036 acceptance criteria** — closing it needs either browser automation or a direct
-owner-supplied observation (e.g., a devtools screenshot of cookie attributes with the value
-redacted).
+**OWNER-OBSERVED (2026-09-11)**: the owner reports directly inspecting the real cookie on an
+authenticated `app.crawlpact.com` session and confirming `HttpOnly`, `Secure`, `Path=/`,
+`SameSite=Lax`, host-only scope (no `Domain=crawlpact.com`), and that a subsequent apex request did
+not send `crawlpact_session`. This session did not observe it directly (no browser automation
+connected) and no cookie value was requested, printed, or stored. Source-level guarantee re-read
+and confirmed unchanged: `buildSessionCookie`/`buildClearedSessionCookie` in
+`apps/web/src/lib/auth/session.ts` remain host-only, zero lines changed since Phase 2 — the
+owner's report matches exactly what the source guarantees. **Recorded as owner-observed,
+corroborated by unchanged source; not independently re-observed by this session.** This closes
+RISK-036's cookie-isolation acceptance criterion at the owner-validation tier.
 
 ## L. CSRF live evidence
 
-Server-level integration suite (`csrf.integration.test.ts`, 4 sibling-origin tests) passes,
-unchanged, re-confirmed green 2026-09-11. **Live proof against a real authenticated session was
-not performed** — same limitation as Section K: no D1-observable proxy exists for a rejected
-cross-origin request (it never persists anywhere), and no browser automation is connected.
-**Still blocks Phase 4's own stated RISK-036 acceptance criteria.**
+**OWNER-OBSERVED (2026-09-11)**: the owner reports a real authenticated `PATCH /api/account`
+tested three ways — app target + app Origin → 200; app target + apex Origin → 403; app target +
+`https://example.com` Origin → 403 — exactly the arrival-origin-must-equal-validated-origin
+invariant `same-origin.ts` implements (never a broad "any trusted CrawlPact origin" allowlist).
+Server-level integration suite (`csrf.integration.test.ts`, 4 sibling-origin tests) re-confirmed
+green 2026-09-11, asserting the identical pattern. **Recorded as owner-observed, corroborated by
+unchanged automated coverage; not independently re-observed by this session** (no D1-observable
+proxy exists for a rejected cross-origin request — it never persists anywhere). This closes
+RISK-036's CSRF-isolation acceptance criterion at the owner-validation tier.
 
 ## M. Recovery/authenticated-app evidence
 
-**Not performed this pass.** Recovery-code validation and authenticated `/app`/`/admin` smoke
-both require a real authenticated session (browser automation unavailable, or the owner's live
-interaction). Nothing in PR #173 touches recovery or authenticated-app code paths.
+**OWNER-OBSERVED (2026-09-11)**, with one HIGH-PRIORITY finding surfaced during corroboration —
+see the callout at the top of this report and `docs/baseline/2026-09-11-app-subdomain-final-pre-phase4/OWNER_ACTION_QUEUE.md`.
+The owner reports generating recovery codes, redeeming one, and completing customer app smoke
+(`/app`, `/app/workspace`, `/app/domains`, `/app/groups`, `/app/notifications`, `/app/billing`,
+`/app/account` all rendered, 200s, no redirect loops) plus admin smoke (`/admin`, `/admin/health`,
+`/admin/domains`, `/admin/analytics`, `/admin/audit-logs` all rendered for an admin-capable
+session; an ordinary session got 302 on `/admin`). Independent D1 check: a real recovery-code
+batch exists (1 batch, 1/10 used, matching "redeemed one"), and — critically — **shows no evidence
+of ever being regenerated**, meaning if this batch was shown in a screenshot, those codes remain
+live right now. Admin route names were verified to genuinely exist in the codebase
+(`ls apps/web/src/pages/admin/`), not assumed from the owner's description. Full detail:
+`docs/baseline/2026-09-11-app-subdomain-final-pre-phase4/TEST_EVIDENCE.md` and
+`VERIFICATION_MATRIX.md`.
 
 ## N. Audit/pricing continuation evidence
 
-**Not performed this pass.** The public-audit-to-app-sign-in continuation flow and the
-pricing→sign-in→billing flow both require a real, live, multi-step browser session. Nothing in
-PR #173 touches continuation, pricing, or billing code paths — Phase 2/3's existing evidence for
-these flows is unchanged and carried forward, but not independently re-proven live this pass.
+**OWNER-OBSERVED (2026-09-11), not independently corroborated**. The owner reports completing both
+the public-audit continuation flow (opaque continuation carried from apex to app sign-in,
+confirmation shown, saved, no replay possible) and the pricing→auth→billing flow (plan/interval
+preserved exactly through app sign-in, no auto-checkout). `audit_continuations` currently has 0
+rows account-wide — inconclusive, not a negative signal: the daily retention cron deletes
+consumed/expired rows and already ran once in this window, so an empty table is consistent with
+"created, consumed, then swept." No D1 table captures in-flight plan/interval query-parameter
+state by design. Existing automated coverage for both flows (continuation replay/expiry tests,
+plan/interval allowlist, `isSafeRelativeRedirect`, server-side price re-resolution) is unchanged
+and re-confirmed green. **Recorded as owner-observed only** — genuinely no technical proxy exists
+either way.
 
 ## O. SEO/GSC
 
@@ -236,10 +282,15 @@ are both effectively invisible to page-load performance).
 
 ## R. Monitoring/observability
 
-**Not assessed or changed this pass.** Phase 3 previously found Workers Observability/Logs
-disabled; this pass neither enabled it nor built an alternative. This remains an open item for
-Phase 4 planning — Phase 4 must not begin with zero cutover-monitoring signal, but implementing
-that is a distinct, unauthorized-this-pass change, not something to do incidentally here.
+**Assessed in detail 2026-09-11, not changed** — full findings and options in
+`docs/baseline/2026-09-11-app-subdomain-final-pre-phase4/OBSERVABILITY_READINESS.md`. Confirmed
+live: 0 account-wide Logpush jobs, Worker-level `logpush: false`, no tail consumers, no Workers
+Observability configuration present. There is currently no automated signal for 5xx, Worker
+exceptions, auth/WebAuthn/CSRF failure spikes, or webhook failures. Enabling Workers Observability
+is a real Production configuration change with its own cost/retention tradeoffs on this account's
+Free plan — prepared as an option, not applied, pending explicit owner decision (see
+`OWNER_ACTION_QUEUE.md` item 3). **Phase 4 must not begin with zero cutover-monitoring signal —
+this remains a genuinely open item, not resolved by this pass's assessment alone.**
 
 ## S. Quality/CI
 
@@ -271,6 +322,9 @@ routing. `Cross-Origin-Opener-Policy` remains absent everywhere (see Section T).
 
 ## T. Residual non-blocking risks
 
+- **This is a blocking, not non-blocking, item, listed here only because it fits nowhere else in
+  the A–U structure**: the exposed-recovery-code finding (see the callout at the top of this
+  report and `OWNER_ACTION_QUEUE.md` item 1) must be resolved by the owner before Phase 4.
 - **COOP/Google FedCM compatibility**: no browser automation is connected, so this session cannot
   run its own Chromium/Safari/FedCM-off matrix. The owner's reported Google Sign-In (Section I)
   completed without a mentioned failure, which is evidence-favoring "no COOP header needed" rather
@@ -324,11 +378,25 @@ inside the same tight real-activity window, no anomalies, nothing deleted. That 
 new-passkey criterion and materially strengthens confidence in Google's app-origin configuration,
 though it stops short of a direct read of Google's own console state.
 
-What remains is a short, specific, already-enumerated list: Google Search Console, GA4, Clarity
-API, and CrUX verification (no connected tooling — genuinely unverifiable this pass, not skipped),
-live cookie-isolation and sibling-origin CSRF proof (no D1-observable proxy exists for either, and
-no browser automation is connected), live Paddle checkout opening, recovery validation,
-authenticated app/admin smoke, and audit/pricing continuation flows (all require either browser
-automation or a live session neither available nor owner-reported this pass), plus the
-already-known non-blocking items (`workers.dev`, COOP, monitoring). Phase 4 has not started and
-will not start until the genuinely blocking items above close.
+On 2026-09-11, in a second round, the owner reported completing the remainder of the manual
+validation set: live cookie-isolation inspection, authenticated sibling-origin CSRF testing, a
+live Paddle checkout open/cancel, recovery-code generation and redemption, authenticated app and
+admin smoke, public-audit continuation, and pricing-to-billing continuation. This session
+corroborated everything with a technical footprint (Paddle domain state unchanged, admin routes
+genuinely exist, automated CSRF/session-cookie source guarantees unchanged) and was honest about
+what has none (cookie/CSRF live proof, checkout/recovery/admin/continuation UI flows — no browser
+automation is connected, so none of these were independently re-observed).
+
+Doing that corroboration surfaced a genuine finding, not a paperwork gap: the recovery-code batch
+used in this round's testing has never been regenerated, and 9 of its 10 codes remain valid right
+now. If those codes appeared in a screenshot during testing, they are currently usable by anyone
+who saw it. This is recorded as a HIGH-PRIORITY owner action, not buried in a residual-risks list.
+
+What remains open: Google Search Console, GA4, Clarity API, and CrUX verification (no connected
+tooling — genuinely unverifiable this pass, not skipped); live browser re-observation of
+cookie-isolation, CSRF, checkout, recovery, admin, and continuation flows (owner-observed and
+partially corroborated, but not independently proven by this session); the recovery-code
+regeneration action above; and the already-known non-blocking items (`workers.dev` disposition,
+COOP, monitoring — the last of which is a genuinely open readiness gap, not merely non-blocking
+cosmetic follow-up). Phase 4 has not started and will not start until the genuinely blocking items
+above close.
