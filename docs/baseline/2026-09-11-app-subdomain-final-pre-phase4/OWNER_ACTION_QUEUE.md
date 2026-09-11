@@ -55,14 +55,18 @@ live query proving an intentional test request was actually logged. **Production
 completely unchanged** — no `observability` key exists at the top level, confirmed by diffing the
 generated build output before and after.
 
-**Action needed**: decide whether to enable Workers Logs for Production too. Before that can
-happen safely, Production's own real request volume needs to be checked against the Workers Free
-plan's 200,000 events/day allowance to pick an appropriate sampling rate (Preview's 100% rate was
-justified by Preview's own low traffic — ~1,248 requests/24h, 0.6% of the allowance — and does not
-automatically transfer to Production, which carries real customer traffic and is very plausibly
-much higher-volume). This check plus the actual Production config change are prepared to execute
-on request but were not performed this pass, per explicit instruction not to touch Production
-without separate approval.
+**Updated again same day (observability step 2)**: Production's real traffic was measured
+(7-day peak 3,328 requests/day, 7-day average ~1,894/day, both far under the 200,000/day
+allowance), the exact Production config was prepared (`observability: { enabled: true,
+head_sampling_rate: 1 }` at the top level), and a Production-specific privacy review completed
+(no sensitive `console.*` logging anywhere; one honest non-blocking note about two existing
+path-embedded bearer tokens — `/feed/[token].xml`, `/shared/[token]` — being visible to Cloudflare
+dashboard users once enabled, both already independently revocable). Full detail and the exact
+calculation: `OBSERVABILITY_READINESS.md`.
+
+**Action needed**: a single decision — approve or decline enabling Workers Logs for Production
+with `head_sampling_rate: 1`. Nothing further needs to be measured or prepared; the change is a
+one-line config diff, tested and ready to apply, held only for explicit approval.
 
 ## 4. LOW PRIORITY — Confirm Google Authorized JavaScript Origins directly
 
