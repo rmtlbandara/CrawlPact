@@ -143,6 +143,32 @@
           "custom_domain": true,
         },
       ],
+      // Pre-Phase-4 observability step 1 (2026-09-11): `observability` is
+      // marked `@inheritable` in Wrangler 4.123.0's own config schema
+      // (confirmed by reading the installed package's bundled type
+      // definitions, not assumed from docs alone), but this repo's own
+      // established pattern for a structured/object-type field with
+      // uncertain merge semantics — see the `assets` block above, redeclared
+      // in full for the identical reason — is to declare it completely
+      // under the environment that needs it rather than rely on inheritance
+      // either way. Production declares no `observability` key at all, so
+      // there is nothing for Preview's value to be confused with regardless
+      // of merge-vs-replace semantics; empirically confirmed by building
+      // both targets and diffing the generated
+      // `apps/web/dist/server/wrangler.json` — Production's carries no
+      // `observability` key, Preview's carries exactly this one.
+      // `head_sampling_rate: 1` (100%) is deliberate for this Preview-only
+      // step: Preview traffic is low-volume (owner + this session's own
+      // testing only), so 100% sampling stays well under the Workers Free
+      // plan's 200,000 events/day allowance — see
+      // docs/baseline/2026-09-11-app-subdomain-final-pre-phase4/OBSERVABILITY_READINESS.md
+      // for the evidence. Traces are deliberately NOT enabled here — only
+      // `logs`-relevant fields at the top of this object are ever set, per
+      // explicit instruction to leave `traces` untouched in this step.
+      "observability": {
+        "enabled": true,
+        "head_sampling_rate": 1,
+      },
       "vars": {
         "PUBLIC_APP_ENV": "preview",
         // Canonical preview origin: the CrawlPact-owned Custom Domain
