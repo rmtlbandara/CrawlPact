@@ -46,16 +46,23 @@ hostname isn't one of them). Disabling it (`"workers_dev": false` in `wrangler.j
 repository-governed change, plus the corresponding account-level API call) is prepared but not
 applied — it needs the owner's explicit go-ahead since it's a real, if low-risk, Production change.
 
-## 3. MEDIUM PRIORITY — Decide on Phase 4 cutover monitoring
+## 3. MEDIUM PRIORITY — Approve (or decline) enabling Workers Logs for Production
 
-Confirmed live 2026-09-11: 0 Logpush jobs account-wide, Worker-level `logpush: false`, no tail
-consumers, no Workers Observability configuration present. **There is currently no automated
-signal for 5xx spikes, Worker exceptions, auth/WebAuthn/CSRF failure spikes, or webhook failures**
-— the only visibility this pass had was ad hoc read-only D1 queries and manual HTTP probes. Phase 4
-should not begin without at least one of: Cloudflare Workers Observability/Logs enabled (a real
-Production configuration change with its own cost/retention/privacy tradeoffs — not applied this
-pass), or an equivalent alerting mechanism the owner already has in mind. This requires an explicit
-owner decision, not a default.
+**Updated same day (observability step 1)**: Cloudflare Workers Logs is now enabled for **Preview
+only** (`env.preview.observability` in `wrangler.jsonc`, PR #176), deployed, and empirically
+verified receiving real data — see `OBSERVABILITY_READINESS.md` for the full evidence, including a
+live query proving an intentional test request was actually logged. **Production remains
+completely unchanged** — no `observability` key exists at the top level, confirmed by diffing the
+generated build output before and after.
+
+**Action needed**: decide whether to enable Workers Logs for Production too. Before that can
+happen safely, Production's own real request volume needs to be checked against the Workers Free
+plan's 200,000 events/day allowance to pick an appropriate sampling rate (Preview's 100% rate was
+justified by Preview's own low traffic — ~1,248 requests/24h, 0.6% of the allowance — and does not
+automatically transfer to Production, which carries real customer traffic and is very plausibly
+much higher-volume). This check plus the actual Production config change are prepared to execute
+on request but were not performed this pass, per explicit instruction not to touch Production
+without separate approval.
 
 ## 4. LOW PRIORITY — Confirm Google Authorized JavaScript Origins directly
 
