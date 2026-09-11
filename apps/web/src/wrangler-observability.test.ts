@@ -20,7 +20,11 @@ describe("wrangler.jsonc observability configuration", () => {
   const configPath = fileURLToPath(new URL("../wrangler.jsonc", import.meta.url));
   const config = parseJsonc(readFileSync(configPath, "utf-8")) as {
     observability?: unknown;
-    env?: { preview?: { observability?: { enabled?: boolean; head_sampling_rate?: number; traces?: unknown } } };
+    env?: {
+      preview?: {
+        observability?: { enabled?: boolean; head_sampling_rate?: number; traces?: unknown };
+      };
+    };
   };
 
   it("does not enable observability at the top level (Production stays untouched)", () => {
