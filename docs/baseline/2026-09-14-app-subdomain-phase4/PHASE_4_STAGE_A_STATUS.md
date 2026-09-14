@@ -1,22 +1,25 @@
-# Phase 4 — Stage A Status (Candidate, Not Yet Deployed Anywhere)
+# Phase 4 — Stage A Status (Preview Validated; Production Not Yet Deployed)
 
 Status 2026-09-14. This document exists specifically so nothing in this pass's other evidence
-files is misread as claiming more than what actually happened. **Nothing in this document has
-been deployed to Preview or Production.** All evidence below is SOURCE INSPECTION, AUTOMATED
-TEST (local), or CI, never PREVIEW LIVE or PRODUCTION LIVE HTTP.
+files is misread as claiming more than what actually happened. **This has been deployed to and
+validated on Preview. Nothing has been deployed to Production.** Preview evidence below is real
+LIVE HTTP and CLOUDFLARE API / TELEMETRY (see `PREVIEW_VALIDATION.md`); everything else is SOURCE
+INSPECTION, AUTOMATED TEST (local), or CI.
 
 ## Verdict
 
 ```
-BLOCKED — PHASE 4 FINALIZATION INCOMPLETE
+PHASE 4 STAGE A — PREVIEW VALIDATION PASS
+BLOCKED — PHASE 4 FINALIZATION INCOMPLETE (Production Stage A not yet deployed)
 ```
 
-Not because a hard gate failed — every gate this pass could actually run is green (see below) —
-but because the Phase 4 directive's full acceptance criteria require Preview deployment, a
-dedicated PR, CI on the exact PR head, a real Production Stage-A deployment, a live observability
-health-gate window, Stage B permanentization, and (separately) Stage C WebAuthn finalization —
-none of which this pass performed. Declaring `PASS — PHASE 4 CUTOVER COMPLETE` without those would
-be exactly the "claim flawless merely because tests pass" the directive itself prohibits.
+Every gate this pass could actually run — including, now, full live two-origin Preview
+validation (`PREVIEW_VALIDATION.md`, 21/21 checks) — is green. What remains before the full
+Phase 4 directive's acceptance criteria are met: a real Production Stage-A deployment, a live
+observability health-gate window, Stage B permanentization, and (separately) Stage C WebAuthn
+finalization. Declaring `PASS — PHASE 4 CUTOVER COMPLETE` without those would be exactly the
+"claim flawless merely because tests pass" the directive itself prohibits — Preview validation,
+however thorough, is not Production validation.
 
 ## What this pass actually did (implementation + local/CI-track validation only)
 
@@ -44,9 +47,10 @@ be exactly the "claim flawless merely because tests pass" the directive itself p
 
 ## What this pass explicitly did NOT do, and why
 
-- **Superseded**: this pass has since pushed the branch, opened PR #180, gotten CI green, and
-  attempted a Preview deployment — see "Preview deployment attempt found a genuine, pre-existing
-  infrastructure gap" below for what happened and why Preview validation remains blocked.
+- **Superseded**: this pass has since pushed the branch, opened PR #180, gotten CI green,
+  attached a second Preview Custom Domain (owner-approved), and completed full live Preview
+  validation — see "RESOLVED 2026-09-14" below and `PREVIEW_VALIDATION.md` for the complete
+  evidence.
 - **Did not run the full `pnpm test:e2e` / `pnpm test:integration` suites to a clean local
   result.** Both suites hit this migration's long-documented, pre-existing local Miniflare/
   WebAuthn-hydration resource-contention flakiness (confirmed via two direct attempts at
@@ -187,40 +191,64 @@ later (three separate checks, all `200`, with the expected `"Sign in with passke
 account"` content present, and `/app` correctly `302`-ing to sign-in). **Preview is currently
 healthy, running the pre-Phase-4 code.**
 
-**This blocks genuine Preview validation of Stage A's redirect behavior specifically** — not the
+**This blocked genuine Preview validation of Stage A's redirect behavior specifically** — not the
 unit-level proof (`legacy-redirect.test.ts`, `worker.host-boundary.test.ts`, 60+ tests, all
-passing), which remains valid and unaffected, but the live, real-HTTP, two-host proof this phase's
-own directive calls for. Per this session's standing principle (never bypass or weaken a
-blocking harness/prerequisite to force a result through), the fix is **not** to special-case or
-disable the redirect for Preview — that would defeat the point of validating it at all. Closing
-this gap requires attaching `app.preview.crawlpact.com` as a real Cloudflare Custom Domain, a
-real infrastructure action with its own DNS/certificate implications that this session does not
-take unilaterally without asking, matching how every other Cloudflare configuration change this
-migration has made was owner-confirmed first.
+passing), which remained valid and unaffected, but the live, real-HTTP, two-host proof this
+phase's own directive calls for. Per this session's standing principle (never bypass or weaken a
+blocking harness/prerequisite to force a result through), the fix was **not** to special-case or
+disable the redirect for Preview — that would have defeated the point of validating it at all.
+
+## RESOLVED 2026-09-14: `app.preview.crawlpact.com` attached, Preview validation complete
+
+The owner explicitly approved attaching `app.preview.crawlpact.com` as a second real Cloudflare
+Custom Domain for `crawlpact-web-preview` — a Preview-only infrastructure change. Preflight
+(live Cloudflare API read) confirmed clean: no conflicting DNS record, not attached elsewhere,
+`preview.crawlpact.com` unaffected, Production untouched. `wrangler.jsonc`'s `env.preview.routes`
+now declares both Custom Domains (source of truth, not the dashboard alone); 7 new tests
+(`wrangler-preview-topology.test.ts`) guard this against drift. Deploying the exact PR head
+(`a808f0f`) to Preview caused `wrangler deploy` to auto-provision the second Custom Domain
+directly — no manual Cloudflare API call was needed — confirmed via a live API read showing both
+hostnames attached with their own distinct, real TLS certificates.
+
+This deployment attempt found one more real, CI-invisible defect (`scripts/smoke-test.ts`
+hardcoded `/sign-in` returning 200 directly on the base URL — stale the moment a real distinct
+app host exists): fixed with an optional `appBaseUrl` third argument, `smoke:preview` updated to
+pass it, `smoke:production` deliberately left unchanged (Production hasn't cut over yet). Verified
+directly: `smoke:preview` 39/39, `smoke:production` 35/35 (unaffected).
+
+**The full 21-point live two-origin validation matrix passes — see `PREVIEW_VALIDATION.md` for
+the complete evidence**, including: apex→app redirects (`/sign-in`, `/app`, `/admin`) with query
+allowlisting and full-path preservation, one hop with no loop, bidirectional wrong-host `/api/*`
+rejection (proven via distinguishably different response bodies, not just matching status codes),
+the agency-logo fix confirmed live (the real handler is reached on the correct host, rejected on
+the wrong one), the Static Assets alias boundary holding on the real two-host topology, app-host
+noindex and GA/Clarity absence, and Workers Logs receiving clean (zero 5xx, zero exceptions)
+telemetry from both real hostnames.
 
 ## Hard gates: current status
 
-| Gate                                                              | Status                                                                                                                                           |
-| ----------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------ |
-| Route ownership contract, zero UNRESOLVED                         | ✅ (CI-enforced test)                                                                                                                            |
-| Symmetric wrong-host enforcement (page + API, both directions)    | ✅ (48 new unit tests, all green locally)                                                                                                        |
-| No `/app` de-prefixing                                            | ✅ (explicit test + doc supersession note)                                                                                                       |
-| First-party entry points migrated                                 | ✅ (5/5 found, all migrated)                                                                                                                     |
-| Redirect: one hop, no loop, method-safe                           | ✅ (unit-tested directly)                                                                                                                        |
-| Local quality gate (format/lint/typecheck/unit/security/db/build) | ✅ all green                                                                                                                                     |
-| Full E2E/integration suite clean                                  | ✅ CI green (151/151 E2E+a11y), first-attempt-clean on final commit; local run still blocked by known pre-existing flakiness                     |
-| Preview deployment + validation                                   | 🛑 BLOCKED — `app.preview.crawlpact.com` has no attached Custom Domain (real infra gap, not a code defect); Preview restored to known-good state |
-| Dedicated Phase 4 PR, CI green on exact head                      | ✅ PR #180, CI green, `CLEAN`/`MERGEABLE`, not merged                                                                                            |
-| Production Stage A deployment                                     | ⏳ not started — requires fresh, explicit, in-the-moment owner permission                                                                        |
-| Production observability health gate                              | ⏳ not started                                                                                                                                   |
-| Stage B permanentization (307→308)                                | ⏳ not started — gated on the above                                                                                                              |
-| Stage C WebAuthn finalization                                     | ⏳ deferred — separate, later stage by design                                                                                                    |
+| Gate                                                              | Status                                                                                                                       |
+| ----------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------- |
+| Route ownership contract, zero UNRESOLVED                         | ✅ (CI-enforced test)                                                                                                        |
+| Symmetric wrong-host enforcement (page + API, both directions)    | ✅ (48 new unit tests, all green locally)                                                                                    |
+| No `/app` de-prefixing                                            | ✅ (explicit test + doc supersession note)                                                                                   |
+| First-party entry points migrated                                 | ✅ (5/5 found, all migrated)                                                                                                 |
+| Redirect: one hop, no loop, method-safe                           | ✅ (unit-tested directly)                                                                                                    |
+| Local quality gate (format/lint/typecheck/unit/security/db/build) | ✅ all green                                                                                                                 |
+| Full E2E/integration suite clean                                  | ✅ CI green (151/151 E2E+a11y), first-attempt-clean on final commit; local run still blocked by known pre-existing flakiness |
+| Preview deployment + validation                                   | ✅ PASS — both Custom Domains live, full 21-point matrix green (`PREVIEW_VALIDATION.md`)                                     |
+| Dedicated Phase 4 PR, CI green on exact head                      | ✅ PR #180, CI green, `CLEAN`/`MERGEABLE`, not merged                                                                        |
+| Production Stage A deployment                                     | ⏳ not started — requires fresh, explicit, in-the-moment owner permission                                                    |
+| Production observability health gate                              | ⏳ not started                                                                                                               |
+| Stage B permanentization (307→308)                                | ⏳ not started — gated on the above                                                                                          |
+| Stage C WebAuthn finalization                                     | ⏳ deferred — separate, later stage by design                                                                                |
 
 ## Final verdict (restated)
 
 ```
-BLOCKED — PHASE 4 FINALIZATION INCOMPLETE
+PHASE 4 STAGE A — PREVIEW VALIDATION PASS
 ```
 
-Blocker: this is a Stage-A implementation candidate, locally/CI-track validated, not yet pushed,
-reviewed, Preview-deployed, or Production-deployed. **Phase 4 has NOT started in Production.**
+PR #180 (head `a808f0f`, plus the smoke-test fix on top) is pushed, reviewed by CI, and fully
+validated live on Preview against a real two-origin topology — see `PREVIEW_VALIDATION.md`.
+**Production Stage A has NOT been deployed. Phase 4 has NOT started in Production.**
