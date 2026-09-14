@@ -145,8 +145,17 @@ jobs:
       - name: Verify deployed bindings match wrangler.jsonc
         run: pnpm run deploy:verify-bindings production
 
-      - name: Smoke test production
-        run: pnpm run smoke:production
+      # 2026-09-14: a real Stage-A deployment (run 34835290020) proved that a
+      # smoke check only a few seconds after `wrangler deploy` returns can
+      # still observe stale pre-deploy behavior from an edge location —
+      # ordinary Cloudflare propagation lag, not a routing defect (confirmed
+      # by an independent identical smoke re-run ~18 minutes later: 43/43,
+      # no redeploy in between). `smoke-retry.sh` retries the SAME complete
+      # smoke command a bounded number of times with a short delay/backoff —
+      # it never redeploys, never weakens an assertion, and a genuinely
+      # persistent failure still fails this step exactly as before.
+      - name: Smoke test production (bounded, propagation-aware retry)
+        run: bash scripts/smoke-retry.sh pnpm run smoke:production
 
       - name: Upload deployment evidence
         if: always()
