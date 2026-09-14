@@ -1,18 +1,20 @@
 # Final Pre-Phase-4 — Observability Readiness
 
-Status 2026-09-11. Step 1 ("pre-Phase-4 observability step 1"): Cloudflare Workers Logs enabled
-for **Preview only**, empirically verified live. Step 2 ("Production traffic baseline & sampling
-decision", same day): read-only measurement of real Production traffic and preparation of the
-exact — but not applied — Production config. Step 3A/3B ("privacy-safe Workers Logs design",
-same day): resolved the path-embedded-bearer-token privacy question empirically — see below.
-Per the owner's 2026-09-11 explicit authorization, Production enablement of the identical,
-already-proven-safe config is now authorized and tracked as in-progress follow-through, not an
-open decision.
+Status 2026-09-14 (superseded from 2026-09-11). Step 1 ("pre-Phase-4 observability step 1"):
+Cloudflare Workers Logs enabled for **Preview only**, empirically verified live. Step 2
+("Production traffic baseline & sampling decision"): read-only measurement of real Production
+traffic and preparation of the exact Production config. Step 3A/3B ("privacy-safe Workers Logs
+design"): resolved the path-embedded-bearer-token privacy question empirically — see below. Step
+4 ("Production deployment and post-deploy verification", 2026-09-14): the identical, already-
+proven-safe config was deployed to Production (PR #178, `f1d817e`, `deploy-production.yml` run
+`34798095329`) and independently re-verified live — see the dedicated section below. **Nothing
+in this document remains pending.**
 
 ```
 Preview:     Workers Logs ENABLED, deployed, and TESTED (verified receiving real data)
-Production:  APPROVED — NOT YET DEPLOYED (config identical to Preview's; deployment pending,
-              not blocked on any further design or owner decision)
+Production:  ENABLED, DEPLOYED, and INDEPENDENTLY VERIFIED LIVE (2026-09-14) —
+              deployment 689a7055-8be7-4abf-8d6d-a49d40f68681, Worker version
+              886fb70e-d760-4f3b-87b1-4a71820074ff
 ```
 
 ## What changed this step
@@ -328,30 +330,69 @@ To run only after explicit approval and only against a real Production deploymen
 13. Confirm the rollback procedure (below) actually works by exercising it once in a low-risk
     window if the owner wants that extra proof before relying on it.
 
+## Step 4 — Production deployment and independent post-deploy verification (2026-09-14)
+
+**Deployment**: PR #178 (`feat/observability-production-step2`) added the identical top-level
+config to `wrangler.jsonc`, merged to `main` as `f1d817e7a03c2ae5a98e5ab0781ce01fef2fd110` after
+fresh CI passed on that exact commit. `deploy-production.yml` run `34798095329` deployed it —
+deployment `689a7055-8be7-4abf-8d6d-a49d40f68681`, Worker version
+`886fb70e-d760-4f3b-87b1-4a71820074ff` (version 85).
+
+**Independent verification, CLOUDFLARE API / TELEMETRY evidence** (not accepted on the deploy
+workflow's success status alone):
+
+- Live Worker settings re-read via the Cloudflare API confirm
+  `{ enabled: true, head_sampling_rate: 1, traces.enabled: false }` — byte-for-byte the same
+  shape as Preview's Step 1 config.
+- Workers Logs actively receiving Production events after deployment; a synthetic
+  (non-guessable, no real token) safe 404 was visible in telemetry within seconds, correctly
+  attributed to `scriptVersion.id: 886fb70e-...` — the exact deployed version.
+- Zero `5xx` responses and zero non-`info`-level events (no exceptions) in the post-deploy
+  telemetry window.
+- **Redaction re-confirmed on Production itself, not only Preview**: fresh synthetic 256-bit
+  tokens against the real `/feed/[token].xml` and `/shared/[token]` routes, and a synthetic
+  `?continuation=` query value, all showed `REDACTED` in captured Production telemetry. No real
+  bearer token was used for this check.
+
+**Independent verification, LIVE HTTP evidence**: all four canonical URLs return 200 with correct
+indexability headers (apex indexable, app host `noindex`); apex sitemap contains zero app-host
+URLs; unauthenticated `/app`/`/admin` on the app host still 302 to sign-in; the `workers.dev`
+fallback still 404s the same sensitive routes; the BIC exception rule and `WEBAUTHN_RP_ID` are
+both confirmed live and unchanged — none of these were disturbed by the deployment.
+
+**Privacy note recorded accurately, not glossed over**: one intermediate telemetry query during
+this verification returned standard Cloudflare per-request platform metadata (client IP, TLS
+fingerprint, coarse geolocation) — this is exactly the already-documented, expected default
+Workers Logs capture behavior described earlier in this document, not an application secret or an
+unexpected leak. That raw payload was not reproduced in any report or committed anywhere.
+
+**Result: PRODUCTION OBSERVABILITY — PASS.** No further action is pending on this item.
+
 ## Rollback procedure
 
 **Preview**: set `env.preview.observability.enabled` to `false` (or remove the block), rebuild,
 redeploy Preview.
 
-**Production** (once/if enabled): remove the top-level `observability` key (or set `enabled:
-false`), rebuild, redeploy Production. Single-field config change and redeploy either way — no
-data migration, no persistent application-state change, no D1/KV/R2 impact. Already-ingested log
-events are unaffected regardless of the toggle's current state (they age out per the 3-day
-Free-plan retention on their own schedule).
+**Production**: remove the top-level `observability` key (or set `enabled: false`), rebuild,
+redeploy Production. Single-field config change and redeploy either way — no data migration, no
+persistent application-state change, no D1/KV/R2 impact. Already-ingested log events are
+unaffected regardless of the toggle's current state (they age out per the 3-day Free-plan
+retention on their own schedule). Not exercised this pass — recorded as available, not proven
+in practice.
 
 ## Recommendation
 
-**Production enablement is authorized and should be completed** — the evidence supports it
-clearly: 100% sampling stays under 2% of the daily allowance even at observed peak, the privacy
-review found no sensitive application-level logging, and Step 3A/3B closed the one remaining
-open question (path-embedded bearer tokens) with a decisive empirical finding rather than a
-judgment call. The owner's 2026-09-11 explicit authorization (Section 6) covers this deployment
-without requiring a further approval round — the standard platform data-retention implications
-(client IP/geo capture, 3-day Free-plan retention) remain honestly documented above and are
-unchanged by the redaction finding, which concerns only the two path-embedded-token routes. See
-`OWNER_ACTION_QUEUE.md` item 3 (closed).
+**Production enablement is complete.** The evidence supported it clearly at approval time (100%
+sampling under 2% of the daily allowance even at observed peak, no sensitive application-level
+logging, Step 3A/3B's decisive empirical redaction finding), the owner's 2026-09-11 explicit
+authorization (Section 6) covered the deployment without a further approval round, and Step 4
+above independently confirms the deployed result live matches what was approved — including
+re-proving the redaction guarantee against Production itself, not just inferring it from Preview.
+See `OWNER_ACTION_QUEUE.md` item 3 (closed).
 
 ```
-Production Workers Logs status: APPROVED — deployment pending (config: identical to Preview's
-                                  Step 1 config, { enabled: true, head_sampling_rate: 1 })
+Production Workers Logs status: ENABLED, DEPLOYED, and INDEPENDENTLY VERIFIED (2026-09-14)
+                                  config: { enabled: true, head_sampling_rate: 1 }
+                                  deployment: 689a7055-8be7-4abf-8d6d-a49d40f68681
+                                  version:    886fb70e-d760-4f3b-87b1-4a71820074ff
 ```

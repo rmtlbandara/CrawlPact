@@ -9,9 +9,13 @@ corroboration; updated again 2026-09-11 with the owner's explicit closure author
 (recovery-code remediation confirmed, `workers.dev`/BIC/WebAuthn decisions frozen, remaining
 owner-observed gates accepted as closed) and this session's independent resolution of the
 observability privacy question (Cloudflare's automatic path/query redaction). Verdict upgraded to
-`PASS — PHASE 4 READY`. This report supersedes the **status** claims of every earlier Phase 1–3
-document where they conflict — it does not rewrite or remove any historical evidence. Full
-evidence for the 2026-09-11 final pass: `docs/baseline/2026-09-11-app-subdomain-final-pre-phase4/`.
+`PASS — PHASE 4 READY`; updated again 2026-09-14 to record that the Production observability
+deployment (Section R), previously the one remaining mechanical follow-through under that verdict,
+has since been deployed (PR #178, `f1d817e`) and independently verified live via the Cloudflare API
+and direct HTTP checks — no open items remain under this verdict. This report supersedes the
+**status** claims of every earlier Phase 1–3 document where they conflict — it does not rewrite or
+remove any historical evidence. Full evidence for the 2026-09-11 final pass:
+`docs/baseline/2026-09-11-app-subdomain-final-pre-phase4/`.
 
 ## Recovery-code exposure — RESOLVED
 
@@ -110,15 +114,15 @@ all passed. Full detail in the conversation record; not duplicated here.
 
 ## F. Cloudflare hostname matrix
 
-| Hostname                             | Classification                | State                                                                                                                                                                                   |
-| ------------------------------------ | ----------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `crawlpact.com`                      | PUBLIC                        | Live, canonical, unchanged                                                                                                                                                              |
-| `app.crawlpact.com`                  | APP                           | Live, Custom Domain attached to `crawlpact-web`, Paddle-approved                                                                                                                        |
-| `www.crawlpact.com`                  | REDIRECT_ONLY                 | 301 → apex, unchanged                                                                                                                                                                   |
-| `preview.crawlpact.com`              | PREVIEW                       | Live, Custom Domain attached to `crawlpact-web-preview`                                                                                                                                 |
-| `e2e-fixture.crawlpact.com`          | Test infrastructure only      | Unrelated to production app, unchanged                                                                                                                                                  |
-| `<account>.workers.dev` (production) | **unclassified — still open** | Still enabled; disabling it was explicitly held for owner sign-off, not included in PR #173. Redundant exposure, not a broken security boundary, but should be resolved before Phase 4. |
-| `app.preview.crawlpact.com`          | Candidate only, not attached  | Corrected to a WebAuthn-valid hostname this pass; no DNS/Custom Domain exists                                                                                                           |
+| Hostname                             | Classification                 | State                                                                                                                                                                                                                                                                                                                         |
+| ------------------------------------ | ------------------------------ | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `crawlpact.com`                      | PUBLIC                         | Live, canonical, unchanged                                                                                                                                                                                                                                                                                                    |
+| `app.crawlpact.com`                  | APP                            | Live, Custom Domain attached to `crawlpact-web`, Paddle-approved                                                                                                                                                                                                                                                              |
+| `www.crawlpact.com`                  | REDIRECT_ONLY                  | 301 → apex, unchanged                                                                                                                                                                                                                                                                                                         |
+| `preview.crawlpact.com`              | PREVIEW                        | Live, Custom Domain attached to `crawlpact-web-preview`                                                                                                                                                                                                                                                                       |
+| `e2e-fixture.crawlpact.com`          | Test infrastructure only       | Unrelated to production app, unchanged                                                                                                                                                                                                                                                                                        |
+| `<account>.workers.dev` (production) | **Classification B — decided** | Still enabled by explicit owner decision (2026-09-11 authorization, Section 2.4): KEEP TEMPORARILY during the Phase-4 rollback window. Redundant exposure, not a broken security boundary; not a Phase 4 blocker. Confirmed still fail-closed on sensitive routes as of the 2026-09-14 Production observability verification. |
+| `app.preview.crawlpact.com`          | Candidate only, not attached   | Corrected to a WebAuthn-valid hostname this pass; no DNS/Custom Domain exists                                                                                                                                                                                                                                                 |
 
 ## G. Paddle Approved evidence
 
@@ -346,9 +350,42 @@ Consequence: the already-approved, already-deployed-to-Preview Step 1 configurat
 (`observability: { enabled: true, head_sampling_rate: 1 }`, no other overrides) already satisfies
 the hard invariant, with full per-request monitoring value intact. No `invocation_logs` change,
 no new sanitized logging code, and no further architecture decision were needed. This closes
-`OWNER_ACTION_QUEUE.md` item 3. Deploying the identical config to Production remains to be done
-(not yet applied as of this document) but is no longer blocked on an open design question —
-Section 6 of the owner's authorization already covers this deployment.
+`OWNER_ACTION_QUEUE.md` item 3.
+
+**Deployed to Production and independently verified live, 2026-09-14 (CLOUDFLARE API / TELEMETRY
+
+- LIVE HTTP evidence)**. PR #178 added the identical config at the top level of `wrangler.jsonc`
+  (merged `f1d817e`); `deploy-production.yml` run `34798095329` deployed it
+  (deployment `689a7055-8be7-4abf-8d6d-a49d40f68681`, Worker version `886fb70e-...`, version number
+  85). Confirmed live via the Cloudflare API — not assumed from the deploy log alone — that Production's
+  Worker settings carry exactly `{ enabled: true, head_sampling_rate: 1, traces.enabled: false }`,
+  matching Preview's config exactly. Independent post-deploy verification (not just "the workflow
+  said success"):
+
+* **CLOUDFLARE API / TELEMETRY**: Workers Logs actively receiving Production events after
+  deployment, correctly attributed to the deployed version (`886fb70e-...`); a synthetic
+  (non-guessable, no real token) 404 request was visible within seconds; zero `5xx` responses and
+  zero non-`info`-level events (0 exceptions) in the post-deploy window.
+* **CLOUDFLARE API / TELEMETRY, redaction re-confirmed on Production itself** (not only Preview):
+  fresh synthetic 256-bit tokens against the real `/feed/[token].xml` and `/shared/[token]` routes,
+  and a synthetic `?continuation=` query value, all showed `REDACTED` in captured Production
+  telemetry — no real bearer token was ever used for this check.
+* **LIVE HTTP**: all four canonical URLs (`crawlpact.com/`, `crawlpact.com/pricing/`,
+  `app.crawlpact.com/`, `app.crawlpact.com/sign-in`) return 200 with correct indexability headers
+  (apex indexable, app host `noindex`); apex sitemap contains zero app-host URLs; unauthenticated
+  `/app` and `/admin` on the app host still 302 to sign-in; the `workers.dev` fallback still 404s
+  the same sensitive routes (fail-closed, unchanged); the BIC exception rule
+  (`689db52e511b4346a1b142aefc9c11ce`) and `WEBAUTHN_RP_ID` (`crawlpact.com`) are both confirmed
+  live and unchanged.
+
+One intermediate telemetry query during this verification returned standard Cloudflare
+per-request platform metadata (client IP, TLS fingerprint, coarse geolocation) — this is exactly
+the already-documented, expected default-capture behavior described earlier in this section, not
+an application-level secret or an unexpected leak; that raw payload was not reproduced in any
+report or committed anywhere.
+
+**Production observability status: DEPLOYED AND VERIFIED. No further action pending on this
+item.**
 
 ## S. Quality/CI
 
@@ -467,7 +504,10 @@ repeat them independently; `workers.dev` is decided (keep temporarily through th
 window); Google Console review is desirable but not a blocker; BIC and the WebAuthn RP ID stay
 exactly as they are. Combined with the recovery-code closure and the observability resolution,
 every genuinely blocking item this report tracked is now closed, and the verdict is upgraded to
-**`PASS — PHASE 4 READY`** (Section A). Remaining pre-cutover work (dependency audit, Lighthouse
-reconciliation, final PR merges, the Production observability deploy itself) is tracked as
-in-progress follow-through under that verdict, not as a reason to withhold it — per the owner's
-explicit instruction not to return merely to ask for another approval on this sequence.
+**`PASS — PHASE 4 READY`** (Section A). The remaining pre-cutover follow-through named at that
+time — dependency audit, Lighthouse reconciliation, final PR merges, and the Production
+observability deploy itself — is now complete: the dependency audit found 0 critical issues, the
+Lighthouse reconciliation resolved the "Mobile 79" concern and root-caused the "Best Practices 92"
+score (Section Q), PRs #175/#176/#178 are merged, and the Production observability deployment
+(PR #178, `f1d817e`) is deployed and independently verified live — see Section R. Nothing tracked
+under the `PASS — PHASE 4 READY` verdict remains outstanding as of 2026-09-14.
