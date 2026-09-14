@@ -44,9 +44,9 @@ be exactly the "claim flawless merely because tests pass" the directive itself p
 
 ## What this pass explicitly did NOT do, and why
 
-- **Did not create a branch push / PR / Preview deployment yet.** The code above exists only in
-  this local working tree at the time this document was written; see the accompanying session
-  report for whether it has since been pushed.
+- **Superseded**: this pass has since pushed the branch, opened PR #180, gotten CI green, and
+  attempted a Preview deployment — see "Preview deployment attempt found a genuine, pre-existing
+  infrastructure gap" below for what happened and why Preview validation remains blocked.
 - **Did not run the full `pnpm test:e2e` / `pnpm test:integration` suites to a clean local
   result.** Both suites hit this migration's long-documented, pre-existing local Miniflare/
   WebAuthn-hydration resource-contention flakiness (confirmed via two direct attempts at
@@ -163,23 +163,58 @@ touching agency branding or any file this fix changed. Final result:
 smoke` both pass — 152/152 E2E + accessibility tests on the clean run. `gh pr view 180` reports
 `mergeStateStatus: CLEAN`, `mergeable: MERGEABLE`. **Not merged.**
 
+## Preview deployment attempt found a genuine, pre-existing infrastructure gap
+
+Deployed PR #180's exact final head (`efbadb8`) to Preview (`deploy-preview.yml`,
+`commit_sha=efbadb8418288a2b7be434ce61a135f6cc7b41ec`). The deploy itself succeeded, but the
+workflow's own pre-existing smoke test failed: `GET https://preview.crawlpact.com/sign-in`
+returned `307` instead of `200`, because Stage A's apex→app redirect (working exactly as
+designed and tested) sent it to `https://app.preview.crawlpact.com/sign-in` — **a hostname that
+has never been attached as a real Cloudflare Custom Domain**. This is not a code defect: it is a
+disclosed, pre-existing gap from Phase 1 of this migration (recorded in `STARTING_STATE.md`
+before this deploy attempt, re-confirmed by `ORIGIN_AND_ROUTE_OWNERSHIP_MATRIX.md`'s own
+Preview-hostname note) that Phase 4 is the first piece of work to actually depend on
+behaviorally — every prior phase configured `PUBLIC_APP_URL` for Preview but never exercised a
+code path that would redirect real Preview traffic there.
+
+**Immediate action taken**: restored Preview to the last known-good deployment
+(`ce953a4`, the pre-Phase-4 `main` tip — confirmed via `gh run list` as the most recent
+`success`ful `deploy-preview.yml` run) via the same workflow. The first restoration attempt's own
+CI smoke-test run also showed the stale `307`, traced to ordinary Cloudflare edge-propagation lag
+(the smoke test ran ~5 seconds after `version.created_on`) rather than a second real failure —
+confirmed by independently curling `https://preview.crawlpact.com/sign-in` directly moments
+later (three separate checks, all `200`, with the expected `"Sign in with passkey"`/`"Create
+account"` content present, and `/app` correctly `302`-ing to sign-in). **Preview is currently
+healthy, running the pre-Phase-4 code.**
+
+**This blocks genuine Preview validation of Stage A's redirect behavior specifically** — not the
+unit-level proof (`legacy-redirect.test.ts`, `worker.host-boundary.test.ts`, 60+ tests, all
+passing), which remains valid and unaffected, but the live, real-HTTP, two-host proof this phase's
+own directive calls for. Per this session's standing principle (never bypass or weaken a
+blocking harness/prerequisite to force a result through), the fix is **not** to special-case or
+disable the redirect for Preview — that would defeat the point of validating it at all. Closing
+this gap requires attaching `app.preview.crawlpact.com` as a real Cloudflare Custom Domain, a
+real infrastructure action with its own DNS/certificate implications that this session does not
+take unilaterally without asking, matching how every other Cloudflare configuration change this
+migration has made was owner-confirmed first.
+
 ## Hard gates: current status
 
-| Gate                                                              | Status                                                                                                                       |
-| ----------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------- |
-| Route ownership contract, zero UNRESOLVED                         | ✅ (CI-enforced test)                                                                                                        |
-| Symmetric wrong-host enforcement (page + API, both directions)    | ✅ (48 new unit tests, all green locally)                                                                                    |
-| No `/app` de-prefixing                                            | ✅ (explicit test + doc supersession note)                                                                                   |
-| First-party entry points migrated                                 | ✅ (5/5 found, all migrated)                                                                                                 |
-| Redirect: one hop, no loop, method-safe                           | ✅ (unit-tested directly)                                                                                                    |
-| Local quality gate (format/lint/typecheck/unit/security/db/build) | ✅ all green                                                                                                                 |
-| Full E2E/integration suite clean                                  | ✅ CI green (151/151 E2E+a11y), first-attempt-clean on final commit; local run still blocked by known pre-existing flakiness |
-| Preview deployment + validation                                   | ⏳ not started                                                                                                               |
-| Dedicated Phase 4 PR, CI green on exact head                      | ✅ PR #180, CI green, `CLEAN`/`MERGEABLE`, not merged                                                                        |
-| Production Stage A deployment                                     | ⏳ not started — requires fresh, explicit, in-the-moment owner permission                                                    |
-| Production observability health gate                              | ⏳ not started                                                                                                               |
-| Stage B permanentization (307→308)                                | ⏳ not started — gated on the above                                                                                          |
-| Stage C WebAuthn finalization                                     | ⏳ deferred — separate, later stage by design                                                                                |
+| Gate                                                              | Status                                                                                                                                           |
+| ----------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------ |
+| Route ownership contract, zero UNRESOLVED                         | ✅ (CI-enforced test)                                                                                                                            |
+| Symmetric wrong-host enforcement (page + API, both directions)    | ✅ (48 new unit tests, all green locally)                                                                                                        |
+| No `/app` de-prefixing                                            | ✅ (explicit test + doc supersession note)                                                                                                       |
+| First-party entry points migrated                                 | ✅ (5/5 found, all migrated)                                                                                                                     |
+| Redirect: one hop, no loop, method-safe                           | ✅ (unit-tested directly)                                                                                                                        |
+| Local quality gate (format/lint/typecheck/unit/security/db/build) | ✅ all green                                                                                                                                     |
+| Full E2E/integration suite clean                                  | ✅ CI green (151/151 E2E+a11y), first-attempt-clean on final commit; local run still blocked by known pre-existing flakiness                     |
+| Preview deployment + validation                                   | 🛑 BLOCKED — `app.preview.crawlpact.com` has no attached Custom Domain (real infra gap, not a code defect); Preview restored to known-good state |
+| Dedicated Phase 4 PR, CI green on exact head                      | ✅ PR #180, CI green, `CLEAN`/`MERGEABLE`, not merged                                                                                            |
+| Production Stage A deployment                                     | ⏳ not started — requires fresh, explicit, in-the-moment owner permission                                                                        |
+| Production observability health gate                              | ⏳ not started                                                                                                                                   |
+| Stage B permanentization (307→308)                                | ⏳ not started — gated on the above                                                                                                              |
+| Stage C WebAuthn finalization                                     | ⏳ deferred — separate, later stage by design                                                                                                    |
 
 ## Final verdict (restated)
 
