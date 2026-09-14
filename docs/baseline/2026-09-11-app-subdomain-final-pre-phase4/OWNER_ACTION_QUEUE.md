@@ -1,11 +1,12 @@
 # Owner Action Queue — Final Pre-Phase-4 Pass
 
-Status as of 2026-09-11 — **all four items below are now CLOSED**, per the owner's explicit
-2026-09-11 "Complete Pre-Phase-4 Closure and Proceed Through Phase 4" authorization (item 1 by the
-owner's own account action; items 2 and 4 by explicit owner decision; item 3 by this session's
-empirical resolution of the previously-open privacy question, deployment to Production still
-pending as a mechanical follow-through, not an open decision). Historical detail below is kept
-as-is for the record — items are marked closed, not deleted or rewritten.
+Status as of 2026-09-14 (superseded from 2026-09-11) — **all four items below are fully CLOSED,
+with zero remaining follow-through of any kind**, per the owner's explicit 2026-09-11 "Complete
+Pre-Phase-4 Closure and Proceed Through Phase 4" authorization (item 1 by the owner's own account
+action; items 2 and 4 by explicit owner decision; item 3 by this session's empirical resolution of
+the previously-open privacy question, followed by the actual Production deployment and independent
+live verification on 2026-09-14). Historical detail below is kept as-is for the record — items are
+marked closed, not deleted or rewritten.
 
 ## 1. CLOSED — Regenerate recovery codes for the test account(s) used during manual validation
 
@@ -87,9 +88,17 @@ verbatim; every synthetic token-shaped value, across the real `/feed/*`, `/share
 `?continuation=` code paths, redacted to `REDACTED`). Full experiment:
 `OBSERVABILITY_READINESS.md`'s "Step 3A/3B" section. The already-approved config (`{ enabled: true,
 head_sampling_rate: 1 }`, identical to Preview's) already satisfies the hard invariant — no
-further design decision is needed. The owner's explicit authorization (Section 6) covers deploying
-this to Production without a further approval round; deployment itself is tracked as in-progress
-mechanical follow-through, not an open item on this queue.
+further design decision is needed.
+
+**Fully closed 2026-09-14 (Step 4 — deployed and independently verified)**: PR #178 deployed the
+identical config to the top level of `wrangler.jsonc` (merged `f1d817e`); `deploy-production.yml`
+run `34798095329` deployed it live (deployment `689a7055-8be7-4abf-8d6d-a49d40f68681`, Worker
+version `886fb70e-...`). Independently re-verified via the Cloudflare API and live HTTP checks —
+config matches exactly, events are arriving, zero 5xx/exceptions post-deploy, and the redaction
+guarantee was re-proven against Production itself (not just inferred from Preview) using fresh
+synthetic tokens on the real `/feed/*`, `/shared/*`, and `?continuation=` routes. Full evidence:
+`OBSERVABILITY_READINESS.md`'s "Step 4" section. **No further action pending — this item is
+completely closed, not merely decided.**
 
 ## 4. CLOSED (NON-BLOCKING) — Confirm Google Authorized JavaScript Origins directly
 

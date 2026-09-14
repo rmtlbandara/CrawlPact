@@ -471,12 +471,22 @@ Status vocabulary: `verified-live` · `verified-disabled` · `verified-partial` 
   a public unauthenticated app-shell landing page, a corrected `robots.txt` policy, product-
   oriented landing copy, and one narrowly-scoped Cloudflare Configuration Rule (Browser Integrity
   Check disabled only for `app.crawlpact.com`'s `/`, `/sign-in`, `/robots.txt`) — all deployed and
-  independently reverified in production; Paddle resubmission itself remains an owner action, not
-  yet confirmed approved as of this update. Google's Authorized JavaScript Origin and GSC/GA4/CrUX
-  state could not be verified this session (no connected tooling). See
+  independently reverified in production. **Superseded 2026-09-10 through 2026-09-14**: Paddle
+  resubmission was approved (independently confirmed via the Paddle API, not just the owner's
+  dashboard screenshot — `app.crawlpact.com`'s checkout-domain status is `approved`). Google's
+  Authorized JavaScript Origin and GSC/GA4/CrUX state remain unverifiable by any tooling connected
+  to this session, but are accepted at the owner-observed validation tier per the owner's
+  2026-09-11 explicit closure authorization and are not treated as blocking. Cloudflare Workers
+  Logs observability is enabled and independently verified live on both Preview and Production
+  (2026-09-11 and 2026-09-14 respectively), with a proven platform-level redaction guarantee for
+  the two path-embedded bearer-token routes. The overall final pre-Phase-4 readiness verdict is
+  **`PASS — PHASE 4 READY`** — see
+  `docs/baseline/2026-09-10-app-subdomain-phases1-3-closure/PHASE_4_READINESS_REPORT.md` for the
+  authoritative record. **Phase 4 cutover itself has still NOT started** — no permanent root→app
+  redirect, CTA change, or traffic-migration switch has been enabled. See
   `docs/baseline/2026-09-09-app-subdomain-phase1/`, `-phase2/`, `-phase3/` (including
-  `PADDLE_REACHABILITY_REMEDIATION_REPORT.md`), and `docs/baseline/2026-09-10-app-subdomain-phases1-3-closure/`
-  for the full evidence sets.
+  `PADDLE_REACHABILITY_REMEDIATION_REPORT.md`), `docs/baseline/2026-09-10-app-subdomain-phases1-3-closure/`,
+  and `docs/baseline/2026-09-11-app-subdomain-final-pre-phase4/` for the full evidence sets.
 
 ## Version status
 
