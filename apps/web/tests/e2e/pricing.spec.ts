@@ -109,10 +109,25 @@ test.describe("Pricing page comparison", () => {
     await expect(coreRegion.getByRole("columnheader", { name: /Solo/ })).toContainText("$9/month");
   });
 
-  test("an unauthenticated visitor's Pro CTA preserves plan and interval", async ({ page }) => {
+  test("an unauthenticated visitor's Pro CTA preserves plan and interval, pointing directly at the app host", async ({
+    page,
+  }) => {
+    // Phase 4 (controlled production cutover): this CTA is built client-side with an absolute
+    // app-origin URL (PricingPlans.tsx's `appOrigin` prop), not a relative same-origin path — see
+    // docs/baseline/2026-09-14-app-subdomain-phase4/ENTRY_POINT_INVENTORY.md's testing-strategy
+    // note for why this asserts against the page's own origin rather than a hardcoded hostname:
+    // PUBLIC_APP_URL equals PUBLIC_SITE_URL in this local/CI E2E environment (a legitimate
+    // single-origin dev setup), so the app origin *is* the page's own origin here; proving the
+    // real cross-origin hostname is deferred to Production live verification, where Preview's
+    // topology can't provide it honestly (app.preview.crawlpact.com is not an attached Custom
+    // Domain).
     await page.goto("/pricing");
     const proLink = page.locator("#pro").getByRole("link", { name: "Choose Pro" });
-    await expect(proLink).toHaveAttribute("href", "/sign-in?plan=pro&interval=year");
+    const expectedOrigin = new URL(page.url()).origin;
+    await expect(proLink).toHaveAttribute(
+      "href",
+      `${expectedOrigin}/sign-in?plan=pro&interval=year`,
+    );
   });
 
   test("Free plan and the final CTA both point to the free audit", async ({ page }) => {
