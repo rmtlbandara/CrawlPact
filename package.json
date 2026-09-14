@@ -71,7 +71,7 @@
     "deploy:production": "bash scripts/deploy.sh production",
     "deploy:verify-bindings": "node --experimental-strip-types scripts/verify-bindings.ts",
     "smoke:preview": "node --experimental-strip-types scripts/smoke-test.ts preview https://preview.crawlpact.com https://app.preview.crawlpact.com",
-    "smoke:production": "node --experimental-strip-types scripts/smoke-test.ts production https://crawlpact.com",
+    "smoke:production": "node --experimental-strip-types scripts/smoke-test.ts production https://crawlpact.com https://app.crawlpact.com",
     "paddle:catalog:verify": "node --experimental-strip-types scripts/paddle-catalog-verify.ts",
     "performance:scan": "vitest run --project integration apps/web/tests/integration/persist-scan-benchmark.integration.test.ts"
   },
