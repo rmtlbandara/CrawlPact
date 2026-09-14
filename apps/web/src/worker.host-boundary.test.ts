@@ -483,6 +483,40 @@ describe("fetchWithPreviewSearchIsolation — Phase 2 host boundary", () => {
       expect(handleMock).not.toHaveBeenCalled();
     });
 
+    /**
+     * Regression coverage for the specific real bug an independent review
+     * found in PR #180: the PUBLIC_ONLY agency-logo asset endpoint was
+     * being referenced with a *relative* URL from APP_ONLY UI
+     * (`AgencyBrandingSettings.tsx`, `ShareReportDialog.tsx`), which this
+     * exact host-boundary rejection would 404 once the apex and app hosts
+     * are genuinely distinct. The endpoint's ownership itself is correct
+     * and unchanged (PUBLIC_ONLY, not made SHARED) — the fix was on the
+     * display side (`toLogoDisplayUrl`, `agency-logo.ts`), not here. See
+     * docs/baseline/2026-09-14-app-subdomain-phase4/PHASE_4_STAGE_A_STATUS.md.
+     */
+    it("rejects (404) the PUBLIC_ONLY agency-logo asset endpoint reached on the app host", async () => {
+      const request = new Request(`${PUBLIC_APP_URL}/api/agency-branding/logo/user-1/abc123.png`);
+      const response = await fetchWithPreviewSearchIsolation(request, env, ctx);
+      expect(response.status).toBe(404);
+      expect(handleMock).not.toHaveBeenCalled();
+    });
+
+    it("still serves the PUBLIC_ONLY agency-logo asset endpoint on the apex (unaffected)", async () => {
+      const request = new Request(`${PUBLIC_SITE_URL}/api/agency-branding/logo/user-1/abc123.png`);
+      const response = await fetchWithPreviewSearchIsolation(request, env, ctx);
+      expect(response.status).toBe(200);
+      expect(handleMock).toHaveBeenCalled();
+    });
+
+    it("still allows the APP_ONLY agency-logo upload endpoint on the app host (unaffected — same directory, different ownership)", async () => {
+      const request = new Request(`${PUBLIC_APP_URL}/api/agency-branding/logo`, {
+        method: "POST",
+      });
+      const response = await fetchWithPreviewSearchIsolation(request, env, ctx);
+      expect(response.status).toBe(200);
+      expect(handleMock).toHaveBeenCalled();
+    });
+
     it("rejects (404) the Paddle webhook reached on the app host, even with the correct method", async () => {
       const request = new Request(`${PUBLIC_APP_URL}/api/billing/webhook`, { method: "POST" });
       const response = await fetchWithPreviewSearchIsolation(request, env, ctx);

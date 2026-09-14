@@ -12,7 +12,7 @@ import { trackEvent } from "../../lib/analytics";
 import { getPageSession } from "../../lib/auth/page-session";
 import { getPlan } from "../../lib/plan";
 import { findOwnedDomainByOrigin } from "../../lib/domains";
-import { requireAppOrigin } from "../../lib/origin";
+import { getPublicOrigin, requireAppOrigin } from "../../lib/origin";
 
 const { auditId } = Astro.params;
 
@@ -75,6 +75,7 @@ const conversionCta = reportIsSaveable
                 client:load
                 auditId={report.auditId}
                 agencyBrandingAllowed={agencyBrandingAllowed}
+                publicOrigin={getPublicOrigin()}
               />
             </div>
           )}

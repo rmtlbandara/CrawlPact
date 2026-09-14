@@ -6,6 +6,7 @@ import { createDb } from "@crawlpact/database";
 import { getEnv } from "../../lib/env";
 import { getPageSession } from "../../lib/auth/page-session";
 import { getPlan } from "../../lib/plan";
+import { getPublicOrigin } from "../../lib/origin";
 
 const db = createDb(getEnv().DB);
 const result = await getPageSession(db, Astro.request);
@@ -41,7 +42,7 @@ const plan = await getPlan(db, user.planId);
       </div>
     ) : (
       <div class="mt-6">
-        <AgencyBrandingSettings client:load />
+        <AgencyBrandingSettings client:load publicOrigin={getPublicOrigin()} />
       </div>
     )
   }

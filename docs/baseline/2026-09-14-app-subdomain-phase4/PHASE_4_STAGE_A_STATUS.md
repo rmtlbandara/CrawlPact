@@ -68,6 +68,71 @@ be exactly the "claim flawless merely because tests pass" the directive itself p
 - **Did not deploy anything to Production, or flip Stage A's 307 to Stage B's 308.** Both require
   a real, observed Production health-gate window this pass cannot fabricate.
 
+## Second real bug: independent review found a cross-origin asset regression CI never caught
+
+An independent review of PR #180 (after CI was fully green) found a real defect neither this
+session's own tests nor CI's E2E run exercised at all: **zero E2E coverage of agency branding
+exists in this repository**, so the bug below was invisible to every automated check that had
+run so far.
+
+**Root cause**: `GET /api/agency-branding/logo/[...key]` is correctly classified `PUBLIC_ONLY`
+(a shared/public report viewer must load the logo with no authentication) — this classification
+is deliberate and was **not** weakened. But two `APP_ONLY` UI components —
+`AgencyBrandingSettings.tsx` (`/app/agency-branding`) and `ShareReportDialog.tsx`
+(`/app/domains/:domainId`, and conditionally `/audit/:auditId` for a legacy apex-scoped session)
+— rendered the stored `logoUrl`/`logoPath` directly as `<img src={logoUrl}>`, a **relative** path.
+Once the apex and app hosts are genuinely distinct origins, that relative URL resolves against
+`app.crawlpact.com`, and this pass's own new wrong-host `/api/*` rejection (1b) correctly 404s a
+`PUBLIC_ONLY` API reached on the app host — meaning the logo image would break in exactly the
+environment (real cross-origin Production/Preview) this pass's own local/CI single-origin
+regression fix (see below) could never exercise. Confirmed genuinely reachable in Production/
+Preview terms, not merely theoretical: `AgencyBrandingSettings` is APP_ONLY-only (always broken
+post-cutover), `ShareReportDialog` is reachable both from an APP_ONLY page (always broken
+post-cutover) and, narrowly, from the PUBLIC `/audit/:auditId` page when a pre-cutover
+apex-scoped session still exists (session-dependent, transitional).
+
+**Fix — display only, storage/API contract unchanged**: added `toLogoDisplayUrl(publicOrigin,
+logoUrl)` (`agency-logo.ts`) — a pure `${publicOrigin}${logoUrl}` transform used only at render
+time for `<img src>`. `publicOrigin` is threaded from each server-rendered parent
+(`getPublicOrigin()`) into the client island as a required prop — never guessed client-side.
+Nothing about the stored/API `logoUrl` value, its validation (`logoPathBelongsToUser`,
+`objectKeyFromLogoUrl`, `AGENCY_LOGO_PATH_PATTERN`), or the upload/profile POST/PUT payloads
+changed — those remain the same relative path, same-origin-to-app, exactly as before. No route
+ownership was weakened: the logo GET endpoint is still `PUBLIC_ONLY`, still rejected on the app
+host, still served on the apex — `classifyApiOwnership` and its exhaustive real-file-tree test are
+unchanged from PR #180's original commit.
+
+**Repository-wide sweep performed** (not limited to agency branding, per the review's own
+instruction): grepped every `PUBLIC_ONLY`/`SERVER_TO_SERVER_PUBLIC` API path
+(`/api/audit`, `/api/audit/:id`, `/api/audit/:id/report`, `/api/audit/:id/continuation`,
+`/api/agency-branding/logo/:key`, `/api/billing/webhook`) against every APP_ONLY UI file
+(`components/app/**`, `components/admin/**`, `pages/app/**`, `pages/admin/**`) for `fetch`/`<img
+src>`/background-image usage, and the inverse (every `APP_ONLY` API path against every PUBLIC
+surface component/page). Result: the two agency-logo `<img>` cases above were the only real hits.
+The two `/api/audit/*` references found in APP_ONLY components (`ShareReportDialog.tsx`'s
+`/api/audit/:auditId/share`, `AuditConversionHandoff.tsx`'s `/api/audit/continuation/:id`) are
+both correctly `APP_ONLY` themselves — same-origin-to-app, not a cross-origin issue.
+
+**One further finding, documented rather than "fixed"**: `ShareReportDialog` can render on the
+public `/audit/:auditId` page for a visitor with a still-live, pre-cutover, apex-scoped session
+(host-only cookies mean this can only be a legacy session, never a newly-created one). In that
+narrow case, its "Create link" action (`POST /api/audit/:auditId/share`, itself correctly
+`APP_ONLY`) and its branding-profile prefill (`GET /api/agency-branding/profile`, also
+`APP_ONLY`) will now correctly 404 when that fetch is made from the apex — because this pass's
+own 1b enforcement is doing exactly its job: an `APP_ONLY`, credentialed, same-origin-only
+endpoint must never respond to a same-origin-_apex_ request just because a legacy apex-scoped
+session cookie happens to still be present. There is no safe fix for this beyond what Phase 4
+already prescribes: same-origin-only APIs, no CORS, no credentialed cross-origin fetch (ADR-0010).
+The correct resolution is the same one-time reauthentication the whole migration already accepts
+— a user in this state gets a clear failure on this one action rather than a silent success, and
+regains full functionality the next time they sign in (now necessarily on the app host). Recorded
+here as an accepted, narrow, transitional limitation, not silently dropped.
+
+**Regression tests added**: `agency-logo.test.ts` (`toLogoDisplayUrl` — 3 tests, including that
+the stored path itself is untouched), `worker.host-boundary.test.ts` (3 new tests: the logo GET
+endpoint still 404s on the app host, still 200s on the apex, and the upload POST endpoint at the
+same path prefix still works on the app host — proving no route-ownership weakening).
+
 ## Real bug found and fixed by CI (not by local testing)
 
 The first CI run on PR #180 failed with `net::ERR_TOO_MANY_REDIRECTS` during E2E setup, not the

@@ -88,3 +88,30 @@ export function objectKeyFromLogoUrl(logoUrl: string): string | null {
   if (!AGENCY_LOGO_PATH_PATTERN.test(logoUrl)) return null;
   return logoUrl.slice(LOGO_SERVING_PREFIX.length);
 }
+
+/**
+ * Phase 4 (controlled production cutover) fix: the *stored/API* `logoUrl`
+ * contract is deliberately unchanged — still the relative
+ * `/api/agency-branding/logo/<key>` path built by `buildLogoServingPath`,
+ * still what `logoPathBelongsToUser`/`objectKeyFromLogoUrl` validate against,
+ * still what's persisted to D1 and sent back to the upload/profile APIs.
+ *
+ * But `GET /api/agency-branding/logo/[...key]` is (correctly, deliberately)
+ * classified `PUBLIC_ONLY` (`route-ownership.ts`) — a shared/public report
+ * viewer must be able to load the logo with no authentication. Once the
+ * apex and app hosts are genuinely distinct origins, `worker.ts`'s new
+ * wrong-host `/api/*` rejection means a *relative* `<img src>` on an
+ * `APP_ONLY` page (which resolves against `app.crawlpact.com`) 404s
+ * outright — found by an independent review after PR #180's own CI (which
+ * runs local/CI's single-origin config, where this check is a no-op) missed
+ * it entirely. `AgencyBrandingSettings.tsx` and `ShareReportDialog.tsx` both
+ * call this at render time to convert the stored relative path into an
+ * absolute, always-loadable PUBLIC-origin URL — `publicOrigin` must come
+ * from the server-rendered parent (`getPublicOrigin()`), never guessed
+ * client-side (Phase 4 directive: "keep client code environment-agnostic").
+ * This is a pure display-URL transform: it never touches what's stored,
+ * uploaded, or sent back to the server.
+ */
+export function toLogoDisplayUrl(publicOrigin: string, logoUrl: string): string {
+  return `${publicOrigin}${logoUrl}`;
+}
