@@ -57,8 +57,8 @@ describe("deploy-production.yml — smoke step and safety guards unchanged", () 
     jobs: { deploy: { steps: Array<{ name?: string; run?: string }> } };
   };
 
-  it("still runs pnpm run smoke:production as its final live-verification step", () => {
-    const smokeStep = workflow.jobs.deploy.steps.find((s) => s.run === "pnpm run smoke:production");
+  it("still runs pnpm run smoke:production as its final live-verification step (now through the bounded propagation-retry wrapper — see production-smoke-propagation-retry.test.ts)", () => {
+    const smokeStep = workflow.jobs.deploy.steps.find((s) => s.run?.includes("smoke:production"));
     expect(smokeStep).toBeDefined();
   });
 
