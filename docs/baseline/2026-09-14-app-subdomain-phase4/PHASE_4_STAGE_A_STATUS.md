@@ -152,12 +152,16 @@ exists to catch.
 
 ## CI result (PR #180)
 
-Green on the third attempt (two commits fixed real, CI-caught issues — see above and
-`ENTRY_POINT_INVENTORY.md`): `Format, lint, typecheck, unit + integration tests, build` and
-`Chromium E2E + accessibility smoke` both pass, first-attempt-clean, on the final commit
-(`6b14503`) — 151/151 E2E + accessibility tests, including real WebAuthn passkey registration/
-login, pricing, audit-conversion, checkout-continuity, and admin flows exercised against this
-diff. `gh pr view 180` reports `mergeStateStatus: CLEAN`, `mergeable: MERGEABLE`. **Not merged.**
+Final head: `777af0cc1ede81f9e48bc4fcfff6f4c7f2164e4c`. Green after the agency-branding
+cross-origin-asset fix (see below) plus three E2E reruns on this exact commit — each failure had
+a distinct, already-documented-elsewhere-in-this-migration flake signature (a WebAuthn
+setup-fixture `page.waitForResponse` timeout; the "Worker code hung" 500 signature on an
+unrelated `notifications-monitoring-reliability.spec.ts` spec; a tight-explicit-timeout real
+audit/registration flow in `audit-conversion.spec.ts` under third-run CI-runner load) — none
+touching agency branding or any file this fix changed. Final result:
+`Format, lint, typecheck, unit + integration tests, build` and `Chromium E2E + accessibility
+smoke` both pass — 152/152 E2E + accessibility tests on the clean run. `gh pr view 180` reports
+`mergeStateStatus: CLEAN`, `mergeable: MERGEABLE`. **Not merged.**
 
 ## Hard gates: current status
 
