@@ -9,12 +9,16 @@ import { toAppUrl } from "./origin";
  * module's job is solely the redirect *target*, not the ownership decision.
  *
  * Stage A of the two-stage cutover (`docs/baseline/2026-09-14-app-subdomain-phase4/`)
- * uses a 307 Temporary Redirect for these — deliberately reversible and
- * uncacheable-as-permanent while Production health is being proven. Stage B
- * flips `LEGACY_REDIRECT_STATUS` to 308 once that health gate passes; no
- * other code changes. See `REDIRECT_AND_RETIREMENT_CONTRACT.md`.
+ * used a 307 Temporary Redirect for these — deliberately reversible and
+ * uncacheable-as-permanent while Production health was being proven. Stage B
+ * (Master Finalization Directive, Phase 4B, 2026-09-14) flips this to a 308
+ * Permanent Redirect now that Stage A's health gate has passed
+ * (`PRODUCTION_CUTOVER_EVIDENCE.md`, `OBSERVABILITY_EVIDENCE.md`) — no other
+ * code change. Reverting to 307 (or disabling the redirect entirely) remains
+ * a same-Worker rollback if ever needed; no database migration is involved
+ * either way. See `REDIRECT_AND_RETIREMENT_CONTRACT.md`.
  */
-export const LEGACY_REDIRECT_STATUS = 307;
+export const LEGACY_REDIRECT_STATUS = 308;
 
 const PAID_PLAN_IDS = new Set(["solo", "pro", "agency"]);
 const BILLING_INTERVALS = new Set(["month", "year"]);

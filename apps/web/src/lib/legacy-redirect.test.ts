@@ -14,8 +14,8 @@ describe("legacy-redirect.ts — Phase 4 apex→app redirect targets", () => {
     };
   };
 
-  it("is Stage A (307 Temporary Redirect) — see legacy-redirect.ts's doc comment for the two-stage plan", () => {
-    expect(LEGACY_REDIRECT_STATUS).toBe(307);
+  it("is Stage B (308 Permanent Redirect) — see legacy-redirect.ts's doc comment for the two-stage plan", () => {
+    expect(LEGACY_REDIRECT_STATUS).toBe(308);
   });
 
   describe("/sign-in", () => {
