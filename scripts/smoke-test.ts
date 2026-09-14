@@ -64,11 +64,21 @@ async function checkRedirect(label: string, url: string, expectedLocation: strin
 async function run(): Promise<void> {
   const target = process.argv[2] as Target | undefined;
   const baseUrl = process.argv[3];
+  // Phase 4 Stage A (2026-09-14, controlled production cutover): optional —
+  // present only once a target's apex has genuinely cut over to redirecting
+  // /sign-in (and the other APP_ONLY pages) to a real, distinct app host.
+  // `smoke:preview` passes this from the moment Preview's own two-host
+  // topology is real; `smoke:production` deliberately does NOT yet (see
+  // package.json) — Production has not deployed Stage A, so its apex still
+  // genuinely serves /sign-in directly, and asserting otherwise here would
+  // be asserting a Production behavior that doesn't exist yet.
+  const appBaseUrl = process.argv[4];
   if (!target || !baseUrl || !(["preview", "production"] as Target[]).includes(target)) {
-    console.error("Usage: smoke:<preview|production> <baseUrl>");
+    console.error("Usage: smoke:<preview|production> <baseUrl> [appBaseUrl]");
     process.exit(1);
   }
   const base = baseUrl.replace(/\/$/, "");
+  const appBase = appBaseUrl?.replace(/\/$/, "");
 
   const initialHomeBody = await checkPage("Home page", `${base}/`, 200);
   // Phase 13 (RISK-020/RISK-021): a fresh, cookie-less request must never
@@ -120,10 +130,27 @@ async function run(): Promise<void> {
     target === "preview" ? ["Disallow: /"] : ["Sitemap:"],
   );
   await checkPage("sitemap.xml", `${base}/sitemap.xml`, 200);
-  await checkPage("Sign-in / registration entry point", `${base}/sign-in`, 200, [
-    "Sign in with passkey",
-    "Create account",
-  ]);
+  // Phase 4 Stage A: once a real, distinct app host exists, the apex no
+  // longer serves /sign-in directly — it 307-redirects there (Stage A;
+  // becomes 308 at Stage B, not checked here since both are "a redirect,
+  // to the right place," not a specific status code). The real content
+  // check moves to the app host itself.
+  if (appBase) {
+    await checkRedirect(
+      "Sign-in / registration entry point (apex -> app host)",
+      `${base}/sign-in`,
+      `${appBase}/sign-in`,
+    );
+    await checkPage("Sign-in / registration entry point (app host)", `${appBase}/sign-in`, 200, [
+      "Sign in with passkey",
+      "Create account",
+    ]);
+  } else {
+    await checkPage("Sign-in / registration entry point", `${base}/sign-in`, 200, [
+      "Sign in with passkey",
+      "Create account",
+    ]);
+  }
   await checkPage("/pay (no _ptxn, safe state)", `${base}/pay`, 200, ["Complete your payment"]);
   await checkPage("Known 404", `${base}/this-page-does-not-exist`, 404);
 
@@ -175,6 +202,33 @@ async function run(): Promise<void> {
     "Security headers: Content-Security-Policy present",
     home.headers.get("content-security-policy") !== null,
   );
+
+  if (appBase) {
+    // Phase 4 Stage A: /app and /admin are the other two APP_ONLY page
+    // families that now redirect from the apex — same reasoning as
+    // /sign-in above. GET/HEAD-only, non-mutating, no account required.
+    await checkRedirect("/app (apex -> app host)", `${base}/app`, `${appBase}/app`);
+    await checkRedirect("/admin (apex -> app host)", `${base}/admin`, `${appBase}/admin`);
+    // Wrong-host API rejection (Phase 4, worker.ts's 1b): a PUBLIC_ONLY API
+    // must 404 on the app host, and an APP_ONLY API must 404 on the apex —
+    // both checked with a safe, non-mutating method/path that never
+    // reaches real business logic if correctly rejected at the host
+    // boundary (a malformed/empty body 400 from the handler itself would
+    // still prove the wrong-host check did NOT fire, so this is a
+    // meaningful negative-space check, not a tautology).
+    const appOnlyApiOnApex = await get(`${base}/api/domains`);
+    record(
+      "APP_ONLY API rejected on the apex (wrong host)",
+      appOnlyApiOnApex.status === 404,
+      `got ${appOnlyApiOnApex.status}`,
+    );
+    const publicOnlyApiOnAppHost = await get(`${appBase}/api/audit`, { method: "POST" });
+    record(
+      "PUBLIC_ONLY API rejected on the app host (wrong host)",
+      publicOnlyApiOnAppHost.status === 404,
+      `got ${publicOnlyApiOnAppHost.status}`,
+    );
+  }
 
   const webhookResponse = await get(`${base}/api/billing/webhook`, {
     method: "POST",
