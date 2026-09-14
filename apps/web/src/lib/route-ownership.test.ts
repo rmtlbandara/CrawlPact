@@ -1,5 +1,13 @@
+import { readdirSync, statSync } from "node:fs";
+import { fileURLToPath } from "node:url";
 import { describe, expect, it } from "vitest";
-import { isPublicOnlyPath, isSensitivePath } from "./route-ownership";
+import {
+  classifyApiOwnership,
+  isAppOnlyPagePath,
+  isPublicOnlyPath,
+  isSensitivePath,
+} from "./route-ownership";
+import type { ApiOwnership } from "./route-ownership";
 
 describe("isPublicOnlyPath — Phase 2 executable form of the route ownership matrix", () => {
   it("classifies the root and marketing pages as public-only", () => {
@@ -124,6 +132,147 @@ describe("isPublicOnlyPath — Phase 2 executable form of the route ownership ma
   it("does not false-positive on a path that merely looks alias-shaped but matches no known route", () => {
     expect(isPublicOnlyPath("/apparently-fine.html")).toBe(false);
     expect(isPublicOnlyPath("/apparently-fine/index.html")).toBe(false);
+  });
+});
+
+describe("isAppOnlyPagePath — Phase 4 apex→app legacy-page redirect set", () => {
+  it("flags sign-in, app, and admin (bare and nested)", () => {
+    for (const path of [
+      "/sign-in",
+      "/app",
+      "/app/domains",
+      "/app/domains/abc123",
+      "/app/billing",
+      "/admin",
+      "/admin/users",
+      "/admin/users/abc123",
+    ]) {
+      expect(isAppOnlyPagePath(path)).toBe(true);
+    }
+  });
+
+  it("does not false-positive on a route that merely starts with a similar prefix", () => {
+    expect(isAppOnlyPagePath("/apparently-fine")).toBe(false);
+    expect(isAppOnlyPagePath("/sign-in-evil")).toBe(false);
+    expect(isAppOnlyPagePath("/administration")).toBe(false);
+  });
+
+  it("does not flag public or API routes", () => {
+    expect(isAppOnlyPagePath("/")).toBe(false);
+    expect(isAppOnlyPagePath("/pricing")).toBe(false);
+    expect(isAppOnlyPagePath("/api/domains")).toBe(false);
+  });
+});
+
+describe("classifyApiOwnership — Phase 4 executable /api/* ownership contract", () => {
+  it("classifies the anonymous audit family as PUBLIC_ONLY, except the owned-audit share action", () => {
+    expect(classifyApiOwnership("/api/audit")).toBe("PUBLIC_ONLY");
+    expect(classifyApiOwnership("/api/audit/abc123")).toBe("PUBLIC_ONLY");
+    expect(classifyApiOwnership("/api/audit/abc123/report")).toBe("PUBLIC_ONLY");
+    expect(classifyApiOwnership("/api/audit/abc123/continuation")).toBe("PUBLIC_ONLY");
+    expect(classifyApiOwnership("/api/audit/abc123/share")).toBe("APP_ONLY");
+  });
+
+  it("classifies continuation consumption (a distinct top-level path from the audit-scoped creation endpoint) as APP_ONLY", () => {
+    expect(classifyApiOwnership("/api/audit/continuation/xyz789")).toBe("APP_ONLY");
+  });
+
+  it("classifies analytics/track as the one SHARED_SAME_ORIGIN_SURFACE entry", () => {
+    expect(classifyApiOwnership("/api/analytics/track")).toBe("SHARED_SAME_ORIGIN_SURFACE");
+  });
+
+  it("classifies the Paddle webhook as SERVER_TO_SERVER_PUBLIC", () => {
+    expect(classifyApiOwnership("/api/billing/webhook")).toBe("SERVER_TO_SERVER_PUBLIC");
+  });
+
+  it("classifies the rest of /api/billing/* as APP_ONLY", () => {
+    for (const path of [
+      "/api/billing/checkout",
+      "/api/billing/portal-session",
+      "/api/billing/plan-change/preview",
+      "/api/billing/plan-change/confirm",
+      "/api/billing/plan-change/cancel-scheduled",
+    ]) {
+      expect(classifyApiOwnership(path)).toBe("APP_ONLY");
+    }
+  });
+
+  it("classifies agency-branding's public asset read separately from its APP_ONLY mutation endpoints", () => {
+    expect(classifyApiOwnership("/api/agency-branding/logo/some-key")).toBe("PUBLIC_ONLY");
+    expect(classifyApiOwnership("/api/agency-branding/logo")).toBe("APP_ONLY");
+    expect(classifyApiOwnership("/api/agency-branding/profile")).toBe("APP_ONLY");
+  });
+
+  it("classifies auth, account, domains, groups, workspace, notifications, app, and admin as APP_ONLY", () => {
+    for (const path of [
+      "/api/auth/login/begin",
+      "/api/auth/register/finish",
+      "/api/account",
+      "/api/account/google/disconnect",
+      "/api/domains",
+      "/api/groups/abc123",
+      "/api/workspace/domains",
+      "/api/notifications/feed-token",
+      "/api/app/pilot/feedback",
+      "/api/admin/users",
+      "/api/admin/registry/crawlers",
+    ]) {
+      expect(classifyApiOwnership(path)).toBe("APP_ONLY");
+    }
+  });
+
+  it("classifies test-only routes as INTERNAL_ONLY", () => {
+    expect(classifyApiOwnership("/api/test-only/set-plan")).toBe("INTERNAL_ONLY");
+  });
+
+  it("returns UNKNOWN for a non-/api/ path", () => {
+    expect(classifyApiOwnership("/app/domains")).toBe("UNKNOWN");
+  });
+
+  it("returns UNKNOWN, never a silent default, for an unrecognized /api/* path", () => {
+    expect(classifyApiOwnership("/api/some-future-endpoint-nobody-added-here-yet")).toBe("UNKNOWN");
+  });
+
+  /**
+   * The load-bearing guarantee behind the Phase 4 directive's "do not
+   * default an unknown API into shared" / "zero UNRESOLVED entries"
+   * requirement: every route file that actually exists under
+   * `apps/web/src/pages/api/` must classify as something other than
+   * `"UNKNOWN"`. This is what makes the previous test's UNKNOWN case a
+   * defined-empty branch in `worker.ts`'s wrong-host check, not a fail-open
+   * gap for anything real — a new endpoint added later without updating
+   * `classifyApiOwnership` fails this test, not silently at runtime.
+   */
+  it("classifies every real API route file with a real ownership, never UNKNOWN", () => {
+    const apiDir = fileURLToPath(new URL("../pages/api", import.meta.url));
+
+    function walk(dir: string, urlPrefix: string): string[] {
+      const paths: string[] = [];
+      for (const entry of readdirSync(dir)) {
+        if (entry === "AGENTS.md") continue;
+        const fullPath = `${dir}/${entry}`;
+        if (statSync(fullPath).isDirectory()) {
+          paths.push(...walk(fullPath, `${urlPrefix}/${entry}`));
+          continue;
+        }
+        if (!entry.endsWith(".ts")) continue;
+        // Astro file-based routing: `index.ts` is the directory's own
+        // route; `[param].ts`/`[...param].ts` become a placeholder segment
+        // that still needs *some* concrete value to test the classifier
+        // with (the classifier only cares about static prefix shape, so any
+        // placeholder value works).
+        const base = entry.replace(/\.ts$/, "");
+        const segment = base === "index" ? "" : `/${base.replace(/^\[.*\]$/, "placeholder")}`;
+        paths.push(`${urlPrefix}${segment}`);
+      }
+      return paths;
+    }
+
+    const realApiPaths = walk(apiDir, "/api");
+    const unresolved = realApiPaths.filter(
+      (path) => classifyApiOwnership(path) === ("UNKNOWN" satisfies ApiOwnership),
+    );
+    expect(unresolved).toEqual([]);
   });
 });
 

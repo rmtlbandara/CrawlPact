@@ -8,11 +8,16 @@ import { createDb } from "@crawlpact/database";
 import { getEnv } from "../lib/env";
 import { getPageSession } from "../lib/auth/page-session";
 import { getPlanCatalog } from "../lib/billing/plan-catalog";
+import { requireAppOrigin, toAppUrl } from "../lib/origin";
 
 const db = createDb(getEnv().DB);
 const env = getEnv();
 const session = await getPageSession(db, Astro.request);
 const catalog = await getPlanCatalog(db, env.PADDLE_ENVIRONMENT);
+// Phase 4 (controlled production cutover): this page is apex-only — every
+// link to `/sign-in`/`/app/billing` must point directly at the app host
+// (ADR-0010, Phase 4 directive §8–9, §11).
+const appOrigin = requireAppOrigin();
 
 const plans: PricingPlanEntry[] = catalog.map((entry) => ({
   id: entry.id,
@@ -87,7 +92,12 @@ const webApplicationJsonLd = {
     </p>
 
     <div class="mt-8">
-      <PricingPlans client:load plans={plans} isAuthenticated={session !== null} />
+      <PricingPlans
+        client:load
+        plans={plans}
+        isAuthenticated={session !== null}
+        appOrigin={appOrigin}
+      />
     </div>
 
     <p class="mt-6 text-body text-neutral-700">
@@ -96,7 +106,7 @@ const webApplicationJsonLd = {
           <>Manage your plan any time from your account's billing page.</>
         ) : (
           <>
-            <a href="/sign-in" class="text-brand-700 underline underline-offset-2">
+            <a href={toAppUrl("/sign-in")} class="text-brand-700 underline underline-offset-2">
               Create an account
             </a>{" "}
             to subscribe — checkout runs through Paddle. Paddle handles payment, tax, and receipts;

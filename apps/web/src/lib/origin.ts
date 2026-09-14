@@ -125,3 +125,35 @@ export function toPublicUrl(pathname: string, search = ""): string {
   url.search = search;
   return url.toString();
 }
+
+/**
+ * The application origin, required. Phase 4 (controlled production cutover)
+ * first-party entry points (`SiteHeader.astro`, `PricingPlans.tsx`,
+ * `AuditConversionCta.tsx`, `pricing.astro`) must link directly to
+ * `app.crawlpact.com`, never rely on the legacy apex redirect as their
+ * permanent mechanism — see the Phase 4 directive §8–9. Every environment
+ * that actually serves these pages (`preview`, `production`) has
+ * `PUBLIC_APP_URL` schema-required (`packages/config/src/env.ts`); only
+ * `local` may omit it, and `.env.example` sets it there too (equal to
+ * `PUBLIC_SITE_URL`, a legitimate single-origin local dev setup). Throws
+ * rather than silently falling back to the public origin if it's ever
+ * missing — a silent fallback here would mean a first-party "Sign in" link
+ * pointing at the apex again after cutover, exactly the regression this
+ * helper exists to prevent.
+ */
+export function requireAppOrigin(): string {
+  const origin = getAppOrigin();
+  if (!origin) {
+    throw new Error(
+      "toAppUrl() was called but PUBLIC_APP_URL is not configured for this environment.",
+    );
+  }
+  return origin;
+}
+
+/** Builds an absolute URL on the application origin, preserving the given path and query. */
+export function toAppUrl(pathname: string, search = ""): string {
+  const url = new URL(pathname, requireAppOrigin());
+  url.search = search;
+  return url.toString();
+}

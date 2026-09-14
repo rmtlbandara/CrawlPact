@@ -127,8 +127,16 @@ export function AuditReportView({
   focus?: ReportFocus;
   /** Phase 5: only the direct `/audit/[auditId]` report page passes this — never the shared-link
    * or sample-report pages, where "save this domain" either doesn't apply or isn't real. Omitting
-   * it (the default) renders no CTA at all, matching every existing caller unchanged. */
-  conversionCta?: { isAuthenticated: boolean; ownedDomain: { domainId: string } | null };
+   * it (the default) renders no CTA at all, matching every existing caller unchanged.
+   * `appOrigin` (Phase 4, controlled production cutover) is required whenever this prop is
+   * passed at all, since the one caller that ever passes it (`/audit/[auditId].astro`) is an
+   * apex-only page and its CTA's targets (`/app/domains/:id`, `/app/continue`, `/sign-in`) all
+   * moved to the app host — see `AuditConversionCta.tsx`. */
+  conversionCta?: {
+    isAuthenticated: boolean;
+    ownedDomain: { domainId: string } | null;
+    appOrigin: string;
+  };
   /** Phase 8: the saved-domain detail page already has its own page-level
    * `<h1>` (the domain name) and embeds this component as one section among
    * several — passing "h2" there keeps the page to exactly one real `<h1>`.
@@ -484,6 +492,7 @@ export function AuditReportView({
           auditId={report.auditId}
           isAuthenticated={conversionCta.isAuthenticated}
           ownedDomain={conversionCta.ownedDomain}
+          appOrigin={conversionCta.appOrigin}
           copy={deriveConversionCtaCopy(report, policySummary)}
         />
       )}

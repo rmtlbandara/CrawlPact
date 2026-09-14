@@ -17,6 +17,7 @@ export function AuditConversionCta({
   auditId,
   isAuthenticated,
   ownedDomain,
+  appOrigin,
   copy,
 }: {
   auditId: string;
@@ -24,6 +25,18 @@ export function AuditConversionCta({
   /** Set when the signed-in viewer already has this exact domain saved — in that case there is
    * nothing to convert, only somewhere to go. */
   ownedDomain: { domainId: string } | null;
+  /**
+   * Phase 4 (controlled production cutover): this component only ever
+   * renders on the apex `/audit/[auditId]` page (see `AuditReportView.tsx`'s
+   * `conversionCta` prop doc comment), so every navigation target below
+   * (`/app/domains/:id`, `/app/continue`, `/sign-in`) now lives on the app
+   * host, not this page's own origin. `isAuthenticated` here reflects a
+   * still-live apex-scoped session cookie from before the cutover (host-only
+   * cookies mean a brand-new session is always app-host-scoped going
+   * forward) — this branch still needs an absolute app-origin target for as
+   * long as such a legacy session can exist.
+   */
+  appOrigin: string;
   copy: ConversionCtaCopy;
 }) {
   const [busy, setBusy] = useState<"save_and_monitor" | "save_only" | null>(null);
@@ -44,7 +57,7 @@ export function AuditConversionCta({
         </p>
         <div className="mt-4">
           <a
-            href={`/app/domains/${ownedDomain.domainId}`}
+            href={`${appOrigin}/app/domains/${ownedDomain.domainId}`}
             className="inline-flex h-11 items-center justify-center rounded-control bg-brand-600 px-4 text-body font-medium text-white hover:bg-brand-700"
           >
             Manage this domain
@@ -76,8 +89,8 @@ export function AuditConversionCta({
         return;
       }
       const target = isAuthenticated
-        ? `/app/continue?continuation=${encodeURIComponent(parsed.data.continuationId)}`
-        : `/sign-in?continuation=${encodeURIComponent(parsed.data.continuationId)}`;
+        ? `${appOrigin}/app/continue?continuation=${encodeURIComponent(parsed.data.continuationId)}`
+        : `${appOrigin}/sign-in?continuation=${encodeURIComponent(parsed.data.continuationId)}`;
       window.location.href = target;
     } catch {
       setError("This could not be saved right now. Please try again.");
