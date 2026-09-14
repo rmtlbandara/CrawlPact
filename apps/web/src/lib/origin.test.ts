@@ -12,6 +12,9 @@ const {
   classifyRequestOrigin,
   getValidatedRequestOrigin,
   toPublicUrl,
+  toAppUrl,
+  requireAppOrigin,
+  hasDistinctAppOrigin,
 } = await import("./origin");
 
 describe("lib/origin.ts — trusted CrawlPact origin registry (Phase 2, ADR-0010)", () => {
@@ -155,6 +158,67 @@ describe("lib/origin.ts — trusted CrawlPact origin registry (Phase 2, ADR-0010
     it("defaults to no query string", () => {
       mockEnv = { PUBLIC_SITE_URL: "https://crawlpact.com" };
       expect(toPublicUrl("/")).toBe("https://crawlpact.com/");
+    });
+  });
+
+  describe("toAppUrl / requireAppOrigin (Phase 4, controlled production cutover)", () => {
+    it("builds an absolute URL on the app origin, preserving path and query", () => {
+      mockEnv = {
+        PUBLIC_SITE_URL: "https://crawlpact.com",
+        PUBLIC_APP_URL: "https://app.crawlpact.com",
+      };
+      expect(toAppUrl("/sign-in", "?plan=pro&interval=year")).toBe(
+        "https://app.crawlpact.com/sign-in?plan=pro&interval=year",
+      );
+    });
+
+    it("defaults to no query string", () => {
+      mockEnv = {
+        PUBLIC_SITE_URL: "https://crawlpact.com",
+        PUBLIC_APP_URL: "https://app.crawlpact.com",
+      };
+      expect(toAppUrl("/app")).toBe("https://app.crawlpact.com/app");
+    });
+
+    it("throws rather than silently falling back to the public origin when PUBLIC_APP_URL is not configured", () => {
+      mockEnv = { PUBLIC_SITE_URL: "https://crawlpact.com" };
+      expect(() => toAppUrl("/sign-in")).toThrow();
+    });
+
+    it("requireAppOrigin returns the bare app origin", () => {
+      mockEnv = {
+        PUBLIC_SITE_URL: "https://crawlpact.com",
+        PUBLIC_APP_URL: "https://app.crawlpact.com",
+      };
+      expect(requireAppOrigin()).toBe("https://app.crawlpact.com");
+    });
+
+    it("requireAppOrigin throws when PUBLIC_APP_URL is not configured", () => {
+      mockEnv = { PUBLIC_SITE_URL: "https://crawlpact.com" };
+      expect(() => requireAppOrigin()).toThrow();
+    });
+  });
+
+  describe("hasDistinctAppOrigin (Phase 4 regression guard)", () => {
+    it("is true when a real, distinct app origin is configured", () => {
+      mockEnv = {
+        PUBLIC_SITE_URL: "https://crawlpact.com",
+        PUBLIC_APP_URL: "https://app.crawlpact.com",
+      };
+      expect(hasDistinctAppOrigin()).toBe(true);
+    });
+
+    it("is false when PUBLIC_APP_URL is not configured", () => {
+      mockEnv = { PUBLIC_SITE_URL: "https://crawlpact.com" };
+      expect(hasDistinctAppOrigin()).toBe(false);
+    });
+
+    it("is false when PUBLIC_APP_URL equals PUBLIC_SITE_URL (local single-origin dev)", () => {
+      mockEnv = {
+        PUBLIC_SITE_URL: "http://localhost:4321",
+        PUBLIC_APP_URL: "http://localhost:4321",
+      };
+      expect(hasDistinctAppOrigin()).toBe(false);
     });
   });
 });

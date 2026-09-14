@@ -77,6 +77,17 @@ made for a separate admin origin in a future phase — out of scope here.
 
 ### LEGACY_REDIRECT (after Phase 4 cutover only — no redirect exists yet, by design)
 
+> **Superseded 2026-09-14 (Phase 4, controlled production cutover)** — the
+> `crawlpact.com/app/**` row below suggested a de-prefixed target
+> (`app.crawlpact.com/**`, dropping the `/app` segment). The later Phase 2
+> implementation explicitly deferred de-prefixing and committed to
+> `app.crawlpact.com/app/**` as the real, tested, shipped URL structure —
+> Phase 4 preserves that decision rather than reopening it. This row is kept
+> below verbatim as historical evidence of Phase 1's original intent, not
+> rewritten; the actual, current, executable redirect targets live in
+> `apps/web/src/lib/legacy-redirect.ts` and
+> `docs/baseline/2026-09-14-app-subdomain-phase4/REDIRECT_AND_RETIREMENT_CONTRACT.md`.
+
 | From                               | To                                                                                         |
 | ---------------------------------- | ------------------------------------------------------------------------------------------ |
 | `crawlpact.com/sign-in` (GET/HEAD) | `app.crawlpact.com/sign-in`, preserving `continuation`/`plan`/`interval`                   |

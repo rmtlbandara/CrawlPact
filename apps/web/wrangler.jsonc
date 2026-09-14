@@ -150,15 +150,36 @@
       // CrawlPact-owned Custom Domain migration (from the workers.dev
       // fallback below) — required before Google OAuth preview testing can
       // be registered, since Google Auth Platform needs a stable origin.
-      // Cloudflare manages this hostname's DNS record and TLS certificate
-      // once the Custom Domain is attached in the dashboard (Workers &
-      // Pages → crawlpact-web-preview → Settings → Domains & Routes); no
-      // DNS record should be created manually. A whole-hostname Custom
-      // Domain, not a Worker Route with a `/*` pattern, because this
-      // Worker is the origin, not a proxy in front of one.
+      // Cloudflare manages each hostname's DNS record and TLS certificate
+      // once its Custom Domain is attached; no DNS record should be created
+      // manually. A whole-hostname Custom Domain, not a Worker Route with a
+      // `/*` pattern, because this Worker is the origin, not a proxy in
+      // front of one.
+      //
+      // Phase 4 Stage A (2026-09-14, controlled production cutover):
+      // `app.preview.crawlpact.com` is added as a second Custom Domain here
+      // — Wrangler is the source of truth for both, not the dashboard alone
+      // (this same file already committed to that convention for the first
+      // hostname). Previously this comment said the app-preview hostname
+      // "has no Custom Domain attached... do not attach it until Phase 4
+      // planning explicitly revisits nested Preview app-origin support" —
+      // Phase 4 is now active, and this attachment is the approved Preview
+      // topology needed to actually validate Stage A's apex→app redirect
+      // against a real two-host origin, matching the same shape Production
+      // already has (`crawlpact.com` + `app.crawlpact.com`). Preflight
+      // confirmed via a live Cloudflare API read (2026-09-14) before this
+      // change: no conflicting DNS record for `app.preview.crawlpact.com`,
+      // not already attached to any other Worker, `preview.crawlpact.com`
+      // still correctly attached to `crawlpact-web-preview`, Production's
+      // own domains (`crawlpact.com`, `app.crawlpact.com` → `crawlpact-web`)
+      // completely unaffected.
       "routes": [
         {
           "pattern": "preview.crawlpact.com",
+          "custom_domain": true,
+        },
+        {
+          "pattern": "app.preview.crawlpact.com",
           "custom_domain": true,
         },
       ],
@@ -212,10 +233,11 @@
         // moment it was ever attached as a real Custom Domain. Corrected to
         // "app.preview.crawlpact.com" — a genuine subdomain of
         // "preview.crawlpact.com", which the unchanged RP ID below validly
-        // covers. Still has no DNS record or Custom Domain attached (do not
-        // attach it until Phase 4 planning explicitly revisits nested
-        // Preview app-origin support); read by nothing today, kept only so
-        // config isn't ambiguous or wrong if it's ever wired up.
+        // covers. Phase 4 Stage A (2026-09-14): now attached as a real
+        // Custom Domain (see the `routes` array above) — this repository's
+        // two-Preview-host topology now mirrors Production's exactly, and
+        // this value is genuinely live and read by the app-host boundary
+        // logic in `worker.ts`, not merely reserved config.
         "PUBLIC_APP_URL": "https://app.preview.crawlpact.com",
         "WEBAUTHN_RP_ID": "preview.crawlpact.com",
         "WEBAUTHN_RP_ORIGIN": "https://preview.crawlpact.com",

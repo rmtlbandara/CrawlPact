@@ -62,17 +62,29 @@ function ComparisonCellContent({ cell }: { cell: ComparisonCell }) {
 export function PricingPlans({
   plans,
   isAuthenticated,
+  appOrigin,
 }: {
   plans: PricingPlanEntry[];
   isAuthenticated: boolean;
+  /**
+   * Phase 4 (controlled production cutover): this component only ever
+   * renders on the apex `pricing.astro` page, so its authenticated/
+   * unauthenticated CTA must link directly to the app host — never the
+   * relative same-origin path this used before the cutover, and never
+   * falling back to a relative path client-side (ADR-0010, Phase 4
+   * directive §9: "do not make client code guess the environment"). Passed
+   * from the server-rendered parent (`requireAppOrigin()`), not derived
+   * here.
+   */
+  appOrigin: string;
 }) {
   const [interval, setInterval] = useState<"month" | "year">("year");
 
   function ctaHref(plan: PricingPlanEntry): string {
     if (plan.id === "free") return "/audit/";
     return isAuthenticated
-      ? `/app/billing?plan=${plan.id}&interval=${interval}`
-      : `/sign-in?plan=${plan.id}&interval=${interval}`;
+      ? `${appOrigin}/app/billing?plan=${plan.id}&interval=${interval}`
+      : `${appOrigin}/sign-in?plan=${plan.id}&interval=${interval}`;
   }
 
   return (

@@ -1,11 +1,20 @@
 import { useEffect, useRef, useState } from "react";
 import { Alert, Button, Checkbox, FormField, Input, Modal, Textarea } from "@crawlpact/ui";
 import type { ShareSummary } from "@crawlpact/core";
+import { toLogoDisplayUrl } from "../../lib/agency-logo";
 
 type Props = {
   auditId: string;
   /** Only agency-plan customers may attach branding (SRS §29) — gated server-side too. */
   agencyBrandingAllowed: boolean;
+  /**
+   * Phase 4 (controlled production cutover): the logo preview below renders
+   * the stored, still-relative `logoUrl`/`logoPath` (`PUBLIC_ONLY`,
+   * `/api/agency-branding/logo/<key>`) through the public origin — see
+   * `agency-logo.ts`'s `toLogoDisplayUrl` doc comment. Passed from the
+   * server-rendered parent, never guessed client-side.
+   */
+  publicOrigin: string;
 };
 
 /**
@@ -14,7 +23,7 @@ type Props = {
  * remove or replace CrawlPact's own methodology/limitations/evidence — see
  * `AuditReportView`, which renders those unconditionally.
  */
-export function ShareReportDialog({ auditId, agencyBrandingAllowed }: Props) {
+export function ShareReportDialog({ auditId, agencyBrandingAllowed, publicOrigin }: Props) {
   const [open, setOpen] = useState(false);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -232,7 +241,7 @@ export function ShareReportDialog({ auditId, agencyBrandingAllowed }: Props) {
                 {logoPath && (
                   <div className="flex items-center gap-3">
                     <img
-                      src={logoPath}
+                      src={toLogoDisplayUrl(publicOrigin, logoPath)}
                       alt="Logo preview"
                       className="h-10 max-w-[120px] object-contain"
                     />

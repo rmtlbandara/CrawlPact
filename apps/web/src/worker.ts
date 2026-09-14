@@ -6,8 +6,14 @@ import { applyDueScheduledDowngrades } from "./lib/billing/scheduled-downgrades"
 import { reconcileMissingPolicyChangeNotifications } from "./lib/notification-reconciliation";
 import { evaluateOperationalAlerts } from "./lib/admin/operational-alerts";
 import { resolveCanonicalRedirectTarget } from "./lib/route-registry";
-import { classifyRequestOrigin, toPublicUrl } from "./lib/origin";
-import { isPublicOnlyPath, isSensitivePath } from "./lib/route-ownership";
+import { classifyRequestOrigin, hasDistinctAppOrigin, toPublicUrl } from "./lib/origin";
+import {
+  classifyApiOwnership,
+  isAppOnlyPagePath,
+  isPublicOnlyPath,
+  isSensitivePath,
+} from "./lib/route-ownership";
+import { LEGACY_REDIRECT_STATUS, resolveLegacyAppRedirectTarget } from "./lib/legacy-redirect";
 import { readSessionToken } from "./lib/auth/session";
 
 /**
@@ -327,7 +333,7 @@ function notFound(): Response {
  * `wrangler.jsonc`'s production `assets.run_worker_first` array and the
  * pre-existing preview `run_worker_first: true`).
  *
- * Three decisions, always in this order:
+ * Five decisions, always in this order:
  *
  * 1. **Unknown host + sensitive path → fail closed.** A request whose Host
  *    doesn't match any currently configured trusted origin (`lib/origin.ts`)
@@ -336,6 +342,35 @@ function notFound(): Response {
  *    `/api/*`. This does not affect public marketing content: an unknown
  *    host requesting a public page still gets it, unchanged from today,
  *    since there is no security boundary to enforce there.
+ * 1a. **Public surface + APP_ONLY page → redirect or reject (Phase 4).**
+ *    The other half of the symmetric boundary Phase 2 deliberately left
+ *    open for the migration-compatibility window: `crawlpact.com/sign-in`,
+ *    `/app`, `/app/**`, `/admin`, `/admin/**` no longer render application
+ *    HTML on the apex. GET/HEAD temporarily redirect (307 — Stage A of the
+ *    two-stage cutover, see `legacy-redirect.ts`) to the exact app-host
+ *    equivalent, preserving path (no `/app` de-prefixing — see
+ *    `route-ownership.ts`'s `isAppOnlyPagePath` doc comment) and an
+ *    allowlisted query for `/sign-in` specifically. Every other method
+ *    fails closed (404) rather than being replayed cross-origin — the
+ *    Wrong-Host Policy never turns a mutation into a cross-origin request,
+ *    symmetric with the app-surface case below. Gated on
+ *    `hasDistinctAppOrigin()`: local single-origin dev legitimately sets
+ *    `PUBLIC_APP_URL` equal to `PUBLIC_SITE_URL`, under which every request
+ *    classifies as `"public"` (`classifyOrigin` checks the public origin
+ *    first) — an ungated redirect there would target the *same* URL,
+ *    looping forever. Found by CI (`ERR_TOO_MANY_REDIRECTS`) the first time
+ *    this ran against the real local/CI config, not by local testing.
+ * 1b. **Either surface + wrong-host `/api/*` → reject (Phase 4).** An
+ *    `APP_ONLY` API reached on the public apex, or a `PUBLIC_ONLY`/
+ *    `SERVER_TO_SERVER_PUBLIC` API reached on the app host, is rejected
+ *    (404) outright — never proxied, never CORS-forwarded, never replayed.
+ *    `SHARED_SAME_ORIGIN_SURFACE` (`/api/analytics/track`) is deliberately
+ *    exempt: it is same-origin-callable from *either* host by design (see
+ *    `route-ownership.ts`'s `classifyApiOwnership`). An API path this
+ *    registry doesn't recognize (`"UNKNOWN"`) is left untouched by this
+ *    check — `route-ownership.test.ts` asserts no real route is ever
+ *    actually `"UNKNOWN"`, so this is a defined-empty case, not a
+ *    fail-open gap in practice.
  * 2. **App surface `/` → the existing app entry point, or a public shell.**
  *    `app.crawlpact.com/` must render the authenticated dashboard for an
  *    already-signed-in visitor, never the public homepage — but the public
@@ -370,12 +405,14 @@ function notFound(): Response {
  *    (404) rather than replayed against the public origin — the Wrong-Host
  *    Policy never turns a mutation into a cross-origin request.
  *
- * Deliberately absent: the reverse direction (public host serving `/sign-in`
- * or `/app/**`) is untouched. `crawlpact.com` continues to serve the
- * existing application during the Phase 2/3 migration-compatibility window
- * by design (ADR-0010) — only Phase 4's controlled cutover introduces a
- * permanent apex→app redirect for that direction, and only once every gate
- * in `PHASE_2_TEST_CONTRACT.md`/Phase 3's direct-host validation has passed.
+ * The Phase 2/3 migration-compatibility window (`crawlpact.com` continuing
+ * to serve `/sign-in`/`/app/**`/`/admin/**` directly, alongside the app
+ * host) ended with Phase 4's controlled production cutover (1a/1b above) —
+ * see `docs/baseline/2026-09-14-app-subdomain-phase4/` for the health-gated
+ * rollout evidence. The Paddle webhook (`/api/billing/webhook`) and `/pay`
+ * remain apex-only exactly as ADR-0010 always specified; 1b enforces the
+ * webhook side of that (rejecting it on the app host) rather than relying
+ * on convention alone.
  *
  * This function also retains its original Phase 20 responsibility: on
  * preview, it stamps `X-Robots-Tag: noindex` on every response and
@@ -407,7 +444,34 @@ export async function fetchWithPreviewSearchIsolation(
     return notFound();
   }
 
+  // Phase 4, 1b: wrong-host /api/* rejection, checked before any
+  // surface-specific page logic below and regardless of which surface the
+  // request arrived on — an APP_ONLY API must never respond on the public
+  // apex, and a PUBLIC_ONLY/SERVER_TO_SERVER_PUBLIC API must never respond
+  // on the app host. SHARED_SAME_ORIGIN_SURFACE and "UNKNOWN" are
+  // deliberately not touched here (see this function's doc comment).
+  if (surface === "public" || surface === "app") {
+    const apiOwnership = classifyApiOwnership(url.pathname);
+    const wrongHostApi =
+      (surface === "public" && hasDistinctAppOrigin() && apiOwnership === "APP_ONLY") ||
+      (surface === "app" &&
+        (apiOwnership === "PUBLIC_ONLY" || apiOwnership === "SERVER_TO_SERVER_PUBLIC"));
+    if (wrongHostApi) {
+      return notFound();
+    }
+  }
+
   let effectiveRequest = request;
+
+  if (surface === "public" && hasDistinctAppOrigin() && isAppOnlyPagePath(url.pathname)) {
+    // Phase 4, 1a: the apex no longer serves APP_ONLY pages directly — see
+    // this function's doc comment and `legacy-redirect.ts`.
+    if (!SAFE_METHODS.has(request.method)) {
+      return notFound();
+    }
+    const target = resolveLegacyAppRedirectTarget(url.pathname, url.search);
+    return Response.redirect(target, LEGACY_REDIRECT_STATUS);
+  }
 
   if (surface === "app") {
     if (url.pathname === "/") {

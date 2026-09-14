@@ -264,12 +264,22 @@ describe("fetchWithPreviewSearchIsolation — Phase 2 host boundary", () => {
       );
     });
 
-    it("still serves /app and /sign-in on the public host (Phase 2/3 migration-compatibility window — unchanged apex behavior)", async () => {
+    /**
+     * Superseded by Phase 4 (controlled production cutover) — this test used
+     * to assert the Phase 2/3 migration-compatibility window's "apex still
+     * serves /app and /sign-in directly" behavior. That window has ended:
+     * see the "Phase 4: apex no longer serves APP_ONLY pages" describe block
+     * below for the real, current behavior (a 307 redirect to the app
+     * host). Kept here, renamed, as the negative half of that assertion —
+     * the apex must never again *serve* these pages directly.
+     */
+    it("no longer serves /app or /sign-in directly on the public host (Phase 4 cutover)", async () => {
       for (const path of ["/app", "/sign-in", "/app/domains"]) {
         handleMock.mockClear();
         const request = new Request(`${PUBLIC_SITE_URL}${path}`);
         const response = await fetchWithPreviewSearchIsolation(request, env, ctx);
-        expect(response.status).toBe(200);
+        expect(response.status).not.toBe(200);
+        expect(handleMock).not.toHaveBeenCalled();
       }
     });
 
@@ -349,6 +359,265 @@ describe("fetchWithPreviewSearchIsolation — Phase 2 host boundary", () => {
         expect(response.status).toBe(200);
         expect(handleMock).toHaveBeenCalled();
       }
+    });
+  });
+
+  describe("Phase 4: apex no longer serves APP_ONLY pages (controlled production cutover)", () => {
+    beforeEach(() => {
+      mockEnv = { PUBLIC_SITE_URL, PUBLIC_APP_URL };
+      handleMock.mockClear();
+    });
+
+    it("redirects /sign-in to the app host (Stage A: 307, preserving an allowlisted query)", async () => {
+      const request = new Request(`${PUBLIC_SITE_URL}/sign-in?plan=pro&interval=year`);
+      const response = await fetchWithPreviewSearchIsolation(request, env, ctx);
+      expect(response.status).toBe(307);
+      expect(response.headers.get("Location")).toBe(
+        `${PUBLIC_APP_URL}/sign-in?plan=pro&interval=year`,
+      );
+      expect(handleMock).not.toHaveBeenCalled();
+    });
+
+    it("redirects bare /app to the app host, unprefixed (no de-prefixing)", async () => {
+      const request = new Request(`${PUBLIC_SITE_URL}/app`);
+      const response = await fetchWithPreviewSearchIsolation(request, env, ctx);
+      expect(response.status).toBe(307);
+      expect(response.headers.get("Location")).toBe(`${PUBLIC_APP_URL}/app`);
+    });
+
+    it("redirects a nested /app/** path to the app host, preserving the exact path and query", async () => {
+      const request = new Request(`${PUBLIC_SITE_URL}/app/domains/abc123?tab=history`);
+      const response = await fetchWithPreviewSearchIsolation(request, env, ctx);
+      expect(response.status).toBe(307);
+      expect(response.headers.get("Location")).toBe(
+        `${PUBLIC_APP_URL}/app/domains/abc123?tab=history`,
+      );
+    });
+
+    it("redirects bare /admin to the app host", async () => {
+      const request = new Request(`${PUBLIC_SITE_URL}/admin`);
+      const response = await fetchWithPreviewSearchIsolation(request, env, ctx);
+      expect(response.status).toBe(307);
+      expect(response.headers.get("Location")).toBe(`${PUBLIC_APP_URL}/admin`);
+    });
+
+    it("redirects a nested /admin/** path to the app host", async () => {
+      const request = new Request(`${PUBLIC_SITE_URL}/admin/users/abc123`);
+      const response = await fetchWithPreviewSearchIsolation(request, env, ctx);
+      expect(response.status).toBe(307);
+      expect(response.headers.get("Location")).toBe(`${PUBLIC_APP_URL}/admin/users/abc123`);
+    });
+
+    it("redirects HEAD the same as GET", async () => {
+      const request = new Request(`${PUBLIC_SITE_URL}/sign-in`, { method: "HEAD" });
+      const response = await fetchWithPreviewSearchIsolation(request, env, ctx);
+      expect(response.status).toBe(307);
+    });
+
+    it("rejects (404) a non-GET/HEAD request to a legacy app page rather than replaying it cross-origin", async () => {
+      for (const method of ["POST", "PUT", "PATCH", "DELETE"]) {
+        handleMock.mockClear();
+        const request = new Request(`${PUBLIC_SITE_URL}/sign-in`, { method });
+        const response = await fetchWithPreviewSearchIsolation(request, env, ctx);
+        expect(response.status).toBe(404);
+        expect(handleMock).not.toHaveBeenCalled();
+      }
+    });
+
+    it("does not redirect the apex homepage (the one route this boundary must never touch)", async () => {
+      const request = new Request(`${PUBLIC_SITE_URL}/`);
+      const response = await fetchWithPreviewSearchIsolation(request, env, ctx);
+      expect(response.status).toBe(200);
+      expect(handleMock).toHaveBeenCalled();
+    });
+
+    it("does not redirect an unrelated public page", async () => {
+      const request = new Request(`${PUBLIC_SITE_URL}/pricing/`);
+      const response = await fetchWithPreviewSearchIsolation(request, env, ctx);
+      expect(response.status).toBe(200);
+    });
+
+    it("produces exactly one redirect hop (the app host's own worker logic is never re-entered by this redirect)", async () => {
+      const request = new Request(`${PUBLIC_SITE_URL}/app/billing?plan=pro&interval=year`);
+      const response = await fetchWithPreviewSearchIsolation(request, env, ctx);
+      expect(response.status).toBe(307);
+      const location = response.headers.get("Location")!;
+      expect(location).toBe(`${PUBLIC_APP_URL}/app/billing?plan=pro&interval=year`);
+      // The redirect target itself must not be something this same function
+      // would redirect again (no loop): it's an app-host URL, and this
+      // function only ever redirects *away* from the app host for
+      // PUBLIC_ONLY paths — /app/billing is APP_ONLY, so a follow-up
+      // request to the target would fall through to real app-host handling,
+      // not another redirect.
+      const followUp = new Request(location);
+      handleMock.mockClear();
+      const followUpResponse = await fetchWithPreviewSearchIsolation(followUp, env, ctx);
+      expect(followUpResponse.status).toBe(200);
+      expect(handleMock).toHaveBeenCalled();
+    });
+  });
+
+  describe("Phase 4: wrong-host /api/* rejection (controlled production cutover)", () => {
+    beforeEach(() => {
+      mockEnv = { PUBLIC_SITE_URL, PUBLIC_APP_URL };
+      handleMock.mockClear();
+    });
+
+    it("rejects (404) an APP_ONLY API reached on the public apex", async () => {
+      const request = new Request(`${PUBLIC_SITE_URL}/api/domains`, { method: "POST" });
+      const response = await fetchWithPreviewSearchIsolation(request, env, ctx);
+      expect(response.status).toBe(404);
+      expect(handleMock).not.toHaveBeenCalled();
+    });
+
+    it("rejects (404) an APP_ONLY read (GET) API reached on the public apex — the final architecture is same-origin ownership, not a GET-only exception", async () => {
+      const request = new Request(`${PUBLIC_SITE_URL}/api/domains`);
+      const response = await fetchWithPreviewSearchIsolation(request, env, ctx);
+      expect(response.status).toBe(404);
+    });
+
+    it("rejects (404) a PUBLIC_ONLY API reached on the app host", async () => {
+      const request = new Request(`${PUBLIC_APP_URL}/api/audit`, { method: "POST" });
+      const response = await fetchWithPreviewSearchIsolation(request, env, ctx);
+      expect(response.status).toBe(404);
+      expect(handleMock).not.toHaveBeenCalled();
+    });
+
+    /**
+     * Regression coverage for the specific real bug an independent review
+     * found in PR #180: the PUBLIC_ONLY agency-logo asset endpoint was
+     * being referenced with a *relative* URL from APP_ONLY UI
+     * (`AgencyBrandingSettings.tsx`, `ShareReportDialog.tsx`), which this
+     * exact host-boundary rejection would 404 once the apex and app hosts
+     * are genuinely distinct. The endpoint's ownership itself is correct
+     * and unchanged (PUBLIC_ONLY, not made SHARED) — the fix was on the
+     * display side (`toLogoDisplayUrl`, `agency-logo.ts`), not here. See
+     * docs/baseline/2026-09-14-app-subdomain-phase4/PHASE_4_STAGE_A_STATUS.md.
+     */
+    it("rejects (404) the PUBLIC_ONLY agency-logo asset endpoint reached on the app host", async () => {
+      const request = new Request(`${PUBLIC_APP_URL}/api/agency-branding/logo/user-1/abc123.png`);
+      const response = await fetchWithPreviewSearchIsolation(request, env, ctx);
+      expect(response.status).toBe(404);
+      expect(handleMock).not.toHaveBeenCalled();
+    });
+
+    it("still serves the PUBLIC_ONLY agency-logo asset endpoint on the apex (unaffected)", async () => {
+      const request = new Request(`${PUBLIC_SITE_URL}/api/agency-branding/logo/user-1/abc123.png`);
+      const response = await fetchWithPreviewSearchIsolation(request, env, ctx);
+      expect(response.status).toBe(200);
+      expect(handleMock).toHaveBeenCalled();
+    });
+
+    it("still allows the APP_ONLY agency-logo upload endpoint on the app host (unaffected — same directory, different ownership)", async () => {
+      const request = new Request(`${PUBLIC_APP_URL}/api/agency-branding/logo`, {
+        method: "POST",
+      });
+      const response = await fetchWithPreviewSearchIsolation(request, env, ctx);
+      expect(response.status).toBe(200);
+      expect(handleMock).toHaveBeenCalled();
+    });
+
+    it("rejects (404) the Paddle webhook reached on the app host, even with the correct method", async () => {
+      const request = new Request(`${PUBLIC_APP_URL}/api/billing/webhook`, { method: "POST" });
+      const response = await fetchWithPreviewSearchIsolation(request, env, ctx);
+      expect(response.status).toBe(404);
+    });
+
+    it("still serves the Paddle webhook on the apex (unaffected — this check is one-directional)", async () => {
+      const request = new Request(`${PUBLIC_SITE_URL}/api/billing/webhook`, { method: "POST" });
+      const response = await fetchWithPreviewSearchIsolation(request, env, ctx);
+      expect(response.status).toBe(200);
+      expect(handleMock).toHaveBeenCalled();
+    });
+
+    it("still allows an APP_ONLY API on the app host (unaffected)", async () => {
+      const request = new Request(`${PUBLIC_APP_URL}/api/domains`, { method: "POST" });
+      const response = await fetchWithPreviewSearchIsolation(request, env, ctx);
+      expect(response.status).toBe(200);
+      expect(handleMock).toHaveBeenCalled();
+    });
+
+    it("still allows a PUBLIC_ONLY API on the apex (unaffected)", async () => {
+      const request = new Request(`${PUBLIC_SITE_URL}/api/audit`, { method: "POST" });
+      const response = await fetchWithPreviewSearchIsolation(request, env, ctx);
+      expect(response.status).toBe(200);
+      expect(handleMock).toHaveBeenCalled();
+    });
+
+    it("allows the SHARED_SAME_ORIGIN_SURFACE analytics endpoint on either host", async () => {
+      for (const origin of [PUBLIC_SITE_URL, PUBLIC_APP_URL]) {
+        handleMock.mockClear();
+        const request = new Request(`${origin}/api/analytics/track`, { method: "POST" });
+        const response = await fetchWithPreviewSearchIsolation(request, env, ctx);
+        expect(response.status).toBe(200);
+        expect(handleMock).toHaveBeenCalled();
+      }
+    });
+  });
+
+  /**
+   * Regression coverage for a real bug this same Phase 4 work introduced and
+   * CI caught (`ERR_TOO_MANY_REDIRECTS`), not something anticipated in
+   * advance: local/CI single-origin dev (`.env.example`'s `PUBLIC_APP_URL`
+   * legitimately equal to `PUBLIC_SITE_URL`) made every request classify as
+   * `"public"` (`classifyOrigin` checks the public origin first when the two
+   * are equal), which fired the new apex→app `/sign-in` redirect against a
+   * target identical to the request's own URL — an infinite loop — and
+   * separately caused every `APP_ONLY` API to 404 in that same environment.
+   * Both describe blocks above already cover the two-distinct-origins case;
+   * this one is the other real configuration this Worker actually runs
+   * under and must behave identically to *pre*-Phase-4 there (every
+   * Phase 2/3 test above this point already assumes and passes under this
+   * exact single-origin config for `/sign-in`/`/app` — this block only adds
+   * the new Phase 4 behavior's own regression coverage).
+   */
+  describe("Phase 4: single-origin dev/CI config (PUBLIC_APP_URL equals PUBLIC_SITE_URL) is unaffected", () => {
+    beforeEach(() => {
+      mockEnv = { PUBLIC_SITE_URL, PUBLIC_APP_URL: PUBLIC_SITE_URL };
+      handleMock.mockClear();
+    });
+
+    it("does not redirect /sign-in when there is no distinct app origin (no loop)", async () => {
+      const request = new Request(`${PUBLIC_SITE_URL}/sign-in`);
+      const response = await fetchWithPreviewSearchIsolation(request, env, ctx);
+      expect(response.status).toBe(200);
+      expect(handleMock).toHaveBeenCalledWith(
+        expect.objectContaining({ url: `${PUBLIC_SITE_URL}/sign-in` }),
+        env,
+        ctx,
+      );
+    });
+
+    it("does not redirect /app or /admin when there is no distinct app origin", async () => {
+      for (const path of ["/app", "/app/domains", "/admin", "/admin/users"]) {
+        handleMock.mockClear();
+        const request = new Request(`${PUBLIC_SITE_URL}${path}`);
+        const response = await fetchWithPreviewSearchIsolation(request, env, ctx);
+        expect(response.status).toBe(200);
+        expect(handleMock).toHaveBeenCalled();
+      }
+    });
+
+    it("does not reject an APP_ONLY API when there is no distinct app origin", async () => {
+      const request = new Request(`${PUBLIC_SITE_URL}/api/domains`, { method: "POST" });
+      const response = await fetchWithPreviewSearchIsolation(request, env, ctx);
+      expect(response.status).toBe(200);
+      expect(handleMock).toHaveBeenCalled();
+    });
+
+    it("does not reject the Paddle webhook when there is no distinct app origin", async () => {
+      const request = new Request(`${PUBLIC_SITE_URL}/api/billing/webhook`, { method: "POST" });
+      const response = await fetchWithPreviewSearchIsolation(request, env, ctx);
+      expect(response.status).toBe(200);
+      expect(handleMock).toHaveBeenCalled();
+    });
+
+    it("also behaves correctly when PUBLIC_APP_URL is entirely unset (the other legitimate local shape)", async () => {
+      mockEnv = { PUBLIC_SITE_URL };
+      const request = new Request(`${PUBLIC_SITE_URL}/sign-in`);
+      const response = await fetchWithPreviewSearchIsolation(request, env, ctx);
+      expect(response.status).toBe(200);
+      expect(handleMock).toHaveBeenCalled();
     });
   });
 

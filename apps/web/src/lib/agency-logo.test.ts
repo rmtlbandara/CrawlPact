@@ -4,6 +4,7 @@ import {
   buildLogoServingPath,
   detectImageType,
   logoPathBelongsToUser,
+  toLogoDisplayUrl,
 } from "./agency-logo";
 
 describe("detectImageType", () => {
@@ -76,6 +77,36 @@ describe("logoPathBelongsToUser", () => {
   it("rejects a malformed path that doesn't match the pattern at all", () => {
     expect(logoPathBelongsToUser("/api/agency-branding/logo/not-a-real-path", "user-1")).toBe(
       false,
+    );
+  });
+});
+
+describe("toLogoDisplayUrl — Phase 4 fix: PUBLIC_ONLY asset display from APP_ONLY UI", () => {
+  it("builds an absolute public-origin URL from the stored relative path", () => {
+    const stored = buildLogoServingPath(buildLogoObjectKey("user-1", "png"));
+    expect(toLogoDisplayUrl("https://crawlpact.com", stored)).toBe(
+      `https://crawlpact.com${stored}`,
+    );
+  });
+
+  it("does not alter the stored path's own shape (still validates against the same pattern helpers)", () => {
+    const stored = buildLogoServingPath(buildLogoObjectKey("user-1", "png"));
+    const displayUrl = toLogoDisplayUrl("https://crawlpact.com", stored);
+    // The display URL is for <img src> only — anything that validates or
+    // parses the *stored* value must keep using the original relative
+    // path, never the absolute display URL.
+    expect(logoPathBelongsToUser(stored, "user-1")).toBe(true);
+    expect(displayUrl).not.toBe(stored);
+    expect(displayUrl.endsWith(stored)).toBe(true);
+  });
+
+  it("works identically regardless of which environment's public origin is passed", () => {
+    const stored = "/api/agency-branding/logo/user-1/abc123.png";
+    expect(toLogoDisplayUrl("https://preview.crawlpact.com", stored)).toBe(
+      "https://preview.crawlpact.com/api/agency-branding/logo/user-1/abc123.png",
+    );
+    expect(toLogoDisplayUrl("http://localhost:4321", stored)).toBe(
+      "http://localhost:4321/api/agency-branding/logo/user-1/abc123.png",
     );
   });
 });

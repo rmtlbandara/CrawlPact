@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from "react";
 import { Alert, Button, FormField, Input } from "@crawlpact/ui";
+import { toLogoDisplayUrl } from "../../lib/agency-logo";
 
 type Profile = { agencyName: string | null; logoUrl: string | null };
 
@@ -9,7 +10,7 @@ async function fetchJson<T>(url: string): Promise<T | null> {
   return body.ok ? (body.data ?? null) : null;
 }
 
-export function AgencyBrandingSettings() {
+export function AgencyBrandingSettings({ publicOrigin }: { publicOrigin: string }) {
   const [profile, setProfile] = useState<Profile | null>(null);
   const [agencyName, setAgencyName] = useState("");
   const [logoUrl, setLogoUrl] = useState<string | null>(null);
@@ -107,7 +108,7 @@ export function AgencyBrandingSettings() {
       {logoUrl && (
         <div className="flex items-center gap-3">
           <img
-            src={logoUrl}
+            src={toLogoDisplayUrl(publicOrigin, logoUrl)}
             alt={agencyName || "Agency logo"}
             className="h-10 max-w-[120px] object-contain"
           />

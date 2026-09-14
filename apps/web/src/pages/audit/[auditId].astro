@@ -12,6 +12,7 @@ import { trackEvent } from "../../lib/analytics";
 import { getPageSession } from "../../lib/auth/page-session";
 import { getPlan } from "../../lib/plan";
 import { findOwnedDomainByOrigin } from "../../lib/domains";
+import { getPublicOrigin, requireAppOrigin } from "../../lib/origin";
 
 const { auditId } = Astro.params;
 
@@ -45,10 +46,14 @@ const ownedDomain =
   reportIsSaveable && session
     ? await findOwnedDomainByOrigin(db, session.user.id, report.domain)
     : null;
+// Phase 4 (controlled production cutover): this page is apex-only —
+// AuditConversionCta's targets all moved to the app host (see that
+// component's doc comment).
 const conversionCta = reportIsSaveable
   ? {
       isAuthenticated: session !== null,
       ownedDomain: ownedDomain ? { domainId: ownedDomain.id } : null,
+      appOrigin: requireAppOrigin(),
     }
   : undefined;
 ---
@@ -70,6 +75,7 @@ const conversionCta = reportIsSaveable
                 client:load
                 auditId={report.auditId}
                 agencyBrandingAllowed={agencyBrandingAllowed}
+                publicOrigin={getPublicOrigin()}
               />
             </div>
           )}
