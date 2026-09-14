@@ -65,6 +65,24 @@ export function getTrustedOrigins(): string[] {
   return origins;
 }
 
+/**
+ * True only when a real, distinct second surface is configured — false for
+ * local single-origin dev (`.env.example` legitimately sets `PUBLIC_APP_URL`
+ * equal to `PUBLIC_SITE_URL` there, both `http://localhost:...`). Phase 4's
+ * apex→app host-boundary enforcement (`worker.ts`) must gate on this, not
+ * merely on `classifyRequestOrigin(request) === "public"`: when the two
+ * origins are equal, `classifyOrigin` always resolves a same-origin request
+ * to `"public"` (it is checked first), so an ungated redirect-to-app-host
+ * would target the *same* URL it just rejected — an infinite redirect loop,
+ * found by CI the first time this ran against the real local/CI single-
+ * origin config (`ERR_TOO_MANY_REDIRECTS`), not by local testing (which
+ * exercised the code paths with two distinct mocked origins throughout).
+ */
+export function hasDistinctAppOrigin(): boolean {
+  const appOrigin = getAppOrigin();
+  return appOrigin !== null && appOrigin !== getPublicOrigin();
+}
+
 export function isTrustedOrigin(origin: string | null | undefined): boolean {
   if (!origin) return false;
   return getTrustedOrigins().includes(origin);

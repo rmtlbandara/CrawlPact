@@ -68,6 +68,23 @@ be exactly the "claim flawless merely because tests pass" the directive itself p
 - **Did not deploy anything to Production, or flip Stage A's 307 to Stage B's 308.** Both require
   a real, observed Production health-gate window this pass cannot fabricate.
 
+## Real bug found and fixed by CI (not by local testing)
+
+The first CI run on PR #180 failed with `net::ERR_TOO_MANY_REDIRECTS` during E2E setup, not the
+usual local-flakiness signature. Root cause: local/CI's legitimate single-origin dev config
+(`.env.example`'s `PUBLIC_APP_URL` set equal to `PUBLIC_SITE_URL`) makes `classifyOrigin` resolve
+every request to `"public"` (the public-origin check runs first and matches), so the new
+apex→app `/sign-in` redirect fired against a target identical to the request's own URL — an
+infinite loop. The same condition would also have 404'd every `APP_ONLY` API in that
+environment. Fixed by adding `hasDistinctAppOrigin()` (`origin.ts`) and gating both new Phase 4
+checks in `worker.ts` on it — the checks now correctly no-op whenever there is no genuinely
+distinct second origin configured, matching how `getTrustedOrigins()` already treats this case.
+Five new regression tests cover this exact configuration directly. This is recorded here rather
+than glossed over: local unit tests (all written against two distinct mocked origins) did not
+catch it; CI, running against the real single-origin local/CI config, did — exactly the kind of
+gap this migration's own established practice of never trusting local-only test results over CI
+exists to catch.
+
 ## Hard gates: current status
 
 | Gate                                                              | Status                                                                       |

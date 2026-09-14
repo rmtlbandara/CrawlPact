@@ -521,6 +521,72 @@ describe("fetchWithPreviewSearchIsolation — Phase 2 host boundary", () => {
     });
   });
 
+  /**
+   * Regression coverage for a real bug this same Phase 4 work introduced and
+   * CI caught (`ERR_TOO_MANY_REDIRECTS`), not something anticipated in
+   * advance: local/CI single-origin dev (`.env.example`'s `PUBLIC_APP_URL`
+   * legitimately equal to `PUBLIC_SITE_URL`) made every request classify as
+   * `"public"` (`classifyOrigin` checks the public origin first when the two
+   * are equal), which fired the new apex→app `/sign-in` redirect against a
+   * target identical to the request's own URL — an infinite loop — and
+   * separately caused every `APP_ONLY` API to 404 in that same environment.
+   * Both describe blocks above already cover the two-distinct-origins case;
+   * this one is the other real configuration this Worker actually runs
+   * under and must behave identically to *pre*-Phase-4 there (every
+   * Phase 2/3 test above this point already assumes and passes under this
+   * exact single-origin config for `/sign-in`/`/app` — this block only adds
+   * the new Phase 4 behavior's own regression coverage).
+   */
+  describe("Phase 4: single-origin dev/CI config (PUBLIC_APP_URL equals PUBLIC_SITE_URL) is unaffected", () => {
+    beforeEach(() => {
+      mockEnv = { PUBLIC_SITE_URL, PUBLIC_APP_URL: PUBLIC_SITE_URL };
+      handleMock.mockClear();
+    });
+
+    it("does not redirect /sign-in when there is no distinct app origin (no loop)", async () => {
+      const request = new Request(`${PUBLIC_SITE_URL}/sign-in`);
+      const response = await fetchWithPreviewSearchIsolation(request, env, ctx);
+      expect(response.status).toBe(200);
+      expect(handleMock).toHaveBeenCalledWith(
+        expect.objectContaining({ url: `${PUBLIC_SITE_URL}/sign-in` }),
+        env,
+        ctx,
+      );
+    });
+
+    it("does not redirect /app or /admin when there is no distinct app origin", async () => {
+      for (const path of ["/app", "/app/domains", "/admin", "/admin/users"]) {
+        handleMock.mockClear();
+        const request = new Request(`${PUBLIC_SITE_URL}${path}`);
+        const response = await fetchWithPreviewSearchIsolation(request, env, ctx);
+        expect(response.status).toBe(200);
+        expect(handleMock).toHaveBeenCalled();
+      }
+    });
+
+    it("does not reject an APP_ONLY API when there is no distinct app origin", async () => {
+      const request = new Request(`${PUBLIC_SITE_URL}/api/domains`, { method: "POST" });
+      const response = await fetchWithPreviewSearchIsolation(request, env, ctx);
+      expect(response.status).toBe(200);
+      expect(handleMock).toHaveBeenCalled();
+    });
+
+    it("does not reject the Paddle webhook when there is no distinct app origin", async () => {
+      const request = new Request(`${PUBLIC_SITE_URL}/api/billing/webhook`, { method: "POST" });
+      const response = await fetchWithPreviewSearchIsolation(request, env, ctx);
+      expect(response.status).toBe(200);
+      expect(handleMock).toHaveBeenCalled();
+    });
+
+    it("also behaves correctly when PUBLIC_APP_URL is entirely unset (the other legitimate local shape)", async () => {
+      mockEnv = { PUBLIC_SITE_URL };
+      const request = new Request(`${PUBLIC_SITE_URL}/sign-in`);
+      const response = await fetchWithPreviewSearchIsolation(request, env, ctx);
+      expect(response.status).toBe(200);
+      expect(handleMock).toHaveBeenCalled();
+    });
+  });
+
   describe("unknown host fails closed for sensitive paths only", () => {
     beforeEach(() => {
       mockEnv = { PUBLIC_SITE_URL, PUBLIC_APP_URL };

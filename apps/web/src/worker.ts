@@ -6,7 +6,7 @@ import { applyDueScheduledDowngrades } from "./lib/billing/scheduled-downgrades"
 import { reconcileMissingPolicyChangeNotifications } from "./lib/notification-reconciliation";
 import { evaluateOperationalAlerts } from "./lib/admin/operational-alerts";
 import { resolveCanonicalRedirectTarget } from "./lib/route-registry";
-import { classifyRequestOrigin, toPublicUrl } from "./lib/origin";
+import { classifyRequestOrigin, hasDistinctAppOrigin, toPublicUrl } from "./lib/origin";
 import {
   classifyApiOwnership,
   isAppOnlyPagePath,
@@ -353,7 +353,13 @@ function notFound(): Response {
  *    allowlisted query for `/sign-in` specifically. Every other method
  *    fails closed (404) rather than being replayed cross-origin — the
  *    Wrong-Host Policy never turns a mutation into a cross-origin request,
- *    symmetric with the app-surface case below.
+ *    symmetric with the app-surface case below. Gated on
+ *    `hasDistinctAppOrigin()`: local single-origin dev legitimately sets
+ *    `PUBLIC_APP_URL` equal to `PUBLIC_SITE_URL`, under which every request
+ *    classifies as `"public"` (`classifyOrigin` checks the public origin
+ *    first) — an ungated redirect there would target the *same* URL,
+ *    looping forever. Found by CI (`ERR_TOO_MANY_REDIRECTS`) the first time
+ *    this ran against the real local/CI config, not by local testing.
  * 1b. **Either surface + wrong-host `/api/*` → reject (Phase 4).** An
  *    `APP_ONLY` API reached on the public apex, or a `PUBLIC_ONLY`/
  *    `SERVER_TO_SERVER_PUBLIC` API reached on the app host, is rejected
@@ -447,7 +453,7 @@ export async function fetchWithPreviewSearchIsolation(
   if (surface === "public" || surface === "app") {
     const apiOwnership = classifyApiOwnership(url.pathname);
     const wrongHostApi =
-      (surface === "public" && apiOwnership === "APP_ONLY") ||
+      (surface === "public" && hasDistinctAppOrigin() && apiOwnership === "APP_ONLY") ||
       (surface === "app" &&
         (apiOwnership === "PUBLIC_ONLY" || apiOwnership === "SERVER_TO_SERVER_PUBLIC"));
     if (wrongHostApi) {
@@ -457,7 +463,7 @@ export async function fetchWithPreviewSearchIsolation(
 
   let effectiveRequest = request;
 
-  if (surface === "public" && isAppOnlyPagePath(url.pathname)) {
+  if (surface === "public" && hasDistinctAppOrigin() && isAppOnlyPagePath(url.pathname)) {
     // Phase 4, 1a: the apex no longer serves APP_ONLY pages directly — see
     // this function's doc comment and `legacy-redirect.ts`.
     if (!SAFE_METHODS.has(request.method)) {

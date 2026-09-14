@@ -14,6 +14,7 @@ const {
   toPublicUrl,
   toAppUrl,
   requireAppOrigin,
+  hasDistinctAppOrigin,
 } = await import("./origin");
 
 describe("lib/origin.ts — trusted CrawlPact origin registry (Phase 2, ADR-0010)", () => {
@@ -195,6 +196,29 @@ describe("lib/origin.ts — trusted CrawlPact origin registry (Phase 2, ADR-0010
     it("requireAppOrigin throws when PUBLIC_APP_URL is not configured", () => {
       mockEnv = { PUBLIC_SITE_URL: "https://crawlpact.com" };
       expect(() => requireAppOrigin()).toThrow();
+    });
+  });
+
+  describe("hasDistinctAppOrigin (Phase 4 regression guard)", () => {
+    it("is true when a real, distinct app origin is configured", () => {
+      mockEnv = {
+        PUBLIC_SITE_URL: "https://crawlpact.com",
+        PUBLIC_APP_URL: "https://app.crawlpact.com",
+      };
+      expect(hasDistinctAppOrigin()).toBe(true);
+    });
+
+    it("is false when PUBLIC_APP_URL is not configured", () => {
+      mockEnv = { PUBLIC_SITE_URL: "https://crawlpact.com" };
+      expect(hasDistinctAppOrigin()).toBe(false);
+    });
+
+    it("is false when PUBLIC_APP_URL equals PUBLIC_SITE_URL (local single-origin dev)", () => {
+      mockEnv = {
+        PUBLIC_SITE_URL: "http://localhost:4321",
+        PUBLIC_APP_URL: "http://localhost:4321",
+      };
+      expect(hasDistinctAppOrigin()).toBe(false);
     });
   });
 });
