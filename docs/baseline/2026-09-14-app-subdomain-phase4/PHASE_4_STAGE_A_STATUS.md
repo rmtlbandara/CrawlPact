@@ -1,12 +1,26 @@
-# Phase 4 — Stage A Status (Preview Validated; Production Not Yet Deployed)
+# Phase 4 — Stage A Status (Production Live; Stabilization Health Gate Passed)
 
-Status 2026-09-14. This document exists specifically so nothing in this pass's other evidence
-files is misread as claiming more than what actually happened. **This has been deployed to and
-validated on Preview. Nothing has been deployed to Production.** Preview evidence below is real
-LIVE HTTP and CLOUDFLARE API / TELEMETRY (see `PREVIEW_VALIDATION.md`); everything else is SOURCE
-INSPECTION, AUTOMATED TEST (local), or CI.
+Status 2026-09-14 (updated after Production Stage A deployment and post-deploy stabilization
+health gate). **Production Stage A is now live**, deployed commit
+`d77ae4ecd57d11c844eef62f7d05e530de779bad`, Worker version
+`4078cdd9-2639-4421-ae68-af8174d03b69`. See `PRODUCTION_CUTOVER_EVIDENCE.md` and
+`OBSERVABILITY_EVIDENCE.md` for the complete evidence (PRODUCTION LIVE HTTP, WORKERS TELEMETRY,
+SOURCE INSPECTION, AUTOMATED SMOKE, GITHUB ACTIONS classes, each marked explicitly). Preview
+evidence below (predating the Production cutover) remains valid and is retained unchanged.
 
 ## Verdict
+
+```
+PRODUCTION STAGE A — STABILIZATION PASS ✅
+STAGE B ELIGIBLE — NOT STARTED
+```
+
+Stage B has NOT started. Stage C has NOT started. Stage A redirects remain `307`. The WebAuthn
+Stage C origin-narrowing restriction remains unchanged (any currently-trusted origin still
+accepted). `workers.dev` remains in its temporary rollback-window state. BIC (Billing
+Invariant Constraint) remains unchanged — no Paddle configuration was touched.
+
+### Prior verdict (superseded, retained for history)
 
 ```
 PHASE 4 STAGE A — PREVIEW VALIDATION PASS
@@ -230,25 +244,64 @@ telemetry from both real hostnames.
 | Gate                                                              | Status                                                                                                                       |
 | ----------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------- |
 | Route ownership contract, zero UNRESOLVED                         | ✅ (CI-enforced test)                                                                                                        |
-| Symmetric wrong-host enforcement (page + API, both directions)    | ✅ (48 new unit tests, all green locally)                                                                                    |
+| Symmetric wrong-host enforcement (page + API, both directions)    | ✅ (48 new unit tests, all green locally; reconfirmed live in Production, see `PRODUCTION_CUTOVER_EVIDENCE.md` §4)           |
 | No `/app` de-prefixing                                            | ✅ (explicit test + doc supersession note)                                                                                   |
-| First-party entry points migrated                                 | ✅ (5/5 found, all migrated)                                                                                                 |
-| Redirect: one hop, no loop, method-safe                           | ✅ (unit-tested directly)                                                                                                    |
+| First-party entry points migrated                                 | ✅ (5/5 found, all migrated; confirmed live in Production, see `PRODUCTION_CUTOVER_EVIDENCE.md` §10)                         |
+| Redirect: one hop, no loop, method-safe                           | ✅ (unit-tested directly; reconfirmed live in Production)                                                                    |
 | Local quality gate (format/lint/typecheck/unit/security/db/build) | ✅ all green                                                                                                                 |
 | Full E2E/integration suite clean                                  | ✅ CI green (151/151 E2E+a11y), first-attempt-clean on final commit; local run still blocked by known pre-existing flakiness |
 | Preview deployment + validation                                   | ✅ PASS — both Custom Domains live, full 21-point matrix green (`PREVIEW_VALIDATION.md`)                                     |
-| Dedicated Phase 4 PR, CI green on exact head                      | ✅ PR #180, CI green, `CLEAN`/`MERGEABLE`, not merged                                                                        |
-| Production Stage A deployment                                     | ⏳ not started — requires fresh, explicit, in-the-moment owner permission                                                    |
-| Production observability health gate                              | ⏳ not started                                                                                                               |
-| Stage B permanentization (307→308)                                | ⏳ not started — gated on the above                                                                                          |
-| Stage C WebAuthn finalization                                     | ⏳ deferred — separate, later stage by design                                                                                |
+| Dedicated Phase 4 PR, CI green on exact head                      | ✅ PR #180 (merged), plus the smoke-readiness PR #190 (merged, `d77ae4e`)                                                    |
+| Production Stage A deployment                                     | ✅ **live** — commit `d77ae4e`, Worker version `4078cdd9-...`, `PRODUCTION_CUTOVER_EVIDENCE.md`                              |
+| Production observability health gate                              | ✅ **PASS** — ~30 min post-deploy window, zero 5xx, zero exceptions, `OBSERVABILITY_EVIDENCE.md`                             |
+| Stage B permanentization (307→308)                                | ⏳ not started — eligible, owner decision required                                                                           |
+| Stage C WebAuthn finalization                                     | ⏳ deferred — separate, later stage by design, not started                                                                   |
 
-## Final verdict (restated)
+## Production deploy-time smoke anomaly (documented, not dismissed)
+
+The `Deploy production` workflow's own smoke step ran ~6 seconds after the Worker version was
+created and reported 2 failures (`/app` redirect target, `APP_ONLY` API wrong-host rejection)
+consistent with ordinary Cloudflare edge-propagation lag immediately post-deploy — the same class
+of false negative this migration already documented once before on Preview's own cutover.
+Independently re-verified by this session via direct live HTTP checks and a fresh
+`pnpm run smoke:production` run: **43/43 passed**. The workflow run's historical conclusion
+remains `failure` — not relabeled. See `PRODUCTION_CUTOVER_EVIDENCE.md` §2 for full detail and the
+required classification wording.
+
+## Stage-B-readiness hardening recommendation (documented only — NOT implemented this pass)
+
+The Production deployment workflow's first smoke assertion runs immediately after `wrangler
+deploy` with no delay, which is what produced the propagation-lag false negative above. Before
+Stage B (permanent 308s, harder to reverse) is considered, `deploy-production.yml`'s smoke step
+should be hardened against this exact recurrence. Recommended design (either is acceptable, not
+mutually required):
+
+- **Bounded initial delay + smoke**: sleep a short, fixed duration (e.g. 10–15s) after the deploy
+  step, before running `pnpm run smoke:production` once, as today.
+- **Bounded smoke retry with short backoff**: run the existing smoke script; on failure, wait a
+  short backoff and retry the same read-only checks, up to a small fixed attempt count (e.g. 3),
+  logging every attempt's result.
+
+Hard requirements for whichever is chosen: never turn a persistent failure into a reported
+success; retry/delay only the existing read-only smoke checks, never redeploy between attempts;
+bounded attempts (no unbounded retry loop); the final persistent failure must still fail the
+deployment workflow exactly as it does today; every attempt must be logged.
+
+**Not implemented in this pass** — this pass is a stabilization health gate, not a workflow
+change, and the directive explicitly scoped this as "do not implement until Stage A's health gate
+is closed unless required to safely proceed." It was not required to safely proceed: the anomaly
+was fully explained by independent live re-verification, and Production is confirmed healthy
+without this hardening in place.
+
+## Final verdict
 
 ```
-PHASE 4 STAGE A — PREVIEW VALIDATION PASS
+PRODUCTION STAGE A — STABILIZATION PASS ✅
+STAGE B ELIGIBLE — NOT STARTED
 ```
 
-PR #180 (head `a808f0f`, plus the smoke-test fix on top) is pushed, reviewed by CI, and fully
-validated live on Preview against a real two-origin topology — see `PREVIEW_VALIDATION.md`.
-**Production Stage A has NOT been deployed. Phase 4 has NOT started in Production.**
+Production Stage A is live (`d77ae4e`, Worker version `4078cdd9-...`), independently verified
+healthy across the full route/API/asset/search/analytics/auth/billing/telemetry matrix — see
+`PRODUCTION_CUTOVER_EVIDENCE.md` and `OBSERVABILITY_EVIDENCE.md`. **Stage B has NOT started.
+Stage C has NOT started. Stage A redirects remain 307. The WebAuthn Stage C restriction remains
+unchanged. `workers.dev` remains in its temporary rollback-window state. BIC remains unchanged.**
