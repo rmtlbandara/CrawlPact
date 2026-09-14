@@ -35,16 +35,29 @@ on:
         description: "Commit SHA on main to deploy to preview (defaults to main's current tip)"
         required: false
 
-concurrency:
-  # A newer preview deploy always wins — an in-flight deploy of an older
-  # commit is cancelled rather than being allowed to overwrite a newer one.
-  group: deploy-preview
-  cancel-in-progress: true
-
 jobs:
   deploy:
     name: Build, deploy and verify preview
     if: github.event_name == 'workflow_dispatch' || (github.event.workflow_run.conclusion == 'success' && github.event.workflow_run.head_branch == 'main')
+    # 2026-09-14: this used to be a workflow-level `concurrency` block.
+    # `workflow_run` fires for *every* completed run of the "CI" workflow,
+    # regardless of branch — the `if` above is what actually filters that
+    # down to "CI succeeded on main." A workflow-level `concurrency` group is
+    # entered the moment a run is created, before any job's `if` is
+    # evaluated, so an unrelated CI completion (found live: a burst of
+    # Dependabot dependency-update PRs' own CI runs) still spawned a new
+    # "Deploy preview" *run* that entered this group and cancelled a real,
+    # legitimate, still-deploying run — mid-Lighthouse-check, after the
+    # actual deploy/bindings/smoke-test steps had already succeeded (run
+    # 34821431442, `deploy-preview.yml` run history). A job-level
+    # `concurrency` block only takes effect for a job that actually runs —
+    # a job skipped by `if` (Dependabot's own head_branch never equals
+    # `main`) never enters or affects this group, so it can no longer
+    # cancel a real deployment; a genuinely newer deploy of `main` still
+    # correctly cancels an older one, exactly as before.
+    concurrency:
+      group: deploy-preview
+      cancel-in-progress: true
     runs-on: ubuntu-latest
     environment: preview
     permissions:
