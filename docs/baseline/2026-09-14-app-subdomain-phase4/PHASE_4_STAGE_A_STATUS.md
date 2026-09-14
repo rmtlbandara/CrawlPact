@@ -85,23 +85,32 @@ catch it; CI, running against the real single-origin local/CI config, did — ex
 gap this migration's own established practice of never trusting local-only test results over CI
 exists to catch.
 
+## CI result (PR #180)
+
+Green on the third attempt (two commits fixed real, CI-caught issues — see above and
+`ENTRY_POINT_INVENTORY.md`): `Format, lint, typecheck, unit + integration tests, build` and
+`Chromium E2E + accessibility smoke` both pass, first-attempt-clean, on the final commit
+(`6b14503`) — 151/151 E2E + accessibility tests, including real WebAuthn passkey registration/
+login, pricing, audit-conversion, checkout-continuity, and admin flows exercised against this
+diff. `gh pr view 180` reports `mergeStateStatus: CLEAN`, `mergeable: MERGEABLE`. **Not merged.**
+
 ## Hard gates: current status
 
-| Gate                                                              | Status                                                                       |
-| ----------------------------------------------------------------- | ---------------------------------------------------------------------------- |
-| Route ownership contract, zero UNRESOLVED                         | ✅ (CI-enforced test)                                                        |
-| Symmetric wrong-host enforcement (page + API, both directions)    | ✅ (48 new unit tests, all green locally)                                    |
-| No `/app` de-prefixing                                            | ✅ (explicit test + doc supersession note)                                   |
-| First-party entry points migrated                                 | ✅ (5/5 found, all migrated)                                                 |
-| Redirect: one hop, no loop, method-safe                           | ✅ (unit-tested directly)                                                    |
-| Local quality gate (format/lint/typecheck/unit/security/db/build) | ✅ all green                                                                 |
-| Full E2E/integration suite clean                                  | ⏳ not yet run to a clean result locally (known local flakiness); CI pending |
-| Preview deployment + validation                                   | ⏳ not started                                                               |
-| Dedicated Phase 4 PR, CI green on exact head                      | ⏳ not started                                                               |
-| Production Stage A deployment                                     | ⏳ not started — requires fresh, explicit, in-the-moment owner permission    |
-| Production observability health gate                              | ⏳ not started                                                               |
-| Stage B permanentization (307→308)                                | ⏳ not started — gated on the above                                          |
-| Stage C WebAuthn finalization                                     | ⏳ deferred — separate, later stage by design                                |
+| Gate                                                              | Status                                                                                                                       |
+| ----------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------- |
+| Route ownership contract, zero UNRESOLVED                         | ✅ (CI-enforced test)                                                                                                        |
+| Symmetric wrong-host enforcement (page + API, both directions)    | ✅ (48 new unit tests, all green locally)                                                                                    |
+| No `/app` de-prefixing                                            | ✅ (explicit test + doc supersession note)                                                                                   |
+| First-party entry points migrated                                 | ✅ (5/5 found, all migrated)                                                                                                 |
+| Redirect: one hop, no loop, method-safe                           | ✅ (unit-tested directly)                                                                                                    |
+| Local quality gate (format/lint/typecheck/unit/security/db/build) | ✅ all green                                                                                                                 |
+| Full E2E/integration suite clean                                  | ✅ CI green (151/151 E2E+a11y), first-attempt-clean on final commit; local run still blocked by known pre-existing flakiness |
+| Preview deployment + validation                                   | ⏳ not started                                                                                                               |
+| Dedicated Phase 4 PR, CI green on exact head                      | ✅ PR #180, CI green, `CLEAN`/`MERGEABLE`, not merged                                                                        |
+| Production Stage A deployment                                     | ⏳ not started — requires fresh, explicit, in-the-moment owner permission                                                    |
+| Production observability health gate                              | ⏳ not started                                                                                                               |
+| Stage B permanentization (307→308)                                | ⏳ not started — gated on the above                                                                                          |
+| Stage C WebAuthn finalization                                     | ⏳ deferred — separate, later stage by design                                                                                |
 
 ## Final verdict (restated)
 
