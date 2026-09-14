@@ -65,13 +65,18 @@ async function run(): Promise<void> {
   const target = process.argv[2] as Target | undefined;
   const baseUrl = process.argv[3];
   // Phase 4 Stage A (2026-09-14, controlled production cutover): optional —
-  // present only once a target's apex has genuinely cut over to redirecting
+  // present once a target's apex has genuinely cut over to redirecting
   // /sign-in (and the other APP_ONLY pages) to a real, distinct app host.
-  // `smoke:preview` passes this from the moment Preview's own two-host
-  // topology is real; `smoke:production` deliberately does NOT yet (see
-  // package.json) — Production has not deployed Stage A, so its apex still
-  // genuinely serves /sign-in directly, and asserting otherwise here would
-  // be asserting a Production behavior that doesn't exist yet.
+  // `smoke:preview` has passed this since Preview's own two-host topology
+  // went live. `smoke:production` (package.json) now passes it too, updated
+  // ahead of the actual Production Stage A deployment this prepares for —
+  // otherwise `deploy-production.yml`'s final smoke step would fail the
+  // instant Production's apex starts genuinely redirecting (it would expect
+  // the old direct-200 /sign-in response and get a 307 instead). This
+  // script has no way to know either target's *actual* live routing state
+  // at the moment it runs — the caller (package.json) is solely responsible
+  // for passing `appBaseUrl` only once that target's cutover is real; do
+  // not add speculative auto-detection here.
   const appBaseUrl = process.argv[4];
   if (!target || !baseUrl || !(["preview", "production"] as Target[]).includes(target)) {
     console.error("Usage: smoke:<preview|production> <baseUrl> [appBaseUrl]");
