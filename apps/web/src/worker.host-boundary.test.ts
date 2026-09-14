@@ -269,8 +269,8 @@ describe("fetchWithPreviewSearchIsolation — Phase 2 host boundary", () => {
      * to assert the Phase 2/3 migration-compatibility window's "apex still
      * serves /app and /sign-in directly" behavior. That window has ended:
      * see the "Phase 4: apex no longer serves APP_ONLY pages" describe block
-     * below for the real, current behavior (a 307 redirect to the app
-     * host). Kept here, renamed, as the negative half of that assertion —
+     * below for the real, current behavior (a permanent redirect to the app
+     * host, 308 since Stage B). Kept here, renamed, as the negative half of that assertion —
      * the apex must never again *serve* these pages directly.
      */
     it("no longer serves /app or /sign-in directly on the public host (Phase 4 cutover)", async () => {
@@ -368,10 +368,10 @@ describe("fetchWithPreviewSearchIsolation — Phase 2 host boundary", () => {
       handleMock.mockClear();
     });
 
-    it("redirects /sign-in to the app host (Stage A: 307, preserving an allowlisted query)", async () => {
+    it("redirects /sign-in to the app host (Stage B: 308 permanent, preserving an allowlisted query)", async () => {
       const request = new Request(`${PUBLIC_SITE_URL}/sign-in?plan=pro&interval=year`);
       const response = await fetchWithPreviewSearchIsolation(request, env, ctx);
-      expect(response.status).toBe(307);
+      expect(response.status).toBe(308);
       expect(response.headers.get("Location")).toBe(
         `${PUBLIC_APP_URL}/sign-in?plan=pro&interval=year`,
       );
@@ -381,14 +381,14 @@ describe("fetchWithPreviewSearchIsolation — Phase 2 host boundary", () => {
     it("redirects bare /app to the app host, unprefixed (no de-prefixing)", async () => {
       const request = new Request(`${PUBLIC_SITE_URL}/app`);
       const response = await fetchWithPreviewSearchIsolation(request, env, ctx);
-      expect(response.status).toBe(307);
+      expect(response.status).toBe(308);
       expect(response.headers.get("Location")).toBe(`${PUBLIC_APP_URL}/app`);
     });
 
     it("redirects a nested /app/** path to the app host, preserving the exact path and query", async () => {
       const request = new Request(`${PUBLIC_SITE_URL}/app/domains/abc123?tab=history`);
       const response = await fetchWithPreviewSearchIsolation(request, env, ctx);
-      expect(response.status).toBe(307);
+      expect(response.status).toBe(308);
       expect(response.headers.get("Location")).toBe(
         `${PUBLIC_APP_URL}/app/domains/abc123?tab=history`,
       );
@@ -397,21 +397,21 @@ describe("fetchWithPreviewSearchIsolation — Phase 2 host boundary", () => {
     it("redirects bare /admin to the app host", async () => {
       const request = new Request(`${PUBLIC_SITE_URL}/admin`);
       const response = await fetchWithPreviewSearchIsolation(request, env, ctx);
-      expect(response.status).toBe(307);
+      expect(response.status).toBe(308);
       expect(response.headers.get("Location")).toBe(`${PUBLIC_APP_URL}/admin`);
     });
 
     it("redirects a nested /admin/** path to the app host", async () => {
       const request = new Request(`${PUBLIC_SITE_URL}/admin/users/abc123`);
       const response = await fetchWithPreviewSearchIsolation(request, env, ctx);
-      expect(response.status).toBe(307);
+      expect(response.status).toBe(308);
       expect(response.headers.get("Location")).toBe(`${PUBLIC_APP_URL}/admin/users/abc123`);
     });
 
     it("redirects HEAD the same as GET", async () => {
       const request = new Request(`${PUBLIC_SITE_URL}/sign-in`, { method: "HEAD" });
       const response = await fetchWithPreviewSearchIsolation(request, env, ctx);
-      expect(response.status).toBe(307);
+      expect(response.status).toBe(308);
     });
 
     it("rejects (404) a non-GET/HEAD request to a legacy app page rather than replaying it cross-origin", async () => {
@@ -440,7 +440,7 @@ describe("fetchWithPreviewSearchIsolation — Phase 2 host boundary", () => {
     it("produces exactly one redirect hop (the app host's own worker logic is never re-entered by this redirect)", async () => {
       const request = new Request(`${PUBLIC_SITE_URL}/app/billing?plan=pro&interval=year`);
       const response = await fetchWithPreviewSearchIsolation(request, env, ctx);
-      expect(response.status).toBe(307);
+      expect(response.status).toBe(308);
       const location = response.headers.get("Location")!;
       expect(location).toBe(`${PUBLIC_APP_URL}/app/billing?plan=pro&interval=year`);
       // The redirect target itself must not be something this same function

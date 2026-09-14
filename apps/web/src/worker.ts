@@ -346,8 +346,8 @@ function notFound(): Response {
  *    The other half of the symmetric boundary Phase 2 deliberately left
  *    open for the migration-compatibility window: `crawlpact.com/sign-in`,
  *    `/app`, `/app/**`, `/admin`, `/admin/**` no longer render application
- *    HTML on the apex. GET/HEAD temporarily redirect (307 — Stage A of the
- *    two-stage cutover, see `legacy-redirect.ts`) to the exact app-host
+ *    HTML on the apex. GET/HEAD permanently redirect (308 since Stage B, see
+ *    `legacy-redirect.ts`) to the exact app-host
  *    equivalent, preserving path (no `/app` de-prefixing — see
  *    `route-ownership.ts`'s `isAppOnlyPagePath` doc comment) and an
  *    allowlisted query for `/sign-in` specifically. Every other method
