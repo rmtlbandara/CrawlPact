@@ -11,7 +11,12 @@ import type {
 } from "@simplewebauthn/server";
 import { ApiError, signToken, verifyToken } from "@crawlpact/core";
 import { getEnv } from "../env";
-import { getValidatedRequestOrigin, isTrustedOrigin } from "../origin";
+import {
+  getPublicOrigin,
+  getValidatedRequestOrigin,
+  hasDistinctAppOrigin,
+  requireAppOrigin,
+} from "../origin";
 
 /**
  * Thin wrapper around @simplewebauthn/server, scoped to this app's RP
@@ -35,6 +40,22 @@ import { getValidatedRequestOrigin, isTrustedOrigin } from "../origin";
  * doesn't match the origin pinned into the token, SimpleWebAuthn's own
  * verification fails. `WEBAUTHN_RP_ID` remains a single, unchanged value
  * throughout — only the *origin* varies per ceremony, never the RP ID.
+ *
+ * Stage C (Master Finalization Directive, Phase 4C, 2026-09-15) narrows
+ * *which* origin a ceremony may use: `webauthnCeremonyOrigins()` below is
+ * deliberately a separate, narrower rule from `getTrustedOrigins()`
+ * (`origin.ts`) — the public origin stays fully trusted for everything else
+ * (CSRF, general request classification; it is NOT removed from
+ * `getTrustedOrigins()`). Once a real, distinct app origin is configured,
+ * only it may begin or finish a *new* ceremony; `/api/auth/**` is already
+ * `APP_ONLY` and 404s on the apex at the host-boundary layer (`worker.ts`),
+ * so this is defense-in-depth — the ceremony logic itself no longer depends
+ * on that outer boundary holding to keep the apex out of WebAuthn. Existing
+ * credentials are entirely unaffected: `WEBAUTHN_RP_ID` never changes, and
+ * this only governs where a ceremony may *start*, never which credentials
+ * are valid. Local single-origin dev (no distinct app origin configured)
+ * keeps its single origin allowed, matching `hasDistinctAppOrigin()`'s
+ * existing convention elsewhere in this migration.
  */
 
 const CHALLENGE_TTL_SECONDS = 300;
@@ -44,17 +65,31 @@ function rpConfig() {
   return { rpID: env.WEBAUTHN_RP_ID, rpName: "CrawlPact" };
 }
 
+/** The origin(s) a WebAuthn ceremony may begin or finish on, right now. */
+function webauthnCeremonyOrigins(): string[] {
+  return hasDistinctAppOrigin() ? [requireAppOrigin()] : [getPublicOrigin()];
+}
+
+function isWebauthnCeremonyOrigin(origin: string | null | undefined): boolean {
+  if (!origin) return false;
+  return webauthnCeremonyOrigins().includes(origin);
+}
+
 /**
  * The origin a ceremony is permitted to begin on, right now. Deliberately
  * derived from the same request the caller already has, never trusted from
  * client-supplied JSON. Throws if the request didn't arrive on a currently
- * trusted CrawlPact origin — a ceremony must never be signed for an origin
- * we don't recognize.
+ * permitted WebAuthn ceremony origin — a ceremony must never be signed for
+ * an origin Stage C doesn't allow, even if that origin is otherwise a
+ * trusted CrawlPact origin for other purposes (e.g. the apex, post-cutover).
  */
 function requireCeremonyOrigin(request: Request): string {
   const origin = getValidatedRequestOrigin(request);
-  if (!origin) {
-    throw new ApiError("FORBIDDEN", "This request did not arrive on a trusted CrawlPact origin.");
+  if (!origin || !isWebauthnCeremonyOrigin(origin)) {
+    throw new ApiError(
+      "FORBIDDEN",
+      "This request did not arrive on a permitted WebAuthn ceremony origin.",
+    );
   }
   return origin;
 }
@@ -121,19 +156,22 @@ export type FinishRegistrationOutcome =
   | { ok: false; reason: "challenge_invalid" | "verification_failed" };
 
 /**
- * `request` here is the *finish* request — used only to confirm it's
- * arriving on a currently trusted origin (defence-in-depth; the binding
- * property that actually prevents cross-origin completion is passing the
- * *signed, begin-time* origin as `expectedOrigin` below, which SimpleWebAuthn
- * verifies against the authenticator's own signed `clientDataJSON.origin` —
- * not anything derived from this request).
+ * `request` here is the *finish* request — Stage C requires it to have
+ * arrived on a currently *permitted WebAuthn ceremony* origin (not merely
+ * any trusted CrawlPact origin), independent of the outer host-boundary
+ * (defence-in-depth). The binding property that actually prevents
+ * cross-origin completion is passing the *signed, begin-time* origin as
+ * `expectedOrigin` below, which SimpleWebAuthn verifies against the
+ * authenticator's own signed `clientDataJSON.origin` — not anything derived
+ * from this request.
  */
 export async function finishPasskeyRegistration(
   request: Request,
   challengeToken: string,
   response: RegistrationResponseJSON,
 ): Promise<FinishRegistrationOutcome> {
-  if (!getValidatedRequestOrigin(request)) {
+  const requestOrigin = getValidatedRequestOrigin(request);
+  if (!requestOrigin || !isWebauthnCeremonyOrigin(requestOrigin)) {
     return { ok: false, reason: "challenge_invalid" };
   }
 
@@ -142,13 +180,17 @@ export async function finishPasskeyRegistration(
     getEnv().SESSION_SIGNING_SECRET,
   );
   // A legacy challenge token signed before this origin-pinning change has no
-  // `origin` field at all; `isTrustedOrigin(undefined)` is `false`, so it is
-  // rejected the same as any other invalid challenge — expected and
-  // acceptable given the 5-minute TTL (WEBAUTHN_MIGRATION_CONTRACT.md).
+  // `origin` field at all; `isWebauthnCeremonyOrigin(undefined)` is `false`,
+  // so it is rejected the same as any other invalid challenge — expected and
+  // acceptable given the 5-minute TTL (WEBAUTHN_MIGRATION_CONTRACT.md). A
+  // token signed at begin time for an origin Stage C no longer permits (e.g.
+  // a stale in-flight apex-began ceremony from the moment of cutover) is
+  // rejected the same way — a deliberate, accepted sharp edge given the
+  // short TTL, not a bug.
   if (
     !verified.valid ||
     verified.payload.purpose !== "register" ||
-    !isTrustedOrigin(verified.payload.origin)
+    !isWebauthnCeremonyOrigin(verified.payload.origin)
   ) {
     return { ok: false, reason: "challenge_invalid" };
   }
@@ -205,7 +247,8 @@ export async function finishPasskeyAuthentication(
   response: AuthenticationResponseJSON,
   storedCredential: WebAuthnCredential,
 ): Promise<FinishAuthenticationOutcome> {
-  if (!getValidatedRequestOrigin(request)) {
+  const requestOrigin = getValidatedRequestOrigin(request);
+  if (!requestOrigin || !isWebauthnCeremonyOrigin(requestOrigin)) {
     return { ok: false, reason: "challenge_invalid" };
   }
 
@@ -216,7 +259,7 @@ export async function finishPasskeyAuthentication(
   if (
     !verified.valid ||
     verified.payload.purpose !== "login" ||
-    !isTrustedOrigin(verified.payload.origin)
+    !isWebauthnCeremonyOrigin(verified.payload.origin)
   ) {
     return { ok: false, reason: "challenge_invalid" };
   }

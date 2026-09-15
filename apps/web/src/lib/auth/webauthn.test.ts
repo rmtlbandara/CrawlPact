@@ -29,44 +29,35 @@ function baseEnv(): Partial<Cloudflare.Env> {
   };
 }
 
-/**
- * Phase 2 of the app-subdomain migration (ADR-0010,
- * `docs/baseline/2026-09-09-app-subdomain-phase1/WEBAUTHN_MIGRATION_CONTRACT.md`):
- * the origin-pinned dual-origin ceremony design. These are pure unit tests
- * against `beginPasskeyRegistration`/`finishPasskeyRegistration` (no D1
- * needed — that logic lives entirely in the route handlers) using a real
- * software WebAuthn authenticator (`virtual-authenticator.ts`) so the
- * cryptographic verification is genuine, not mocked.
- */
-describe("WebAuthn origin pinning", () => {
-  describe("registration", () => {
-    it("succeeds when the ceremony begins and finishes at the same trusted origin", async () => {
-      mockEnv = baseEnv();
-      const credential = await createVirtualCredential();
-      const beginRequest = new Request(`${PUBLIC_ORIGIN}/api/auth/register/begin`, {
-        method: "POST",
-      });
-      const { challengeToken, options } = await beginPasskeyRegistration(beginRequest, "Ada", []);
-      const response = await simulateRegistration(
-        credential,
-        options.challenge,
-        RP_ID,
-        PUBLIC_ORIGIN,
-      );
-      const finishRequest = new Request(`${PUBLIC_ORIGIN}/api/auth/register/finish`, {
-        method: "POST",
-      });
-      const outcome = await finishPasskeyRegistration(finishRequest, challengeToken, response);
-      expect(outcome.ok).toBe(true);
-    });
+function localSingleOriginEnv(): Partial<Cloudflare.Env> {
+  const local = "http://localhost:4321";
+  return {
+    PUBLIC_SITE_URL: local,
+    PUBLIC_APP_URL: local,
+    WEBAUTHN_RP_ID: "localhost",
+    WEBAUTHN_RP_ORIGIN: local,
+    SESSION_SIGNING_SECRET: "test-signing-secret-long-enough-for-hmac",
+  };
+}
 
-    it("succeeds when begun on the app origin and finished (same origin end-to-end) even though the finish HTTP request itself arrives on the other trusted origin", async () => {
-      // The finish request's own arrival host is only a defense-in-depth
-      // check (must be *some* trusted origin) — the property that actually
-      // prevents replay is the *pinned* origin matching the real ceremony's
-      // clientDataJSON.origin, regardless of which trusted host physically
-      // received the finish POST. Both are trusted CrawlPact origins during
-      // the Phase 2/3 migration-compatibility window (ADR-0010).
+/**
+ * Stage C of the app-subdomain migration (Master Finalization Directive,
+ * Phase 4C, 2026-09-15): with a real, distinct app origin configured, a
+ * WebAuthn ceremony may now only begin or finish on the app origin —
+ * `webauthnCeremonyOrigins()` (`webauthn.ts`) is a narrower rule than
+ * `getTrustedOrigins()` (`origin.ts`), which still trusts the apex for
+ * every other purpose (CSRF, general request classification). `/api/auth/**`
+ * is already `APP_ONLY` and 404s on the apex at the host-boundary layer
+ * (`worker.ts`) — these are pure unit tests against
+ * `beginPasskeyRegistration`/`finishPasskeyRegistration`/etc. directly (no
+ * D1 needed), proving the ceremony logic itself independently enforces this,
+ * not merely relying on that outer boundary. `WEBAUTHN_RP_ID` is asserted
+ * unchanged throughout — Stage C narrows the ceremony *origin*, never the
+ * RP ID, and existing credentials are unaffected by any of this.
+ */
+describe("WebAuthn ceremony origin — Stage C (app-origin-only once a distinct app origin exists)", () => {
+  describe("registration", () => {
+    it("succeeds when begun and finished at the app origin", async () => {
       mockEnv = baseEnv();
       const credential = await createVirtualCredential();
       const beginRequest = new Request(`${APP_ORIGIN}/api/auth/register/begin`, {
@@ -74,29 +65,21 @@ describe("WebAuthn origin pinning", () => {
       });
       const { challengeToken, options } = await beginPasskeyRegistration(beginRequest, "Ada", []);
       const response = await simulateRegistration(credential, options.challenge, RP_ID, APP_ORIGIN);
-      const finishRequest = new Request(`${PUBLIC_ORIGIN}/api/auth/register/finish`, {
+      const finishRequest = new Request(`${APP_ORIGIN}/api/auth/register/finish`, {
         method: "POST",
       });
       const outcome = await finishPasskeyRegistration(finishRequest, challengeToken, response);
       expect(outcome.ok).toBe(true);
     });
 
-    it("REJECTS a ceremony begun on one trusted origin but actually completed (per clientDataJSON) on the other — the dual-origin replay case", async () => {
+    it("rejects a begin request arriving on the apex (public origin) — no longer a permitted ceremony origin", async () => {
       mockEnv = baseEnv();
-      const credential = await createVirtualCredential();
       const beginRequest = new Request(`${PUBLIC_ORIGIN}/api/auth/register/begin`, {
         method: "POST",
       });
-      const { challengeToken, options } = await beginPasskeyRegistration(beginRequest, "Ada", []);
-      // The real ceremony's signed clientDataJSON claims APP_ORIGIN, but the
-      // challenge token was pinned to PUBLIC_ORIGIN at begin time.
-      const response = await simulateRegistration(credential, options.challenge, RP_ID, APP_ORIGIN);
-      const finishRequest = new Request(`${PUBLIC_ORIGIN}/api/auth/register/finish`, {
-        method: "POST",
+      await expect(beginPasskeyRegistration(beginRequest, "Ada", [])).rejects.toMatchObject({
+        code: "FORBIDDEN",
       });
-      const outcome = await finishPasskeyRegistration(finishRequest, challengeToken, response);
-      expect(outcome.ok).toBe(false);
-      if (!outcome.ok) expect(outcome.reason).toBe("verification_failed");
     });
 
     it("rejects a begin request arriving on an untrusted origin", async () => {
@@ -109,23 +92,66 @@ describe("WebAuthn origin pinning", () => {
       });
     });
 
-    it("rejects a finish request arriving on an untrusted origin, even with an otherwise-valid response", async () => {
+    it("rejects a finish request whose challenge was signed for the app origin but whose HTTP request itself arrives on the apex", async () => {
       mockEnv = baseEnv();
       const credential = await createVirtualCredential();
-      const beginRequest = new Request(`${PUBLIC_ORIGIN}/api/auth/register/begin`, {
+      const beginRequest = new Request(`${APP_ORIGIN}/api/auth/register/begin`, {
         method: "POST",
       });
       const { challengeToken, options } = await beginPasskeyRegistration(beginRequest, "Ada", []);
-      const response = await simulateRegistration(
-        credential,
-        options.challenge,
-        RP_ID,
-        PUBLIC_ORIGIN,
-      );
+      const response = await simulateRegistration(credential, options.challenge, RP_ID, APP_ORIGIN);
+      const finishRequest = new Request(`${PUBLIC_ORIGIN}/api/auth/register/finish`, {
+        method: "POST",
+      });
+      const outcome = await finishPasskeyRegistration(finishRequest, challengeToken, response);
+      expect(outcome.ok).toBe(false);
+      if (!outcome.ok) expect(outcome.reason).toBe("challenge_invalid");
+    });
+
+    it("rejects a finish request arriving on an untrusted origin, even with an otherwise-valid response", async () => {
+      mockEnv = baseEnv();
+      const credential = await createVirtualCredential();
+      const beginRequest = new Request(`${APP_ORIGIN}/api/auth/register/begin`, {
+        method: "POST",
+      });
+      const { challengeToken, options } = await beginPasskeyRegistration(beginRequest, "Ada", []);
+      const response = await simulateRegistration(credential, options.challenge, RP_ID, APP_ORIGIN);
       const finishRequest = new Request("https://attacker.example/api/auth/register/finish", {
         method: "POST",
       });
       const outcome = await finishPasskeyRegistration(finishRequest, challengeToken, response);
+      expect(outcome.ok).toBe(false);
+      if (!outcome.ok) expect(outcome.reason).toBe("challenge_invalid");
+    });
+
+    it("rejects a challenge token whose signed origin field is the apex — a tampered/stale token, not merely an arrival-origin problem", async () => {
+      // Manually signs a token exactly as beginPasskeyRegistration would,
+      // but with the apex as the pinned `origin` field — simulating either a
+      // forged token or a genuine in-flight ceremony from the moment of
+      // Stage C cutover. Proves the *payload* origin check
+      // (`isWebauthnCeremonyOrigin(verified.payload.origin)`) independently
+      // rejects this, not just the finish request's own arrival-origin
+      // check (which here correctly arrives on the app origin).
+      mockEnv = baseEnv();
+      const { signToken } = await import("@crawlpact/core");
+      const credential = await createVirtualCredential();
+      const challenge = "tampered-origin-challenge";
+      const tamperedToken = await signToken(
+        {
+          purpose: "register",
+          challenge,
+          displayName: "Ada",
+          label: "Passkey",
+          origin: PUBLIC_ORIGIN,
+        },
+        mockEnv.SESSION_SIGNING_SECRET as string,
+        300,
+      );
+      const response = await simulateRegistration(credential, challenge, RP_ID, PUBLIC_ORIGIN);
+      const finishRequest = new Request(`${APP_ORIGIN}/api/auth/register/finish`, {
+        method: "POST",
+      });
+      const outcome = await finishPasskeyRegistration(finishRequest, tamperedToken, response);
       expect(outcome.ok).toBe(false);
       if (!outcome.ok) expect(outcome.reason).toBe("challenge_invalid");
     });
@@ -148,9 +174,9 @@ describe("WebAuthn origin pinning", () => {
         credential,
         "legacy-challenge",
         RP_ID,
-        PUBLIC_ORIGIN,
+        APP_ORIGIN,
       );
-      const finishRequest = new Request(`${PUBLIC_ORIGIN}/api/auth/register/finish`, {
+      const finishRequest = new Request(`${APP_ORIGIN}/api/auth/register/finish`, {
         method: "POST",
       });
       const outcome = await finishPasskeyRegistration(finishRequest, legacyToken, response);
@@ -160,10 +186,10 @@ describe("WebAuthn origin pinning", () => {
   });
 
   describe("authentication", () => {
-    /** Registers a real credential first so authentication tests have a genuine, correctly COSE-encoded `WebAuthnCredential` to verify against. */
+    /** Registers a real credential first (on the app origin) so authentication tests have a genuine, correctly COSE-encoded `WebAuthnCredential` to verify against. */
     async function registerCredential() {
       const virtualCredential = await createVirtualCredential();
-      const beginRequest = new Request(`${PUBLIC_ORIGIN}/api/auth/register/begin`, {
+      const beginRequest = new Request(`${APP_ORIGIN}/api/auth/register/begin`, {
         method: "POST",
       });
       const { challengeToken, options } = await beginPasskeyRegistration(beginRequest, "Ada", []);
@@ -171,9 +197,9 @@ describe("WebAuthn origin pinning", () => {
         virtualCredential,
         options.challenge,
         RP_ID,
-        PUBLIC_ORIGIN,
+        APP_ORIGIN,
       );
-      const finishRequest = new Request(`${PUBLIC_ORIGIN}/api/auth/register/finish`, {
+      const finishRequest = new Request(`${APP_ORIGIN}/api/auth/register/finish`, {
         method: "POST",
       });
       const outcome = await finishPasskeyRegistration(finishRequest, challengeToken, response);
@@ -181,7 +207,7 @@ describe("WebAuthn origin pinning", () => {
       return { virtualCredential, storedCredential: outcome.credential };
     }
 
-    it("succeeds when begun and finished at the same trusted origin", async () => {
+    it("succeeds when begun and finished at the app origin — an existing credential authenticates fine post-cutover", async () => {
       mockEnv = baseEnv();
       const { virtualCredential, storedCredential } = await registerCredential();
 
@@ -205,15 +231,32 @@ describe("WebAuthn origin pinning", () => {
       expect(outcome.ok).toBe(true);
     });
 
-    it("REJECTS an authentication ceremony begun on one trusted origin but actually completed (per clientDataJSON) on the other", async () => {
+    it("rejects a begin request arriving on the apex (public origin)", async () => {
       mockEnv = baseEnv();
-      const { virtualCredential, storedCredential } = await registerCredential();
-
       const beginRequest = new Request(`${PUBLIC_ORIGIN}/api/auth/login/begin`, {
         method: "POST",
       });
+      await expect(beginPasskeyAuthentication(beginRequest)).rejects.toMatchObject({
+        code: "FORBIDDEN",
+      });
+    });
+
+    it("rejects a begin request arriving on an untrusted origin", async () => {
+      mockEnv = baseEnv();
+      const beginRequest = new Request("https://attacker.example/api/auth/login/begin", {
+        method: "POST",
+      });
+      await expect(beginPasskeyAuthentication(beginRequest)).rejects.toMatchObject({
+        code: "FORBIDDEN",
+      });
+    });
+
+    it("rejects a finish request whose challenge was signed for the app origin but whose HTTP request itself arrives on the apex", async () => {
+      mockEnv = baseEnv();
+      const { virtualCredential, storedCredential } = await registerCredential();
+
+      const beginRequest = new Request(`${APP_ORIGIN}/api/auth/login/begin`, { method: "POST" });
       const { challengeToken, options } = await beginPasskeyAuthentication(beginRequest);
-      // Signed for APP_ORIGIN, but the token was pinned to PUBLIC_ORIGIN.
       const response = await simulateAuthentication(
         virtualCredential,
         options.challenge,
@@ -230,17 +273,37 @@ describe("WebAuthn origin pinning", () => {
         storedCredential,
       );
       expect(outcome.ok).toBe(false);
-      if (!outcome.ok) expect(outcome.reason).toBe("verification_failed");
+      if (!outcome.ok) expect(outcome.reason).toBe("challenge_invalid");
     });
+  });
 
-    it("rejects a begin request arriving on an untrusted origin", async () => {
+  describe("RP ID — never changes, only the ceremony origin narrows", () => {
+    it("uses exactly crawlpact.com as the RP ID in a Production-shaped config", async () => {
       mockEnv = baseEnv();
-      const beginRequest = new Request("https://attacker.example/api/auth/login/begin", {
+      const beginRequest = new Request(`${APP_ORIGIN}/api/auth/register/begin`, {
         method: "POST",
       });
-      await expect(beginPasskeyAuthentication(beginRequest)).rejects.toMatchObject({
-        code: "FORBIDDEN",
-      });
+      const { options } = await beginPasskeyRegistration(beginRequest, "Ada", []);
+      expect(options.rp.id).toBe("crawlpact.com");
+    });
+  });
+
+  describe("local single-origin development — unaffected by Stage C", () => {
+    it("still allows a ceremony to begin and finish on the single configured local origin", async () => {
+      mockEnv = localSingleOriginEnv();
+      const local = mockEnv.PUBLIC_SITE_URL as string;
+      const credential = await createVirtualCredential();
+      const beginRequest = new Request(`${local}/api/auth/register/begin`, { method: "POST" });
+      const { challengeToken, options } = await beginPasskeyRegistration(beginRequest, "Ada", []);
+      const response = await simulateRegistration(
+        credential,
+        options.challenge,
+        "localhost",
+        local,
+      );
+      const finishRequest = new Request(`${local}/api/auth/register/finish`, { method: "POST" });
+      const outcome = await finishPasskeyRegistration(finishRequest, challengeToken, response);
+      expect(outcome.ok).toBe(true);
     });
   });
 });
