@@ -1,6 +1,36 @@
-# Owner Action Required — Google Apex Authorized Origin Disposition
+# Google Apex Authorized Origin Disposition — COMPLETE
 
-Status 2026-09-15. Phase 4D.3 of the Master Finalization Directive asks for a final disposition
+**Status 2026-09-15 (updated): COMPLETE.** The product owner removed `https://crawlpact.com` from
+the CrawlPact Google OAuth Web client's Authorized JavaScript Origins and confirmed a real
+Production Google sign-in on `https://app.crawlpact.com/sign-in` still succeeds end-to-end
+(account chooser → authentication → return to `https://app.crawlpact.com/app` → authenticated
+dashboard loaded). Remaining Authorized JavaScript Origins after the change:
+`http://localhost:4321`, `https://preview.crawlpact.com`, `https://app.crawlpact.com`. Authorized
+Redirect URIs were left unchanged.
+
+```
+GOOGLE APEX AUTHORIZED JAVASCRIPT ORIGIN — REMOVED ✅
+APP-HOST GOOGLE SIGN-IN — RECONFIRMED ✅
+GOOGLE MIGRATION CLEANUP — COMPLETE ✅
+```
+
+Note on the account-chooser branding: Google's chooser screen showing "continue to
+crawlpact.com"-style copy reflects the registered **application/verification name**, not the
+browser-origin JavaScript check — it is expected and is not evidence that the removed apex origin
+is still being used for the origin-validated flow itself.
+
+**Verification limitation, unchanged**: this session has no tool that can read or write Google
+Cloud Console configuration, so the origin removal itself is OWNER-OBSERVED evidence (the owner's
+direct report), not independently re-verified by this session against the Google API. The
+resulting live sign-in behavior (app-host flow succeeding) is exactly what such a removal should
+produce and is consistent with the owner's report.
+
+---
+
+_Original action-item text, preserved below for context on why this was raised and what was
+asked — not rewritten now that it is resolved._
+
+Phase 4D.3 of the Master Finalization Directive asks for a final disposition
 on whether `https://crawlpact.com` should remain a Google Authorized JavaScript Origin now that
 the app-subdomain migration's Google Sign-In flow runs on `https://app.crawlpact.com`.
 
@@ -41,12 +71,11 @@ as done, and the apex origin has **not** been removed by this session.
 - Do not weaken working Google auth for cosmetic cleanup alone — this is optional hygiene, not a
   blocking item.
 
-## Disposition recorded
+## Disposition recorded (original, superseded — see the top of this file)
 
 ```
-GOOGLE APEX AUTHORIZED ORIGIN — OWNER ACTION REQUIRED (console access unavailable to this session)
+~~GOOGLE APEX AUTHORIZED ORIGIN — OWNER ACTION REQUIRED (console access unavailable to this session)~~
 ```
 
-This item does not block Phase 4's completion — the master directive itself treats an
-unavailable-console item as a disclosed OWNER ACTION, not a blocker, provided it is not falsely
-claimed as done.
+**Superseded 2026-09-15**: the owner performed the action directly and confirmed the result —
+see the completion notice at the top of this file.

@@ -47,7 +47,16 @@ tested — this pass touched no billing logic at all.
 Checkout-domain approval for both `crawlpact.com` and `app.crawlpact.com` independently
 re-confirmed live via the Paddle API this session: both `status: "approved"`. Webhook
 invalid-signature rejection reconfirmed live at every stage (`400`). No Paddle configuration was
-touched. No real financial transaction was performed or attempted.
+touched by this session.
+
+**PASS (OWNER-OBSERVED + independently corroborated, 2026-09-15)**: the product owner completed a
+real Production payment-flow validation (checkout, Agency subscription activation, entitlement
+sync, customer portal, cancel-at-period-end, email notifications). This session independently
+corroborated the objectively-checkable parts directly against the live Paddle API (a real
+"CrawlPact Agency" subscription, `status: "active"`, a `completed`/`web`-origin transaction, and a
+scheduled cancellation) and CrawlPact's own production D1 (`plan_id: "agency"`, `status:
+"active"`, `cancel_at_period_end: 1`, `sync_error: null`) — not merely transcribed. No customer
+PII is reproduced anywhere in this evidence set. See `FINAL_COMPLETION_REPORT.md` §23 for detail.
 
 ## Search / canonical / sitemap / noindex
 
