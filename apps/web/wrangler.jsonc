@@ -107,6 +107,21 @@
     "enabled": true,
     "head_sampling_rate": 1,
   },
+  // Phase 4D.1 (Master Finalization Directive, 2026-09-15): Production's
+  // rollback window has closed (Stage A/B/C all deployed, live-validated,
+  // and stable — see docs/baseline/2026-09-14-app-subdomain-final-completion/).
+  // Production has a fully working Custom Domain (crawlpact.com,
+  // app.crawlpact.com), so the *.workers.dev subdomain is redundant public
+  // attack surface, not a needed fallback: Worker version rollback operates
+  // on the Custom Domain routes directly and does not require workers.dev;
+  // no script/CI workflow references it (grepped clean); Google's
+  // Authorized Origins and Paddle's approved checkout domains are both
+  // configured for crawlpact.com/app.crawlpact.com only, never workers.dev.
+  // Repository-governed (not a dashboard-only toggle Wrangler could
+  // silently re-enable). Preview is explicitly NOT touched — it still has
+  // no other public entry point besides its own workers.dev subdomain
+  // history and remains on `workers_dev: true` (env.preview, unchanged).
+  "workers_dev": false,
   "env": {
     "preview": {
       // Distinct D1 database from production (SRS §28.20/§33: "separate
@@ -209,6 +224,14 @@
         "enabled": true,
         "head_sampling_rate": 1,
       },
+      // Phase 4D.1 (2026-09-15): explicitly redeclared here, matching this
+      // file's own established convention of never relying on
+      // named-environment inheritance for anything that matters (see the
+      // `vars` comment below) — Preview has no Custom Domain history as
+      // deep as Production's and its own topology work has depended on
+      // workers.dev being reachable; the top-level `workers_dev: false`
+      // above is Production-only and must not affect Preview.
+      "workers_dev": true,
       "vars": {
         "PUBLIC_APP_ENV": "preview",
         // Canonical preview origin: the CrawlPact-owned Custom Domain
