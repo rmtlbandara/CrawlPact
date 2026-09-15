@@ -11,8 +11,9 @@ it consolidates.
 PHASE 1 — FINAL PASS ✅
 PHASE 2 — FINAL PASS ✅
 PHASE 3 — FINAL PASS ✅
-PHASE 4 — FINAL PASS (Stage A/B/C code+infrastructure; Stage C real-credential owner gate and
-  Phase 4D's Google-origin item remain outstanding OWNER ACTIONS, not blockers) ✅
+PHASE 4 — FINAL PASS ✅ (Stage A/B/C fully closed, including the owner-observed real-credential
+  gate, confirmed 2026-09-15; Phase 4D's Google-origin item remains an outstanding OWNER ACTION,
+  not a blocker)
 
 PASS — PHASE 4 CUTOVER COMPLETE ✅
 PUBLIC / APP ORIGIN SEPARATION — FINALIZED ✅
@@ -20,7 +21,7 @@ PRODUCTION LIVE RELEASE — STABLE ✅
 NO KNOWN P0/P1 CUTOVER DEFECTS REMAIN ✅
 ```
 
-Two items are recorded honestly as outstanding rather than fabricated as done — see §37.
+One item remains recorded honestly as outstanding rather than fabricated as done — see §37.
 
 ## 2–5. SHA / Worker version history
 
@@ -98,12 +99,18 @@ value or "any trusted origin" allowlist). All required negative cases pass:
 `WEBAUTHN_RP_ID` remains `crawlpact.com` in Production, confirmed live and in source, throughout.
 Stage C narrows ceremony begin/finish to the app origin once one is configured —
 `webauthnCeremonyOrigins()`, live-confirmed (`PHASE_4_STAGE_C_EVIDENCE.md`). Real-credential
-owner-observed gate remains outstanding (§37).
+owner-observed gate: **PASS**, confirmed by the product owner 2026-09-15 using a real physical
+passkey device against live Production `app.crawlpact.com` — registration and sign-in both work
+correctly.
 
 ## 19. Google result
 
-Unaffected by this pass — no Google-auth code touched. Apex Authorized Origin disposition is an
-outstanding owner action (`OWNER_ACTION_GOOGLE_APEX_ORIGIN.md`), not a blocker.
+Unaffected by this pass — no Google-auth code touched. **OWNER-OBSERVED, 2026-09-15**: product
+owner confirmed Google login works correctly via live `app.crawlpact.com`, reconfirming this
+holds after Stage A/B/C/4D. Apex Authorized Origin disposition remains an outstanding owner
+action (`OWNER_ACTION_GOOGLE_APEX_ORIGIN.md`), not a blocker — this is a separate question about
+whether the _apex_ origin should still be authorized, independent of the app-host flow just
+reconfirmed working.
 
 ## 20. Recovery result
 
@@ -211,9 +218,9 @@ Full table: `FINAL_ROLLBACK_RECORD.md`.
 
 ## 37. Remaining known risks
 
-- **Stage C real-credential owner-observed gate**: not performed by this session (no physical
-  authenticator device). Code/infrastructure-level correctness is proven (unit-level real-crypto
-  tests, live host-boundary checks); the directive's own real-device verification step is not.
+- **Stage C real-credential owner-observed gate**: **closed**. Confirmed by the product owner
+  2026-09-15 with a real physical passkey device against live Production `app.crawlpact.com` —
+  registration and sign-in both work correctly.
 - **Google apex Authorized Origin disposition**: owner action required (§35).
 - **20 dev/build-only dependency advisories**: zero production-reachable, patches pending via
   already-open Dependabot PRs not merged this pass (out of scope — a separate, unrelated
@@ -238,7 +245,8 @@ which this report builds on rather than duplicates.
 PASS — PHASE 4 CUTOVER COMPLETE ✅
 ```
 
-Two items are deliberately, honestly recorded as outstanding rather than claimed complete: the
-Stage C real-credential owner-observed gate, and the Google apex-origin console action. Neither
-is a code, infrastructure, or security defect — both require the product owner's own direct
-action (a real device, a real console) that this session cannot substitute for or fabricate.
+One item is deliberately, honestly recorded as outstanding rather than claimed complete: the
+Google apex-origin console action (§35). It is not a code, infrastructure, or security defect —
+it requires the product owner's own direct console action that this session cannot substitute
+for or fabricate. The Stage C real-credential gate, the only other owner-dependent item this
+report tracked, was confirmed by the product owner 2026-09-15 with a real passkey device.
