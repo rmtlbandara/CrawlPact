@@ -2,7 +2,7 @@ import { afterAll, beforeAll, describe, expect, it, vi } from "vitest";
 import { createD1TestHarness } from "./d1-harness";
 import { createFakeR2Bucket } from "./fake-r2-bucket";
 import { createVirtualCredential, simulateRegistration } from "./virtual-authenticator";
-import { cookieFromResponse, ctx, jsonRequest, readJson } from "./test-helpers";
+import { cookieFromResponse, ctx, readJson } from "./test-helpers";
 
 /**
  * Verifies the Origin/Referer same-site check in requireSession
