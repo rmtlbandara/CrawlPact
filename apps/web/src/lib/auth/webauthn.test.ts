@@ -24,7 +24,6 @@ function baseEnv(): Partial<Cloudflare.Env> {
     PUBLIC_SITE_URL: PUBLIC_ORIGIN,
     PUBLIC_APP_URL: APP_ORIGIN,
     WEBAUTHN_RP_ID: RP_ID,
-    WEBAUTHN_RP_ORIGIN: PUBLIC_ORIGIN,
     SESSION_SIGNING_SECRET: "test-signing-secret-long-enough-for-hmac",
   };
 }
@@ -35,7 +34,6 @@ function localSingleOriginEnv(): Partial<Cloudflare.Env> {
     PUBLIC_SITE_URL: local,
     PUBLIC_APP_URL: local,
     WEBAUTHN_RP_ID: "localhost",
-    WEBAUTHN_RP_ORIGIN: local,
     SESSION_SIGNING_SECRET: "test-signing-secret-long-enough-for-hmac",
   };
 }
