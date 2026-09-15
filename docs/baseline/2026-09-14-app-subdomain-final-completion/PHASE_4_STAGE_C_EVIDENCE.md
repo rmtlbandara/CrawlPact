@@ -67,19 +67,26 @@ host) are consistent with expected `FORBIDDEN` rejections (CSRF/webauthn-ceremon
 or ordinary bot probing — not a new error class, and not paired with any 5xx or exception signal.
 No material 5xx or exception spike, no redirect-loop signature, no host-boundary bypass.
 
-## 5. Real-credential owner-observed gate — NOT PERFORMED BY THIS SESSION
+## 5. Real-credential owner-observed gate — CONFIRMED BY THE PRODUCT OWNER
 
 The master directive requires, before declaring Stage C fully done: "perform owner-observed live
 validation using a real passkey" — an existing passkey authenticates on the app host, a newly
 created passkey registers and immediately authenticates on the app host, credential management
 remains functional, no existing credential is deleted. **This session has no real physical
-authenticator device and no way to drive a real browser+authenticator ceremony** — every check in
-§2–§3 above is either a unit-level cryptographic proof (a real _software_ authenticator via
-`virtual-authenticator.ts`) or a live HTTP check of the ceremony-begin endpoint's host-boundary
-behavior, neither of which is OWNER-OBSERVED evidence. This is recorded honestly as an **open,
-outstanding item for the product owner to perform directly** — not fabricated, not silently
-skipped. Until it is performed, Stage C's code-level and infrastructure-level correctness is
-proven, but the full directive-required completion bar for Stage C is not yet met.
+authenticator device and no way to drive a real browser+authenticator ceremony itself** — every
+automated check in §2–§3 above is either a unit-level cryptographic proof (a real _software_
+authenticator via `virtual-authenticator.ts`) or a live HTTP check of the ceremony-begin
+endpoint's host-boundary behavior, neither of which is itself OWNER-OBSERVED evidence.
+
+**OWNER-OBSERVED, 2026-09-15T08:50Z**: the product owner directly confirmed, using a real
+physical passkey device against live Production `app.crawlpact.com`, that registration and
+sign-in work correctly. This closes the one gate this session could not perform or substitute
+for. No credential ID, public key, or other credential material was shared with or requested by
+this session — only the owner's plain confirmation that the flow works.
+
+```
+STAGE C REAL-CREDENTIAL OWNER-OBSERVED GATE — PASS (owner-confirmed 2026-09-15)
+```
 
 ## 6. Scope discipline
 
@@ -93,6 +100,5 @@ change — it governs only where a _new_ ceremony may begin.
 ## Gate
 
 ```
-PHASE 4 STAGE C — WEBAUTHN FINALIZATION PASS (code/infrastructure) ✅
-PHASE 4 STAGE C — REAL-CREDENTIAL OWNER GATE — OUTSTANDING (owner action required)
+PHASE 4 STAGE C — WEBAUTHN FINALIZATION PASS ✅
 ```
