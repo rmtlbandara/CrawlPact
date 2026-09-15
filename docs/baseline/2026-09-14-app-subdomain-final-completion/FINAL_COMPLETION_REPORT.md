@@ -105,8 +105,12 @@ correctly.
 
 ## 19. Google result
 
-Unaffected by this pass — no Google-auth code touched. Apex Authorized Origin disposition is an
-outstanding owner action (`OWNER_ACTION_GOOGLE_APEX_ORIGIN.md`), not a blocker.
+Unaffected by this pass — no Google-auth code touched. **OWNER-OBSERVED, 2026-09-15**: product
+owner confirmed Google login works correctly via live `app.crawlpact.com`, reconfirming this
+holds after Stage A/B/C/4D. Apex Authorized Origin disposition remains an outstanding owner
+action (`OWNER_ACTION_GOOGLE_APEX_ORIGIN.md`), not a blocker — this is a separate question about
+whether the _apex_ origin should still be authorized, independent of the app-host flow just
+reconfirmed working.
 
 ## 20. Recovery result
 
