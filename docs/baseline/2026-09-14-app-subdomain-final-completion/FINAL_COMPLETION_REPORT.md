@@ -12,16 +12,18 @@ PHASE 1 — FINAL PASS ✅
 PHASE 2 — FINAL PASS ✅
 PHASE 3 — FINAL PASS ✅
 PHASE 4 — FINAL PASS ✅ (Stage A/B/C fully closed, including the owner-observed real-credential
-  gate, confirmed 2026-09-15; Phase 4D's Google-origin item remains an outstanding OWNER ACTION,
-  not a blocker)
+  gate; Phase 4D fully closed, including the Google apex-origin removal — all confirmed 2026-09-15)
 
 PASS — PHASE 4 CUTOVER COMPLETE ✅
 PUBLIC / APP ORIGIN SEPARATION — FINALIZED ✅
+PADDLE PRODUCTION FLOW — VERIFIED ✅
+GOOGLE APP-HOST AUTH — VERIFIED ✅
+GOOGLE APEX ORIGIN CLEANUP — COMPLETE ✅
 PRODUCTION LIVE RELEASE — STABLE ✅
 NO KNOWN P0/P1 CUTOVER DEFECTS REMAIN ✅
 ```
 
-One item remains recorded honestly as outstanding rather than fabricated as done — see §37.
+No remaining owner-side validation item from the Phase 4 migration remains open — see §37.
 
 ## 2–5. SHA / Worker version history
 
@@ -107,10 +109,12 @@ correctly.
 
 Unaffected by this pass — no Google-auth code touched. **OWNER-OBSERVED, 2026-09-15**: product
 owner confirmed Google login works correctly via live `app.crawlpact.com`, reconfirming this
-holds after Stage A/B/C/4D. Apex Authorized Origin disposition remains an outstanding owner
-action (`OWNER_ACTION_GOOGLE_APEX_ORIGIN.md`), not a blocker — this is a separate question about
-whether the _apex_ origin should still be authorized, independent of the app-host flow just
-reconfirmed working.
+holds after Stage A/B/C/4D. **Apex Authorized Origin disposition: COMPLETE** — the owner removed
+`https://crawlpact.com` from the OAuth client's Authorized JavaScript Origins and reconfirmed the
+app-host flow (chooser → auth → return to `/app` → dashboard) still succeeds end-to-end
+afterward. See `OWNER_ACTION_GOOGLE_APEX_ORIGIN.md` for the full detail and this session's
+verification-limitation disclosure (no Google Console API access; the origin removal itself is
+OWNER-OBSERVED, not independently re-checked against the Google API by this session).
 
 ## 20. Recovery result
 
@@ -124,8 +128,33 @@ Both confirmed live end-to-end at the routing layer: `PRODUCTION_CUTOVER_EVIDENC
 ## 23. Paddle result
 
 Both checkout domains (`crawlpact.com`, `app.crawlpact.com`) independently reconfirmed
-`status: "approved"` via the Paddle API this session. No configuration touched, no real
-transaction performed.
+`status: "approved"` via the Paddle API this session. No Paddle configuration was touched by this
+session at any point.
+
+**OWNER-OBSERVED + independently re-verified, 2026-09-15**: the product owner completed a real
+Production payment-flow validation — checkout opened, a real Agency subscription transaction
+completed, entitlement updated Free→Agency, Agency limits/monitoring state appeared correctly,
+customer portal opened, cancel-at-period-end accepted, and Paddle confirmation/subscription
+emails were received. This session independently corroborated the substance of this report
+directly against the live Paddle API and CrawlPact's own production D1 (not merely transcribing
+the owner's report): a subscription for the **"CrawlPact Agency"** product, created
+`2026-09-15T09:49:57Z`, `status: "active"`, with a scheduled cancellation
+(`scheduled_change.action: "cancel"`, effective `2026-10-15`); its transaction `status:
+"completed"`, `origin: "web"`, billed at the same timestamp; and CrawlPact's own `subscriptions`
+table showing `plan_id: "agency"`, `status: "active"`, `cancel_at_period_end: 1`, `sync_error:
+null` — confirming the webhook→entitlement sync worked correctly with no error. No customer PII
+is reproduced here. This is also positive real-world validation that the retained BIC/Paddle
+Configuration Rule exception (`PHASE_4_FINAL_HARDENING.md` §4D.2) continues to work correctly
+under a real live transaction.
+
+```
+PADDLE PRODUCTION CHECKOUT — PASS ✅
+PADDLE SUBSCRIPTION ACTIVATION — PASS ✅
+CRAWLPACT ENTITLEMENT SYNCHRONIZATION — PASS ✅ (independently confirmed via production D1)
+PADDLE CUSTOMER PORTAL — PASS ✅
+CANCEL-AT-PERIOD-END FLOW — PASS ✅ (independently confirmed via the Paddle API)
+PADDLE EMAIL NOTIFICATIONS — PASS ✅ (owner-observed)
+```
 
 ## 24. Admin result
 
@@ -209,8 +238,11 @@ the real payment-flow risk of the directive's own test-disable procedure. `PHASE
 
 ## 35. Google apex-origin final disposition
 
-**Owner action required** — no console access available to this session. Not fabricated as done.
-`OWNER_ACTION_GOOGLE_APEX_ORIGIN.md`.
+**COMPLETE, 2026-09-15.** The owner removed `https://crawlpact.com` from the OAuth client's
+Authorized JavaScript Origins and reconfirmed real Production Google sign-in via
+`https://app.crawlpact.com/sign-in` still succeeds end-to-end. `OWNER_ACTION_GOOGLE_APEX_ORIGIN.md`.
+This session still has no Google Console API access — the origin removal is OWNER-OBSERVED
+evidence, disclosed as such, not independently re-checked against the Google API.
 
 ## 36. Rollback versions
 
@@ -221,12 +253,20 @@ Full table: `FINAL_ROLLBACK_RECORD.md`.
 - **Stage C real-credential owner-observed gate**: **closed**. Confirmed by the product owner
   2026-09-15 with a real physical passkey device against live Production `app.crawlpact.com` —
   registration and sign-in both work correctly.
-- **Google apex Authorized Origin disposition**: owner action required (§35).
+- **Google apex Authorized Origin disposition**: **closed** (§35).
+- **Paddle Production payment flow**: **closed** — a real Agency checkout, entitlement sync,
+  customer portal, and cancel-at-period-end were all completed and, for the objectively-checkable
+  parts, independently corroborated by this session against the live Paddle API and CrawlPact's
+  own production D1 (§23).
 - **20 dev/build-only dependency advisories**: zero production-reachable, patches pending via
   already-open Dependabot PRs not merged this pass (out of scope — a separate, unrelated
-  dependency-review activity).
+  dependency-review activity, not part of this migration).
 - Every other risk this migration has ever tracked (`docs/risks/ACTIVE_RISKS.md`) is unaffected
-  by this pass and not re-litigated here.
+  by this pass and not re-litigated here — in particular, this real Agency transaction was
+  initiated by the product owner during this pass's own validation, so it does not by itself
+  close RISK-001's separate _commercial_-validation question (which specifically requires an
+  independent external customer, per that risk's own established doctrine); `ACTIVE_RISKS.md`
+  was deliberately left untouched.
 
 ## 38. Documentation created
 
@@ -243,10 +283,16 @@ which this report builds on rather than duplicates.
 
 ```
 PASS — PHASE 4 CUTOVER COMPLETE ✅
+PUBLIC / APP ORIGIN SEPARATION — FINALIZED ✅
+PADDLE PRODUCTION FLOW — VERIFIED ✅
+GOOGLE APP-HOST AUTH — VERIFIED ✅
+GOOGLE APEX ORIGIN CLEANUP — COMPLETE ✅
+PRODUCTION LIVE RELEASE — STABLE ✅
 ```
 
-One item is deliberately, honestly recorded as outstanding rather than claimed complete: the
-Google apex-origin console action (§35). It is not a code, infrastructure, or security defect —
-it requires the product owner's own direct console action that this session cannot substitute
-for or fabricate. The Stage C real-credential gate, the only other owner-dependent item this
-report tracked, was confirmed by the product owner 2026-09-15 with a real passkey device.
+No remaining owner-side validation item from the Phase 4 migration remains open. Every item this
+report ever tracked as owner-dependent — the Stage C real-credential gate, the Google apex-origin
+console action, and the Paddle Production payment-flow validation — was completed and confirmed
+by the product owner on 2026-09-15, with the objectively-checkable parts of the Paddle result
+independently corroborated by this session against the live Paddle API and CrawlPact's own
+production D1.

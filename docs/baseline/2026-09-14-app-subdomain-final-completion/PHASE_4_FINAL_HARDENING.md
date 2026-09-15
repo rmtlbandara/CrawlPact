@@ -56,14 +56,28 @@ rollback: delete the Configuration Rule via the same API used to read it (`PUT`/
 `/zones/{zone}/rulesets/phases/http_config_settings/entrypoint`), review condition: reassess only
 if Paddle's own domain-review requirements change or the exception is found to enable real abuse.
 
-## 4D.3 Google apex Authorized JavaScript Origin — OWNER ACTION REQUIRED
+**Post-decision validation, 2026-09-15**: the owner completed a real Production payment-flow
+validation with this exception still in place — checkout opened, an Agency subscription
+transaction completed (`status: completed`), the CrawlPact D1 entitlement synced correctly
+(`plan_id: "agency"`, `status: "active"`, `sync_error: null` — independently re-confirmed by this
+session directly against both the live Paddle API and CrawlPact's own production D1), the Paddle
+customer portal opened, and a cancel-at-period-end request was accepted
+(`scheduled_change.action: "cancel"`, independently re-confirmed via the Paddle API). This is
+positive real-world evidence the retained exception continues to work exactly as intended —
+recorded here as confirmation, not as a reason to revisit the decision above.
 
-See `OWNER_ACTION_GOOGLE_APEX_ORIGIN.md` for the full detail. No tool available to this session
-can read or write Google Cloud Console configuration — this is disclosed honestly, not falsely
-claimed as done.
+## 4D.3 Google apex Authorized JavaScript Origin — COMPLETE
+
+See `OWNER_ACTION_GOOGLE_APEX_ORIGIN.md` for the full detail. **Completed 2026-09-15**: the owner
+removed `https://crawlpact.com` from the Authorized JavaScript Origins and confirmed a real
+Production Google sign-in via `https://app.crawlpact.com/sign-in` still succeeds end-to-end. This
+session had, and still has, no tool that can read or write Google Cloud Console configuration —
+the origin removal itself is OWNER-OBSERVED evidence, not independently re-verified by this
+session against the Google API; the resulting live app-host sign-in behavior is consistent with
+it.
 
 ```
-GOOGLE APEX ORIGIN — OWNER ACTION REQUIRED (console access unavailable to this session)
+GOOGLE APEX AUTHORIZED ORIGIN — REMOVED ✅ (owner-performed and owner-confirmed, 2026-09-15)
 ```
 
 ## 4D.4 Stale current documentation sweep
@@ -84,8 +98,9 @@ YYYY-MM-DD**:` annotations rather than deleting prior text) — a dedicated upda
 ## Gate
 
 ```
-PHASE 4D — MIGRATION-ERA SURFACE DISPOSITION: 1 of 3 infra items completed (workers.dev),
-1 of 3 retained by explicit owner decision (BIC), 1 of 3 requires owner console action (Google)
+PHASE 4D — MIGRATION-ERA SURFACE DISPOSITION: COMPLETE
+2 of 3 infra items completed (workers.dev disabled; Google apex origin removed and reconfirmed),
+1 of 3 retained by explicit owner decision (BIC)
 ```
 
 Each item received a **deliberate, recorded disposition** — none was left ambiguous or silently
