@@ -59,8 +59,22 @@ describe("CSRF: cross-site requests are rejected on authenticated mutating endpo
       AUDIT_ENGINE_ENABLED: "false",
     };
 
+    // Stage C of the app-subdomain migration (Phase 4C, 2026-09-15): with a
+    // genuinely distinct PUBLIC_APP_URL configured (as this file does, to
+    // exercise the sibling-origin CSRF case below), a WebAuthn ceremony may
+    // only begin/finish on the app origin — the shared `jsonRequest` helper
+    // pins every request to `TEST_ORIGIN` (the public origin), so this
+    // fixture's own register/begin+finish calls are built directly against
+    // `APP_ORIGIN` instead, matching real post-Stage-C behavior (sign-up
+    // only ever happens on the app host).
     const beginResponse = await registerBegin(
-      ctx(jsonRequest("http://x/register/begin", "POST", { displayName: "Ada" })),
+      ctx(
+        new Request(`${APP_ORIGIN}/register/begin`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json", Origin: APP_ORIGIN },
+          body: JSON.stringify({ displayName: "Ada" }),
+        }),
+      ),
     );
     const begin = await readJson<{
       challengeId: string;
@@ -71,13 +85,14 @@ describe("CSRF: cross-site requests are rejected on authenticated mutating endpo
       await createVirtualCredential(),
       begin.data.publicKeyCredentialCreationOptions.challenge,
       RP_ID,
-      ORIGIN,
+      APP_ORIGIN,
     );
     const finishResponse = await registerFinish(
       ctx(
-        jsonRequest("http://x/register/finish", "POST", {
-          challengeId: begin.data.challengeId,
-          credential,
+        new Request(`${APP_ORIGIN}/register/finish`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json", Origin: APP_ORIGIN },
+          body: JSON.stringify({ challengeId: begin.data.challengeId, credential }),
         }),
       ),
     );
