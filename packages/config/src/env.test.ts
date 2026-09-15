@@ -7,7 +7,6 @@ const validEnv = {
   SESSION_SIGNING_SECRET: "a".repeat(32),
   ABUSE_MONITORING_SECRET: "b".repeat(32),
   WEBAUTHN_RP_ID: "localhost",
-  WEBAUTHN_RP_ORIGIN: "http://localhost:4321",
   GOOGLE_CLIENT_ID: "123456789-test.apps.googleusercontent.com",
   PADDLE_API_KEY: "sandbox_key",
   PADDLE_ENVIRONMENT: "sandbox",

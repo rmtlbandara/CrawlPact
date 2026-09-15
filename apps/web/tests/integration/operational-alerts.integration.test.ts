@@ -44,7 +44,6 @@ describe("operational alerts (real D1)", () => {
       SESSION_SIGNING_SECRET: "integration-test-secret-value-long-enough",
       ABUSE_MONITORING_SECRET: "integration-test-abuse-secret-value-long-enough",
       WEBAUTHN_RP_ID: "localhost",
-      WEBAUTHN_RP_ORIGIN: "http://localhost:4321",
       GOOGLE_CLIENT_ID: "test-client-id.apps.googleusercontent.com",
       PADDLE_API_KEY: "test",
       PADDLE_ENVIRONMENT: "sandbox",

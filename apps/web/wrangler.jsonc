@@ -80,12 +80,9 @@
     // `wrangler secret put` — found missing from this file entirely during
     // Part 3 Step 26's production configuration prep.
     "WEBAUTHN_RP_ID": "crawlpact.com",
-    "WEBAUTHN_RP_ORIGIN": "https://crawlpact.com",
-    // Phase 1 of the app-subdomain migration (ADR-0010): reserved future
-    // application origin. Not yet attached as a Cloudflare Custom Domain
-    // (no DNS record exists for it — verified 2026-09-09) and not read by
-    // any route/redirect/CSRF/WebAuthn logic yet. Setting it here now is
-    // purely non-behavioral configuration prep for Phase 2.
+    // app-subdomain migration (ADR-0010): the live application origin,
+    // attached as its own Cloudflare Custom Domain since Phase 3. Read by
+    // route/redirect/CSRF/WebAuthn-ceremony-origin logic — see origin.ts.
     "PUBLIC_APP_URL": "https://app.crawlpact.com",
   },
   // Pre-Phase-4 observability step 2 (2026-09-11): enables Cloudflare Workers
@@ -263,7 +260,6 @@
         // logic in `worker.ts`, not merely reserved config.
         "PUBLIC_APP_URL": "https://app.preview.crawlpact.com",
         "WEBAUTHN_RP_ID": "preview.crawlpact.com",
-        "WEBAUTHN_RP_ORIGIN": "https://preview.crawlpact.com",
         // Same public Google Web OAuth Client ID as production's top-level
         // `vars` above — not a secret, safe to share across environments.
         // Google Sign-In on preview additionally requires

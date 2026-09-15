@@ -41,7 +41,6 @@ env:
   SESSION_SIGNING_SECRET: ci-placeholder-secret-value-not-real-00000000
   ABUSE_MONITORING_SECRET: ci-placeholder-abuse-secret-value-not-real-0000
   WEBAUTHN_RP_ID: localhost
-  WEBAUTHN_RP_ORIGIN: http://localhost:4321
   PADDLE_API_KEY: ci-placeholder
   PADDLE_ENVIRONMENT: sandbox
   PADDLE_WEBHOOK_SECRET: ci-placeholder
@@ -224,7 +223,6 @@ jobs:
           SESSION_SIGNING_SECRET=ci-placeholder-secret-value-not-real-00000000
           ABUSE_MONITORING_SECRET=ci-placeholder-abuse-secret-value-not-real-0000
           WEBAUTHN_RP_ID=localhost
-          WEBAUTHN_RP_ORIGIN=http://localhost:4321
           PADDLE_API_KEY=ci-placeholder
           PADDLE_ENVIRONMENT=sandbox
           PADDLE_WEBHOOK_SECRET=ci-placeholder

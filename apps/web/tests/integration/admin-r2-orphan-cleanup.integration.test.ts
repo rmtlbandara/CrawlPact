@@ -57,7 +57,6 @@ describe("admin R2 orphan cleanup (real D1 + fake R2)", () => {
       SESSION_SIGNING_SECRET: "integration-test-secret-value-long-enough",
       ABUSE_MONITORING_SECRET: "integration-test-abuse-secret-value-long-enough",
       WEBAUTHN_RP_ID: RP_ID,
-      WEBAUTHN_RP_ORIGIN: ORIGIN,
       GOOGLE_CLIENT_ID: "test-client-id.apps.googleusercontent.com",
       PADDLE_API_KEY: "test",
       PADDLE_ENVIRONMENT: "sandbox",

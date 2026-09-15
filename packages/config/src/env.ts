@@ -47,14 +47,6 @@ export const envSchema = z
     // docs/security/TARGET_ABUSE_MONITORING_DESIGN.md.
     ABUSE_MONITORING_SECRET: z.string().min(16),
     WEBAUTHN_RP_ID: z.string().min(1),
-    // Phase 2 of the app-subdomain migration (ADR-0010) replaced the single
-    // fixed expected-origin model with per-ceremony origin pinning
-    // (`auth/webauthn.ts` signs the *validated request origin* into each
-    // challenge token instead) — `webauthn.ts` no longer reads this value.
-    // Left in the schema, still required, so every existing deployment/test
-    // config stays valid without a mechanical edit; safe to remove in a
-    // later cleanup once the dual-origin migration window closes (Phase 4).
-    WEBAUTHN_RP_ORIGIN: z.string().url(),
 
     GOOGLE_CLIENT_ID: z
       .string()
