@@ -8,7 +8,21 @@ after Stage B and Stage C were both deployed, live-validated, and stable
 
 Production's rollback window has closed. Pre-checks (rollback via Worker versions doesn't need
 it; no script/CI workflow references it; Google/Paddle both configured for
-`crawlpact.com`/`app.crawlpact.com` only) all confirmed before acting — see PR #196.
+`crawlpact.com`/`app.crawlpact.com` only) all confirmed before acting. Deployed via PR #196,
+merged as `9a83de8`, Production Worker version `96d4a7c4-6a77-4346-8164-2d2da6e6f224`, deployed
+`2026-09-15T07:45:07Z`.
+
+**Live post-deploy confirmation (PRODUCTION LIVE HTTP + CLOUDFLARE API):**
+`GET /accounts/{account}/workers/scripts/crawlpact-web/subdomain` → `{enabled: false,
+previews_enabled: false}`; direct request to `https://crawlpact-web.<account>.workers.dev/` →
+`404` (no longer serves); `crawlpact.com`/`app.crawlpact.com` both unaffected (`200`); WebAuthn
+ceremony begin still works on the app host (`200`); full `pnpm run smoke:production` — 43/43.
+Preview's own `workers.dev` subdomain independently reconfirmed still resolving (`200`) —
+unaffected.
+
+**~15-minute post-deploy telemetry (WORKERS TELEMETRY):** `2026-09-15T07:45:07Z`–`08:00:07Z` — 57
+Worker invocations, 0 errors, `success` status only; zone-wide 5xx query — zero rows. A fresh
+`smoke:production` run at this point still showed 43/43.
 
 ```
 PRODUCTION WORKERS.DEV — DISABLED (workers_dev: false, repository-governed)
