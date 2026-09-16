@@ -76,6 +76,21 @@ export const envSchema = z
       .enum(["true", "false"])
       .default("false")
       .transform((value) => value === "true"),
+
+    // Read-only Google Search Console / GA4 / CrUX integration
+    // (docs/deployment/CLOUDFLARE_CONFIGURATION.md). Deliberately optional
+    // at the schema level in every environment, including production —
+    // unlike WEBAUTHN_RP_ID/PUBLIC_APP_URL above (which gate real
+    // per-request behaviour and are enforced via the superRefine below),
+    // this is a diagnostic-only integration that must never make an
+    // otherwise-valid environment fail to parse. The provider layer
+    // (apps/web/src/lib/admin/google-insights.ts) reports a "not_configured"
+    // status per service instead when any of these are absent.
+    GOOGLE_ANALYTICS_SERVICE_ACCOUNT_JSON: z.string().optional(),
+    CRUX_API_KEY: z.string().optional(),
+    GOOGLE_GA4_PROPERTY_ID: z.string().optional(),
+    GOOGLE_SEARCH_CONSOLE_SITE_URL: z.string().optional(),
+    CRUX_ORIGIN: z.string().optional(),
   })
   .superRefine((value, ctx) => {
     // Non-negotiable environment isolation: local/preview must never hold a
