@@ -84,6 +84,10 @@
     // attached as its own Cloudflare Custom Domain since Phase 3. Read by
     // route/redirect/CSRF/WebAuthn-ceremony-origin logic — see origin.ts.
     "PUBLIC_APP_URL": "https://app.crawlpact.com",
+    // Read-only Google Search Console / GA4 / CrUX integration.
+    "GOOGLE_GA4_PROPERTY_ID": "547512440",
+    "GOOGLE_SEARCH_CONSOLE_SITE_URL": "sc-domain:crawlpact.com",
+    "CRUX_ORIGIN": "https://crawlpact.com",
   },
   // Pre-Phase-4 observability step 2 (2026-09-11): enables Cloudflare Workers
   // Logs for Production, mirroring env.preview's already-deployed,
