@@ -29,6 +29,17 @@ type CloudflareRuntimeEnv = {
   PUBLIC_PADDLE_CLIENT_TOKEN: string;
   BILLING_ENABLED: string;
   AUDIT_ENGINE_ENABLED: string;
+  // Read-only Google Search Console / GA4 / CrUX integration
+  // (docs/deployment/CLOUDFLARE_CONFIGURATION.md). Production-only for now —
+  // Preview has no credentials for this integration yet, and it must never
+  // be treated as required: `../lib/admin/google-insights.ts` reports
+  // "not_configured" per service when any of these are absent rather than
+  // failing the request.
+  GOOGLE_ANALYTICS_SERVICE_ACCOUNT_JSON?: string;
+  CRUX_API_KEY?: string;
+  GOOGLE_GA4_PROPERTY_ID?: string;
+  GOOGLE_SEARCH_CONSOLE_SITE_URL?: string;
+  CRUX_ORIGIN?: string;
 };
 
 declare namespace Cloudflare {

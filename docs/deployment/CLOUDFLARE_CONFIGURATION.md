@@ -103,6 +103,40 @@ aren't secrets, but getting them wrong breaks real functionality, not just cosme
   which is why the app-preview candidate above was corrected to a genuine subdomain
   (`app.preview.crawlpact.com`) rather than a sibling hostname.
 
+## Google Search Console / GA4 / CrUX integration (read-only)
+
+Production-only, added after the 2026-07-26 baseline above. Three non-secret `vars` in
+`wrangler.jsonc`'s top-level (production) block:
+
+- `GOOGLE_GA4_PROPERTY_ID` — the GA4 property (`547512440`) queried by the GA4 Data API client.
+- `GOOGLE_SEARCH_CONSOLE_SITE_URL` — the Search Console domain property (`sc-domain:crawlpact.com`)
+  queried by the Search Console client. Domain properties (`sc-domain:` prefix), not URL-prefix
+  properties.
+- `CRUX_ORIGIN` — the origin (`https://crawlpact.com`) queried by the CrUX client.
+
+Two Cloudflare Worker secrets (never in `wrangler.jsonc`, set the same way as the table below):
+
+- `GOOGLE_ANALYTICS_SERVICE_ACCOUNT_JSON` — the downloaded Google service-account credential JSON,
+  granted **Restricted** access on the Search Console property and **Viewer** access on the GA4
+  property, in the `CrawlPact-Analytics-SEO` Google Cloud project. Read only by
+  `apps/web/src/lib/google/service-account.ts`, which never logs, persists, or returns it — see
+  that file's own doc comment.
+- `CRUX_API_KEY` — a dedicated Google Cloud API key, restricted to the Chrome UX Report API only,
+  from the same project.
+
+All three access paths (Search Console Search Analytics, GA4 Data API `runReport`, CrUX
+`records:queryRecord`) are **read-only** — nothing in this integration writes to any Google
+property. CrUX may legitimately return "no data for this origin" if CrawlPact hasn't yet met
+Chrome's minimum traffic threshold for meaningful field data; the admin diagnostic endpoint
+(`GET /api/admin/integrations/google-insights`) reports that as `status: "no_data"`, not an error.
+
+**Preview intentionally has none of these five values.** Both `vars` and secrets are
+production-only for now — never copy a production credential into `env.preview`, `.dev.vars`, or
+any committed file. `packages/config/src/env.ts` marks all five `.optional()` (not required by the
+schema in any environment) specifically so Preview's build/validation stays unaffected by their
+absence; the provider layer reports a `not_configured` status per service instead of failing when
+they're missing, rather than the environment schema gating on them.
+
 ## Secrets (never in `wrangler.jsonc`)
 
 Set per environment with `wrangler secret put <NAME> --config apps/web/dist/server/wrangler.json`
