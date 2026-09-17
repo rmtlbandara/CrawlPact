@@ -1,4 +1,4 @@
-import { integer, real, sqliteTable, text, uniqueIndex } from "drizzle-orm/sqlite-core";
+import { index, integer, real, sqliteTable, text, uniqueIndex } from "drizzle-orm/sqlite-core";
 
 // Mirrors packages/database/migrations/0039_growth_snapshots.sql. Ingestion
 // (the scheduled collection job) writes these via raw D1 `prepare`/`bind`
@@ -75,5 +75,23 @@ export const cruxSnapshots = sqliteTable(
       table.origin,
       table.formFactor,
     ),
+  ],
+);
+
+export const rumVitals = sqliteTable(
+  "rum_vitals",
+  {
+    id: integer("id").primaryKey({ autoIncrement: true }),
+    metricName: text("metric_name").notNull().$type<"LCP" | "INP" | "CLS" | "FCP" | "TTFB">(),
+    metricValue: real("metric_value").notNull(),
+    rating: text("rating").$type<"good" | "needs-improvement" | "poor" | null>(),
+    route: text("route").notNull(),
+    surface: text("surface").notNull().$type<"public" | "app">(),
+    deviceCategory: text("device_category").notNull().$type<"mobile" | "desktop">(),
+    recordedAt: text("recorded_at").notNull(),
+  },
+  (table) => [
+    index("idx_rum_vitals_metric_recorded").on(table.metricName, table.recordedAt),
+    index("idx_rum_vitals_recorded_at").on(table.recordedAt),
   ],
 );

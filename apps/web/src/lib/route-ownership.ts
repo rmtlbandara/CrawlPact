@@ -168,6 +168,7 @@ const API_OWNERSHIP_RULES: ApiRule[] = [
   // --- Exact matches and other most-specific rules first ---
   { test: (p) => p === "/api/audit", ownership: "PUBLIC_ONLY" }, // POST: create anonymous audit
   { test: (p) => p === "/api/analytics/track", ownership: "SHARED_SAME_ORIGIN_SURFACE" },
+  { test: (p) => p === "/api/rum", ownership: "SHARED_SAME_ORIGIN_SURFACE" },
   { test: (p) => p === "/api/billing/webhook", ownership: "SERVER_TO_SERVER_PUBLIC" },
   // /api/agency-branding/logo (exact, upload — APP_ONLY) vs.
   // /api/agency-branding/logo/[...key] (PUBLIC_ONLY asset read) are two

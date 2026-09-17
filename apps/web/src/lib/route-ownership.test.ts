@@ -177,8 +177,9 @@ describe("classifyApiOwnership — Phase 4 executable /api/* ownership contract"
     expect(classifyApiOwnership("/api/audit/continuation/xyz789")).toBe("APP_ONLY");
   });
 
-  it("classifies analytics/track as the one SHARED_SAME_ORIGIN_SURFACE entry", () => {
+  it("classifies analytics/track and rum as SHARED_SAME_ORIGIN_SURFACE entries", () => {
     expect(classifyApiOwnership("/api/analytics/track")).toBe("SHARED_SAME_ORIGIN_SURFACE");
+    expect(classifyApiOwnership("/api/rum")).toBe("SHARED_SAME_ORIGIN_SURFACE");
   });
 
   it("classifies the Paddle webhook as SERVER_TO_SERVER_PUBLIC", () => {
