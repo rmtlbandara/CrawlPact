@@ -112,6 +112,20 @@ Apple source above.
 Every other operator's governed data was reconfirmed current and accurate. No other release change
 is warranted from this pass's research.
 
+### ByteDance (Bytespider) — investigated, deliberately not added
+
+CrawlPact governs zero ByteDance crawlers. Checked whether this is a real gap: ByteDance's own
+Bytespider crawler is reportedly among the highest-volume AI crawlers observed on the open web
+(per Cloudflare Radar-adjacent third-party trackers), used to gather training data for ByteDance's
+Doubao/Lark models. However, **no official ByteDance documentation exists for it anywhere** — no
+vendor robots.txt statement, no published IP range, no operator-published purpose statement —
+multiple independent third-party crawler-tracking sites explicitly note this as the single largest
+transparency gap among major AI crawlers. Every existing CrawlPact registry entry cites an official
+`official_source_url`; adding Bytespider based only on third-party blog reports would violate that
+same evidentiary bar this registry holds every other entry to (`docs/registry/
+SOURCE_VERIFICATION_POLICY.md`'s preference for vendor documentation over third-party sources).
+**Deliberately not added.** Revisit only if ByteDance ever publishes an official statement.
+
 ## Static validation
 
 `pnpm registry:validate`, `pnpm registry:public:validate` (24 registry records against 22 content

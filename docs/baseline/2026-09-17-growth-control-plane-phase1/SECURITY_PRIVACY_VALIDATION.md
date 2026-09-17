@@ -76,3 +76,23 @@ key/secret/password/private-key patterns across the full `main..HEAD` diff, excl
 already-established `ci-placeholder`/test-fixture values this repo's own tests use). No existing
 authentication, CSRF, WebAuthn, host-boundary, or Paddle-billing code path was touched by anything
 in this pass.
+
+## Post-deployment re-verification (2026-09-17, after Production deploy)
+
+Re-checked live, after `9a3f950` actually reached Production:
+
+- Repository secret-scanning alerts: **0 open** (`gh api .../secret-scanning/alerts`).
+- Live `POST /api/billing/webhook` with no valid signature → `400`/`403` depending on path (both
+  fail closed, never a 200 or a 500 leaking internals) — confirmed on both the apex (real endpoint)
+  and the app host (`404`, wrong-host rejection, confirming host-boundary enforcement survived this
+  deploy unchanged).
+- Live `POST /api/rum` with a malformed payload → `400 VALIDATION_FAILED`, never a 500 or a silent
+  accept.
+- Live `GET /admin/growth` unauthenticated → `302` to `/sign-in`, `cache-control: private,
+no-store` — no data leakage to an unauthenticated caller.
+- The production deploy workflow's own 43-point smoke test (independently read from its real job
+  log, not just its green checkmark) passed 43/43 on the first attempt, including
+  `APP_ONLY API rejected on the apex`, `PUBLIC_ONLY API rejected on the app host`, and the Paddle
+  webhook signature-rejection check — none of Phase 1's changes regressed any of these.
+- The one manual `/api/rum` test beacon sent during live endpoint verification was deleted
+  immediately afterward via a scoped `DELETE` so it never appears in real visitor data.

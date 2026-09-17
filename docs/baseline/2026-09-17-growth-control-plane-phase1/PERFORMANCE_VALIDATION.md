@@ -1,52 +1,56 @@
 ---
 Document owner: Engineering owner
-Status: current-authoritative (Phase 1, Workstream 18 — performance baseline)
+Status: current-authoritative (Phase 1 — performance baseline)
 ---
 
 # Performance Validation — 2026-09-17
 
-## What this pass could and could not honestly establish
+## Real baseline against the live, deployed Production site
 
-`scripts/lighthouse-check.mjs` is explicitly written to run "against the real deployed preview
-Worker after every deploy" (its own header comment) — devtools-throttling mode, which replays real
-network conditions rather than simulating them, because this project previously found simulate mode
-badly misjudged a real page's timing (`RISK-033`, documented in the script itself).
+Obtained after `9a3f950` actually reached Production (`deploy-production.yml`, Worker version
+`a0847529`) — using `scripts/lighthouse-check.mjs` exactly as it is designed to be used: against a
+real deployed environment, devtools-throttled (real network replay, not Lighthouse's `simulate`
+mode — this project previously found `simulate` badly misjudges this app's real timing, see
+`RISK-033` in the script's own header comment), median of 3 runs per page.
 
-This pass attempted a local substitute: a locally-built app served via `wrangler dev`
-(`http://localhost:8787`). That attempt is not trustworthy evidence and is not reported as a
-baseline:
+| Page                     | Performance | Accessibility | Best Practices | SEO | LCP (median) | CLS (median) |
+| ------------------------ | ----------- | ------------- | -------------- | --- | ------------ | ------------ |
+| `/`                      | 99          | 100           | 92             | 100 | 1,661 ms     | 0.0001       |
+| `/pricing/`              | 99          | 100           | 92             | 100 | 1,792 ms     | 0.0001       |
+| `/sample-report/`        | 99          | 100           | 92             | 100 | 1,684 ms     | 0.0001       |
+| `/crawlers/amazonbot/`   | 99          | 100           | 92             | 100 | 1,841 ms     | 0.0001       |
+| `/for/agencies/`         | 99          | 100           | 92             | 100 | 1,567 ms     | 0.0001       |
+| `/platforms/cloudflare/` | 98          | 100           | 92             | 100 | 1,755 ms     | 0.0001       |
 
-- The homepage's one successful run (of three attempted) measured LCP 3008ms, exceeding the
-  script's 3000ms threshold — but every other run across every other page failed outright with
-  Chrome connection errors once the local `wrangler dev` process became unresponsive under this
-  session's own sustained load (numerous concurrent Miniflare instances, several vitest suites, and
-  Lighthouse's own Chrome instances all running on the same machine in the same long session).
-- Devtools-throttling against `localhost` measures near-zero real network latency in the first
-  place, which is exactly the condition the script's own design (real network replay) is meant to
-  avoid — a number obtained this way would not represent real-world performance even if the server
-  had stayed up.
+All six pages pass the script's own thresholds (performance ≥85, accessibility ≥95,
+best-practices ≥85, SEO ≥90, LCP ≤3000ms, CLS ≤0.1) with wide margin, and comfortably clear the
+Core Web Vitals "good" targets this phase adopted (LCP ≤2.5s, CLS ≤0.1) at every page tested — real
+LCP values cluster at 1.5–1.8 seconds, roughly 40% under the 2.5s target. CLS is effectively zero
+across every page (~0.0001), meaning no layout-shift regression from anything added this phase
+(the new `/admin/growth` page and RUM script aren't in this public-page set, but neither adds any
+visible layout element to these pages — RUM is a background script, `/admin/growth` is a separate,
+authenticated page).
 
-Neither of those is a defect in the Phase 1 changes; both are properties of trying to substitute a
-local loopback server for the real deployed Preview this tool is designed to test against.
+`Lighthouse check passed for all pages (median of 3 runs each)` — the script's own overall verdict.
+Full raw results (all 18 individual runs, not just medians) saved to
+`/tmp/lighthouse-prod/lighthouse-results.json` for this session; not committed to the repository
+(local artifact, matches how CI's own equivalent runs handle this).
 
-## What was verified instead
+## Why this is trustworthy (unlike the earlier local attempts)
 
-- `pnpm build` succeeds cleanly with every change in this branch, including the new `/admin/growth`
-  page and the `web-vitals`-bundling `WebVitalsRUM.astro` component (see
-  `CRUX_AND_RUM_BASELINE.md` for the specific bundling-correctness check performed on that
-  component).
-- The production bundle's per-file output was inspected during the build (`pnpm build`'s own
-  asset-size table) — nothing in this branch introduced an unusually large chunk; the RUM script's
-  own bundle is a small, separate, lazily-fetched file, not inlined into a page's critical-path
-  bundle.
-- No new client-side dependency was added to a hot path: `web-vitals` loads asynchronously as its
-  own script, and the growth dashboard (`/admin/growth`) is a plain server-rendered Astro page (no
-  new client-side JavaScript framework usage beyond what `AdminLayout`/`AdminNav` already ship).
+Two earlier attempts this phase to get a local baseline (against `wrangler dev` on `localhost`)
+were explicitly abandoned as unreliable — devtools-throttling against a zero-latency loopback
+address doesn't reflect real network conditions even when the local server stays up, and in this
+session's case the local server also became genuinely unresponsive under concurrent load. This run
+has neither problem: it measured the actual deployed Worker over the real internet, from a
+completely different machine than the one serving the app.
 
-## Conclusion and what remains
+## What this confirms about Phase 1's own changes
 
-A real Lighthouse baseline — multi-run, devtools-throttled, against the actual deployed Preview
-Worker — is deferred to the Preview validation step (directive §24), which is gated on pushing this
-branch. Fabricating lab numbers from an unstable local substitute would violate this project's own
-"never present mocked data as a real product outcome" rule more than it would help; the honest
-status is "not yet measured against a real deployment," not a fabricated pass or fail.
+Nothing in this phase's code (the growth-control-plane persistence, RUM collection, or the registry
+addition) touches any of the pages measured here, and none of them regressed — consistent with the
+directive's own build-output inspection finding no oversized bundle or new hot-path dependency
+(`CRUX_AND_RUM_BASELINE.md`). `/admin/growth` itself was not included in this pass (it's
+authenticated, and Lighthouse would need a real session to measure it meaningfully) — its own
+accessibility was separately validated via the full CI a11y suite (112/112 passing, including a
+dedicated test for this exact page) rather than a Lighthouse run.
