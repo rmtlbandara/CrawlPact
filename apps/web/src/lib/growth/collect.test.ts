@@ -52,8 +52,9 @@ function createFakeD1(): { db: D1Database; calls: Array<{ sql: string; params: u
 
 function tableOf(sql: string): string {
   const match = /INSERT INTO (\w+)/.exec(sql);
-  if (!match) throw new Error(`no INSERT INTO in: ${sql}`);
-  return match[1];
+  const table = match?.[1];
+  if (!table) throw new Error(`no INSERT INTO in: ${sql}`);
+  return table;
 }
 
 describe("collectGrowthSnapshots", () => {

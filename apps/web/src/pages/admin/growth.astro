@@ -1,0 +1,294 @@
+---
+export const prerender = false;
+import AdminLayout from "../../layouts/AdminLayout.astro";
+import AdminPageHeader from "../../components/admin/AdminPageHeader.astro";
+import { MetricCard, StatusChip } from "@crawlpact/ui";
+import { createDb } from "@crawlpact/database";
+import { getEnv } from "../../lib/env";
+import { getAdminPageSession } from "../../lib/auth/require-admin";
+import { getGrowthDashboard } from "../../lib/admin/growth-dashboard";
+import type { StatusTone } from "@crawlpact/ui";
+
+const env = getEnv();
+const db = createDb(env.DB);
+const admin = await getAdminPageSession(Astro.request, db);
+if (!admin) return Astro.redirect("/sign-in");
+
+const dashboard = await getGrowthDashboard(db, env.CRUX_ORIGIN);
+
+function formatNumber(n: number): string {
+  return n.toLocaleString("en-US");
+}
+
+function formatPct(n: number): string {
+  return `${(n * 100).toFixed(2)}%`;
+}
+
+function formatDelta(
+  pct: number | null,
+): { direction: "up" | "down" | "flat"; label: string } | undefined {
+  if (pct === null) return undefined;
+  const rounded = Math.round(pct * 10) / 10;
+  const direction = rounded > 0 ? "up" : rounded < 0 ? "down" : "flat";
+  return { direction, label: `${rounded > 0 ? "+" : ""}${rounded}% vs. prior 28 days` };
+}
+
+function freshnessTone(collectedAt: string | null): { tone: StatusTone; label: string } {
+  if (!collectedAt) return { tone: "unknown", label: "No data collected yet" };
+  const ageHours = (Date.now() - new Date(collectedAt).getTime()) / (1000 * 60 * 60);
+  if (ageHours <= 48) return { tone: "success", label: `Last collected ${collectedAt}` };
+  return { tone: "warning", label: `Stale — last collected ${collectedAt}` };
+}
+
+const gscFreshness = freshnessTone(dashboard.gsc.lastCollectedAt);
+const ga4Freshness = freshnessTone(dashboard.ga4.lastCollectedAt);
+---
+
+<AdminLayout title="Growth" displayName={admin.user.displayName}>
+  <AdminPageHeader
+    title="Growth"
+    description="Search visibility, acquisition, and field performance — from persisted daily snapshots, not a live API call on every page load."
+    metadata={`Reference day: ${dashboard.referenceDataDate} (last fully-completed day, UTC)`}
+  />
+
+  <section class="mt-6">
+    <h2 class="text-h2 text-neutral-950">Data quality</h2>
+    <div class="mt-4 flex flex-wrap gap-3">
+      <StatusChip tone={gscFreshness.tone} label={`Search Console: ${gscFreshness.label}`} />
+      <StatusChip tone={ga4Freshness.tone} label={`GA4: ${ga4Freshness.label}`} />
+      <StatusChip
+        tone={dashboard.crux.status === "ok" ? "success" : "unknown"}
+        label={dashboard.crux.status === "ok"
+          ? `CrUX: field data as of ${dashboard.crux.dataDate}`
+          : "CrUX: NO_DATA — origin not yet eligible for field data"}
+      />
+    </div>
+    <p class="mt-2 text-supporting text-neutral-500">
+      Collection runs once daily (worker.ts's existing cron, job name <code>growth_collection</code
+      >) — see <a class="text-brand-700 hover:underline" href="/admin/jobs">Scheduled jobs</a> for run
+      history.
+    </p>
+  </section>
+
+  <section class="mt-8">
+    <h2 class="text-h2 text-neutral-950">Search Console</h2>
+    {
+      !dashboard.gsc.last7Days.hasData && !dashboard.gsc.last28Days.current.hasData ? (
+        <p class="mt-4 text-body text-neutral-600">
+          No settled Search Console data yet. Collection begins with the next scheduled run.
+        </p>
+      ) : (
+        <Fragment>
+          <div class="mt-4 grid grid-cols-2 gap-4 sm:grid-cols-4">
+            <MetricCard label="Clicks (7d)" value={formatNumber(dashboard.gsc.last7Days.clicks)} />
+            <MetricCard
+              label="Impressions (7d)"
+              value={formatNumber(dashboard.gsc.last7Days.impressions)}
+            />
+            <MetricCard
+              label="Clicks (28d)"
+              value={formatNumber(dashboard.gsc.last28Days.current.clicks)}
+              trend={formatDelta(dashboard.gsc.last28Days.clicksDeltaPct)}
+            />
+            <MetricCard
+              label="Impressions (28d)"
+              value={formatNumber(dashboard.gsc.last28Days.current.impressions)}
+              trend={formatDelta(dashboard.gsc.last28Days.impressionsDeltaPct)}
+              helpText={`Avg. CTR ${formatPct(dashboard.gsc.last28Days.current.ctr)} · Avg. position ${dashboard.gsc.last28Days.current.position.toFixed(1)}`}
+            />
+          </div>
+
+          <div class="mt-6 grid gap-6 lg:grid-cols-2">
+            <div>
+              <h3 class="text-h3 text-neutral-950">Top queries (28d)</h3>
+              <div class="mt-3 overflow-x-auto rounded-card border border-neutral-200">
+                <table class="w-full text-left text-body">
+                  <thead class="bg-neutral-50 text-supporting font-medium text-neutral-600">
+                    <tr>
+                      <th scope="col" class="px-4 py-2">
+                        Query
+                      </th>
+                      <th scope="col" class="px-4 py-2">
+                        Clicks
+                      </th>
+                      <th scope="col" class="px-4 py-2">
+                        Impressions
+                      </th>
+                    </tr>
+                  </thead>
+                  <tbody class="divide-y divide-neutral-200">
+                    {dashboard.gsc.topQueries.length === 0 ? (
+                      <tr>
+                        <td class="px-4 py-3 text-neutral-500" colspan={3}>
+                          No queries with clicks in this window.
+                        </td>
+                      </tr>
+                    ) : (
+                      dashboard.gsc.topQueries.map((row) => (
+                        <tr>
+                          <td class="px-4 py-2 text-neutral-800">{row.value}</td>
+                          <td class="px-4 py-2 text-neutral-800">{formatNumber(row.clicks)}</td>
+                          <td class="px-4 py-2 text-neutral-800">
+                            {formatNumber(row.impressions)}
+                          </td>
+                        </tr>
+                      ))
+                    )}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+
+            <div>
+              <h3 class="text-h3 text-neutral-950">Top pages (28d)</h3>
+              <div class="mt-3 overflow-x-auto rounded-card border border-neutral-200">
+                <table class="w-full text-left text-body">
+                  <thead class="bg-neutral-50 text-supporting font-medium text-neutral-600">
+                    <tr>
+                      <th scope="col" class="px-4 py-2">
+                        Page
+                      </th>
+                      <th scope="col" class="px-4 py-2">
+                        Clicks
+                      </th>
+                      <th scope="col" class="px-4 py-2">
+                        Impressions
+                      </th>
+                    </tr>
+                  </thead>
+                  <tbody class="divide-y divide-neutral-200">
+                    {dashboard.gsc.topPages.length === 0 ? (
+                      <tr>
+                        <td class="px-4 py-3 text-neutral-500" colspan={3}>
+                          No pages with clicks in this window.
+                        </td>
+                      </tr>
+                    ) : (
+                      dashboard.gsc.topPages.map((row) => (
+                        <tr>
+                          <td class="px-4 py-2 break-all text-neutral-800">{row.value}</td>
+                          <td class="px-4 py-2 text-neutral-800">{formatNumber(row.clicks)}</td>
+                          <td class="px-4 py-2 text-neutral-800">
+                            {formatNumber(row.impressions)}
+                          </td>
+                        </tr>
+                      ))
+                    )}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          </div>
+        </Fragment>
+      )
+    }
+  </section>
+
+  <section class="mt-8">
+    <h2 class="text-h2 text-neutral-950">Acquisition (GA4)</h2>
+    {
+      !dashboard.ga4.last7Days.hasData ? (
+        <p class="mt-4 text-body text-neutral-600">
+          No settled GA4 data yet. Collection begins with the next scheduled run.
+        </p>
+      ) : (
+        <Fragment>
+          <div class="mt-4 grid grid-cols-2 gap-4 sm:grid-cols-4">
+            <MetricCard
+              label="Active users (7d)"
+              value={formatNumber(dashboard.ga4.last7Days.activeUsers)}
+            />
+            <MetricCard
+              label="New users (7d)"
+              value={formatNumber(dashboard.ga4.last7Days.newUsers)}
+            />
+            <MetricCard
+              label="Sessions (7d)"
+              value={formatNumber(dashboard.ga4.last7Days.sessions)}
+            />
+            <MetricCard
+              label="Engaged sessions (7d)"
+              value={formatNumber(dashboard.ga4.last7Days.engagedSessions)}
+              helpText={`Key events: ${formatNumber(dashboard.ga4.last7Days.keyEvents)}`}
+            />
+          </div>
+
+          <div class="mt-6">
+            <h3 class="text-h3 text-neutral-950">Top acquisition channels (28d)</h3>
+            <div class="mt-3 overflow-x-auto rounded-card border border-neutral-200">
+              <table class="w-full text-left text-body">
+                <thead class="bg-neutral-50 text-supporting font-medium text-neutral-600">
+                  <tr>
+                    <th scope="col" class="px-4 py-2">
+                      Channel
+                    </th>
+                    <th scope="col" class="px-4 py-2">
+                      Active users
+                    </th>
+                    <th scope="col" class="px-4 py-2">
+                      Sessions
+                    </th>
+                    <th scope="col" class="px-4 py-2">
+                      Engaged sessions
+                    </th>
+                  </tr>
+                </thead>
+                <tbody class="divide-y divide-neutral-200">
+                  {dashboard.ga4.channels.length === 0 ? (
+                    <tr>
+                      <td class="px-4 py-3 text-neutral-500" colspan={4}>
+                        No channel data in this window.
+                      </td>
+                    </tr>
+                  ) : (
+                    dashboard.ga4.channels.map((row) => (
+                      <tr>
+                        <td class="px-4 py-2 text-neutral-800">{row.value}</td>
+                        <td class="px-4 py-2 text-neutral-800">{formatNumber(row.activeUsers)}</td>
+                        <td class="px-4 py-2 text-neutral-800">{formatNumber(row.sessions)}</td>
+                        <td class="px-4 py-2 text-neutral-800">
+                          {formatNumber(row.engagedSessions)}
+                        </td>
+                      </tr>
+                    ))
+                  )}
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </Fragment>
+      )
+    }
+  </section>
+
+  <section class="mt-8">
+    <h2 class="text-h2 text-neutral-950">Performance</h2>
+    {
+      dashboard.crux.status === "ok" ? (
+        <div class="mt-4 grid grid-cols-2 gap-4 sm:grid-cols-3">
+          <MetricCard
+            label="LCP (p75)"
+            value={dashboard.crux.lcpP75Ms !== null ? `${dashboard.crux.lcpP75Ms} ms` : "—"}
+            helpText="Target ≤ 2500ms"
+          />
+          <MetricCard
+            label="INP (p75)"
+            value={dashboard.crux.inpP75Ms !== null ? `${dashboard.crux.inpP75Ms} ms` : "—"}
+            helpText="Target ≤ 200ms"
+          />
+          <MetricCard
+            label="CLS (p75)"
+            value={dashboard.crux.clsP75 !== null ? dashboard.crux.clsP75.toFixed(3) : "—"}
+            helpText="Target ≤ 0.1"
+          />
+        </div>
+      ) : (
+        <p class="mt-4 text-body text-neutral-600">
+          CrUX: <strong>NO_DATA</strong> — this origin has not yet reached Chrome UX Report's
+          minimum-traffic eligibility threshold. This is expected at current traffic levels, not a
+          defect — see docs/status/KNOWN_RISKS.md.
+        </p>
+      )
+    }
+  </section>
+</AdminLayout>
