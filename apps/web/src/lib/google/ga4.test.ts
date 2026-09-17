@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { queryGa4Report } from "./ga4";
+import { queryGa4DimensionedReport, queryGa4Report } from "./ga4";
 
 const ACCESS_TOKEN = "test-access-token";
 const PROPERTY_ID = "547512440";
@@ -114,5 +114,127 @@ describe("queryGa4Report", () => {
       endDate: "yesterday",
     });
     expect(result).toEqual({ status: "upstream_unavailable" });
+  });
+});
+
+describe("queryGa4DimensionedReport", () => {
+  const originalFetch = globalThis.fetch;
+
+  afterEach(() => {
+    globalThis.fetch = originalFetch;
+    vi.restoreAllMocks();
+  });
+
+  it("requests the five growth-collection metrics with no dimension for a null breakdown", async () => {
+    let capturedBody: Record<string, unknown> = {};
+    globalThis.fetch = vi.fn(async (_url, init?: RequestInit) => {
+      capturedBody = JSON.parse(init?.body as string);
+      return jsonResponse({ rows: [] });
+    }) as unknown as typeof fetch;
+
+    await queryGa4DimensionedReport({
+      propertyId: PROPERTY_ID,
+      accessToken: ACCESS_TOKEN,
+      startDate: "2026-09-16",
+      endDate: "2026-09-16",
+      dimension: null,
+    });
+
+    expect(capturedBody.dimensions).toEqual([]);
+    expect(capturedBody.metrics).toEqual([
+      { name: "activeUsers" },
+      { name: "newUsers" },
+      { name: "sessions" },
+      { name: "engagedSessions" },
+      { name: "keyEvents" },
+    ]);
+  });
+
+  it("normalizes rows keyed by the requested dimension", async () => {
+    globalThis.fetch = vi.fn(async () =>
+      jsonResponse({
+        rows: [
+          {
+            dimensionValues: [{ value: "Organic Search" }],
+            metricValues: [
+              { value: "9" },
+              { value: "4" },
+              { value: "17" },
+              { value: "6" },
+              { value: "1" },
+            ],
+          },
+        ],
+      }),
+    ) as unknown as typeof fetch;
+
+    const result = await queryGa4DimensionedReport({
+      propertyId: PROPERTY_ID,
+      accessToken: ACCESS_TOKEN,
+      startDate: "2026-09-16",
+      endDate: "2026-09-16",
+      dimension: "sessionDefaultChannelGroup",
+    });
+
+    expect(result).toEqual({
+      status: "ok",
+      data: {
+        rowCount: 1,
+        rows: [
+          {
+            dimensionValue: "Organic Search",
+            activeUsers: 9,
+            newUsers: 4,
+            sessions: 17,
+            engagedSessions: 6,
+            keyEvents: 1,
+          },
+        ],
+      },
+    });
+  });
+
+  it("labels a null-dimension row 'site' regardless of what the API returns", async () => {
+    globalThis.fetch = vi.fn(async () =>
+      jsonResponse({
+        rows: [
+          {
+            dimensionValues: [],
+            metricValues: [
+              { value: "9" },
+              { value: "4" },
+              { value: "17" },
+              { value: "6" },
+              { value: "1" },
+            ],
+          },
+        ],
+      }),
+    ) as unknown as typeof fetch;
+
+    const result = await queryGa4DimensionedReport({
+      propertyId: PROPERTY_ID,
+      accessToken: ACCESS_TOKEN,
+      startDate: "2026-09-16",
+      endDate: "2026-09-16",
+      dimension: null,
+    });
+
+    expect(result.status).toBe("ok");
+    if (result.status === "ok") {
+      expect(result.data.rows[0]?.dimensionValue).toBe("site");
+    }
+  });
+
+  it("maps a 429 to rate_limited", async () => {
+    globalThis.fetch = vi.fn(async () => jsonResponse({}, 429)) as unknown as typeof fetch;
+    const result = await queryGa4DimensionedReport({
+      propertyId: PROPERTY_ID,
+      accessToken: ACCESS_TOKEN,
+      startDate: "2026-09-16",
+      endDate: "2026-09-16",
+      dimension: "landingPage",
+    });
+    expect(result).toEqual({ status: "rate_limited" });
   });
 });

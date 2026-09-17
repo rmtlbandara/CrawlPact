@@ -5,6 +5,7 @@ import { runDataRetentionPurge } from "./lib/data-retention";
 import { applyDueScheduledDowngrades } from "./lib/billing/scheduled-downgrades";
 import { reconcileMissingPolicyChangeNotifications } from "./lib/notification-reconciliation";
 import { evaluateOperationalAlerts } from "./lib/admin/operational-alerts";
+import { collectGrowthSnapshots } from "./lib/growth/collect";
 import { resolveCanonicalRedirectTarget } from "./lib/route-registry";
 import { classifyRequestOrigin, hasDistinctAppOrigin, toPublicUrl } from "./lib/origin";
 import {
@@ -94,6 +95,15 @@ export default {
         console.error("evaluateOperationalAlerts failed:", error);
       }),
     );
+
+    // Phase 1 (Growth Control Plane): daily persistence of Search
+    // Console/GA4/CrUX aggregates (lib/growth/collect.ts), replacing the
+    // request-time-only diagnostic. Unconditional like the retention job
+    // above — every Google config value is simply "not_configured" on
+    // Preview (Production-only vars, see wrangler.jsonc) or before secrets
+    // are set, which `collectGrowthSnapshots` already reports as a normal,
+    // non-error per-provider status rather than a job failure.
+    ctx.waitUntil(runGrowthCollectionJob(env, controller.cron));
   },
 } satisfies ExportedHandler<Env>;
 
@@ -272,6 +282,31 @@ async function runRetentionJob(
     });
   } catch (error) {
     await finishJobRun(env, runId, "data_retention_purge", cronExpression, startedAt, {
+      status: "failed",
+      errorSummary: error instanceof Error ? error.message : String(error),
+    });
+  }
+}
+
+async function runGrowthCollectionJob(env: Env, cronExpression: string): Promise<void> {
+  const startedAt = new Date().toISOString();
+  const runId = await startJobRun(env, "growth_collection", cronExpression, startedAt);
+  try {
+    const summary = await collectGrowthSnapshots(env.DB, {
+      serviceAccountJson: env.GOOGLE_ANALYTICS_SERVICE_ACCOUNT_JSON,
+      ga4PropertyId: env.GOOGLE_GA4_PROPERTY_ID,
+      searchConsoleSiteUrl: env.GOOGLE_SEARCH_CONSOLE_SITE_URL,
+      cruxApiKey: env.CRUX_API_KEY,
+      cruxOrigin: env.CRUX_ORIGIN,
+    });
+    const describe = (result: { status: string; rowsWritten?: number }) =>
+      result.status === "ok" ? `ok(${result.rowsWritten})` : result.status;
+    await finishJobRun(env, runId, "growth_collection", cronExpression, startedAt, {
+      status: "completed",
+      errorSummary: `data_date=${summary.dataDate} gsc=${describe(summary.searchConsole)} ga4=${describe(summary.ga4)} crux=${describe(summary.crux)}`,
+    });
+  } catch (error) {
+    await finishJobRun(env, runId, "growth_collection", cronExpression, startedAt, {
       status: "failed",
       errorSummary: error instanceof Error ? error.message : String(error),
     });
@@ -515,4 +550,9 @@ type Env = {
   PADDLE_ENVIRONMENT: "sandbox" | "production";
   AGENCY_LOGOS: R2Bucket;
   PUBLIC_APP_ENV: string;
+  GOOGLE_ANALYTICS_SERVICE_ACCOUNT_JSON?: string;
+  GOOGLE_GA4_PROPERTY_ID?: string;
+  GOOGLE_SEARCH_CONSOLE_SITE_URL?: string;
+  CRUX_API_KEY?: string;
+  CRUX_ORIGIN?: string;
 };

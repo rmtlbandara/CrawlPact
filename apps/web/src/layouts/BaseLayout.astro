@@ -3,6 +3,7 @@ import "../styles/global.css";
 import { getEnv } from "../lib/env";
 import { BRAND } from "../config/brand";
 import { TRUST_CONFIG } from "../lib/trust-config";
+import WebVitalsRUM from "../components/WebVitalsRUM.astro";
 
 export type Breadcrumb = { name: string; url: string };
 
@@ -61,6 +62,9 @@ const environmentLabel: string | null = (() => {
   }
 })();
 const canonicalUrl = new URL(canonicalPath ?? Astro.url.pathname, siteUrl).toString();
+// Phase 1 Workstream 3: gates WebVitalsRUM's inclusion (never inside that
+// component's own markup — see its doc comment for why).
+const isProduction = getEnv().PUBLIC_APP_ENV === "production";
 const ogImageUrl = new URL(ogImage, siteUrl).toString();
 
 const jsonLdGraph: Record<string, unknown>[] = [
@@ -169,6 +173,7 @@ if (extraJsonLd && extraJsonLd.length > 0) {
     <a href="#main-content" class="skip-link">Skip to content</a>
     {environmentLabel && <div class="env-banner no-print">{environmentLabel} environment</div>}
     <slot />
+    {isProduction && <WebVitalsRUM />}
   </body>
 </html>
 

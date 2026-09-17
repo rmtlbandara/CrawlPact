@@ -10,3 +10,4 @@ export * from "./incidents";
 export * from "./workspace";
 export * from "./research";
 export * from "./pilots";
+export * from "./growth";

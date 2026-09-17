@@ -172,6 +172,18 @@ INSERT OR IGNORE INTO crawlers (
   ('crw_applebot_extended', 'op_apple', 'Applebot-Extended', 'Applebot-Extended', 'training',
    'Controls use of website content for training Apple Intelligence and other Apple generative AI models.',
    'https://support.apple.com/en-us/119829', 'active', '2026-01-01', '2026-07-01', NULL),
+  -- Added Phase 1 growth-control-plane crawler-registry freshness pass
+  -- (2026-09-17): Apple's own documentation now states Applebot crawled
+  -- data "may be used to provide additional context and up-to-date content
+  -- when AI models are used to generate output for display in Apple
+  -- products and services" — a live-context/agent-adjacent AI use distinct
+  -- from Applebot-Extended's separate, opt-out-able foundation-model
+  -- training role. Previously ungoverned (only the -Extended variant was
+  -- tracked). Classified 'mixed', matching Amazonbot's precedent for a
+  -- crawler with both a classic-search and an AI-adjacent purpose.
+  ('crw_applebot', 'op_apple', 'Applebot', 'Applebot', 'mixed',
+   'Powers Apple search features (Spotlight, Siri, Safari) and, per Apple''s documentation, may also provide context to Apple''s generative AI models when they generate output — distinct from Applebot-Extended, which separately governs foundation-model training.',
+   'https://support.apple.com/en-us/119829', 'active', '2026-09-17', '2026-09-17', NULL),
   ('crw_meta_external_agent', 'op_meta', 'Meta-ExternalAgent', 'Meta-ExternalAgent', 'training',
    'Used by Meta to crawl content for training AI models and improving AI products.',
    'https://developers.facebook.com/docs/sharing/webmasters/web-crawlers/', 'active', '2026-01-01', '2026-07-01', NULL),

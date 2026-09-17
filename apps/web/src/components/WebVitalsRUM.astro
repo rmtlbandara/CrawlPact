@@ -1,0 +1,66 @@
+---
+/**
+ * Phase 1 (Growth Control Plane) Workstream 3: first-party Real User
+ * Monitoring, sending Core Web Vitals to `POST /api/rum`
+ * (../pages/api/rum.ts / ../lib/rum.ts). This is the interim field-
+ * performance source while CrUX reports NO_DATA for this origin.
+ *
+ * Not gated behind analytics consent (docs/analytics/
+ * CONSENT_AND_ANALYTICS_PREFERENCE_MODEL.md) the way GoogleAnalytics.astro/
+ * MicrosoftClarity.astro are: this loads no third-party script, sets no
+ * cookie, and sends no identifier of any kind — only an aggregate metric
+ * name/value/route bucket (see lib/rum.ts's privacy doc comment). It is
+ * first-party functional telemetry, the same category as
+ * `/api/analytics/track`, not third-party behavioural analytics.
+ *
+ * Production-only gating happens at the *call site* (BaseLayout.astro's
+ * `{isProduction && <WebVitalsRUM />}`), not inside this component's own
+ * markup — matching GoogleAnalytics.astro's documented reason: Astro's
+ * compiler cannot parse a `<script>` body containing `{}` when the tag
+ * itself sits inside a `{condition && (...)}` JSX expression, so this
+ * file's `<script>` stays at the template root. Preview traffic (dev
+ * iteration, CI browser smoke) would otherwise pollute the one performance
+ * dataset this baseline is meant to reflect; the `/api/rum` endpoint itself
+ * is not environment-gated, so it can still be exercised directly during
+ * Preview validation.
+ *
+ * The `web-vitals` package (Google's own, ~2KB, MIT-licensed measurement
+ * library) is used rather than a hand-rolled PerformanceObserver: correctly
+ * computing INP in particular is genuinely intricate, and this is the
+ * library the Core Web Vitals documentation itself points to.
+ */
+---
+
+<script>
+  import { onLCP, onINP, onCLS, onFCP, onTTFB } from "web-vitals";
+  import type { Metric } from "web-vitals";
+
+  function deviceCategory(): "mobile" | "desktop" {
+    return window.matchMedia("(max-width: 767px)").matches ? "mobile" : "desktop";
+  }
+
+  function send(metric: Metric) {
+    const payload = JSON.stringify({
+      route: location.pathname,
+      device: deviceCategory(),
+      metrics: [{ name: metric.name, value: metric.value, rating: metric.rating }],
+    });
+    const beaconSent =
+      "sendBeacon" in navigator &&
+      navigator.sendBeacon("/api/rum", new Blob([payload], { type: "application/json" }));
+    if (!beaconSent) {
+      fetch("/api/rum", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: payload,
+        keepalive: true,
+      }).catch(() => {});
+    }
+  }
+
+  onLCP(send);
+  onINP(send);
+  onCLS(send);
+  onFCP(send);
+  onTTFB(send);
+</script>

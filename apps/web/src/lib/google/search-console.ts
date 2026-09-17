@@ -23,13 +23,15 @@ export type SearchConsoleReport = {
   rows: SearchConsoleRow[];
 };
 
+export type SearchConsoleDimension = "date" | "query" | "page" | "device" | "country";
+
 export type SearchConsoleQueryParams = {
   siteUrl: string;
   accessToken: string;
   startDate: string;
   endDate: string;
   rowLimit?: number;
-  dimensions?: Array<"query" | "page">;
+  dimensions?: SearchConsoleDimension[];
 };
 
 function toSearchConsoleRow(raw: unknown): SearchConsoleRow | null {

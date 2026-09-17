@@ -33,6 +33,7 @@
     "react": "19.2.8",
     "react-dom": "19.2.8",
     "tailwindcss": "4.3.3",
+    "web-vitals": "4.2.4",
     "zod": "4.4.3"
   },
   "devDependencies": {
