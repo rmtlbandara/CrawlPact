@@ -273,6 +273,39 @@ test.describe("authenticated routes", () => {
       .analyze();
     expect(results.violations, JSON.stringify(results.violations, null, 2)).toEqual([]);
   });
+
+  test("Phase 1: Super Admin growth dashboard has no automatically detectable WCAG 2.2 AA violations", async ({
+    page,
+  }) => {
+    // Analytics dashboards commonly introduce inaccessible tables/charts
+    // (directive §19) — this page's data tables and StatusChip freshness
+    // indicators are exactly the kind of thing worth a dedicated check
+    // rather than assuming the shared AdminLayout/MetricCard/table markup
+    // is automatically fine on a new page.
+    await addVirtualAuthenticator(page);
+    const displayName = `A11y Growth ${Date.now()}-${crypto.randomUUID().slice(0, 8)}`;
+    await registerNewAccount(page, displayName);
+    await grantSuperAdminToCurrentUser(page);
+    await retryUntilSettled(async () => {
+      await Promise.all([
+        page.waitForResponse((res) => res.url().includes("/api/auth/logout"), {
+          timeout: 1_000,
+        }),
+        page.getByRole("button", { name: "Sign out" }).click(),
+      ]);
+    });
+    await page.waitForURL("**/");
+    await signInWithPasskey(page);
+    await page.goto("/admin/growth");
+    await ensureRealPage(page);
+    await expect(page.getByRole("heading", { name: "Growth", level: 1 })).toBeVisible({
+      timeout: 10_000,
+    });
+    const results = await new AxeBuilder({ page })
+      .withTags(["wcag2a", "wcag2aa", "wcag22aa"])
+      .analyze();
+    expect(results.violations, JSON.stringify(results.violations, null, 2)).toEqual([]);
+  });
 });
 
 test("reduced-motion preference is respected on the home page", async ({ page }) => {
