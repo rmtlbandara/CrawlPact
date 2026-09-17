@@ -85,6 +85,7 @@ export type GrowthDashboard = {
   gsc: GscGrowthSummary;
   ga4: Ga4GrowthSummary;
   crux: CruxGrowthSummary;
+  rum: RumGrowthSummary;
 };
 
 function toDateRange(referenceDate: Date, days: number): { start: string; end: string } {
@@ -326,19 +327,63 @@ async function getCruxSummary(
   };
 }
 
+export type RumMetricSummary = { sampleSize: number; p75: number | null };
+export type RumGrowthSummary = {
+  lcp: RumMetricSummary;
+  inp: RumMetricSummary;
+  cls: RumMetricSummary;
+};
+
+function p75(values: number[]): number | null {
+  if (values.length === 0) return null;
+  const sorted = [...values].sort((a, b) => a - b);
+  const index = Math.min(sorted.length - 1, Math.ceil(sorted.length * 0.75) - 1);
+  return sorted[index] ?? null;
+}
+
+/** Computed in application code, not SQL — SQLite has no percentile
+ * aggregate, and expected local volume (a handful of beacons/day at
+ * current traffic) makes fetching the raw values and sorting them trivial.
+ * Revisit only if this table's row count ever makes that untrue. */
+async function getRumSummary(db: Database, referenceDate: Date): Promise<RumGrowthSummary> {
+  const window7 = toDateRange(referenceDate, 7);
+  const rows = await db
+    .select({ metricName: schema.rumVitals.metricName, metricValue: schema.rumVitals.metricValue })
+    .from(schema.rumVitals)
+    .where(
+      and(
+        gte(schema.rumVitals.recordedAt, window7.start),
+        sql`${schema.rumVitals.recordedAt} <= ${window7.end} || 'T23:59:59.999Z'`,
+      ),
+    );
+
+  const byMetric: Record<"LCP" | "INP" | "CLS", number[]> = { LCP: [], INP: [], CLS: [] };
+  for (const row of rows) {
+    if (row.metricName in byMetric)
+      byMetric[row.metricName as "LCP" | "INP" | "CLS"].push(row.metricValue);
+  }
+
+  return {
+    lcp: { sampleSize: byMetric.LCP.length, p75: p75(byMetric.LCP) },
+    inp: { sampleSize: byMetric.INP.length, p75: p75(byMetric.INP) },
+    cls: { sampleSize: byMetric.CLS.length, p75: p75(byMetric.CLS) },
+  };
+}
+
 /** Assembles the full Super Admin growth dashboard from persisted history —
  * every value here is a read of `gsc_daily_metrics`/`ga4_daily_metrics`/
- * `crux_snapshots`, never a live Google API call. */
+ * `crux_snapshots`/`rum_vitals`, never a live Google API call. */
 export async function getGrowthDashboard(
   db: Database,
   cruxOrigin: string | undefined,
   referenceDate: Date = new Date(),
 ): Promise<GrowthDashboard> {
-  const [gsc, ga4, crux] = await Promise.all([
+  const [gsc, ga4, crux, rum] = await Promise.all([
     getGscSummary(db, referenceDate),
     getGa4Summary(db, referenceDate),
     getCruxSummary(db, cruxOrigin),
+    getRumSummary(db, referenceDate),
   ]);
 
-  return { referenceDataDate: toDateRange(referenceDate, 1).end, gsc, ga4, crux };
+  return { referenceDataDate: toDateRange(referenceDate, 1).end, gsc, ga4, crux, rum };
 }

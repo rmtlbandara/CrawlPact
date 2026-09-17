@@ -263,9 +263,45 @@ const ga4Freshness = freshnessTone(dashboard.ga4.lastCollectedAt);
 
   <section class="mt-8">
     <h2 class="text-h2 text-neutral-950">Performance</h2>
+
+    <h3 class="mt-4 text-h3 text-neutral-950">Real User Monitoring (last 7 days)</h3>
+    <p class="mt-1 text-supporting text-neutral-500">
+      First-party field data (own visitors, own site) — the interim performance source while CrUX
+      below reports NO_DATA. A p75 needs a real sample to mean anything; a low sample size is shown
+      honestly rather than treated as a reliable figure.
+    </p>
+    <div class="mt-3 grid grid-cols-2 gap-4 sm:grid-cols-3">
+      <MetricCard
+        label="LCP (p75)"
+        value={dashboard.rum.lcp.p75 !== null ? `${Math.round(dashboard.rum.lcp.p75)} ms` : "—"}
+        helpText={`n=${dashboard.rum.lcp.sampleSize} · Target ≤ 2500ms`}
+      />
+      <MetricCard
+        label="INP (p75)"
+        value={dashboard.rum.inp.p75 !== null ? `${Math.round(dashboard.rum.inp.p75)} ms` : "—"}
+        helpText={`n=${dashboard.rum.inp.sampleSize} · Target ≤ 200ms`}
+      />
+      <MetricCard
+        label="CLS (p75)"
+        value={dashboard.rum.cls.p75 !== null ? dashboard.rum.cls.p75.toFixed(3) : "—"}
+        helpText={`n=${dashboard.rum.cls.sampleSize} · Target ≤ 0.1`}
+      />
+    </div>
+    {
+      dashboard.rum.lcp.sampleSize === 0 &&
+        dashboard.rum.inp.sampleSize === 0 &&
+        dashboard.rum.cls.sampleSize === 0 && (
+          <p class="mt-2 text-supporting text-neutral-500">
+            Waiting for the first real visitor beacon — RUM only runs in Production (see
+            WebVitalsRUM.astro), so this stays empty on Preview/local.
+          </p>
+        )
+    }
+
+    <h3 class="mt-6 text-h3 text-neutral-950">CrUX (Chrome UX Report field data)</h3>
     {
       dashboard.crux.status === "ok" ? (
-        <div class="mt-4 grid grid-cols-2 gap-4 sm:grid-cols-3">
+        <div class="mt-3 grid grid-cols-2 gap-4 sm:grid-cols-3">
           <MetricCard
             label="LCP (p75)"
             value={dashboard.crux.lcpP75Ms !== null ? `${dashboard.crux.lcpP75Ms} ms` : "—"}
@@ -283,7 +319,7 @@ const ga4Freshness = freshnessTone(dashboard.ga4.lastCollectedAt);
           />
         </div>
       ) : (
-        <p class="mt-4 text-body text-neutral-600">
+        <p class="mt-3 text-body text-neutral-600">
           CrUX: <strong>NO_DATA</strong> — this origin has not yet reached Chrome UX Report's
           minimum-traffic eligibility threshold. This is expected at current traffic levels, not a
           defect — see docs/status/KNOWN_RISKS.md.

@@ -82,6 +82,11 @@ describe("getGrowthDashboard (real D1)", () => {
     expect(dashboard.gsc.last28Days.clicksDeltaPct).toBeNull();
     expect(dashboard.ga4.last7Days.hasData).toBe(false);
     expect(dashboard.crux).toEqual({ status: "no_data" });
+    expect(dashboard.rum).toEqual({
+      lcp: { sampleSize: 0, p75: null },
+      inp: { sampleSize: 0, p75: null },
+      cls: { sampleSize: 0, p75: null },
+    });
   });
 
   it("sums site totals and computes period-over-period deltas across two 28-day windows", async () => {
@@ -196,5 +201,31 @@ describe("getGrowthDashboard (real D1)", () => {
       inpP75Ms: 150,
       clsP75: 0.04,
     });
+  });
+
+  it("computes a p75 per RUM metric over the trailing 7 days, ignoring rows outside the window", async () => {
+    const ref = new Date("2026-07-10T00:00:00Z"); // window: 2026-07-03..2026-07-09
+    const lcpValues = [1000, 1200, 1400, 1600, 1800, 2000, 5000]; // p75 (ceil(7*.75)=6th smallest) = 2000
+    for (const value of lcpValues) {
+      await rawDb
+        .prepare(
+          `INSERT INTO rum_vitals (metric_name, metric_value, route, surface, device_category, recorded_at)
+           VALUES ('LCP', ?, '/', 'public', 'desktop', '2026-07-05T10:00:00.000Z')`,
+        )
+        .bind(value)
+        .run();
+    }
+    // Outside the 7-day window — must not affect the result.
+    await rawDb
+      .prepare(
+        `INSERT INTO rum_vitals (metric_name, metric_value, route, surface, device_category, recorded_at)
+         VALUES ('LCP', 99999, '/', 'public', 'desktop', '2026-06-01T10:00:00.000Z')`,
+      )
+      .run();
+
+    const dashboard = await getGrowthDashboard(db, undefined, ref);
+
+    expect(dashboard.rum.lcp).toEqual({ sampleSize: 7, p75: 2000 });
+    expect(dashboard.rum.inp).toEqual({ sampleSize: 0, p75: null });
   });
 });
