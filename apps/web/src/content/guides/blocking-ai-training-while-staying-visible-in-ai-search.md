@@ -3,6 +3,21 @@ title: "Blocking AI training while staying visible in AI search"
 description: "Choosing between CrawlPact's presets when the goal is opting out of model training without losing AI-search discoverability."
 category: "decision"
 publishedDate: "2026-07-24"
+relatedCrawlerSlugs:
+  [
+    "amazonbot",
+    "applebot-extended",
+    "chatgpt-user",
+    "claude-searchbot",
+    "claude-user",
+    "claudebot",
+    "gptbot",
+    "google-extended",
+    "googlebot",
+    "meta-externalagent",
+    "meta-webindexer",
+    "oai-searchbot",
+  ]
 ---
 
 A common, specific goal is: don't let AI companies train on my content, but stay discoverable

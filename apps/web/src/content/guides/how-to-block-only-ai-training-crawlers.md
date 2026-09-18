@@ -3,6 +3,8 @@ title: "How to block only AI training crawlers, without blocking AI search"
 description: "A step-by-step implementation guide for writing robots.txt groups that restrict training-purpose crawlers while leaving search-purpose crawlers untouched."
 category: "implementation"
 publishedDate: "2026-07-24"
+relatedCrawlerSlugs:
+  ["gptbot", "claudebot", "google-extended", "applebot-extended", "meta-externalagent"]
 ---
 
 This is the practical, step-by-step version of the decision covered in
