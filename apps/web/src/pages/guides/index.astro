@@ -3,9 +3,26 @@ export const prerender = true;
 import { getCollection } from "astro:content";
 import MarketingLayout from "../../layouts/MarketingLayout.astro";
 
-const guides = (await getCollection("guides")).sort(
-  (a, b) => new Date(b.data.publishedDate).getTime() - new Date(a.data.publishedDate).getTime(),
-);
+const guides = await getCollection("guides");
+
+// Grouped by category rather than one flat 21-item list, matching the same
+// scannability pattern crawlers/index.astro and platforms/index.astro already
+// use for collections of this size (Phase 2 hub-architecture audit).
+const CATEGORY_ORDER = ["decision", "implementation", "troubleshooting"] as const;
+const CATEGORY_LABEL: Record<(typeof CATEGORY_ORDER)[number], string> = {
+  decision: "Decision guides",
+  implementation: "Implementation guides",
+  troubleshooting: "Troubleshooting guides",
+};
+const groups = CATEGORY_ORDER.map((category) => ({
+  category,
+  label: CATEGORY_LABEL[category],
+  guides: guides
+    .filter((guide) => guide.data.category === category)
+    .sort(
+      (a, b) => new Date(b.data.publishedDate).getTime() - new Date(a.data.publishedDate).getTime(),
+    ),
+})).filter((group) => group.guides.length > 0);
 ---
 
 <MarketingLayout
@@ -20,22 +37,24 @@ const guides = (await getCollection("guides")).sort(
       choosing an approach, implementation guides for setting it up, and troubleshooting guides for
       when something doesn't behave as expected.
     </p>
-    <ul class="mt-8 grid gap-4 sm:grid-cols-2">
-      {
-        guides.map((guide) => (
-          <li class="rounded-card border border-neutral-200 bg-white p-5">
-            <p class="text-metadata font-medium uppercase tracking-wide text-neutral-500">
-              {guide.data.category}
-            </p>
-            <h2 class="mt-1 text-card-heading text-neutral-950">
-              <a href={`/guides/${guide.id}/`} class="hover:text-brand-700">
-                {guide.data.title}
-              </a>
-            </h2>
-            <p class="mt-2 text-body text-neutral-700">{guide.data.description}</p>
-          </li>
-        ))
-      }
-    </ul>
+    {
+      groups.map((group) => (
+        <section class="mt-10 first:mt-8">
+          <h2 class="text-h3 text-neutral-950">{group.label}</h2>
+          <ul class="mt-4 grid gap-4 sm:grid-cols-2">
+            {group.guides.map((guide) => (
+              <li class="rounded-card border border-neutral-200 bg-white p-5">
+                <h3 class="text-card-heading text-neutral-950">
+                  <a href={`/guides/${guide.id}/`} class="hover:text-brand-700">
+                    {guide.data.title}
+                  </a>
+                </h3>
+                <p class="mt-2 text-body text-neutral-700">{guide.data.description}</p>
+              </li>
+            ))}
+          </ul>
+        </section>
+      ))
+    }
   </div>
 </MarketingLayout>
