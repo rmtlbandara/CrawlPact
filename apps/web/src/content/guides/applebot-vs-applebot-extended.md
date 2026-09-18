@@ -12,20 +12,26 @@ newer, separate token specifically for generative AI training opt-out.
 ## The two tokens
 
 - `Applebot` — Apple's general-purpose crawler, used since well before the current wave of
-  generative AI products, for features like Siri and Spotlight Suggestions.
+  generative AI products, for features like Siri and Spotlight Suggestions. Apple's own
+  documentation additionally states that data it crawls "may be used to provide additional
+  context and up-to-date content when AI models are used to generate output for display in Apple
+  products and services" — a narrower, context-supplying role, distinct from model training.
 - [`Applebot-Extended`](/crawlers/applebot-extended/) — controls use of website content for
   training Apple Intelligence and other Apple generative AI models, independent of the base
   `Applebot` crawl.
 
 ## The decision
 
-- Disallow `Applebot-Extended` if you want to opt content out of Apple's generative AI training
+- Disallow `Applebot-Extended` if you want to opt content out of Apple's generative AI **training**
   specifically, while keeping Siri/Spotlight functionality intact.
-- Disallowing `Applebot` itself affects the older Search/Siri features `Applebot` was built for —
-  a broader decision than an AI-training-specific opt-out.
-- If your goal is narrowly "opt out of AI training, keep everything else," `Applebot-Extended` is
-  the correct, narrower token — the same pattern as Google's `Google-Extended` next to
-  `Googlebot`.
+- Disallowing `Applebot` itself affects both the older Search/Siri features it was built for and
+  the AI-generated-output context-supplying role described above — a broader decision than an
+  AI-training-specific opt-out, and not one that leaves AI-adjacent uses entirely untouched.
+- If your goal is narrowly "opt out of AI model **training**, keep everything else," `Applebot-
+Extended` is the correct, narrower token — the same pattern as Google's `Google-Extended` next
+  to `Googlebot`. It does not, however, opt out of the base crawler's separate context-supplying
+  use described above; there is currently no narrower token for that specific use, only the
+  broader `Applebot` disallow.
 
 ## Common mistake CrawlPact flags
 
