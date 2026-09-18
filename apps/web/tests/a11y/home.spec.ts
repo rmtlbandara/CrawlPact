@@ -32,6 +32,7 @@ const ROUTES = [
   "/crawlers/amazonbot",
   "/tools",
   "/tools/ai-crawler-checker",
+  "/observatory",
   "/guides",
   "/guides/applebot-vs-applebot-extended",
   "/for/agencies",
