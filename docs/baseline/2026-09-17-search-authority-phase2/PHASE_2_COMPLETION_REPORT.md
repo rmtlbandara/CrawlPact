@@ -29,8 +29,8 @@ defeating the audit-trail/authorization guarantees those workflows exist to prov
 - Final `main`: `b10ffc8c86a2307747478b11c8a430ec68117f06`.
 - 6 PRs merged this phase: #204, #205, #206, #207, #208, #209 (all squash-merged, all branches
   auto-deleted).
-- CI: green on `main` at this SHA (one transient infrastructure flake during the process — see
-  §17 below — resolved by rerun, not a real regression).
+- CI: green on `main` at this SHA (three transient infrastructure flakes during the process — see
+  §17 below — each resolved by rerun, none a real regression).
 - Working tree: clean.
 
 ## 3. Production State
@@ -192,12 +192,15 @@ from Phase 1):
   `pilot:validate`, `content:validate`, `internal-link-canonical:check`,
   `repo-privacy:validate`, `analytics:validate`: all **PASSED**.
 - Build: succeeded.
-- One CI infrastructure flake occurred twice during this phase (PR #205's first attempt, and
-  main's first post-merge run), both with the identical `Workers runtime canceled this request…
-hung` signature in tests unrelated to any Phase 2 change (`notifications-monitoring-
-reliability.spec.ts`, `saved-domain-timeline.spec.ts`) — both resolved cleanly on rerun,
-  confirming infrastructure flakiness rather than a real regression, consistent with this
-  session's established pattern for this exact signature.
+- CI infrastructure flakiness occurred three times during this phase (PR #205's first attempt,
+  main's first post-merge run, and this report's own PR #210), all resolved cleanly on rerun and
+  none touching any file this phase changed — two with the identical `Workers runtime canceled
+this request… hung` signature in unrelated authenticated-app tests
+  (`notifications-monitoring-reliability.spec.ts`, `saved-domain-timeline.spec.ts`), one with a
+  `Hook timed out`/`dispose is not a function` signature in the integration suite (this session's
+  already-documented Miniflare/D1-harness resource-contention pattern) on a pure docs-only PR
+  adding a single markdown file. The pure-docs case is itself further confirmation this is
+  infrastructure noise, not a code regression — there was no code to regress.
 - Two Prettier formatting misses occurred early in this phase (checking only the changed file
   instead of the full repo) — both caught before merge; the standing rule going forward is
   `pnpm run format:check` across the whole repo before every commit, which was followed for the
