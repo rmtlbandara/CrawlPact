@@ -16,7 +16,7 @@ Pulled per-file stats (line count, `lastVerified`, `purpose`, summary length) ac
 then read the full body of every page under 30 lines (the outlier band) plus one page per
 multi-crawler operator family (Amazon, Meta, OpenAI, Google, Anthropic) to check for a consistent
 structural pattern: does each crawler page reciprocally disambiguate itself from its own
-operator's sibling crawlers, the way every *other* page in that family does?
+operator's sibling crawlers, the way every _other_ page in that family does?
 
 ## Real gap found and fixed: ClaudeBot page
 
@@ -61,7 +61,7 @@ Worth noting for process, not fixing here: Phase 1's `CRAWLER_REGISTRY_FRESHNESS
 "no change," but did not bump `last_verified_at` for either — only the newly-added `crw_applebot`
 row got a fresh date. Whether a "re-confirmed, no change" event should advance
 `last_verified_at` (so the 180-day review-due clock reflects actual confirmation recency) or only
-a genuine content *change* should do so is a registry-governance policy question, not a bug in
+a genuine content _change_ should do so is a registry-governance policy question, not a bug in
 this pass's data. Both are still well within the 180-day review-due threshold (79 days old as of
 today). Flagging as a process question for whoever owns `docs/registry/
 SOURCE_VERIFICATION_POLICY.md`, not changing it via a direct D1 write.
