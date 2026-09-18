@@ -11,11 +11,11 @@ data is available.
 
 ## Content collections (`apps/web/src/content/`)
 
-| Collection  | Count | Notes                                                                 |
-| ----------- | ----- | ---------------------------------------------------------------------- |
-| `crawlers`  | 22    | Per-crawler markdown pages, rendered at `/crawlers/[slug]`             |
-| `guides`    | 21    | How-to / troubleshooting / comparison guides at `/guides/[slug]`       |
-| `platforms` | 5     | cloudflare, netlify, shopify, vercel, wordpress — `/platforms/[slug]`  |
+| Collection  | Count | Notes                                                                        |
+| ----------- | ----- | ---------------------------------------------------------------------------- |
+| `crawlers`  | 22    | Per-crawler markdown pages, rendered at `/crawlers/[slug]`                   |
+| `guides`    | 21    | How-to / troubleshooting / comparison guides at `/guides/[slug]`             |
+| `platforms` | 5     | cloudflare, netlify, shopify, vercel, wordpress — `/platforms/[slug]`        |
 | `verticals` | 4     | agencies, publishers, saas-and-documentation, web-developers — `/for/[slug]` |
 
 Guide topics present today span: crawler-vs-crawler comparisons (Amazon, Apple, Claude, Google,

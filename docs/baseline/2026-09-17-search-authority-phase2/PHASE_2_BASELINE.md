@@ -32,14 +32,14 @@ Live D1 queries against production this pass:
 - Active published release: `2026.07.3`, 23 crawlers, **9 operators**, 1 total published release
   ever (`total_published_releases: 1` — this would be the second release if published).
 - Purpose distribution across the 23 published crawlers: `search: 7, training: 5,
-  user_triggered: 4, agent: 2, advertising_validation: 2, unknown: 1, research: 1, mixed: 1`
+user_triggered: 4, agent: 2, advertising_validation: 2, unknown: 1, research: 1, mixed: 1`
   (sums to 23).
 - Verification health of the published release: `total: 23, eligible: 23, verified: 23,
-  review_due: 0` — every governed crawler in the live release is currently verified and none is
+review_due: 0` — every governed crawler in the live release is currently verified and none is
   past its review-due threshold (180 days). This is a real, positive, reproducible finding, not
   an assumption carried from Phase 1's freshness audit — it was re-queried directly this pass.
 - `crw_applebot` exists in master `crawlers` data (added in Phase 1, `last_verified_at:
-  2026-09-17`) but belongs to **zero** published releases — unchanged since Phase 1 close-out.
+2026-09-17`) but belongs to **zero** published releases — unchanged since Phase 1 close-out.
 
 ## What this baseline enables this pass
 

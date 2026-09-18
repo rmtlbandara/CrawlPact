@@ -11,7 +11,7 @@ phase, and requires that decision be evidence-based, not a scaled/fabricated con
 ## Infrastructure check (real, live)
 
 - `research_publications` table: confirmed empty in Production (`SELECT id, title, slug, status,
-  published_at FROM research_publications LIMIT 10` → `[]`). The research-publication feature has
+published_at FROM research_publications LIMIT 10` → `[]`). The research-publication feature has
   never been used for a real publication — this would be the first.
 - `generateRegistryLandscapeDraft(db, { createdByUserId })` in
   `apps/web/src/lib/admin/research.ts` deterministically builds the entire report from
