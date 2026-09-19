@@ -19,10 +19,20 @@ action against an external site through GPT Actions.
 tracked separately in CrawlPact's registry from the training-purpose `GPTBot` and the
 search-purpose `OAI-SearchBot` — a website can restrict one without restricting the others.
 
+## A `robots.txt` limitation worth knowing
+
+OpenAI's own documentation states: "Because these actions are initiated by a user, robots.txt
+rules may not apply." A `Disallow` rule aimed at `ChatGPT-User` is therefore not a reliable way to
+prevent a specific page from being fetched on a person's behalf — this is OpenAI's documented
+position (wording checked against its bots page on 2026-09-19), not a CrawlPact-observed
+workaround. See [/limitations](/limitations/) for what a `robots.txt` rule can and cannot
+guarantee more generally.
+
 ## Site-owner controls
 
-Standard `robots.txt` disallow rules apply. See [/limitations](/limitations/) for what a
-`robots.txt` rule can and cannot guarantee.
+A `robots.txt` rule for `ChatGPT-User` may not be honoured, per OpenAI's own documentation above —
+unlike the search- and training-purpose tokens, where OpenAI's page makes no such statement. It
+does not affect `GPTBot` (training) or `OAI-SearchBot` (search), each governed by its own token.
 
 ## Note on this page's source
 

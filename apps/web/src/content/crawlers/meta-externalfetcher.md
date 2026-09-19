@@ -20,10 +20,18 @@ Meta's own documentation writes the literal user-agent string in lowercase,
 `meta-externalfetcher/1.1`. `robots.txt` user-agent matching is case-insensitive (RFC 9309
 §2.2.1), so this does not change how a `Disallow` rule applies.
 
+## A `robots.txt` limitation worth knowing
+
+Meta's own documentation states that this crawler "may bypass robots.txt because it performs
+fetches that were requested by the user." A `Disallow` rule aimed at `Meta-ExternalFetcher` is
+therefore not a reliable way to prevent a specific page from being fetched on a person's behalf —
+this is Meta's documented position (wording checked against its crawler page on 2026-09-19), not
+a CrawlPact-observed workaround. See [/limitations](/limitations/) for what a `robots.txt` rule
+can and cannot guarantee more generally.
+
 ## Site-owner controls
 
-Disallowing `Meta-ExternalFetcher` prevents Meta's agentic AI features from fetching this
-specific page on a user's behalf — a single-page, user-directed retrieval, not a bulk crawl. It
-does not affect `Meta-ExternalAgent` (bulk AI-training crawling), `Meta-WebIndexer` (search), or
+A `robots.txt` rule for `Meta-ExternalFetcher` may not be honoured, per Meta's own documentation
+above — a single-page, user-directed retrieval, not a bulk crawl. It does not affect
+`Meta-ExternalAgent` (bulk AI-training crawling), `Meta-WebIndexer` (search), or
 `Meta-ExternalAds` (advertising validation), each of which Meta documents as a separate token.
-See [/limitations](/limitations/) for what a `robots.txt` rule can and cannot guarantee.

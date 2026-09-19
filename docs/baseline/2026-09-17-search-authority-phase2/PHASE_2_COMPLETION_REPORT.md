@@ -49,10 +49,10 @@ defeating the audit-trail/authorization guarantees those workflows exist to prov
 
 ## 4. Search Data Baseline
 
-- `growth_collection` has run once (`2026-09-18T03:01 UTC`, covering GSC through `2026-09-15`
-  and GA4 for `2026-09-17`) — re-confirmed unchanged at the end of this phase (no second run has
-  occurred yet; next is `2026-09-19T03:00 UTC`).
-- GSC: 15 total impressions across 3 settled days, 0 clicks. GA4: 1 session, 1 active user.
+- `growth_collection` has run twice (`2026-09-18T03:01 UTC` and `2026-09-19T03:01 UTC`; latest
+  covers GSC through `2026-09-16` and GA4 for `2026-09-18`), re-confirmed live on 2026-09-19.
+- GSC: 27 total impressions across 4 settled days (3, 2, 10, 12), 0 clicks. GA4: 1 session, 1
+  active user in total (0 rows for 2026-09-18).
 - CrUX: `no_data` (expected at this traffic level).
 - Concrete, evidence-based maturity criteria for when opportunity analysis becomes responsible
   are now defined in `SEARCH_DATA_MATURITY_CRITERIA.md` (14+ settled days, 5+ occurrence
@@ -60,8 +60,9 @@ defeating the audit-trail/authorization guarantees those workflows exist to prov
 
 ## 5. Search Opportunity Work
 
-**None performed** — current volume (15 impressions, 0 clicks, 1 GA4 session) fails every
-criterion in `SEARCH_DATA_MATURITY_CRITERIA.md`. Computing "high-impression/low-CTR" or similar
+**None performed** — current volume (27 impressions over 4 days, 0 clicks, 1 GA4 session) fails
+every criterion in `SEARCH_DATA_MATURITY_CRITERIA.md` (best query recurs on 3 of the required 5
+days; 4 of the required 14 settled days; no click yet — see `EXISTING_PAGE_PERFORMANCE.md`). Computing "high-impression/low-CTR" or similar
 classifications from this sample would be statistically meaningless. This is a data-maturity
 condition per §58, not a blocker — non-GSC-dependent work continued in parallel instead (§6-9
 below).
@@ -94,7 +95,18 @@ Full 22-page audit performed (`CRAWLER_AUTHORITY_AUDIT.md`). One real gap found 
 `claudebot.md` was the thinnest page in the directory and, uniquely among training-purpose
 crawler pages, didn't disambiguate itself from its own operator's sibling crawlers — fixed to
 match the established pattern every other training-purpose page already followed. Amazon, Meta,
-OpenAI, and Google crawler families checked and confirmed clean.
+OpenAI, and Google crawler families checked and confirmed clean for sibling disambiguation. All
+22 pages have now been read in full.
+
+**Follow-up (2026-09-19) — 3 factual defects found and fixed, a class of claim never previously
+verified.** Phase 1 and Phase 15 verified each crawler's _token and purpose_ against vendor docs,
+but never what vendors say about _robots.txt compliance_. Checking that against primary sources
+found `chatgpt-user.md` asserting "standard robots.txt rules apply" where OpenAI says they "may
+not apply"; `meta-externalfetcher.md` saying a `Disallow` "prevents" fetches where Meta says the
+crawler "may bypass robots.txt"; and `oai-adsbot.md` asserting robots.txt support that OpenAI's
+page never states. All three pages and the two guides that discuss them were corrected to quote
+the vendor (details and method caveats in `CRAWLER_AUTHORITY_AUDIT.md`). An open product question
+is recorded there: result screens show `Blocked` for such crawlers without a per-crawler caveat.
 
 ## 9. Content Quality
 
@@ -158,10 +170,32 @@ meaningful search-to-product path analysis.
 ## 14. Performance / RUM
 
 No Phase 2 change touched JS bundles, images, or hydration — all changes were content
-(frontmatter, prose) or static markup restructuring (guides hub grouping, one footer link). No
-independent Lighthouse re-run was performed this phase given the negligible regression surface;
-this is a known limitation of this report, stated honestly rather than reusing Phase 1's numbers
-as if freshly measured. RUM collection is unchanged and live (real visitor data, per Phase 1).
+(frontmatter, prose) or static markup restructuring (guides hub grouping, one footer link).
+
+**Measured (2026-09-19), not reused from Phase 1** — full detail in `PREVIEW_VALIDATION.md`:
+on the Preview deploy of the merged batch, the standard six-page Lighthouse run scored
+performance 99-100, accessibility 100, LCP 1.41-1.80 s, CLS ~0.0001 (39/39 smoke checks passed);
+the two pages this phase changed were measured separately (`/observatory/` 99, LCP 1.80 s;
+`/guides/` first reading 95 / 2.43 s, re-run 100 / 1.51 s, Production before-state 99 / 1.78 s).
+The one apparent regression was investigated rather than assumed — the new HTML is smaller than
+the old, and a same-code control plus an untouched-page control both came back at ~1.4-1.5 s — and
+is concluded to be measurement noise. The methodology shows roughly ±0.5 s LCP swing between
+windows, so a single reading is not a verdict. This is Preview, not the merged code on
+Production, which does not run it yet.
+
+**RUM data-integrity defect found (Phase 1 deliverable, surfaced by Phase 2 verification).**
+`rum_vitals` is not purely visitor data: headless Chrome under Lighthouse executes the same
+`web-vitals` beacon. Of 199 rows to date, 157 (2026-09-17) coincide with Phase 1's Production
+lab runs and 24 (2026-09-19, one 61-second burst, `/guides/`, mobile) came from this phase's own
+Production Lighthouse baseline — a side effect of this phase's verification, disclosed rather
+than hidden. Only ~18 rows are not part of an identifiable lab burst, and even those are unverified
+as human traffic. Consequently the `/admin/growth`
+RUM section and any p75 from it **must not be cited as a real-visitor baseline**. UA-based
+filtering does not work (Lighthouse 13.4.1's emulated UAs carry no marker — checked in source).
+Nothing was deleted or changed; options and a review-first cleanup statement are in
+`CRUX_AND_RUM_BASELINE.md` for the owner to choose. This is a genuine product-integrity item, not
+a Phase 2 blocker per §58 (small RUM sample is explicitly non-blocking), but it should be fixed
+before anyone reports RUM figures.
 
 ## 15. Accessibility
 
@@ -210,10 +244,16 @@ this request… hung` signature in unrelated authenticated-app tests
 
 - Search opportunity analysis: correctly pending sufficient data, per §58 and
   `SEARCH_DATA_MATURITY_CRITERIA.md` — not a blocker.
-- A full line-by-line factual re-verification of all 21 guides (beyond the one confirmed Apple
-  change): genuinely not done, stated honestly rather than claimed complete.
-- No independent Lighthouse re-run this phase (§14) — low risk given the nature of the changes,
-  but not measured, stated honestly.
+- A full line-by-line factual re-verification of all 21 guides: genuinely not done, stated
+  honestly rather than claimed complete. Two evidence-driven corrections were made (Apple, and the
+  robots.txt-semantics fixes that touched two guides), but the robots.txt-semantics check found a
+  whole class of claim that had never been verified, which raises the odds that other unverified
+  vendor-behaviour claims exist in guides that were not re-read against primary sources.
+- Lighthouse on the merged batch is measured on Preview only (§14); Production performance for it
+  is confirmable only after the owner deploys. (Avoid ad-hoc Lighthouse runs against Production —
+  they write synthetic RUM rows, see §14.)
+- RUM figures must not be cited as a real-visitor baseline until the lab-traffic contamination is
+  addressed (§14) — an owner decision, not a Phase 2 blocker.
 - Distribution package: correctly deferred until the registry release and research publication
   are live (§12).
 

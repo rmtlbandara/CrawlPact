@@ -28,7 +28,10 @@ them.
 - Disallow `Meta-WebIndexer` if you don't want your pages surfaced in Meta AI's search features.
 - `Meta-ExternalAds` and `Meta-ExternalFetcher` serve narrower purposes (advertising products, and
   single-page fetches on a user's request, respectively) — most sites leave these two allowed
-  unless they have a specific reason to restrict them.
+  unless they have a specific reason to restrict them. For `Meta-ExternalFetcher` specifically,
+  Meta's own documentation says it "may bypass robots.txt because it performs fetches that were
+  requested by the user," so a `Disallow` for it is a declared preference, not a dependable
+  control.
 
 ## Common mistake CrawlPact flags
 
