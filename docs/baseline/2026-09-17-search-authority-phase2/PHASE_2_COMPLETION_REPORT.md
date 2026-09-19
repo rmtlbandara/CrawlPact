@@ -26,11 +26,13 @@ defeating the audit-trail/authorization guarantees those workflows exist to prov
 
 ## 2. Repository State
 
-- Final `main`: `b10ffc8c86a2307747478b11c8a430ec68117f06`.
-- 6 PRs merged this phase: #204, #205, #206, #207, #208, #209 (all squash-merged, all branches
-  auto-deleted).
-- CI: green on `main` at this SHA (three transient infrastructure flakes during the process — see
-  §17 below — each resolved by rerun, none a real regression).
+- `main` when this report was first written: `b10ffc8c86a2307747478b11c8a430ec68117f06`; the
+  report itself merged as #210 (`5835cb8`), and #211 (2026-09-19 follow-up) carries the corrections
+  in this document.
+- PRs #204-#210 merged this phase (all squash-merged, branches auto-deleted); #211 pending at time
+  of writing.
+- CI: green on `main` (transient infrastructure flakes during the process — see §17 below — each
+  resolved by rerun, none a real regression).
 - Working tree: clean.
 
 ## 3. Production State
@@ -226,15 +228,20 @@ from Phase 1):
   `pilot:validate`, `content:validate`, `internal-link-canonical:check`,
   `repo-privacy:validate`, `analytics:validate`: all **PASSED**.
 - Build: succeeded.
-- CI infrastructure flakiness occurred three times during this phase (PR #205's first attempt,
-  main's first post-merge run, and this report's own PR #210), all resolved cleanly on rerun and
-  none touching any file this phase changed — two with the identical `Workers runtime canceled
-this request… hung` signature in unrelated authenticated-app tests
-  (`notifications-monitoring-reliability.spec.ts`, `saved-domain-timeline.spec.ts`), one with a
-  `Hook timed out`/`dispose is not a function` signature in the integration suite (this session's
-  already-documented Miniflare/D1-harness resource-contention pattern) on a pure docs-only PR
-  adding a single markdown file. The pure-docs case is itself further confirmation this is
-  infrastructure noise, not a code regression — there was no code to regress.
+- CI infrastructure flakiness hit four runs during this phase: PR #207 (first attempt), `main` at
+  `c28c7bc` (first post-merge run), PR #210 (its first attempt _and_ its second — two different
+  signatures), and PR #211 (first attempt) — every one resolved by rerun, and none touching a file
+  those failures exercise. (An earlier version of this section wrongly listed #205; its only
+  first-attempt failure was Prettier formatting.) The failures carry two signatures: the
+  `Workers runtime canceled this request… hung` 500 from the `/api/test-only/*` fixture endpoints,
+  which cascades into unrelated authenticated-app and skip-link tests and into axe reporting a
+  missing `<title>`/`lang` on what was an error response, not a real page; and, once, a `Hook
+timed out`/`dispose is not a function` failure in the integration suite (the already-documented
+  Miniflare/D1-harness contention pattern), on a docs-only PR with no code to regress. In every
+  failed run all public-route accessibility tests passed. Taken together this is a CI reliability
+  trend worth the owner's attention — first attempts failed on this phase's PRs noticeably more
+  often than in Phase 1 — but no rate is claimed here because a first-attempt rate was not
+  measured.
 - Two Prettier formatting misses occurred early in this phase (checking only the changed file
   instead of the full repo) — both caught before merge; the standing rule going forward is
   `pnpm run format:check` across the whole repo before every commit, which was followed for the

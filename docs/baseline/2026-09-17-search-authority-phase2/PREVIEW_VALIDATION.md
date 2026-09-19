@@ -16,7 +16,8 @@ The first post-merge CI run on `c28c7bc` failed one job (`Chromium E2E + accessi
 in tests entirely unrelated to this phase's changes (`saved-domain-timeline.spec.ts`,
 `notifications-monitoring-reliability.spec.ts`), with the same `Workers runtime canceled this
 request because it detected that your Worker's code had hung` signature seen earlier this session
-on PR #205. Reran via `gh run rerun --failed`: passed clean on the second attempt, confirming
+on PR #207 (corrected 2026-09-19: an earlier version of this note wrongly said #205, whose only
+first-attempt failure was Prettier formatting). Reran via `gh run rerun --failed`: passed clean on the second attempt, confirming
 infrastructure flakiness, not a real regression — consistent with this session's established
 pattern for this exact failure signature.
 
