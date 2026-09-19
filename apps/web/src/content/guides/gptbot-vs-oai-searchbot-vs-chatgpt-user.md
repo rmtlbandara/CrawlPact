@@ -27,7 +27,9 @@ misconfiguration CrawlPact sees in this operator's traffic.
   engine's indexer.
 - Leave `ChatGPT-User` allowed unless you specifically don't want any content served in response
   to direct user questions inside ChatGPT — blocking it does not reduce training or search
-  exposure, since it's a separate, user-initiated request path.
+  exposure, since it's a separate, user-initiated request path. Note that OpenAI's own
+  documentation states "Because these actions are initiated by a user, robots.txt rules may not
+  apply" to this token, so a `Disallow` for it is a declared preference, not a dependable control.
 
 ## Common mistake CrawlPact flags
 

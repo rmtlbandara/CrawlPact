@@ -76,9 +76,62 @@ SOURCE_VERIFICATION_POLICY.md`, not changing it via a direct D1 write.
   crawler's actual documented behavior (e.g. `Amzn-User`'s "may not follow all robots.txt
   directives" caveat, `Meta-WebIndexer`'s lowercase-token note), not templated boilerplate.
 
-## Not yet checked this pass
+## Follow-up read (2026-09-19) — remaining four pages, no gap found
 
-- `googleother.md`, `google-cloudvertexbot.md`, `perplexitybot.md`, `perplexity-user.md` — not
-  read in full this pass (their line counts and purpose values didn't flag them as outliers);
-  genuinely open, not claimed clean.
-- Operator-level authority pages (§17 of the directive) — separate workstream, not started.
+`googleother.md`, `google-cloudvertexbot.md`, `perplexitybot.md`, and `perplexity-user.md` were
+initially skipped (their size and purpose didn't flag them as outliers) and were read in full on
+2026-09-19. All four hold the same standard as the rest of the directory: each states its
+operator, purpose and the reasoning behind that category, cites Google's/Perplexity's own wording
+rather than paraphrase, and explains what disallowing it does and does not affect relative to its
+sibling tokens. `googleother.md`'s deliberately unspecific "unknown" hedging matches Google's own
+documentation (which does not name a purpose) and is the correct handling under FR-REG-005, not a
+thin-page defect. `perplexity-user.md` correctly surfaces Perplexity's documented "generally
+ignores robots.txt" behavior. No changes made from that read. The remaining three
+(`ccbot.md`, `chatgpt-user.md`, `oai-adsbot.md`) were read the same day. This closes the earlier
+"not yet checked" item — all 22 crawler pages have now been read in full.
+
+## robots.txt-semantics verification against primary sources (2026-09-19) — 3 defects fixed
+
+Reading `chatgpt-user.md` surfaced an inconsistency: it stated "Standard `robots.txt` disallow
+rules apply," while sibling user-triggered pages (`Amzn-User`, `Perplexity-User`) carry an explicit
+"may not be honoured" caveat. Phase 1's freshness audit and Phase 15's re-verification confirmed
+each crawler's **token and purpose** against vendor docs, but neither checked **what the vendor
+says about robots.txt compliance** — so this whole class of claim had never been verified. Every
+page that makes such a claim for a user-triggered/agent/ads crawler was checked against the
+vendor's own page (fetched 2026-09-19):
+
+| Crawler                        | Vendor statement (verbatim, per fetch)                                                                          | Our page said                                   | Result                                   |
+| ------------------------------ | --------------------------------------------------------------------------------------------------------------- | ----------------------------------------------- | ---------------------------------------- |
+| `ChatGPT-User`                 | "Because these actions are initiated by a user, robots.txt rules may not apply."                                | "Standard robots.txt disallow rules apply"      | **Wrong — fixed**                        |
+| `Meta-ExternalFetcher`         | "may bypass robots.txt because it performs fetches that were requested by the user."                            | "Disallowing … prevents" the fetch              | **Wrong — fixed** (direct contradiction) |
+| `OAI-AdsBot`                   | robots.txt not mentioned in its section; page-level guidance names only OAI-SearchBot and GPTBot                | "supporting standard robots.txt disallow rules" | **Unsupported — fixed**                  |
+| `Claude-User`                  | Not stated per-bot; Anthropic states generally that its bots honor "industry standard directives in robots.txt" | "Standard robots.txt disallow rules apply"      | Supported — no change                    |
+| `Amzn-User`, `Perplexity-User` | Pages already quote the vendor's own caveat (vendor pages not re-fetched today; last confirmed in Phase 1)      | matches                                         | No change                                |
+
+Fixes: `chatgpt-user.md`, `meta-externalfetcher.md`, `oai-adsbot.md` now quote the vendor and add a
+"robots.txt limitation worth knowing" section in the same shape as the Amzn-User/Perplexity-User
+pages; the two guides that discuss these tokens (`gptbot-vs-oai-searchbot-vs-chatgpt-user`,
+`metas-four-crawlers-explained`) gained a one-sentence caveat. Each page states the date the
+wording was checked. **`lastVerified` was deliberately not bumped**: it must stay in sync with the
+governed registry's `last_verified_at`, which cannot be changed outside the admin workflow, and
+this was a wording check against an already-verified source, not a new registry verification.
+
+Method caveat, stated plainly: vendor text was retrieved through a summarising fetch tool, not a
+raw HTTP capture. The `ChatGPT-User` quote was reproduced identically across two independent
+fetches; the `Meta-ExternalFetcher` quote was one fetch. The owner should treat the exact
+punctuation as reliable to the sentence, not guaranteed to the character.
+
+Residual, not changed: Meta's page states no robots.txt behaviour for `Meta-ExternalAgent`,
+`Meta-WebIndexer` or `Meta-ExternalAds`, and Anthropic's states none per-bot for `Claude-SearchBot`;
+our pages for those describe a `Disallow` as effective, which is the conventional default but is
+not explicitly confirmed by the vendor page. Flagged rather than hedged across the board.
+
+**Open product question for the owner (not a content defect):** the registry seed carries no
+robots-compliance data and no product code keys off it, so scan result screens and the AI crawler
+checker show `Blocked`/`Allowed` for `ChatGPT-User`, `Meta-ExternalFetcher`, `Amzn-User` and
+`Perplexity-User` without a per-crawler "vendor says this may ignore robots.txt" caveat — only the
+public crawler pages and `/limitations` say so. Whether results should surface that is a product
+decision left for the owner.
+
+Operator-level authority pages were evaluated separately and deferred — see
+`OPERATOR_AUTHORITY_DECISION.md`.

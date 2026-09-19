@@ -41,8 +41,9 @@ rather than content generation.
 
 **Recommendation: keep collecting, don't yet run §2/§7-8 as originally scoped.** These sections
 need enough accumulated volume that a "top query" or "underperforming page" claim reflects a real
-pattern, not one visitor. Revisit after at least 2-4 weeks of continuous collection (the table is
-append-only per day, so history will accumulate automatically without any further action). In the
+pattern, not one visitor. Revisit when the evidence thresholds in
+`SEARCH_DATA_MATURITY_CRITERIA.md` are actually met — not after a fixed number of weeks (the table
+is append-only per day, so history accumulates automatically without any further action). In the
 meantime, §7's content inventory (`CONTENT_INVENTORY.md`) and the registry/research readiness
 work (`REGISTRY_RELEASE_DECISION.md`, `RESEARCH_PUBLICATION_EVIDENCE.md`) remain the productive
 tracks, since they don't depend on traffic volume.
@@ -56,3 +57,25 @@ CrawlPact's existing content strategy (crawler-identity content, not commercial 
 what search is currently surfacing) but is far too small a sample (single-digit impressions per
 query) to be treated as a confirmed pattern. Flagging it as a hypothesis to watch as more data
 accumulates, not a finding to act on today.
+
+## Update — 2026-09-19 (second collection run)
+
+`growth_collection` ran again at `2026-09-19T03:01 UTC` (`data_date=2026-09-18 gsc=ok(42) ga4=ok(0)
+crux=no_data`). Re-evaluated against `SEARCH_DATA_MATURITY_CRITERIA.md` using live D1 reads:
+
+| Criterion                                     | Required | Current                                              | Met? |
+| --------------------------------------------- | -------- | ---------------------------------------------------- | ---- |
+| Settled GSC days                              | 14+      | 4 (Sep 13-16; 3, 2, 10, 12 impressions = 27 total)   | No   |
+| A query with impressions on 5+ distinct days  | 1+       | best query recurs on 3 days (3 impressions in total) | No   |
+| A page with impressions on 5+ distinct days   | 1+       | best page (`/guides/`) recurs on 3 days (7 total)    | No   |
+| Single-day concentration cap (~40% of 14-day) | n/a yet  | not evaluable below 14 days                          | n/a  |
+| At least one click recorded                   | 1+       | 0 clicks across all dimensions                       | No   |
+
+Volume roughly doubled (15 → 27 impressions) and two pages/one query now recur across 3 days, so
+the pipeline is accumulating a real time series — but every threshold is still unmet, so no
+opportunity classification is computed. GA4 returned 0 rows for 2026-09-18 (no sessions recorded
+that day; the cumulative GA4 total remains 1 session from 2026-09-17).
+
+One observation, recorded as an observation only: `/guides/` (the hub restructured by PR #207) is
+the most-recurring page. Those impressions predate the restructure (data covers Sep 13-16; the
+change merged Sep 18 and is not yet live in Production), so they say nothing about its effect.

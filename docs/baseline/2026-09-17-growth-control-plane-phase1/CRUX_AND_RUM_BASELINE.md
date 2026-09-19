@@ -98,3 +98,53 @@ blocker: "if there has not yet been enough time to establish meaningful p75 valu
 still be live and validated" — which it is, locally. Real p75s can only be reported honestly after
 a Production deployment and some real traffic; fabricating them now would violate the project's own
 "never present mocked data as a real product outcome" rule.
+
+## Addendum (2026-09-19, found during Phase 2) — `rum_vitals` contains lab traffic
+
+**Finding.** `rum_vitals` is not purely real-visitor data. Headless Chrome driven by Lighthouse
+executes the page's `web-vitals` script exactly as a real browser does, and the RUM beacon is
+gated only on `PUBLIC_APP_ENV === "production"`, not on who is browsing. Any Lighthouse run
+against `https://crawlpact.com` therefore writes synthetic rows.
+
+**Evidence (live D1 read, 2026-09-19):**
+
+- Rows per UTC day: 2026-09-17 → 157, 2026-09-18 → 4, 2026-09-19 → 38 (all `surface = public`).
+  The 157 on Sep 17 coincide with Phase 1's Production Lighthouse runs and deploy smoke tests, not
+  with organic traffic (site traffic that week is on the order of one session per day).
+- 24 of today's 38 rows are `route = /guides/`, `device_category = mobile`, all inside one
+  61-second window (10:29:18–10:30:19 UTC). That is the Production Lighthouse baseline run made
+  during Phase 2 (Lighthouse emulates mobile by default) — **a side effect of this phase's own
+  verification work**, disclosed here rather than left for someone to trip over.
+- Lighthouse 13.4.1's emulated user agents (read from its `core/config/constants.js`) are ordinary
+  Chrome-on-Android / Chrome-on-macOS strings with no `Lighthouse` marker, so a User-Agent filter
+  would **not** work. (An earlier assumption that they end in `Chrome-Lighthouse` was checked and
+  found wrong before any code was written against it.)
+
+**Consequence.** The `/admin/growth` RUM section and any p75 derived from `rum_vitals` currently
+blend lab and visitor samples and must not be cited as a real-visitor Core Web Vitals baseline.
+Phase 1's completion report correctly said real-visitor RUM was not yet available; nothing in it
+claimed a p75.
+
+**Not done, deliberately:** no rows were deleted (irreversible production write, not requested; a
+concurrent real visitor cannot be ruled out with certainty) and no filter was implemented (needs a
+design decision). Options for the owner, none implemented:
+
+1. Skip the beacon when the URL carries a lab marker (e.g. `?lab=1`) that
+   `scripts/lighthouse-check.mjs` appends — simple, but it changes the script the deploy pipelines
+   run, and only covers runs that opt in.
+2. Skip the beacon when `navigator.webdriver` is true — cheap, but whether Lighthouse's launch
+   flags set it was not verified.
+3. Accept lab rows and instead exclude known lab windows/bursts when reading — no code change,
+   but fragile.
+
+Cleanup of the confirmed burst, if the owner wants it (review first — it is irreversible):
+
+```sql
+DELETE FROM rum_vitals
+WHERE route = '/guides/' AND device_category = 'mobile'
+  AND recorded_at BETWEEN '2026-09-19T10:29:00Z' AND '2026-09-19T10:31:00Z';
+-- expected: changes = 24
+```
+
+Until one of these is done, avoid further Lighthouse runs against Production outside the deploy
+pipeline; Preview runs are unaffected (the beacon is not loaded there).

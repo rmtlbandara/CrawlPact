@@ -22,10 +22,14 @@ search indexing.
 
 ## Published IP ranges
 
-OpenAI publishes `OAI-AdsBot`'s IP ranges at `https://openai.com/adsbot.json`, in addition to
-supporting standard `robots.txt` disallow rules.
+OpenAI publishes `OAI-AdsBot`'s IP ranges at `https://openai.com/adsbot.json`, which is the
+documented way to recognise its requests.
 
 ## Site-owner controls
 
-Standard `robots.txt` disallow rules apply. See [/limitations](/limitations/) for what a
-`robots.txt` rule can and cannot guarantee.
+OpenAI's bots page does not say whether `OAI-AdsBot` honours `robots.txt` — its `robots.txt`
+guidance names only `OAI-SearchBot` and `GPTBot` (wording checked 2026-09-19). Because the
+crawler "only visits pages submitted as ads," the practical control is whether an ad is submitted
+for that landing page, not a `robots.txt` rule; treat a `Disallow` for this token as a declared
+preference of unconfirmed effect. See [/limitations](/limitations/) for what a `robots.txt` rule
+can and cannot guarantee.
